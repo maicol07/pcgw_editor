@@ -246,14 +246,21 @@ const currentWikitext = computed(() => {
 // Preview State
 const renderedHtml = ref('');
 const isLoading = ref(false);
-const error = ref('');
+const isPending = ref(false); // True during debounce, false when actually fetching
+const error = ref('')
 
-// Simple Debounce
+;
+
+// Simple Debounce with pending state
 const debounce = (fn: Function, delay: number) => {
     let timeoutId: any;
     return (...args: any[]) => {
+        isPending.value = true; // Show loading immediately when user makes changes
         clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fn(...args), delay);
+        timeoutId = setTimeout(() => {
+            isPending.value = false; // Clear pending when actually executing
+            fn(...args);
+        }, delay);
     };
 };
 
@@ -799,12 +806,27 @@ watch(searchQuery, (val) => {
         
         <div class="flex-1 overflow-y-auto custom-scrollbar relative">
            <!-- Loading Overlay -->
-           <div v-if="isLoading" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-50 flex items-center justify-center backdrop-blur-sm">
-                <div class="flex flex-col items-center">
-                    <i class="pi pi-spin pi-spinner text-4xl text-primary-500 mb-2"></i>
-                    <span class="text-surface-600 dark:text-surface-300 font-medium">Rendering Preview...</span>
-                </div>
-           </div>
+           <Transition name="fade">
+               <div v-if="isPending || isLoading" class="fixed inset-0 bg-surface-0/90 dark:bg-surface-950/90 flex items-center justify-center backdrop-blur-sm" style="left: 50%; right: 0; z-index: 9999;">
+                    <div class="flex flex-col items-center gap-4 p-8 rounded-lg bg-surface-50/80 dark:bg-surface-800/80 border border-surface-200 dark:border-surface-700 shadow-xl">
+                        <div class="relative">
+                            <i class="pi pi-spin pi-spinner text-5xl text-primary-500"></i>
+                            <div class="absolute inset-0 rounded-full border-4 border-primary-500/30 animate-ping"></div>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-surface-700 dark:text-surface-200 font-semibold text-lg">
+                                {{ isPending && !isLoading ? 'Waiting for changes...' : 'Rendering Preview...' }}
+                            </span>
+                            <span class="text-surface-500 dark:text-surface-400 text-sm">
+                                {{ isPending && !isLoading ? 'Debouncing input' : 'Fetching from PCGamingWiki API' }}
+                            </span>
+                        </div>
+                        <div class="w-48 h-1 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full animate-progress"></div>
+                        </div>
+                    </div>
+               </div>
+           </Transition>
 
           <div v-if="error" class="p-4 m-4 bg-red-100 text-red-700 rounded border border-red-300">
              {{ error }}
