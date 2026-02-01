@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, defineAsyncComponent } from 'vue';
 import { useWorkspaceStore } from './stores/workspace';
 import { storeToRefs } from 'pinia';
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
@@ -11,7 +11,8 @@ import InfoboxForm from './components/InfoboxForm.vue';
 import AvailabilityForm from './components/AvailabilityForm.vue';
 import MonetizationForm from './components/MonetizationForm.vue';
 import GameDataForm from './components/GameDataForm.vue';
-import CodeEditor from './components/CodeEditor.vue';
+// Lazy load CodeEditor only when switching to Code mode
+const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
 import StateForm from './components/StateForm.vue';
 import SectionGallery from './components/SectionGallery.vue';
 import GeneralInfoForm from './components/GeneralInfoForm.vue';
@@ -45,8 +46,24 @@ import { reactive, provide } from 'vue';
 // Modes
 type EditorMode = 'Visual' | 'Code';
 const editorMode = ref<EditorMode>('Visual');
+const isModeSwitching = ref(false);
+const isCodeEditorLoaded = ref(false);
 type PreviewMode = 'Local' | 'API';
 const previewMode = ref<PreviewMode>('API');
+
+// Progressive rendering - defer heavy components
+const isInitialLoad = ref(true);
+
+// After initial mount, defer rendering of collapsed panels
+import { onMounted } from 'vue';
+onMounted(() => {
+    // Small delay to let the page render first
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            isInitialLoad.value = false;
+        }, 100);
+    });
+});
 
 // Auto theme based on system preference
 // Auto theme based on system preference
@@ -174,18 +191,35 @@ watch(pageTitle, () => {
     }
 });
 
-function handleModeChange(newMode: EditorMode) {
+async function handleModeChange(newMode: EditorMode) {
     const oldMode = editorMode.value === newMode ? (newMode === 'Visual' ? 'Code' : 'Visual') : editorMode.value;
     
     if (newMode === 'Code' && oldMode === 'Visual') {
+        // Fast: just copy the generated wikitext
         manualWikitext.value = wikitext.value;
+        // Mark that CodeEditor is being loaded (lazy)
+        if (!isCodeEditorLoaded.value) {
+            isCodeEditorLoaded.value = true;
+        }
     } else if (newMode === 'Visual' && oldMode === 'Code') {
+        // Show skeleton during parsing and rendering
+        isInitialLoad.value = true;
+        isModeSwitching.value = true;
+        
+        // Use setTimeout to allow UI to update before heavy parsing
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         try {
             const parsedData = parseWikitext(manualWikitext.value);
             gameData.value = parsedData;
             baseWikitext.value = manualWikitext.value;
         } catch (e) {
             console.error("Failed to parse wikitext:", e);
+        } finally {
+            isModeSwitching.value = false;
+            // Keep skeleton visible a bit longer while components mount
+            await new Promise(resolve => setTimeout(resolve, 100));
+            isInitialLoad.value = false;
         }
     }
 }
@@ -214,6 +248,23 @@ const panelState = reactive({
     systemReq: true,
     l10n: true,
     general: true,
+});
+
+// Lazy rendering - only render panel content if expanded or has been expanded
+const panelsRendered = ref<Record<string, boolean>>({});
+
+// Initialize: only render panels that are initially expanded (collapsed=false)
+Object.keys(panelState).forEach(key => {
+    panelsRendered.value[key] = !(panelState as any)[key];
+});
+
+// Watch for panel expansions to trigger rendering
+watch(panelState, (newState) => {
+    Object.keys(newState).forEach(key => {
+        if (!(newState as any)[key] && !panelsRendered.value[key]) {
+            panelsRendered.value[key] = true;
+        }
+    });
 });
 
 // Global Event Bus for deep components
@@ -277,7 +328,7 @@ const previewOptions = ref(['Local', 'API']);
   <div class="h-screen w-screen overflow-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-0 transition-colors duration-200">
     <WorkspaceSidebar v-model:visible="sidebarVisible" />
     <Splitter style="height: 100vh" class="border-none !mb-0 !rounded-none bg-transparent splitter-modern">
-      <SplitterPanel class="flex flex-col overflow-hidden" :size="50" :minSize="30">
+      <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
         <Toolbar class="!border-b !border-0 !rounded-none glass glass-border shadow-soft z-20 !p-1.5 sticky top-0">
             <template #start>
                 <div class="flex items-center gap-2 md:gap-3">
@@ -292,9 +343,35 @@ const previewOptions = ref(['Local', 'API']);
             </template>
         </Toolbar>
         
+        <!-- Loading Overlay for Mode Switching -->
+        <Transition name="fade-fast">
+            <div v-if="isModeSwitching" class="absolute inset-0 bg-surface-0/80 dark:bg-surface-950/80 backdrop-blur-sm z-30 flex items-center justify-center">
+                <div class="flex flex-col items-center gap-3">
+                    <i class="pi pi-spin pi-spinner text-4xl text-primary-500"></i>
+                    <span class="text-surface-600 dark:text-surface-300 font-medium">Parsing wikitext...</span>
+                </div>
+            </div>
+        </Transition>
+        
         <div class="flex-1 overflow-y-auto custom-scrollbar bg-gradient-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900">
           <Transition name="fade" mode="out-in">
-            <div v-if="editorMode === 'Visual'" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="visual">
+            <!-- Skeleton Screen during initial load -->
+            <div v-if="editorMode === 'Visual' && isInitialLoad" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="skeleton">
+                <div class="h-12 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                <div class="h-24 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                <div class="h-48 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                <div class="flex items-center justify-center h-32">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                        <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading editor...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actual Visual Editor -->
+            <div v-else-if="editorMode === 'Visual'" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="visual">
               
               <!-- Quick Actions Toolbar -->
               <div class="flex items-center justify-between glass glass-border p-2.5 rounded-lg shadow-soft sticky top-0 z-20 animate-slide-in-down">
@@ -319,7 +396,7 @@ const previewOptions = ref(['Local', 'API']);
                           <span class="font-semibold text-sm">Article State</span>
                       </div>
                   </template>
-                  <StateForm v-model="gameData.articleState" :gameData="gameData" />
+                  <StateForm v-if="panelsRendered.articleState" v-model="gameData.articleState" :gameData="gameData" />
               </Panel>
 
               <Panel toggleable v-model:collapsed="panelState.infobox" class="panel-modern shadow-soft hover-lift">
@@ -329,7 +406,7 @@ const previewOptions = ref(['Local', 'API']);
                           <span class="font-semibold text-sm">Infobox</span>
                       </div>
                   </template>
-                  <InfoboxForm v-model="gameData.infobox" />
+                  <InfoboxForm v-if="panelsRendered.infobox" v-model="gameData.infobox" />
               </Panel>
 
               <Panel toggleable v-model:collapsed="panelState.introduction" class="panel-modern shadow-soft hover-lift">
@@ -543,8 +620,22 @@ const previewOptions = ref(['Local', 'API']);
               </Panel>
             </div>
             
-            <div v-else class="h-full" key="code">
-                <CodeEditor v-model="manualWikitext" />
+            <div v-else class="h-full flex flex-col" key="code">
+                <Suspense>
+                    <template #default>
+                        <CodeEditor v-model="manualWikitext" />
+                    </template>
+                    <template #fallback>
+                        <div class="h-full w-full p-4 animate-pulse">
+                            <div class="h-full w-full bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 flex items-center justify-center">
+                                <div class="flex flex-col items-center gap-3">
+                                    <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                                    <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading Code Editor...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </Suspense>
             </div>
           </Transition>
         </div>
@@ -638,13 +729,30 @@ const previewOptions = ref(['Local', 'API']);
 }
 
 /* Smooth Fade Transitions */
-.fade-enter-active,
+.fade-enter-active {
+    transition: opacity 0.15s ease-out;
+}
+
 .fade-leave-active {
-    transition: opacity 0.2s ease-out;
+    transition: opacity 0.12s ease-in;
 }
 
 .fade-enter-from,
 .fade-leave-to {
+    opacity: 0;
+}
+
+/* Faster fade for loading overlays */
+.fade-fast-enter-active {
+    transition: opacity 0.1s ease-out;
+}
+
+.fade-fast-leave-active {
+    transition: opacity 0.08s ease-in;
+}
+
+.fade-fast-enter-from,
+.fade-fast-leave-to {
     opacity: 0;
 }
 
