@@ -1,0 +1,202 @@
+:root {
+    /* Common Tokens */
+    --wa-color-primary-500: #6366f1;
+    /* Indigo */
+    --wa-color-primary-600: #4f46e5;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --transition-fast: 0.2s ease;
+
+    /* LIGHT MODE DEFAULTS (Slate Palette) */
+    --bg-app: #f1f5f9;
+    /* Slate 100 */
+    --bg-panel: #ffffff;
+    /* White */
+    --bg-panel-transparent: rgba(255, 255, 255, 0.7);
+    --text-main: #0f172a;
+    /* Slate 900 */
+    --text-muted: #64748b;
+    /* Slate 500 */
+    --border-color: #cbd5e1;
+    /* Slate 300 */
+    --glass-border: 1px solid rgba(0, 0, 0, 0.05);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --input-bg: #ffffff;
+    --header-bg: rgba(255, 255, 255, 0.8);
+    --editor-gradient-start: #ffffff;
+    --editor-gradient-end: #f1f5f9;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* DARK MODE OVERRIDES (Slate Palette) */
+        --bg-app: #0f172a;
+        /* Slate 900 */
+        --bg-panel: #1e293b;
+        /* Slate 800 */
+        --bg-panel-transparent: rgba(30, 41, 59, 0.7);
+        --text-main: #f8fafc;
+        /* Slate 50 */
+        --text-muted: #94a3b8;
+        /* Slate 400 */
+        --border-color: #334155;
+        /* Slate 700 */
+        --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        --input-bg: #1e293b;
+        --header-bg: rgba(15, 23, 42, 0.8);
+        --editor-gradient-start: #1e293b;
+        --editor-gradient-end: #0f172a;
+    }
+}
+
+body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Scrollbars - Adaptive */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--wa-color-primary-500);
+}
+
+/* App Layout */
+.app-container {
+    background-color: var(--bg-app) !important;
+}
+
+/* Panes */
+.editor-pane,
+.preview-pane {
+    background-color: transparent !important;
+    color: var(--text-main) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.editor-pane {
+    background: linear-gradient(to bottom right, var(--editor-gradient-start), var(--editor-gradient-end));
+}
+
+/* Headers */
+header {
+    background: var(--header-bg) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: var(--glass-border) !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+h2 {
+    color: var(--text-main) !important;
+    font-size: 1rem !important;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+/* Cards & Sections */
+.form-section {
+    background: var(--bg-panel-transparent);
+    border: var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--glass-shadow);
+    transition: transform var(--transition-fast), border-color 0.2s;
+}
+
+.form-section:hover {
+    transform: translateY(-2px);
+    border-color: var(--wa-color-primary-500);
+}
+
+.form-section h3 {
+    margin-top: 0 !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding-bottom: 0.5rem;
+    color: var(--wa-color-primary-500) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Inputs & Forms */
+wa-input,
+wa-textarea,
+wa-select,
+wa-details {
+    margin-bottom: 0.75rem;
+    --border-radius-medium: var(--radius-md);
+}
+
+/* Compact Grid for Inputs */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+/* Tab Transitions */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Preview Pane Overrides */
+/* The Preview Pane mimics a paper/document, so typically it stays white or adapts separately.
+   If we want it to adapt to dark mode too (as a 'dark mode wiki'), we can use similar vars.
+   However, PCGW wiki is usually light. Let's make the CONTAINER adapt, but the CONTENT match PCGW.
+   Actually, users might expect the preview to be readable in dark mode. 
+   Let's keep the preview pane background neutral but allow the rendered VIEW to be white specific (as per pcgw-preview.css).
+*/
+
+.preview-pane {
+    /* Background for the pane itself (behind the paper if we had margins, 
+       but currently it's full width). 
+       The rendered-view has its own background in pcgw-preview.css.
+       We should ensure that renders correctly. 
+    */
+}
+
+/* Warnings */
+.warning {
+    background: rgba(234, 179, 8, 0.1) !important;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    color: var(--text-main) !important;
+}
+
+/* Code Editor */
+.code-area::part(base) {
+    background-color: var(--bg-panel);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}

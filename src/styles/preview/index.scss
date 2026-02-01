@@ -1,0 +1,8 @@
+@use "sass:meta";
+
+/* Scoped styles for the Wiki Preview */
+.rendered-view .mw-parser-output {
+    @include meta.load-css("style1");
+    @include meta.load-css("style2");
+    @include meta.load-css("icons");
+}

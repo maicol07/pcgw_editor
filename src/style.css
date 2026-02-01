@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import custom animations */
+@import './styles/animations.css';
+
+/* CSS Reset & Base Styles */
+:root {
+  --p-primary-50: #faf5ff;
+  --p-primary-100: #f3e8ff;
+  --p-primary-200: #e9d5ff;
+  --p-primary-300: #d8b4fe;
+  --p-primary-400: #c084fc;
+  --p-primary-500: #a855f7;
+  --p-primary-600: #9333ea;
+  --p-primary-700: #7e22ce;
+  --p-primary-800: #6b21a8;
+  --p-primary-900: #581c87;
+  --p-primary-950: #3b0764;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-size: 14px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  @apply bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-surface-0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Ultra-thin Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(168, 85, 247, 0.6);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(168, 85, 247, 0.7);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgba(71, 85, 105, 0.5) transparent;
+}
+
+/* Focus States - Accessible */
+:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 0.6);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Text Selection */
+::selection {
+  background-color: rgba(168, 85, 247, 0.2);
+  color: inherit;
+}
+
+.dark ::selection {
+  background-color: rgba(168, 85, 247, 0.3);
+}
+
+/* Utility Classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    @apply bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md;
+  }
+
+  .glass-border {
+    @apply border border-surface-200/50 dark:border-surface-700/50;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-soft-lg {
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  }
+}

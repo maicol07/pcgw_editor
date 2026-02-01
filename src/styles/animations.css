@@ -1,0 +1,265 @@
+/* Custom Animations for Micro-Interactions */
+
+/* Fade Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+/* Slide Animations */
+@keyframes slideInUp {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Scale Animations */
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes scaleOut {
+    from {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+}
+
+/* Pulse Animations */
+@keyframes pulseSoft {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px -3px rgba(168, 85, 247, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.5);
+    }
+}
+
+/* Skeleton Loading */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg,
+            rgba(203, 213, 225, 0.2) 0%,
+            rgba(203, 213, 225, 0.4) 50%,
+            rgba(203, 213, 225, 0.2) 100%);
+    background-size: 1000px 100%;
+}
+
+.dark .skeleton {
+    background: linear-gradient(90deg,
+            rgba(51, 65, 85, 0.2) 0%,
+            rgba(51, 65, 85, 0.4) 50%,
+            rgba(51, 65, 85, 0.2) 100%);
+}
+
+/* Bounce Animations */
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Shake Animation (for errors) */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Spin Animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Utility Classes */
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+    animation: fadeOut 0.2s ease-out;
+}
+
+.animate-slide-in-up {
+    animation: slideInUp 0.2s ease-out;
+}
+
+.animate-slide-in-down {
+    animation: slideInDown 0.2s ease-out;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.15s ease-out;
+}
+
+.animate-bounce-in {
+    animation: bounceIn 0.3s ease-out;
+}
+
+.animate-shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+.animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Transition Utilities */
+.transition-fast {
+    transition: all 0.15s ease-out;
+}
+
+.transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Hover Effects */
+.hover-lift {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+}
+
+.hover-scale {
+    transition: transform 0.15s ease-out;
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+.hover-glow {
+    transition: box-shadow 0.2s ease-out;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 15px -3px rgba(168, 85, 247, 0.4);
+}
