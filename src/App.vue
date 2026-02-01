@@ -33,6 +33,7 @@ import MiddlewareForm from './components/MiddlewareForm.vue';
 import Splitter from 'primevue/splitter';
 import SplitterPanel from 'primevue/splitterpanel';
 import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
 import SelectButton from 'primevue/selectbutton';
 import Panel from 'primevue/panel';
 import InputText from 'primevue/inputtext';
@@ -40,6 +41,7 @@ import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import { GoogleGenAI } from '@google/genai';
 import iconBulletDocument from './assets/icons/bullet-document.svg';
 import { reactive, provide } from 'vue';
 
@@ -96,6 +98,118 @@ const pageTitle = computed({
 });
 
 const sidebarVisible = ref(false);
+const shareSummaryVisible = ref(false);
+const shareSummaryText = ref('');
+const isGeneratingSummary = ref(false);
+
+// Gemini API Key Management
+const geminiApiKey = ref(localStorage.getItem('gemini-api-key') || '');
+const showApiKeyDialog = ref(false);
+const tempApiKey = ref('');
+
+// Save API key to localStorage
+function saveApiKey() {
+    if (tempApiKey.value.trim()) {
+        geminiApiKey.value = tempApiKey.value.trim();
+        localStorage.setItem('gemini-api-key', geminiApiKey.value);
+        showApiKeyDialog.value = false;
+        tempApiKey.value = '';
+    }
+}
+
+// Clear API key
+function clearApiKey() {
+    geminiApiKey.value = '';
+    localStorage.removeItem('gemini-api-key');
+    tempApiKey.value = '';
+}
+
+// Generate share summary based on game data
+// Generate share summary using Gemini AI
+async function generateShareSummary() {
+    // Check if API key exists
+    if (!geminiApiKey.value) {
+        showApiKeyDialog.value = true;
+        tempApiKey.value = '';
+        return;
+    }
+
+    isGeneratingSummary.value = true;
+    
+    try {
+        const data = gameData.value;
+        const title = pageTitle.value || 'Unknown Game';
+        
+        // Initialize Google Generative AI with API key
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey.value });
+        
+        // Create a structured prompt for Gemini
+        const prompt = `You are creating a feature list for a PCGamingWiki article about "${title}".
+
+Game Data:
+${JSON.stringify({
+    video: data.video,
+    input: data.input,
+    audio: data.audio,
+    network: data.network,
+    vr: data.vr
+}, null, 2)}
+
+Instructions:
+- Create ONLY a bullet-point list of features
+- Include BOTH positive features (things supported/available) AND negative features (limitations/missing features)
+- Use natural, readable language
+- Focus on video settings, input support, audio options, and multiplayer features
+- Be brief and factual
+- Only include features explicitly set in the data (ignore "false", "unknown", "hackable", or empty values for positive features)
+- For negative features, mention notable limitations (e.g., "No native ultrawide support", "Limited to stereo audio")
+
+Output format (no introduction, just the list):
+- Native 4K resolution support.
+- Options for FXAA and SMAA anti-aliasing.
+- No native ultrawide support.
+- Xbox and DualShock 4 controllers are natively supported.
+- Separate volume sliders for master, music, and sound effects.
+- Audio limited to stereo (no surround sound).`;
+
+        // Call Gemini API using the SDK
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+        });
+
+        const generatedText = response.text;
+        
+        if (!generatedText) {
+            throw new Error('No response from AI');
+        }
+
+        shareSummaryText.value = generatedText.trim();
+        shareSummaryVisible.value = true;
+        
+    } catch (error: any) {
+        console.error('Failed to generate summary:', error);
+        alert(`Failed to generate summary: ${error.message || 'Unknown error'}\n\nPlease check your API key and try again.`);
+        
+        // Optionally show API key dialog on error
+        if (error.message?.includes('API key') || error.message?.includes('API_KEY')) {
+            showApiKeyDialog.value = true;
+        }
+    } finally {
+        isGeneratingSummary.value = false;
+    }
+}
+
+// Copy share summary to clipboard
+async function copyShareSummary() {
+    try {
+        await navigator.clipboard.writeText(shareSummaryText.value);
+        // Show success feedback (you can add a toast notification here if needed)
+        console.log('Copied to clipboard!');
+    } catch (err) {
+        console.error('Failed to copy:', err);
+    }
+}
 
 // Computed
 const wikitext = computed(() => generateWikitext(gameData.value, baseWikitext.value));
@@ -183,6 +297,21 @@ watch(currentWikitext, (newVal) => {
 watch(previewMode, () => {
     fetchPreview(currentWikitext.value);
 });
+
+// UI Functions
+const expandAll = () => {
+    Object.keys(panelState).forEach(k => (panelState as any)[k] = false);
+    uiBus.expandAllCount++;
+};
+
+const collapseAll = () => {
+    Object.keys(panelState).forEach(k => (panelState as any)[k] = true);
+    uiBus.collapseAllCount++;
+};
+
+// UI Constants
+const editorModeOptions = ref(['Visual', 'Code']);
+const previewOptions = ref(['Local', 'API']);
 
 // Watch title change to update preview if in API mode
 watch(pageTitle, () => {
@@ -274,16 +403,6 @@ const uiBus = reactive({
 });
 provide('uiBus', uiBus);
 
-const expandAll = () => {
-    Object.keys(panelState).forEach(k => (panelState as any)[k] = false);
-    uiBus.expandAllCount++;
-};
-
-const collapseAll = () => {
-    Object.keys(panelState).forEach(k => (panelState as any)[k] = true);
-    uiBus.collapseAllCount++;
-};
-
 const searchQuery = ref('');
 const performSearch = () => {
     const q = searchQuery.value.toLowerCase();
@@ -319,9 +438,6 @@ watch(searchQuery, (val) => {
     if (val.length > 2) performSearch();
 });
 
-const editorModeOptions = ref(['Visual', 'Code']);
-const previewOptions = ref(['Local', 'API']);
-
 </script>
 
 <template>
@@ -332,10 +448,20 @@ const previewOptions = ref(['Local', 'API']);
         <Toolbar class="!border-b !border-0 !rounded-none glass glass-border shadow-soft z-20 !p-1.5 sticky top-0">
             <template #start>
                 <div class="flex items-center gap-2 md:gap-3">
-                    <Button icon="pi pi-bars" text rounded @click="sidebarVisible = true" severity="secondary" class="hover-scale" />
-                    <h2 class="font-bold text-base md:text-lg bg-gradient-to-r from-primary-500 via-primary-600 to-violet-600 bg-clip-text text-transparent shrink-0 tracking-tight">PCGW EDITOR</h2>
+                    <Button icon="pi pi-bars" text size="small" @click="sidebarVisible = true" class="lg:hidden hover-scale" severity="secondary" />
+                    <span class="font-bold text-base md:text-lg bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">PCGamingWiki Editor</span>
                     <span class="text-surface-300 dark:text-surface-600 hidden lg:block text-xs">•</span>
                     <InputText v-model="pageTitle" placeholder="Page Title..." class="w-48 lg:w-64 !py-1.5 !px-2.5 text-sm hidden md:block" />
+                    <Button 
+                        :icon="isGeneratingSummary ? 'pi pi-spin pi-spinner' : 'pi pi-file-edit'" 
+                        text 
+                        size="small" 
+                        @click="generateShareSummary" 
+                        severity="secondary" 
+                        class="!text-xs !px-2 !py-1 hover-scale"
+                        v-tooltip.bottom="'Generate share summary'"
+                        :disabled="isGeneratingSummary"
+                    />
                 </div>
             </template>
             <template #end>
@@ -665,11 +791,141 @@ const previewOptions = ref(['Local', 'API']);
         </div>
       </SplitterPanel>
     </Splitter>
+    
+    <!-- Gemini API Key Settings Dialog -->
+    <Dialog v-model:visible="showApiKeyDialog" modal :style="{ width: '35rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+        <template #header>
+            <div class="flex items-center gap-2">
+                <i class="pi pi-key text-primary-500"></i>
+                <span class="font-bold text-lg">Gemini API Key</span>
+            </div>
+        </template>
+        
+        <div class="flex flex-col gap-4">
+            <p class="text-surface-600 dark:text-surface-400 text-sm">
+                To generate AI-powered summaries, please provide your Gemini API key.
+                Get one for free at <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary-500 hover:underline">Google AI Studio</a>.
+            </p>
+            
+            <div class="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div class="flex gap-2">
+                    <i class="pi pi-exclamation-triangle text-orange-500 mt-0.5"></i>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-orange-800 dark:text-orange-200 mb-1">Security Notice</p>
+                        <p class="text-xs text-orange-700 dark:text-orange-300">
+                            Your API key will be stored in plain text in your browser's local storage. 
+                            Only use this on trusted devices. Anyone with access to your browser can read this key.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <label class="font-medium text-sm">API Key</label>
+                <InputText 
+                    v-model="tempApiKey" 
+                    type="password"
+                    placeholder="Enter your Gemini API key..."
+                    class="w-full"
+                    @keyup.enter="saveApiKey"
+                />
+            </div>
+            
+            <div class="flex gap-2 justify-end">
+                <Button 
+                    v-if="geminiApiKey"
+                    label="Clear Key" 
+                    icon="pi pi-trash" 
+                    @click="clearApiKey"
+                    severity="danger"
+                    outlined
+                />
+                <Button 
+                    label="Cancel" 
+                    icon="pi pi-times" 
+                    @click="showApiKeyDialog = false"
+                    severity="secondary"
+                    outlined
+                />
+                <Button 
+                    label="Save" 
+                    icon="pi pi-check" 
+                    @click="saveApiKey"
+                    severity="primary"
+                    :disabled="!tempApiKey.trim()"
+                />
+            </div>
+        </div>
+    </Dialog>
+    
+    <!-- Share Summary Dialog -->
+    <Dialog v-model:visible="shareSummaryVisible" modal :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+        <template #header>
+            <div class="flex items-center gap-2">
+                <i class="pi pi-share-alt text-primary-500"></i>
+                <span class="font-bold text-lg">Share Summary</span>
+                <i v-if="geminiApiKey" class="pi pi-sparkles text-primary-500 text-sm ml-1" title="AI-Generated"></i>
+            </div>
+        </template>
+        
+        <div class="flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <p class="text-surface-600 dark:text-surface-400 text-sm">
+                    {{ geminiApiKey ? 'AI-generated summary ready to share!' : 'Copy this summary to share!' }}
+                </p>
+                <Button 
+                    v-if="geminiApiKey"
+                    icon="pi pi-cog" 
+                    text
+                    size="small"
+                    @click="showApiKeyDialog = true; shareSummaryVisible = false"
+                    severity="secondary"
+                    v-tooltip.left="'API Settings'"
+                />
+            </div>
+            
+            <div v-if="isGeneratingSummary" class="flex items-center justify-center p-8">
+                <div class="flex flex-col items-center gap-3">
+                    <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                    <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Generating summary with AI...</span>
+                </div>
+            </div>
+            
+            <Textarea 
+                v-else
+                v-model="shareSummaryText" 
+                :autoResize="true" 
+                rows="12" 
+                class="w-full font-mono text-sm"
+                readonly
+            />
+            
+            <div class="flex gap-2 justify-end">
+                <Button 
+                    label="Copy to Clipboard" 
+                    icon="pi pi-copy" 
+                    @click="copyShareSummary"
+                    severity="primary"
+                    :disabled="isGeneratingSummary || !shareSummaryText"
+                />
+                <Button 
+                    label="Close" 
+                    icon="pi pi-times" 
+                    @click="shareSummaryVisible = false"
+                    severity="secondary"
+                    outlined
+                />
+            </div>
+        </div>
+    </Dialog>
   </div>
 </template>
 
 
 <style>
+/* Import custom animations */
+@import './styles/animations.css';
+
 /* Modern Panel Styling */
 .panel-modern {
     border-radius: 0.75rem;
