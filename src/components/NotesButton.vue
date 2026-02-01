@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import Textarea from 'primevue/textarea';
@@ -8,6 +8,7 @@ import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import AutoComplete from 'primevue/autocomplete';
 import Toolbar from 'primevue/toolbar';
+import { renderWikitextToHtml } from '../utils/renderer';
 
 const props = defineProps<{
   modelValue?: string;
@@ -151,6 +152,30 @@ const tooltipText = computed(() => {
         return hasContent.value ? 'Edit references' : 'Add references';
     }
     return hasContent.value ? 'Edit Notes' : 'Add Notes';
+});
+
+// Live Preview for Notes
+const previewHtml = ref('');
+const updatePreview = () => {
+    if (props.type === 'note' && localValue.value) {
+        previewHtml.value = renderWikitextToHtml(localValue.value);
+    } else {
+        previewHtml.value = '';
+    }
+};
+
+// Watch localValue for live preview updates
+watch(localValue, () => {
+    if (props.type === 'note' && visible.value) {
+        updatePreview();
+    }
+});
+
+// Update preview when dialog opens
+watch(visible, (newVal) => {
+    if (newVal && props.type === 'note') {
+        updatePreview();
+    }
 });
 
 // WYSIWYG Editor Logic for Notes
@@ -300,7 +325,7 @@ const insertReference = () => {
       @click="openDialog"
     />
 
-    <Dialog v-model:visible="visible" :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal class="w-full max-w-2xl">
+    <Dialog v-model:visible="visible" :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal :class="type === 'note' ? 'w-full max-w-6xl' : 'w-full max-w-2xl'">
       <div class="flex flex-col gap-4">
         
         <!-- Reference Editor -->
@@ -397,7 +422,7 @@ const insertReference = () => {
             </div>
         </div>
 
-        <!-- Note Editor with WYSIWYG Toolbar -->
+        <!-- Note Editor with WYSIWYG Toolbar and Preview -->
         <div v-else class="flex flex-col gap-3">
             <Toolbar class="!p-2 !border !rounded">
                 <template #start>
@@ -482,7 +507,31 @@ const insertReference = () => {
                     </div>
                 </template>
             </Toolbar>
-            <Textarea ref="textareaRef" v-model="localValue" rows="5" class="w-full" placeholder="Enter content here..." autoResize />
+            
+            <!-- Dual Panel: Textarea + Preview -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Wikitext Editor -->
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Wikitext Source</label>
+                    <Textarea 
+                        ref="textareaRef" 
+                        v-model="localValue" 
+                        rows="8" 
+                        class="w-full !font-mono !text-sm" 
+                        placeholder="Enter wikitext here..." 
+                        autoResize 
+                    />
+                </div>
+                
+                <!-- Live Preview -->
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Preview</label>
+                    <div 
+                        class="border border-surface-300 dark:border-surface-600 rounded p-3 min-h-[200px] bg-surface-50 dark:bg-surface-900 overflow-auto"
+                        v-html="previewHtml || '<span class=\'text-surface-400 italic text-sm\'>Preview will appear here...</span>'"
+                    ></div>
+                </div>
+            </div>
         </div>
         
         <div class="flex justify-end gap-2">
