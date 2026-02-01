@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent } from 'vue';
 import { useWorkspaceStore } from './stores/workspace';
-import { storeToRefs } from 'pinia';
+import { GameData, initialGameData } from './models/GameData';
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
-import { generateWikitext } from './utils/wikitext';
 import { parseWikitext } from './utils/parser';
 import { renderWikitextToHtml } from './utils/renderer';
 import { useAutoTheme } from './composables/useAutoTheme';
@@ -72,11 +71,33 @@ onMounted(() => {
 useAutoTheme();
 
 const store = useWorkspaceStore();
-// Use storeToRefs for reactive access to store state if needed, but activeGameData is a computed ref returned by store
-const { activeGameData } = storeToRefs(store);
 
-// Map gameData to store
-const gameData = activeGameData; 
+// Create a local mutable copy of gameData for editing
+// The store's activeGameData is a computed with getter/setter that parses wikitext on every access
+// We need a stable ref we can mutate and deep-watch
+const gameData = ref<GameData>(initialGameData);
+
+// Flag to prevent infinite loops when syncing between store and local gameData
+let isSyncingFromStore = false;
+
+// Watch store's activeGameData and sync to our local copy when the page changes
+watch(() => store.activeGameData, (newData) => {
+    isSyncingFromStore = true;
+    // Create a deep copy to avoid reference issues
+    gameData.value = JSON.parse(JSON.stringify(newData));
+    // Use nextTick to ensure the flag is reset after all watchers have run
+    setTimeout(() => { isSyncingFromStore = false; }, 0);
+}, { immediate: true, deep: true });
+
+// Watch our local gameData for changes and save back to store
+watch(gameData, (newData) => {
+    // Only save if we're not currently syncing from the store (to avoid loops)
+    if (!isSyncingFromStore) {
+        // Save mutations back to the store (which will generate wikitext)
+        store.activeGameData = newData;
+    }
+}, { deep: true });
+ 
 
 // baseWikitext is now stored in the workspace store, accessed via activePage
 const baseWikitext = computed({
@@ -211,11 +232,12 @@ async function copyShareSummary() {
     }
 }
 
-// Computed
-const wikitext = computed(() => generateWikitext(gameData.value, baseWikitext.value));
+// Wikitext is now managed by the store - when we update gameData, the store generates wikitext
+// We just read it from the store's activePage
+const wikitext = computed(() => store.activePage?.wikitext || '');
 
 // Logic for active wikitext source
-const manualWikitext = ref(wikitext.value);
+const manualWikitext = ref('');
 
 const currentWikitext = computed(() => {
     return editorMode.value === 'Visual' ? wikitext.value : manualWikitext.value;
