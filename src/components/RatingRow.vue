@@ -19,7 +19,6 @@ const props = defineProps<{
   label: string;
   value?: string;
   notes?: string;
-  reference?: string;
   options?: string[];
   icon?: string;
   title?: string;
@@ -29,7 +28,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:value', value: string): void;
   (e: 'update:notes', value: string): void;
-  (e: 'update:reference', value: string): void;
 }>();
 
 const defaultOptions = ['true', 'false', 'unknown', 'hackable', 'limited', 'always on', 'n/a'];
@@ -90,14 +88,6 @@ const getIconSrc = (val: string) => {
           </div>
         </template>
       </Select>
-      <InputGroupAddon class="p-0 min-w-[3rem]">
-        <NotesButton 
-           :modelValue="reference" 
-           @update:modelValue="emit('update:reference', $event)" 
-           type="ref"
-           class="w-full h-full !rounded-none !border-none !border-r"
-        />
-      </InputGroupAddon>
       <InputGroupAddon class="p-0 min-w-[3rem]">
         <NotesButton 
            :modelValue="notes" 

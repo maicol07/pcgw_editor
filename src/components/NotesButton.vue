@@ -7,6 +7,7 @@ import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import AutoComplete from 'primevue/autocomplete';
+import Toolbar from 'primevue/toolbar';
 
 const props = defineProps<{
   modelValue?: string;
@@ -151,6 +152,139 @@ const tooltipText = computed(() => {
     }
     return hasContent.value ? 'Edit Notes' : 'Add Notes';
 });
+
+// WYSIWYG Editor Logic for Notes
+const textareaRef = ref<any>(null);
+
+// Insert wikitext formatting at cursor position
+const insertFormatting = (before: string, after: string = '', placeholder: string = 'text') => {
+    const textarea = textareaRef.value?.$el as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = localValue.value;
+    const selectedText = text.substring(start, end) || placeholder;
+    
+    const newText = text.substring(0, start) + before + selectedText + after + text.substring(end);
+    localValue.value = newText;
+    
+    // Restore focus and set cursor position
+    setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + before.length + selectedText.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 10);
+};
+
+const insertBold = () => insertFormatting("'''", "'''");
+const insertItalic = () => insertFormatting("''", "''");
+const insertWikilink = () => insertFormatting('[[', ']]', 'link');
+const insertBulletList = () => {
+    const textarea = textareaRef.value?.$el as HTMLTextAreaElement;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const text = localValue.value;
+    const beforeCursor = text.substring(0, start);
+    const afterCursor = text.substring(start);
+    
+    // Check if we're at the start of a line
+    const lastNewline = beforeCursor.lastIndexOf('\n');
+    const currentLineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+    const isStartOfLine = start === currentLineStart || beforeCursor.substring(currentLineStart).trim() === '';
+    
+    if (isStartOfLine) {
+        localValue.value = beforeCursor + '* ' + afterCursor;
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + 2, start + 2);
+        }, 10);
+    } else {
+        localValue.value = beforeCursor + '\n* ' + afterCursor;
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + 3, start + 3);
+        }, 10);
+    }
+};
+
+const insertNumberedList = () => {
+    const textarea = textareaRef.value?.$el as HTMLTextAreaElement;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const text = localValue.value;
+    const beforeCursor = text.substring(0, start);
+    const afterCursor = text.substring(start);
+    
+    const lastNewline = beforeCursor.lastIndexOf('\n');
+    const currentLineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+    const isStartOfLine = start === currentLineStart || beforeCursor.substring(currentLineStart).trim() === '';
+    
+    if (isStartOfLine) {
+        localValue.value = beforeCursor + '# ' + afterCursor;
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + 2, start + 2);
+        }, 10);
+    } else {
+        localValue.value = beforeCursor + '\n# ' + afterCursor;
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + 3, start + 3);
+        }, 10);
+    }
+};
+
+const insertCodeBlock = () => insertFormatting('<code>', '</code>', 'code');
+
+// Reference Dialog Management for Notes
+const showRefDialog = ref(false);
+const currentRefType = ref<'Refcheck' | 'Refurl' | 'cn'>('Refcheck');
+const tempRefParams = ref<Record<string, string>>({});
+
+const openRefDialog = (type: 'Refcheck' | 'Refurl' | 'cn') => {
+    currentRefType.value = type;
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (type === 'Refcheck') {
+        tempRefParams.value = { user: 'User', date: today, comment: '' };
+    } else if (type === 'Refurl') {
+        tempRefParams.value = { url: '', title: '', date: today, snippet: '' };
+    } else if (type === 'cn') {
+        tempRefParams.value = { date: today, reason: '' };
+    }
+    
+    showRefDialog.value = true;
+};
+
+const insertReference = () => {
+    const params = Object.entries(tempRefParams.value)
+        .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${k}=${v}`)
+        .join('|');
+    
+    const template = `{{${currentRefType.value}${params ? '|' + params : ''}}}`;
+    
+    const textarea = textareaRef.value?.$el as HTMLTextAreaElement;
+    if (!textarea) {
+        localValue.value += ' ' + template;
+    } else {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = localValue.value;
+        localValue.value = text.substring(0, start) + template + text.substring(end);
+        
+        setTimeout(() => {
+            textarea.focus();
+            const newCursorPos = start + template.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 10);
+    }
+    
+    showRefDialog.value = false;
+};
 </script>
 
 <template>
@@ -263,12 +397,155 @@ const tooltipText = computed(() => {
             </div>
         </div>
 
-        <!-- Note Editor (Standard) -->
-        <Textarea v-else v-model="localValue" rows="5" class="w-full" placeholder="Enter content here..." autoResize />
+        <!-- Note Editor with WYSIWYG Toolbar -->
+        <div v-else class="flex flex-col gap-3">
+            <Toolbar class="!p-2 !border !rounded">
+                <template #start>
+                    <div class="flex gap-1 flex-wrap">
+                        <Button 
+                            label="B"
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Bold (wikitext)'"
+                            @click="insertBold"
+                            class="!font-bold !min-w-[2rem]"
+                        />
+                        <Button 
+                            label="I"
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Italic (wikitext)'"
+                            @click="insertItalic"
+                            class="!italic !min-w-[2rem]"
+                        />
+                        <Button 
+                            icon="pi pi-link" 
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Wikilink'"
+                            @click="insertWikilink"
+                        />
+                        <div class="h-6 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                        <Button 
+                            icon="pi pi-list" 
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Bullet list'"
+                            @click="insertBulletList"
+                        />
+                        <Button 
+                            label="1."
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Numbered list'"
+                            @click="insertNumberedList"
+                            class="!min-w-[2rem]"
+                        />
+                        <Button 
+                            icon="pi pi-code" 
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            v-tooltip.top="'Code block'"
+                            @click="insertCodeBlock"
+                        />
+                        <div class="h-6 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                        <Button 
+                            icon="pi pi-check" 
+                            label="Refcheck"
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            @click="openRefDialog('Refcheck')"
+                        />
+                        <Button 
+                            icon="pi pi-external-link" 
+                            label="Refurl"
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            @click="openRefDialog('Refurl')"
+                        />
+                        <Button 
+                            icon="pi pi-question" 
+                            label="Citation"
+                            text 
+                            size="small" 
+                            severity="secondary"
+                            @click="openRefDialog('cn')"
+                        />
+                    </div>
+                </template>
+            </Toolbar>
+            <Textarea ref="textareaRef" v-model="localValue" rows="5" class="w-full" placeholder="Enter content here..." autoResize />
+        </div>
         
         <div class="flex justify-end gap-2">
           <Button label="Cancel" text @click="visible = false" />
           <Button label="Save" @click="save" />
+        </div>
+      </div>
+    </Dialog>
+
+    <!-- Reference Parameter Dialog for Notes -->
+    <Dialog v-model:visible="showRefDialog" :header="'Insert ' + (currentRefType === 'cn' ? 'Citation Needed' : currentRefType)" modal class="w-full max-w-md">
+      <div class="flex flex-col gap-3">
+        <!-- Refcheck Form -->
+        <div v-if="currentRefType === 'Refcheck'" class="flex flex-col gap-2">
+          <InputGroup>
+            <InputGroupAddon>User</InputGroupAddon>
+            <AutoComplete v-model="tempRefParams.user" :suggestions="userSuggestions" @complete="searchUser" placeholder="Username" class="w-full flex-1" />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Date</InputGroupAddon>
+            <InputText v-model="tempRefParams.date" placeholder="YYYY-MM-DD" />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Comment</InputGroupAddon>
+            <InputText v-model="tempRefParams.comment" placeholder="Optional comment" />
+          </InputGroup>
+        </div>
+
+        <!-- Refurl Form -->
+        <div v-if="currentRefType === 'Refurl'" class="flex flex-col gap-2">
+          <InputGroup>
+            <InputGroupAddon>URL</InputGroupAddon>
+            <InputText v-model="tempRefParams.url" placeholder="https://..." />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Title</InputGroupAddon>
+            <InputText v-model="tempRefParams.title" placeholder="Page Title" />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Date</InputGroupAddon>
+            <InputText v-model="tempRefParams.date" placeholder="YYYY-MM-DD" />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Snippet</InputGroupAddon>
+            <InputText v-model="tempRefParams.snippet" placeholder="Optional quote" />
+          </InputGroup>
+        </div>
+
+        <!-- Citation Needed Form -->
+        <div v-if="currentRefType === 'cn'" class="flex flex-col gap-2">
+          <InputGroup>
+            <InputGroupAddon>Date</InputGroupAddon>
+            <InputText v-model="tempRefParams.date" placeholder="YYYY-MM-DD" />
+          </InputGroup>
+          <InputGroup>
+            <InputGroupAddon>Reason</InputGroupAddon>
+            <InputText v-model="tempRefParams.reason" placeholder="Optional reason" />
+          </InputGroup>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <Button label="Cancel" text @click="showRefDialog = false" />
+          <Button label="Insert" @click="insertReference" />
         </div>
       </div>
     </Dialog>
