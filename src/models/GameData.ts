@@ -294,6 +294,55 @@ export interface SettingsInput {
     steamCursorDetection?: RatingValue;
     steamCursorDetectionNotes?: string;
     steamCursorDetectionRef?: string;
+    // New fields
+    directInputControllers?: RatingValue;
+    directInputControllersNotes?: string;
+    directInputControllersRef?: string;
+    directInputPrompts?: RatingValue;
+    directInputPromptsNotes?: string;
+    directInputPromptsRef?: string;
+    nintendoControllers?: RatingValue;
+    nintendoControllersNotes?: string;
+    nintendoControllersRef?: string;
+    nintendoControllerModels?: string;
+    nintendoPrompts?: RatingValue;
+    nintendoPromptsNotes?: string;
+    nintendoPromptsRef?: string;
+    nintendoButtonLayout?: RatingValue;
+    nintendoButtonLayoutNotes?: string;
+    nintendoButtonLayoutRef?: string;
+    nintendoMotionSensors?: RatingValue;
+    nintendoMotionSensorsNotes?: string;
+    nintendoMotionSensorsRef?: string;
+    nintendoMotionSensorsModes?: string;
+    nintendoConnectionModes?: string;
+    nintendoConnectionModesNotes?: string;
+    nintendoConnectionModesRef?: string;
+    trackedMotionPrompts?: RatingValue;
+    trackedMotionPromptsNotes?: string;
+    trackedMotionPromptsRef?: string;
+    peripheralDevices?: RatingValue;
+    peripheralDevicesNotes?: string;
+    peripheralDevicesRef?: string;
+    peripheralDeviceTypes?: string;
+    inputPromptOverride?: RatingValue;
+    inputPromptOverrideNotes?: string;
+    inputPromptOverrideRef?: string;
+    hapticFeedbackHd?: RatingValue;
+    hapticFeedbackHdNotes?: string;
+    hapticFeedbackHdRef?: string;
+    hapticFeedbackHdControllerModels?: string;
+    digitalMovementSupported?: RatingValue;
+    digitalMovementSupportedNotes?: string;
+    digitalMovementSupportedRef?: string;
+    steamHookInput?: RatingValue;
+    steamHookInputNotes?: string;
+    steamHookInputRef?: string;
+    steamInputPromptsIcons?: string;
+    steamInputPromptsStyles?: string;
+    steamInputPresets?: RatingValue;
+    steamInputPresetsNotes?: string;
+    steamInputPresetsRef?: string;
 }
 
 export interface SettingsAudio {
@@ -747,7 +796,22 @@ export const initialGameData: GameData = {
         controllerHotplug: 'unknown',
         hapticFeedback: 'unknown',
         simultaneousInput: 'unknown',
-        steamInput: 'unknown',
+        steamHookInput: 'unknown',
+        steamInput: 'unknown', // legacy or alias? Keeping for now but steamHookInput is the new one
+        steamInputPromptsIcons: '',
+        steamInputPromptsStyles: '',
+        steamInputPresets: 'unknown',
+        nintendoControllers: 'unknown',
+        nintendoPrompts: 'unknown',
+        nintendoButtonLayout: 'unknown',
+        nintendoMotionSensors: 'unknown',
+        trackedMotionPrompts: 'unknown',
+        peripheralDevices: 'unknown',
+        inputPromptOverride: 'unknown',
+        hapticFeedbackHd: 'unknown',
+        digitalMovementSupported: 'unknown',
+        directInputControllers: 'unknown',
+        directInputPrompts: 'unknown',
     },
     audio: {
         separateVolume: 'unknown',
