@@ -1,8 +1,8 @@
 import { GameData, initialGameData, CloudSync, SystemRequirementsOS } from '../models/GameData';
-import 'wikiparser-node';
+import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 
-const wiki = (globalThis as any).Parser as typeof Parser;
+const wiki = (globalThis as any).Parser as Parser;
 
 export function parseRaw(text: string) {
     return wiki.parse(text);
