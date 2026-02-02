@@ -15,7 +15,7 @@ import Checkbox from 'primevue/checkbox';
 import NotesButton from './NotesButton.vue';
 import { 
   Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, 
-  IdCard, ShoppingCart, ShoppingBag, Globe, Trash2, Plus, Terminal, Box 
+  IdCard, ShoppingCart, ShoppingBag, Globe, Trash2, Plus, Terminal, Box, Calendar 
 } from 'lucide-vue-next';
 
 // Search
@@ -334,7 +334,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     <div class="flex items-center justify-between gap-2">
                       <div class="text-xs font-bold">{{ dev.name }}</div>
                       <div class="flex items-center gap-1">
-                        <NotesButton :modelValue="dev.note" @update:modelValue="v => updateListParam('developers', index, 'note', v)" type="note" />
+                        <NotesButton :modelValue="dev.note" @update:modelValue="v => updateListParam('developers', index, 'note', v)" type="note" class="w-7 h-7" />
 
                         <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
                         <label class="text-[10px] uppercase font-bold text-surface-400 cursor-pointer">Porter</label>
@@ -366,7 +366,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-bold">{{ pub.name }}</div>
                         <div class="flex items-center gap-1">
-                           <NotesButton :modelValue="pub.note" @update:modelValue="v => updateListParam('publishers', index, 'note', v)" type="note" />
+                           <NotesButton :modelValue="pub.note" @update:modelValue="v => updateListParam('publishers', index, 'note', v)" type="note" class="w-7 h-7" />
 
                         </div>
                     </div>
@@ -397,7 +397,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     <div class="flex items-center justify-between gap-2">
                       <div class="text-xs font-bold">{{ eng.name }}</div>
                       <div class="flex items-center gap-1">
-                           <NotesButton :modelValue="eng.note" @update:modelValue="v => updateListParam('engines', index, 'note', v)" type="note" />
+                           <NotesButton :modelValue="eng.note" @update:modelValue="v => updateListParam('engines', index, 'note', v)" type="note" class="w-7 h-7" />
 
                         </div>
                     </div>
@@ -428,29 +428,39 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               </div>
               <div class="flex flex-col gap-3 p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50">
                 <div v-for="(rd, index) in structuredDates" :key="index" class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
-                  <div class="flex items-center justify-between gap-2">
-                    <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="flex-1" size="small" />
-                    <div class="flex items-center gap-1">
-
-                        <Button severity="danger" text @click="removeReleaseDate(index)" size="small">
-                            <template #icon><Trash2 class="w-4 h-4" /></template>
-                        </Button>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-1">
-                      <label class="text-[10px] uppercase font-bold text-surface-500">Release Date</label>
-                      <DatePicker v-model="rd.date" dateFormat="dd MM yy" placeholder="Select Date" class="w-full" size="small" />
-                      <div class="mt-1 flex items-center gap-2">
-                        <span class="text-[10px] text-surface-400">Or special:</span>
-                        <div class="flex gap-1 flex-wrap">
-                          <Button v-for="s in ['TBA', 'EA', 'Unknown', 'LC', 'Cancelled']" :key="s" :label="s" class="text-[9px] p-1" text severity="secondary" @click="rd.rawDate = s; rd.date = null" />
+                  <div class="flex items-center justify-between gap-3">
+                    <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small" />
+                    
+                    <div class="flex-1 relative">
+                        <InputText 
+                            v-model="rd.rawDate" 
+                            placeholder="Select date or type custom (e.g. TBA)" 
+                            class="w-full pr-10" 
+                            size="small"
+                            @update:model-value="rd.date = null"
+                        />
+                        <div class="absolute right-1 top-1/2 -translate-y-1/2">
+                            <Button severity="secondary" text rounded size="small" class="relative overflow-hidden w-8 h-8 !p-0">
+                                <Calendar class="w-4 h-4 text-surface-500" />
+                                <DatePicker 
+                                    v-model="rd.date" 
+                                    class="opacity-0 !absolute inset-0 w-full h-full p-0 !cursor-pointer" 
+                                    @update:model-value="(d) => { if(d instanceof Date) rd.rawDate = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }"
+                                />
+                            </Button>
                         </div>
-                      </div>
                     </div>
-                    <div class="flex flex-col gap-1">
-                      <label class="text-[10px] uppercase font-bold text-surface-500">Raw/Special Date</label>
-                      <InputText v-model="rd.rawDate" placeholder="e.g. TBA or Jan 2024" class="text-xs" />
+
+                    <Button severity="danger" variant="outlined" @click="removeReleaseDate(index)" size="small" class="!p-2">
+                        <template #icon><Trash2 class="w-5 h-5" /></template>
+                    </Button>
+                  </div>
+                  <div class="flex flex-col gap-1.5 pt-1 border-t border-surface-100 dark:border-surface-700/50">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-[10px] uppercase font-bold text-surface-400 whitespace-nowrap">Special:</span>
+                      <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
+                        <Button v-for="s in ['TBA', 'EA', 'Unknown', 'LC', 'Cancelled']" :key="s" :label="s" class="text-[9px] !px-2 !py-0.5" :variant="rd.rawDate === s ? 'filled' : 'outlined'" severity="secondary" @click="rd.rawDate = s; rd.date = null" />
+                      </div>
                     </div>
                   </div>
                 </div>

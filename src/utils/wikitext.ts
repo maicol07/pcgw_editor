@@ -145,6 +145,22 @@ export class PCGWEditor {
 
         this.updateInfoboxList('developers', infobox.developers);
         this.updateInfoboxList('publishers', infobox.publishers);
+        this.updateInfoboxList('engines', infobox.engines);
+        this.updateReleaseDates(infobox.releaseDates);
+    }
+
+    private updateReleaseDates(dates: any[]) {
+        if (!dates || dates.length === 0) return;
+
+        // Formato: {{Infobox game/row/date|Platform|Date|ref=...}}
+        const listContent = dates.map(d => {
+            let row = `{{Infobox game/row/date|${d.platform}|${d.date}`;
+            if (d.ref) row += `|ref=${d.ref}`;
+            row += `}}`;
+            return row;
+        }).join('');
+
+        this.parser.replaceParameterContent('Infobox game', 'release dates', listContent);
     }
 
     // ... private updateInfoboxList ... (kept as is, but needing to be preserved)
