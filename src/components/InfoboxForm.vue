@@ -335,7 +335,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                       <div class="text-xs font-bold">{{ dev.name }}</div>
                       <div class="flex items-center gap-1">
                         <NotesButton :modelValue="dev.note" @update:modelValue="v => updateListParam('developers', index, 'note', v)" type="note" />
-                        <NotesButton :modelValue="dev.ref" @update:modelValue="v => updateListParam('developers', index, 'ref', v)" type="ref" />
+
                         <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
                         <label class="text-[10px] uppercase font-bold text-surface-400 cursor-pointer">Porter</label>
                         <Checkbox :modelValue="dev.type === 'porter'" @update:modelValue="v => updateListParam('developers', index, 'type', v ? 'porter' : 'developer')" :binary="true" />
@@ -367,7 +367,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                         <div class="text-xs font-bold">{{ pub.name }}</div>
                         <div class="flex items-center gap-1">
                            <NotesButton :modelValue="pub.note" @update:modelValue="v => updateListParam('publishers', index, 'note', v)" type="note" />
-                           <NotesButton :modelValue="pub.ref" @update:modelValue="v => updateListParam('publishers', index, 'ref', v)" type="ref" />
+
                         </div>
                     </div>
                     <div class="flex flex-col gap-1">
@@ -398,7 +398,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                       <div class="text-xs font-bold">{{ eng.name }}</div>
                       <div class="flex items-center gap-1">
                            <NotesButton :modelValue="eng.note" @update:modelValue="v => updateListParam('engines', index, 'note', v)" type="note" />
-                           <NotesButton :modelValue="eng.ref" @update:modelValue="v => updateListParam('engines', index, 'ref', v)" type="ref" />
+
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -431,7 +431,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                   <div class="flex items-center justify-between gap-2">
                     <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="flex-1" size="small" />
                     <div class="flex items-center gap-1">
-                        <NotesButton v-model="rd.ref" type="ref" />
+
                         <Button severity="danger" text @click="removeReleaseDate(index)" size="small">
                             <template #icon><Trash2 class="w-4 h-4" /></template>
                         </Button>
@@ -484,7 +484,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.monetization.note" @update:modelValue="v => updateTaxonomyParam('monetization', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.monetization.ref" @update:modelValue="v => updateTaxonomyParam('monetization', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -504,7 +504,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.microtransactions.note" @update:modelValue="v => updateTaxonomyParam('microtransactions', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.microtransactions.ref" @update:modelValue="v => updateTaxonomyParam('microtransactions', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -524,7 +524,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.modes.note" @update:modelValue="v => updateTaxonomyParam('modes', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.modes.ref" @update:modelValue="v => updateTaxonomyParam('modes', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -546,7 +546,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.pacing.note" @update:modelValue="v => updateTaxonomyParam('pacing', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.pacing.ref" @update:modelValue="v => updateTaxonomyParam('pacing', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -566,7 +566,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.perspectives.note" @update:modelValue="v => updateTaxonomyParam('perspectives', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.perspectives.ref" @update:modelValue="v => updateTaxonomyParam('perspectives', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -586,7 +586,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.controls.note" @update:modelValue="v => updateTaxonomyParam('controls', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.controls.ref" @update:modelValue="v => updateTaxonomyParam('controls', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -608,7 +608,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.genres.note" @update:modelValue="v => updateTaxonomyParam('genres', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.genres.ref" @update:modelValue="v => updateTaxonomyParam('genres', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -628,7 +628,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                      <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.sports.note" @update:modelValue="v => updateTaxonomyParam('sports', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.sports.ref" @update:modelValue="v => updateTaxonomyParam('sports', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -648,7 +648,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.vehicles.note" @update:modelValue="v => updateTaxonomyParam('vehicles', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.vehicles.ref" @update:modelValue="v => updateTaxonomyParam('vehicles', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -670,7 +670,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.artStyles.note" @update:modelValue="v => updateTaxonomyParam('artStyles', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.artStyles.ref" @update:modelValue="v => updateTaxonomyParam('artStyles', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -690,7 +690,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.themes.note" @update:modelValue="v => updateTaxonomyParam('themes', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.themes.ref" @update:modelValue="v => updateTaxonomyParam('themes', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 
@@ -710,7 +710,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.series.note" @update:modelValue="v => updateTaxonomyParam('series', 'note', v)" type="note" />
-                        <NotesButton :modelValue="modelValue.taxonomy.series.ref" @update:modelValue="v => updateTaxonomyParam('series', 'ref', v)" type="ref" />
+
                     </div>
                 </div>
                 <AutocompleteField 

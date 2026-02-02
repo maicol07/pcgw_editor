@@ -125,7 +125,7 @@ defineProps<{
                <div class="flex items-center justify-between border-b pb-1 mb-1">
                    <div class="font-bold flex items-center gap-2"><AppWindow class="w-4 h-4" /> Windows</div>
                    <div class="flex gap-1">
-                       <NotesButton v-model="api.windowsRef" type="ref" />
+
                        <NotesButton v-model="api.windowsNotes" type="note" />
                    </div>
                </div>
@@ -141,7 +141,7 @@ defineProps<{
                 <div class="flex items-center justify-between border-b pb-1 mb-1">
                     <div class="font-bold flex items-center gap-2"><AppWindow class="w-4 h-4" /> macOS / OS X</div>
                     <div class="flex gap-1">
-                        <NotesButton v-model="api.macOsAppRef" type="ref" />
+
                         <NotesButton v-model="api.macOsAppNotes" type="note" />
                     </div>
                 </div>
@@ -158,7 +158,7 @@ defineProps<{
                 <div class="flex items-center justify-between border-b pb-1 mb-1">
                     <div class="font-bold flex items-center gap-2"><AppWindow class="w-4 h-4" /> Classic Mac OS</div>
                     <div class="flex gap-1">
-                        <NotesButton v-model="api.macOsRef" type="ref" />
+
                         <NotesButton v-model="api.macOsNotes" type="note" />
                     </div>
                 </div>
@@ -173,7 +173,7 @@ defineProps<{
                 <div class="flex items-center justify-between border-b pb-1 mb-1">
                     <div class="font-bold flex items-center gap-2"><Terminal class="w-4 h-4" /> Linux</div>
                     <div class="flex gap-1">
-                        <NotesButton v-model="api.linuxRef" type="ref" />
+
                         <NotesButton v-model="api.linuxNotes" type="note" />
                     </div>
                 </div>
