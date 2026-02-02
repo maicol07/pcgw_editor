@@ -42,11 +42,11 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import { GoogleGenAI } from '@google/genai';
 import { 
-  Menu, Loader2, FileEdit, ChevronsDown, ChevronsUp, Search, 
+  Menu, Loader2, ChevronsDown, ChevronsUp, Search, 
   File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle, 
   Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, 
   TriangleAlert, Settings, Cpu, Globe, List, Key, Trash, X, Check,
-  Share2, Sparkles, Copy
+  Sparkles, Copy, Wand2
 } from 'lucide-vue-next';
 import iconBulletDocument from './assets/icons/bullet-document.svg';
 import { reactive, provide } from 'vue';
@@ -415,6 +415,13 @@ const panelState = reactive({
     general: true,
 });
 
+// Panel Visibility for Search (Default all visible)
+const panelVisibility = reactive<Record<string, boolean>>({});
+// Initialize visibility
+Object.keys(panelState).forEach(key => {
+    panelVisibility[key] = true;
+});
+
 // Lazy rendering - only render panel content if expanded or has been expanded
 const panelsRendered = ref<Record<string, boolean>>({});
 
@@ -442,28 +449,45 @@ provide('uiBus', uiBus);
 const searchQuery = ref('');
 const performSearch = () => {
     const q = searchQuery.value.toLowerCase();
-    if (!q) return;
+    
+    // If query is empty/short, show all and don't change collapse state
+    if (!q || q.length < 2) {
+        Object.keys(panelVisibility).forEach(k => panelVisibility[k] = true);
+        return;
+    }
     
     // Map keywords to panels
     const keywords: Record<string, string[]> = {
+        articleState: ['stub', 'cleanup', 'delete', 'state', 'disambig'],
         infobox: ['cover', 'developer', 'publisher', 'engine', 'genre', 'taxonomy'],
-        video: ['resolution', 'fps', 'widescreen', 'hdr', 'ray tracing', 'fov'],
-        input: ['mouse', 'keyboard', 'controller', 'remap', 'bind'],
-        audio: ['surround', 'volume', 'voice', 'mute'],
-        network: ['multiplayer', 'server', 'p2p', 'crossplay'],
-        vr: ['hmd', 'trackir', 'oculus', 'vive'],
-        systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os'],
-        availability: ['store', 'drm', 'launcher'],
-        // ... add more as needed
+        introduction: ['introduction', 'release history', 'current state', 'title'],
+        availability: ['store', 'drm', 'launcher', 'steam', 'gog', 'notes'],
+        monetization: ['ad-supported', 'dlc', 'expansion', 'freeware', 'free-to-play', 'purchase', 'subscription', 'microtransactions', 'loot box'],
+        dlc: ['dlc', 'expansions'],
+        essentialImprovements: ['essential', 'improvements', 'patches', 'mods'],
+        gameData: ['config', 'save', 'cloud', 'path', 'location'],
+        video: ['resolution', 'fps', 'widescreen', 'hdr', 'ray tracing', 'fov', 'windowed', 'borderless', 'upscaling', 'framegen'],
+        input: ['mouse', 'keyboard', 'controller', 'remap', 'bind', 'touchscreen', 'haptic', 'ps4', 'ps5', 'xbox'],
+        audio: ['surround', 'volume', 'voice', 'mute', 'subtitles', 'captions', 'royalty free'],
+        network: ['multiplayer', 'server', 'p2p', 'crossplay', 'lan', 'online', 'matchmaking'],
+        vr: ['hmd', 'trackir', 'oculus', 'vive', 'steamvr', 'openxr'],
+        issues: ['issues', 'fixes', 'bugs', 'crash', 'freeze'],
+        other: ['api', 'middleware', 'directx', 'vulkan', 'opengl', 'physics', 'anticheat'],
+        systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os', 'windows', 'linux', 'mac'],
+        l10n: ['localization', 'language', 'dubbing', 'subtitles', 'ui'],
+        general: ['general', 'info'],
     };
 
-    // Simple search: check keys and keywords
+    // Check keys and keywords
     Object.keys(panelState).forEach(key => {
         const matchKey = key.toLowerCase().includes(q);
         const matchKeywords = keywords[key]?.some(k => k.includes(q)) ?? false;
         
         if (matchKey || matchKeywords) {
             (panelState as any)[key] = false; // Expand matches
+            panelVisibility[key] = true;      // Show matches
+        } else {
+            panelVisibility[key] = false;     // Hide non-matches
         }
     });
 };
@@ -471,7 +495,7 @@ const performSearch = () => {
 provide('searchQuery', searchQuery);
 
 watch(searchQuery, (val) => {
-    if (val.length > 2) performSearch();
+    performSearch();
 });
 
 </script>
@@ -498,12 +522,12 @@ watch(searchQuery, (val) => {
                         @click="generateShareSummary" 
                         severity="secondary" 
                         class="!text-xs !px-2 !py-1 hover-scale"
-                        v-tooltip.bottom="'Generate share summary'"
+                        v-tooltip.bottom="'Generate summary'"
                         :disabled="isGeneratingSummary"
                     >
                         <template #icon>
                             <Loader2 v-if="isGeneratingSummary" class="w-4 h-4 animate-spin" />
-                            <FileEdit v-else class="w-4 h-4" />
+                            <Wand2 v-else class="w-4 h-4" />
                         </template>
                     </Button>
                 </div>
@@ -569,7 +593,7 @@ watch(searchQuery, (val) => {
                   </div>
               </div>
 
-              <Panel toggleable v-model:collapsed="panelState.articleState" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.articleState" v-show="panelVisibility.articleState" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <File class="text-primary-500 w-4 h-4" />
@@ -579,7 +603,7 @@ watch(searchQuery, (val) => {
                   <StateForm v-if="panelsRendered.articleState" v-model="gameData.articleState" :gameData="gameData" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.infobox" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.infobox" v-show="panelVisibility.infobox" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Info class="text-accent-teal-500 w-4 h-4" />
@@ -589,7 +613,7 @@ watch(searchQuery, (val) => {
                   <InfoboxForm v-if="panelsRendered.infobox" v-model="gameData.infobox" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.introduction" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.introduction" v-show="panelVisibility.introduction" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <AlignLeft class="text-accent-orange-500 w-4 h-4" />
@@ -624,7 +648,7 @@ watch(searchQuery, (val) => {
                 </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.availability" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.availability" v-show="panelVisibility.availability" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <ShoppingCart class="text-accent-emerald-500 w-4 h-4" />
@@ -634,7 +658,7 @@ watch(searchQuery, (val) => {
                 <AvailabilityForm v-model="gameData.availability" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.monetization" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.monetization" v-show="panelVisibility.monetization" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <DollarSign class="text-accent-orange-500 w-4 h-4" />
@@ -644,7 +668,7 @@ watch(searchQuery, (val) => {
                 <MonetizationForm :monetization="gameData.monetization" :microtransactions="gameData.microtransactions" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.dlc" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.dlc" v-show="panelVisibility.dlc" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <PlusCircle class="text-primary-600 w-4 h-4" />
@@ -654,7 +678,7 @@ watch(searchQuery, (val) => {
                 <DLCForm v-model="gameData.dlc" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.essentialImprovements" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.essentialImprovements" v-show="panelVisibility.essentialImprovements" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Star class="text-yellow-500 w-4 h-4" />
@@ -664,7 +688,7 @@ watch(searchQuery, (val) => {
                   <EssentialImprovementsForm v-model="gameData.essentialImprovements" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.gameData" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.gameData" v-show="panelVisibility.gameData" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Save class="text-indigo-500 w-4 h-4" />
@@ -674,7 +698,7 @@ watch(searchQuery, (val) => {
                   <GameDataForm :config="gameData.config" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.video" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.video" v-show="panelVisibility.video" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Monitor class="text-blue-500 w-4 h-4" />
@@ -687,7 +711,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.input" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.input" v-show="panelVisibility.input" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Keyboard class="w-4 h-4" />
@@ -700,7 +724,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.audio" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.audio" v-show="panelVisibility.audio" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Volume2 class="w-4 h-4" />
@@ -713,7 +737,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.network" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.network" v-show="panelVisibility.network" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Wifi class="w-4 h-4" />
@@ -726,7 +750,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.vr" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.vr" v-show="panelVisibility.vr" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Eye class="w-4 h-4" />
@@ -739,7 +763,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.issues" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.issues" v-show="panelVisibility.issues" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <TriangleAlert class="w-4 h-4" />
@@ -752,7 +776,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.other" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.other" v-show="panelVisibility.other" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Settings class="w-4 h-4" />
@@ -766,7 +790,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.systemReq" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.systemReq" v-show="panelVisibility.systemReq" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Cpu class="w-4 h-4" />
@@ -779,7 +803,7 @@ watch(searchQuery, (val) => {
                   </div>
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.l10n" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.l10n" v-show="panelVisibility.l10n" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <Globe class="w-4 h-4" />
@@ -789,7 +813,7 @@ watch(searchQuery, (val) => {
                   <LocalizationsForm :localizations="gameData.localizations" />
               </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.general" class="panel-modern shadow-soft hover-lift">
+              <Panel toggleable v-model:collapsed="panelState.general" v-show="panelVisibility.general" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
                           <List class="w-4 h-4" />
@@ -940,9 +964,8 @@ watch(searchQuery, (val) => {
     <Dialog v-model:visible="shareSummaryVisible" modal :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
         <template #header>
             <div class="flex items-center gap-2">
-                <Share2 class="text-primary-500 w-5 h-5" />
-                <span class="font-bold text-lg">Share Summary</span>
-                <Sparkles v-if="geminiApiKey" class="text-primary-500 w-4 h-4 ml-1" title="AI-Generated" />
+                <Sparkles class="text-primary-500 w-5 h-5" />
+                <span class="font-bold text-lg">Generate AI Summary</span>
             </div>
         </template>
         
