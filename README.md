@@ -1,6 +1,11 @@
 # PCGamingWiki Editor
 
+
 A modern, two-pane visual editor for PCGamingWiki articles with live preview functionality.
+
+> [!TIP]
+> **Edge Version**: You can try the latest version (updated on every commit) at [pcgw-editor.vercel.app](https://pcgw-editor.vercel.app/).
+
 
 ## About This Project
 
