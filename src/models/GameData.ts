@@ -644,14 +644,22 @@ export interface MiddlewareRow {
     notes?: string;
 }
 
+// Simplified Middleware (Value + Notes)
 export interface GameMiddleware {
-    physics: MiddlewareRow[];
-    audio: MiddlewareRow[];
-    interface: MiddlewareRow[];
-    input: MiddlewareRow[];
-    cutscenes: MiddlewareRow[];
-    multiplayer: MiddlewareRow[];
-    anticheat: MiddlewareRow[];
+    physics: string;
+    physicsNotes?: string;
+    audio: string;
+    audioNotes?: string;
+    interface: string;
+    interfaceNotes?: string;
+    input: string;
+    inputNotes?: string;
+    cutscenes: string;
+    cutscenesNotes?: string;
+    multiplayer: string;
+    multiplayerNotes?: string;
+    anticheat: string;
+    anticheatNotes?: string;
 }
 
 export interface GalleryImage {
@@ -899,13 +907,13 @@ export const initialGameData: GameData = {
         linuxNotes: '',
     },
     middleware: {
-        physics: [],
-        audio: [],
-        interface: [],
-        input: [],
-        cutscenes: [],
-        multiplayer: [],
-        anticheat: [],
+        physics: 'unknown',
+        audio: 'unknown',
+        interface: 'unknown',
+        input: 'unknown',
+        cutscenes: 'unknown',
+        multiplayer: 'unknown',
+        anticheat: 'unknown',
     },
     config: {
         configFiles: [

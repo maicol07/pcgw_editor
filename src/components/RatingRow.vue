@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Select from 'primevue/select';
+import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import NotesButton from './NotesButton.vue';
@@ -23,6 +24,7 @@ const props = defineProps<{
   icon?: any;
   title?: string;
   compact?: boolean;
+  freeText?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ const ratingOptions = computed(() => props.options || defaultOptions);
 
 // Compute styles based on value for visual feedback
 const statusColor = computed(() => {
+  if (props.freeText) return 'text-surface-600 dark:text-surface-400';
   switch (props.value) {
     case 'true': return 'text-green-600 dark:text-green-400';
     case 'false': return 'text-red-600 dark:text-red-400';
@@ -67,7 +70,17 @@ const getIconSrc = (val: string) => {
         <component v-if="icon" :is="icon" class="w-4 h-4" />
         <span class="truncate">{{ label }}</span>
       </InputGroupAddon>
+      
+      <InputText 
+        v-if="freeText" 
+        :modelValue="value" 
+        @update:modelValue="emit('update:value', $event || '')" 
+        class="w-full rounded-none! border-l-0! border-r-0!"
+        :placeholder="label + '...'"
+      />
+      
       <Select 
+        v-else
         :modelValue="value" 
         @update:modelValue="emit('update:value', $event)" 
         :options="ratingOptions" 

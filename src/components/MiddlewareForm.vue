@@ -1,67 +1,28 @@
 <script setup lang="ts">
-import { GameMiddleware, MiddlewareRow } from '../models/GameData';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
+import { GameMiddleware } from '../models/GameData';
+import RatingRow from './RatingRow.vue';
 import Panel from 'primevue/panel';
-import { Trash2, Plus } from 'lucide-vue-next';
+import { 
+  Zap, Volume2, Layout, Gamepad2, Film, Users, Shield
+} from 'lucide-vue-next';
 
-const props = defineProps<{
+defineProps<{
   middleware: GameMiddleware;
 }>();
-
-const middlewareTypes = [
-  { key: 'physics', label: 'Physics' },
-  { key: 'audio', label: 'Audio' },
-  { key: 'interface', label: 'Interface' },
-  { key: 'input', label: 'Input' },
-  { key: 'cutscenes', label: 'Cutscenes' },
-  { key: 'multiplayer', label: 'Multiplayer' },
-  { key: 'anticheat', label: 'Anticheat' },
-] as const;
-
-const addRow = (type: keyof GameMiddleware) => {
-  props.middleware[type].push({
-    name: '',
-    notes: ''
-  });
-};
-
-const removeRow = (type: keyof GameMiddleware, index: number) => {
-  props.middleware[type].splice(index, 1);
-};
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <Panel v-for="type in middlewareTypes" :key="type.key" :header="type.label" toggleable collapsed>
-      <div v-if="middleware[type.key].length === 0" class="text-sm text-surface-500 italic mb-4">
-        No {{ type.label.toLowerCase() }} middleware added.
+    <Panel header="Middleware" toggleable>
+      <div class="flex flex-col gap-2">
+        <RatingRow :icon="Zap" label="Physics" v-model:value="middleware.physics" v-model:notes="middleware.physicsNotes" free-text />
+        <RatingRow :icon="Volume2" label="Audio" v-model:value="middleware.audio" v-model:notes="middleware.audioNotes" free-text />
+        <RatingRow :icon="Layout" label="Interface" v-model:value="middleware.interface" v-model:notes="middleware.interfaceNotes" free-text />
+        <RatingRow :icon="Gamepad2" label="Input" v-model:value="middleware.input" v-model:notes="middleware.inputNotes" free-text />
+        <RatingRow :icon="Film" label="Cutscenes" v-model:value="middleware.cutscenes" v-model:notes="middleware.cutscenesNotes" free-text />
+        <RatingRow :icon="Users" label="Multiplayer" v-model:value="middleware.multiplayer" v-model:notes="middleware.multiplayerNotes" free-text />
+        <RatingRow :icon="Shield" label="Anticheat" v-model:value="middleware.anticheat" v-model:notes="middleware.anticheatNotes" free-text />
       </div>
-      
-      <div v-for="(row, index) in middleware[type.key]" :key="index" class="p-4 mb-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-4">
-        <div class="flex justify-between items-center">
-             <div class="font-bold text-sm">#{{ index + 1 }}</div>
-             <Button severity="danger" text @click="removeRow(type.key, index)" size="small">
-                <template #icon><Trash2 class="w-4 h-4" /></template>
-             </Button>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col gap-2">
-                <label class="text-sm">Name</label>
-                <InputText v-model="row.name" placeholder="Name of middleware..." />
-            </div>
-            
-            <div class="flex flex-col gap-2">
-                 <label class="text-sm">Notes</label>
-                 <InputText v-model="row.notes" placeholder="Optional notes..." />
-            </div>
-        </div>
-      </div>
-      
-      <Button label="Add Middleware" size="small" @click="addRow(type.key)">
-        <template #icon><Plus class="w-4 h-4" /></template>
-      </Button>
     </Panel>
   </div>
 </template>

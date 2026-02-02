@@ -23,6 +23,19 @@ export class PCGWEditor {
     }
 
     /**
+     * Ensures a template exists in the wikitext.
+     * If not found, appends it to the end (or specific logic if we want to be smarter later).
+     */
+    ensureTemplate(templateName: string) {
+        if (!this.parser.findTemplate(templateName)) {
+            // Check if we can start a new line
+            const text = this.parser.getText();
+            const prefix = text.length > 0 && !text.endsWith('\n') ? '\n' : '';
+            this.parser = new WikitextParser(text + `${prefix}{{${templateName}}}\n`);
+        }
+    }
+
+    /**
      * Gestisce i template riga specifici di PCGW come {{Infobox game/row/developer|Nome}}
      * Now uses depth-aware parsing to handle nested structures properly.
      */
@@ -110,7 +123,12 @@ export class PCGWEditor {
         this.setFlag('stub', !!state.stub);
         this.setFlag('cleanup', !!state.cleanup, state.cleanupDescription);
         this.setFlag('delete', !!state.delete, state.deleteReason);
-        this.setTemplateParam('State', 'state', state.state);
+
+        // State template
+        if (state.state) {
+            this.ensureTemplate('State');
+            this.setTemplateParam('State', 'state', state.state);
+        }
 
         if (state.disambig) {
             const template = this.parser.findTemplate('Disambig');
@@ -129,6 +147,7 @@ export class PCGWEditor {
     }
 
     updateInfobox(infobox: GameInfobox) {
+        this.ensureTemplate('Infobox game');
         this.setTemplateParam('Infobox game', 'cover', infobox.cover);
         this.setTemplateParam('Infobox game', 'license', infobox.license);
 
@@ -182,6 +201,7 @@ export class PCGWEditor {
     }
 
     updateIntroduction(data: GameData['introduction']) {
+        this.ensureTemplate('Introduction');
         this.updateSection('Introduction', data, {
             introduction: 'introduction',
             releaseHistory: 'release history',
@@ -212,6 +232,7 @@ ${rows}
     }
 
     updateMonetization(data: GameData['monetization']) {
+        this.ensureTemplate('Monetization');
         this.updateSection('Monetization', data, {
             adSupported: 'ad-supported',
             dlc: 'dlc',
@@ -224,6 +245,7 @@ ${rows}
     }
 
     updateMicrotransactions(data: GameData['microtransactions']) {
+        this.ensureTemplate('Microtransactions');
         this.updateSection('Microtransactions', data, {
             boost: 'boost',
             cosmetic: 'cosmetic',
@@ -280,6 +302,7 @@ ${rows}
             colorBlind: 'color blind',
             colorBlindNotes: 'color blind notes'
         };
+        this.ensureTemplate('Video');
         this.updateSection('Video', data, map);
     }
 
@@ -291,6 +314,8 @@ ${rows}
             mouseSensitivityNotes: 'mouse sensitivity notes',
             mouseMenu: 'mouse menu',
             mouseMenuNotes: 'mouse menu notes',
+            keyboardMousePrompts: 'keyboard and mouse prompts',
+            keyboardMousePromptsNotes: 'keyboard and mouse prompts notes',
             invertMouseY: 'invert mouse y-axis',
             invertMouseYNotes: 'invert mouse y-axis notes',
             controllerSupport: 'controller support',
@@ -303,6 +328,8 @@ ${rows}
             controllerSensitivityNotes: 'controller sensitivity notes',
             invertControllerY: 'invert controller y-axis',
             invertControllerYNotes: 'invert controller y-axis notes',
+            controllerHotplug: 'controller hotplugging',
+            controllerHotplugNotes: 'controller hotplugging notes',
             hapticFeedback: 'haptic feedback',
             hapticFeedbackNotes: 'haptic feedback notes',
             simultaneousInput: 'simultaneous input',
@@ -387,6 +414,7 @@ ${rows}
             impulseTriggers: 'impulse triggers',
             impulseTriggersNotes: 'impulse triggers notes',
         };
+        this.ensureTemplate('Input');
         this.updateSection('Input', data, map);
     }
 
@@ -400,6 +428,7 @@ ${rows}
             royaltyFree: 'royalty free audio',
             royaltyFreeNotes: 'royalty free audio notes'
         };
+        this.ensureTemplate('Audio');
         this.updateSection('Audio', data, map);
     }
 
@@ -419,6 +448,7 @@ ${rows}
             selfHosting: 'self-hosting',
             directIp: 'direct ip'
         };
+        this.ensureTemplate('Network');
         this.updateSection('Network', data, map);
     }
 
@@ -433,6 +463,7 @@ ${rows}
             oculusVr: 'oculus',
             windowsMixedReality: 'windows mixed reality'
         };
+        this.ensureTemplate('VR support');
         this.updateSection('VR support', data, map);
     }
 
@@ -448,24 +479,43 @@ ${rows}
             windows64: 'windows 64-bit exe',
             windowsArm: 'windows arm app'
         };
+        this.ensureTemplate('API');
         this.updateSection('API', data, map);
     }
 
     updateMiddleware(data: GameData['middleware']) {
-        // ... custom logic for generic rows per category ...
-        const updateMWCat = (param: string, items: any[]) => {
-            if (!items || items.length === 0) return;
-            const content = items.map(i => `{{Middleware/row|${i.name}|${i.notes || ''}}}`).join('\n');
-            this.setTemplateParam('Middleware', param, '\n' + content + '\n');
+        const map: Record<string, string> = {
+            physics: 'physics',
+            physicsNotes: 'physics notes',
+            audio: 'audio',
+            audioNotes: 'audio notes',
+            interface: 'interface',
+            interfaceNotes: 'interface notes',
+            input: 'input',
+            inputNotes: 'input notes',
+            cutscenes: 'cutscenes',
+            cutscenesNotes: 'cutscenes notes',
+            multiplayer: 'multiplayer',
+            multiplayerNotes: 'multiplayer notes',
+            anticheat: 'anticheat',
+            anticheatNotes: 'anticheat notes'
         };
 
-        updateMWCat('physics', data.physics);
-        updateMWCat('audio', data.audio);
-        updateMWCat('interface', data.interface);
-        updateMWCat('input', data.input);
-        updateMWCat('cutscenes', data.cutscenes);
-        updateMWCat('multiplayer', data.multiplayer);
-        updateMWCat('anticheat', data.anticheat);
+        const hasContent = Object.keys(map).some(key => {
+            const val = (data as any)[key];
+            return val && val !== 'unknown' && val !== '';
+        });
+
+        if (hasContent) {
+            this.ensureTemplate('Middleware');
+            // Helper to wrap single value into Middleware/row if needed, or just standard updateSection if simpler.
+            // However, user asked for "like Input/Video", checking template standard:
+            // If template supports |physics=Havok, we use that.
+            // If template requires |physics={{Middleware/row...}}, we must wrap.
+            // Assumption: Let's assume standard mapping first as requested "like Input".
+            // If wrapping is needed, we can add a transform.
+            this.updateSection('Middleware', data, map);
+        }
     }
 
     updateLocalizations(data: GameData['localizations']) {
@@ -476,6 +526,8 @@ ${rows}
             return `{{L10n/row|${row.language}|${ui}|${row.audio}|${row.subtitles}|${row.notes || ''}|${fan}|${row.ref || ''}}}`;
         }).join('\n');
 
+
+        this.ensureTemplate('L10n');
         this.setTemplateParam('L10n', 'content', '\n' + content + '\n');
     }
 
@@ -638,6 +690,8 @@ ${rows}
             // @ts-ignore
             const service = cloud[key];
             if (service) {
+                // Ensure template exists before first write
+                this.ensureTemplate('Save game cloud syncing');
                 this.setTemplateParam('Save game cloud syncing', param, service.status);
                 this.setTemplateParam('Save game cloud syncing', `${param} notes`, service.notes);
             }

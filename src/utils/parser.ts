@@ -469,8 +469,12 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.fullControllerNotes = getParam(input, 'full controller notes');
         data.input.controllerRemap = getParam(input, 'controller remap') as any;
         data.input.controllerRemapNotes = getParam(input, 'controller remap notes');
+        data.input.controllerSensitivity = getParam(input, 'controller sensitivity') as any;
+        data.input.controllerSensitivityNotes = getParam(input, 'controller sensitivity notes');
         data.input.invertControllerY = getParam(input, 'invert controller y-axis') as any;
         data.input.invertControllerYNotes = getParam(input, 'invert controller y-axis notes');
+        data.input.controllerHotplug = getParam(input, 'controller hotplugging') as any;
+        data.input.controllerHotplugNotes = getParam(input, 'controller hotplugging notes');
         data.input.hapticFeedback = getParam(input, 'haptic feedback') as any;
         data.input.hapticFeedbackNotes = getParam(input, 'haptic feedback notes');
         // ... missing fields can be mapped here as needed
@@ -482,8 +486,90 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.trackedMotionControllers = getParam(input, 'tracked motion controllers') as any;
         data.input.trackedMotionControllersNotes = getParam(input, 'tracked motion controllers notes');
 
+        data.input.keyboardMousePrompts = getParam(input, 'keyboard and mouse prompts') as any;
+        data.input.keyboardMousePromptsNotes = getParam(input, 'keyboard and mouse prompts notes');
         data.input.touchscreen = getParam(input, 'touchscreen') as any;
         data.input.touchscreenNotes = getParam(input, 'touchscreen notes');
+
+        // New Input Mappings
+        data.input.accelerationOption = getParam(input, 'acceleration option') as any;
+        data.input.accelerationOptionNotes = getParam(input, 'acceleration option notes');
+        data.input.xinputControllers = getParam(input, 'xinput controllers') as any;
+        data.input.xinputControllersNotes = getParam(input, 'xinput controllers notes');
+        data.input.xboxPrompts = getParam(input, 'xbox prompts') as any;
+        data.input.xboxPromptsNotes = getParam(input, 'xbox prompts notes');
+        data.input.impulseTriggers = getParam(input, 'impulse triggers') as any;
+        data.input.impulseTriggersNotes = getParam(input, 'impulse triggers notes');
+
+        data.input.playstationPrompts = getParam(input, 'playstation prompts') as any;
+        data.input.playstationPromptsNotes = getParam(input, 'playstation prompts notes');
+        data.input.playstationControllerModels = getParam(input, 'playstation controller models');
+        data.input.playstationConnectionModes = getParam(input, 'playstation connection modes');
+        data.input.playstationConnectionModesNotes = getParam(input, 'playstation connection modes notes');
+        data.input.playstationMotionSensors = getParam(input, 'playstation motion sensors') as any;
+        data.input.playstationMotionSensorsNotes = getParam(input, 'playstation motion sensors notes');
+        data.input.playstationMotionSensorsModes = getParam(input, 'playstation motion sensors modes');
+
+        data.input.dualSenseAdaptiveTrigger = getParam(input, 'dualsense adaptive trigger support') as any;
+        data.input.dualSenseAdaptiveTriggerNotes = getParam(input, 'dualsense adaptive trigger support notes');
+        data.input.dualSenseHaptics = getParam(input, 'dualsense haptics support') as any;
+        data.input.dualSenseHapticsNotes = getParam(input, 'dualsense haptics support notes');
+
+        data.input.nintendoControllers = getParam(input, 'nintendo controllers') as any;
+        data.input.nintendoControllersNotes = getParam(input, 'nintendo controllers notes');
+        data.input.nintendoControllerModels = getParam(input, 'nintendo controller models');
+        data.input.nintendoPrompts = getParam(input, 'nintendo prompts') as any;
+        data.input.nintendoPromptsNotes = getParam(input, 'nintendo prompts notes');
+        data.input.nintendoButtonLayout = getParam(input, 'nintendo button layout') as any;
+        data.input.nintendoButtonLayoutNotes = getParam(input, 'nintendo button layout notes');
+        data.input.nintendoMotionSensors = getParam(input, 'nintendo motion sensors') as any;
+        data.input.nintendoMotionSensorsNotes = getParam(input, 'nintendo motion sensors notes');
+        data.input.nintendoMotionSensorsModes = getParam(input, 'nintendo motion sensors modes');
+        data.input.nintendoConnectionModes = getParam(input, 'nintendo connection modes');
+        data.input.nintendoConnectionModesNotes = getParam(input, 'nintendo connection modes notes');
+
+        data.input.steamInputApi = getParam(input, 'steam input api') as any;
+        data.input.steamInputApiNotes = getParam(input, 'steam input api notes');
+        data.input.steamHookInput = getParam(input, 'steam hook input') as any;
+        data.input.steamHookInputNotes = getParam(input, 'steam hook input notes');
+        data.input.steamInputPrompts = getParam(input, 'steam input prompts') as any;
+        data.input.steamInputPromptsNotes = getParam(input, 'steam input prompts notes');
+        data.input.steamInputPromptsIcons = getParam(input, 'steam input prompts icons');
+        data.input.steamInputPromptsStyles = getParam(input, 'steam input prompts styles');
+        data.input.steamInputPresets = getParam(input, 'steam input presets') as any;
+        data.input.steamInputPresetsNotes = getParam(input, 'steam input presets notes');
+        data.input.steamDeckPrompts = getParam(input, 'steam deck prompts') as any;
+        data.input.steamDeckPromptsNotes = getParam(input, 'steam deck prompts notes');
+        data.input.steamControllerPrompts = getParam(input, 'steam controller prompts') as any;
+        data.input.steamControllerPromptsNotes = getParam(input, 'steam controller prompts notes');
+        data.input.steamInputMotionSensors = getParam(input, 'steam input motion sensors') as any;
+        data.input.steamInputMotionSensorsNotes = getParam(input, 'steam input motion sensors notes');
+        data.input.steamCursorDetection = getParam(input, 'steam cursor detection') as any;
+        data.input.steamCursorDetectionNotes = getParam(input, 'steam cursor detection notes');
+
+        data.input.directInputControllers = getParam(input, 'directinput controllers') as any;
+        data.input.directInputControllersNotes = getParam(input, 'directinput controllers notes');
+        data.input.directInputPrompts = getParam(input, 'directinput prompts') as any;
+        data.input.directInputPromptsNotes = getParam(input, 'directinput prompts notes');
+
+        data.input.trackedMotionPrompts = getParam(input, 'tracked motion prompts') as any;
+        data.input.trackedMotionPromptsNotes = getParam(input, 'tracked motion prompts notes');
+        data.input.peripheralDevices = getParam(input, 'peripheral devices') as any;
+        data.input.peripheralDevicesNotes = getParam(input, 'peripheral devices notes');
+        data.input.peripheralDeviceTypes = getParam(input, 'peripheral device types');
+        data.input.inputPromptOverride = getParam(input, 'input prompt override') as any;
+        data.input.inputPromptOverrideNotes = getParam(input, 'input prompt override notes');
+        data.input.hapticFeedbackHd = getParam(input, 'haptic feedback hd') as any;
+        data.input.hapticFeedbackHdNotes = getParam(input, 'haptic feedback hd notes');
+        data.input.hapticFeedbackHdControllerModels = getParam(input, 'haptic feedback hd controller models');
+        data.input.digitalMovementSupported = getParam(input, 'digital movement supported') as any;
+        data.input.digitalMovementSupportedNotes = getParam(input, 'digital movement supported notes');
+
+        data.input.otherControllers = getParam(input, 'other controllers') as any;
+        data.input.otherControllersNotes = getParam(input, 'other controllers notes');
+        data.input.otherButtonPrompts = getParam(input, 'other button prompts');
+        data.input.otherButtonPromptsNotes = getParam(input, 'other button prompts notes');
+
     }
 
     // --- Audio ---
@@ -622,6 +708,27 @@ export function parseWikitext(wikitext: string): GameData {
         target.recommended.hdd = getParam(req, 'recHD');
         target.recommended.gpu = getParam(req, 'recGPU');
     });
+
+    // --- Middleware ---
+    const middleware = findTemplateGlobal('Middleware');
+    if (middleware) {
+
+
+        data.middleware.physics = getParam(middleware, 'physics') as any;
+        data.middleware.physicsNotes = getParam(middleware, 'physics notes');
+        data.middleware.audio = getParam(middleware, 'audio') as any;
+        data.middleware.audioNotes = getParam(middleware, 'audio notes');
+        data.middleware.interface = getParam(middleware, 'interface') as any;
+        data.middleware.interfaceNotes = getParam(middleware, 'interface notes');
+        data.middleware.input = getParam(middleware, 'input') as any;
+        data.middleware.inputNotes = getParam(middleware, 'input notes');
+        data.middleware.cutscenes = getParam(middleware, 'cutscenes') as any;
+        data.middleware.cutscenesNotes = getParam(middleware, 'cutscenes notes');
+        data.middleware.multiplayer = getParam(middleware, 'multiplayer') as any;
+        data.middleware.multiplayerNotes = getParam(middleware, 'multiplayer notes');
+        data.middleware.anticheat = getParam(middleware, 'anticheat') as any;
+        data.middleware.anticheatNotes = getParam(middleware, 'anticheat notes');
+    }
 
     return data;
 }
