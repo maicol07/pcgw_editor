@@ -977,13 +977,12 @@ watch(searchQuery, (val) => {
                 <Button 
                     v-if="geminiApiKey"
                     text
-                    size="small"
                     @click="showApiKeyDialog = true; shareSummaryVisible = false"
                     severity="secondary"
                     v-tooltip.left="'API Settings'"
                 >
                     <template #icon>
-                        <Settings class="w-4 h-4" />
+                        <Settings class="!w-5 !h-5" />
                     </template>
                 </Button>
             </div>
