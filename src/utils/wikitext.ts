@@ -1,4 +1,4 @@
-import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, GameMiddleware, SystemRequirements, LocalizationRow, GameIssues, Issue } from '../models/GameData';
+import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, SystemRequirements, GameDataConfig } from '../models/GameData';
 import { WikitextParser } from './WikitextParser';
 
 export class PCGWEditor {
@@ -82,9 +82,9 @@ export class PCGWEditor {
 
     // --- Utils for Lists ---
 
-    replaceSectionContent(header: string, newContent: string) {
+    replaceSectionContent(header: string | RegExp, newContent: string, defaultTitle: string = '') {
         // Use the new parser's section handling
-        this.parser.replaceSection(header, newContent);
+        this.parser.replaceSection(header, newContent, defaultTitle);
     }
 
     // --- Dynamic Update Helper ---
@@ -583,6 +583,66 @@ ${rows}
         updateOSReq('Mac', data.mac);
         updateOSReq('Linux', data.linux);
     }
+
+    updateGameData(config: GameDataConfig) {
+        const wrapInGameData = (content: string) => {
+            return `{{Game data|\n${content}\n}}`;
+        };
+
+        // Config Files
+        if (config.configFiles.length > 0) {
+            const content = config.configFiles.map(row => {
+                // Format: {{Game data/config|Platform|Path1|Path2|...}}
+                const paths = row.paths.filter(p => p.trim() !== '').join('|');
+                if (!paths) return ''; // Skip if no paths for this row? Or output empty? PCGW usually wants at least one empty param if row exists? 
+                // Actually if row exists but empty paths, maybe we skip.
+                return `{{Game data/config|${row.platform}|${paths}}}`;
+            }).filter(s => s !== '').join('\n');
+
+            if (content.length > 0) {
+                const wrappedContent = wrapInGameData(content);
+                this.replaceSectionContent(/Configuration file(s|\(s\))? location/i, '\n' + wrappedContent + '\n', '=== Configuration file(s) location ===');
+            }
+        }
+
+        // Save Data
+        if (config.saveData.length > 0) {
+            const content = config.saveData.map(row => {
+                // Format: {{Game data/saves|Platform|Path1|Path2|...}}
+                const paths = row.paths.filter(p => p.trim() !== '').join('|');
+                if (!paths) return '';
+                return `{{Game data/saves|${row.platform}|${paths}}}`;
+            }).filter(s => s !== '').join('\n');
+
+            if (content.length > 0) {
+                // The user requested {{Game data}} wrapper for paths. Assuming this applies to saves too.
+                // However, user example only showed it for config. I will wrap it to be consistent with table style.
+                const wrappedContent = wrapInGameData(content);
+                this.replaceSectionContent(/Save game data location/i, '\n' + wrappedContent + '\n', '=== Save game data location ===');
+            }
+        }
+
+        // Cloud Sync
+        const cloud = config.cloudSync;
+        const cloudMap: Record<string, string> = {
+            discord: 'discord',
+            epicGamesLauncher: 'epic games launcher',
+            gogGalaxy: 'gog galaxy',
+            eaApp: 'ea app',
+            steamCloud: 'steam cloud',
+            ubisoftConnect: 'ubisoft connect',
+            xboxCloud: 'xbox cloud'
+        };
+
+        for (const [key, param] of Object.entries(cloudMap)) {
+            // @ts-ignore
+            const service = cloud[key];
+            if (service) {
+                this.setTemplateParam('Save game cloud syncing', param, service.status);
+                this.setTemplateParam('Save game cloud syncing', `${param} notes`, service.notes);
+            }
+        }
+    }
 }
 // Keep DEFAULT_TEMPLATE and generateWikitext at the end
 
@@ -617,6 +677,33 @@ const DEFAULT_TEMPLATE = `{{Infobox game
 }}
 
 {{Microtransactions}}
+
+{{Game data
+|file structure              = 
+}}
+
+=== Configuration file(s) location ===
+{{Game data/config|Windows|}}
+
+=== Save game data location ===
+{{Game data/saves|Windows|}}
+
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = 
+|epic games launcher notes = 
+|gog galaxy                = 
+|gog galaxy notes          = 
+|ea app                    = 
+|ea app notes              = 
+|steam cloud               = 
+|steam cloud notes         = 
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = 
+|xbox cloud notes          = 
+}}
 
 {{Video
 |widescreen resolution      = 
@@ -719,6 +806,7 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateLocalizations(data.localizations);
     editor.updateIssues(data.issues);
     editor.updateSystemRequirements(data.requirements);
+    editor.updateGameData(data.config);
 
     return editor.getText();
 }

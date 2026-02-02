@@ -3,7 +3,9 @@ import { GameDataPathRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
-import { Plus, Trash, X } from 'lucide-vue-next';
+import Popover from 'primevue/popover';
+import { Plus, Trash, X, Bookmark } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 // Icons
 import iconWindows from '../assets/icons/os-windows.svg';
@@ -49,7 +51,7 @@ const removeRow = (index: number) => {
 };
 
 const addPath = (rowIndex: number) => {
-  if (props.rows[rowIndex].paths.length < 4) {
+  if (props.rows[rowIndex].paths.length < 20) {
     props.rows[rowIndex].paths.push('');
   }
 };
@@ -75,15 +77,48 @@ const quickPaths = [
   { label: 'User Home (Linux)', value: '{{p|user}}' }
 ];
 
-const insertQuickPath = (rowIndex: number, pathIndex: number, value: string) => {
-  const current = props.rows[rowIndex].paths[pathIndex] || '';
-  props.rows[rowIndex].paths[pathIndex] = current + value;
-};
+// insertQuickPath removed since logic is moved to selectQuickPath with cursor support
 
 // Helper for display
 const getPlatformIcon = (val: string) => {
     const opt = platformOptions.find(o => o.value === val);
     return opt ? opt.icon : iconGeneric;
+};
+
+// Popover logic
+const op = ref();
+const activeInput = ref<{row: number, path: number, id: string} | null>(null);
+
+const toggleQuickPath = (event: Event, rowIndex: number, pathIndex: number) => {
+    activeInput.value = { 
+        row: rowIndex, 
+        path: pathIndex,
+        id: `path-input-${rowIndex}-${pathIndex}`
+    };
+    op.value.toggle(event);
+};
+
+const selectQuickPath = (value: string) => {
+    if (activeInput.value) {
+        const { row, path, id } = activeInput.value;
+        const inputEl = document.getElementById(id) as HTMLInputElement;
+        
+        let newValue = props.rows[row].paths[path] || '';
+        if (inputEl) {
+            const start = inputEl.selectionStart || 0;
+            const end = inputEl.selectionEnd || 0;
+            newValue = newValue.substring(0, start) + value + newValue.substring(end);
+            
+            // Wait for re-render then restore focus? 
+            // Actually just setting it is enough for now, user can continue typing.
+        } else {
+            // Fallback
+            newValue += value;
+        }
+
+        props.rows[row].paths[path] = newValue;
+        op.value.hide();
+    }
 };
 </script>
 
@@ -92,7 +127,7 @@ const getPlatformIcon = (val: string) => {
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2">
       <h3 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ title }}</h3>
-      <Button label="Add Platform" size="small" text @click="addRow">
+      <Button label="Add Platform Row" size="small" text @click="addRow">
         <template #icon><Plus class="w-4 h-4" /></template>
       </Button>
     </div>
@@ -125,22 +160,54 @@ const getPlatformIcon = (val: string) => {
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
           <label class="text-xs font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">File Paths</label>
-          <Button v-if="row.paths.length < 4" label="Add Path" size="small" text @click="addPath(rowIndex)">
+          <Button v-if="row.paths.length < 20" label="Add Path" size="small" text @click="addPath(rowIndex)">
             <template #icon><Plus class="w-4 h-4" /></template>
           </Button>
         </div>
         
         <div class="grid grid-cols-1 gap-2">
           <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2">
-            <InputText v-model="row.paths[pathIndex]" placeholder="e.g. {{p|appdata}}\GameName\" class="flex-1" />
-            <Select :options="quickPaths" optionLabel="label" optionValue="value" placeholder="Insert Path..." 
-                    class="w-40" @change="(e) => { insertQuickPath(rowIndex, pathIndex, e.value); e.value = null; }" />
-            <Button v-if="row.paths.length > 1" severity="danger" text rounded size="small" @click="removePath(rowIndex, pathIndex)">
-                <template #icon><X class="w-4 h-4" /></template>
+            <InputText 
+                :id="`path-input-${rowIndex}-${pathIndex}`"
+                v-model="row.paths[pathIndex]" 
+                placeholder="e.g. {{p|appdata}}\GameName\" 
+                class="flex-1" 
+            />
+            <Button 
+                icon="pi" 
+                severity="secondary" 
+                variant="outlined" 
+                v-tooltip.top="'Insert Special Path'"
+                @click="(e) => toggleQuickPath(e, rowIndex, pathIndex)"
+            >
+                <template #icon>
+                    <Bookmark class="w-4 h-4" />
+                </template>
+            </Button>
+            <Button v-if="row.paths.length > 1" severity="danger" text rounded @click="removePath(rowIndex, pathIndex)">
+                <template #icon><X class="w-5 h-5" /></template>
             </Button>
           </div>
         </div>
       </div>
     </div>
+    
+    <Popover ref="op">
+        <div class="flex flex-col gap-2 p-1 max-w-sm">
+            <span class="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">Insert Special Path</span>
+            <div class="flex flex-wrap gap-2">
+                <Button 
+                    v-for="item in quickPaths" 
+                    :key="item.label" 
+                    :label="item.label" 
+                    severity="secondary" 
+                    variant="outlined" 
+                    size="small" 
+                    class="text-xs! py-1! px-2!"
+                    @click="selectQuickPath(item.value)"
+                />
+            </div>
+        </div>
+    </Popover>
   </div>
 </template>

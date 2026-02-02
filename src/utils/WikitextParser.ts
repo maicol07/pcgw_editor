@@ -309,8 +309,24 @@ export class WikitextParser {
      * Find content between section headers.
      * Returns null if section not found.
      */
-    findSection(header: string): { start: number; end: number; content: string } | null {
-        const headerRegex = new RegExp(`^==\\s*${this.escapeRegex(header)}\\s*==`, 'im');
+    findSection(header: string | RegExp): { start: number; end: number; content: string } | null {
+        let headerRegex: RegExp;
+
+        if (header instanceof RegExp) {
+            // If it's a regex, we need to ensure it matches the full header line pattern
+            // This is tricky because the user's regex might just match the text.
+            // We can construct a new regex that looks for == around the pattern.
+            // But simpler is to assume the caller provides a regex that matches the TITLE text, 
+            // and we wrap it.
+            // We want to match ^={2,}\s*pattern\s*={2,}$
+            const source = header.source;
+            const flags = header.flags.replace('g', '').replace('y', ''); // remove global/sticky
+            // Construct regex: start of line, ==, space*, pattern, space*, ==
+            headerRegex = new RegExp(`^={2,}\\s*${source}\\s*={2,}`, flags + 'm');
+        } else {
+            headerRegex = new RegExp(`^={2,}\\s*${this.escapeRegex(header)}\\s*={2,}`, 'im');
+        }
+
         const match = this.wikitext.match(headerRegex);
 
         if (!match || match.index === undefined) {
@@ -336,18 +352,38 @@ export class WikitextParser {
     /**
      * Replace or create a section with new content.
      */
-    replaceSection(header: string, newContent: string): void {
+    replaceSection(header: string | RegExp, newContent: string, defaultTitle: string = ''): void {
         const section = this.findSection(header);
 
         if (section) {
             // Replace existing section content
             const before = this.wikitext.substring(0, section.start);
             const after = this.wikitext.substring(section.end);
-            this.wikitext = before + '\n' + newContent + '\n' + after;
+
+            // We want to ensure one newline after the header and one before the next section
+            // The 'newContent' usually passed in has explicit newlines, but we should be careful.
+            // The current logic: before + '\n' + newContent + '\n' + after
+            // 'before' includes the match up to ==Title==
+            // 'after' starts at next == or end of string
+
+            this.wikitext = before + newContent + after;
         } else {
             // Append new section at the end
-            const needsNewline = this.wikitext.length > 0 && !this.wikitext.endsWith('\n');
-            this.wikitext += `${needsNewline ? '\n' : ''}\n==${header}==\n${newContent}\n`;
+            // Use defaultTitle if provided, otherwise if header is string use that.
+            let title = defaultTitle;
+            if (!title && typeof header === 'string') {
+                title = header;
+            }
+
+            if (title) {
+                const needsNewline = this.wikitext.length > 0 && !this.wikitext.endsWith('\n');
+                // Check if title already includes ==
+                if (title.trim().startsWith('=')) {
+                    this.wikitext += `${needsNewline ? '\n' : ''}\n${title}\n${newContent}\n`;
+                } else {
+                    this.wikitext += `${needsNewline ? '\n' : ''}\n== ${title} ==\n${newContent}\n`;
+                }
+            }
         }
     }
 

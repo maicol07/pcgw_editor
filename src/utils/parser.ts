@@ -1,9 +1,12 @@
-
 import { GameData, initialGameData, CloudSync, SystemRequirementsOS } from '../models/GameData';
 import 'wikiparser-node';
 import type Parser from 'wikiparser-node';
 
 const wiki = (globalThis as any).Parser as typeof Parser;
+
+export function parseRaw(text: string) {
+    return wiki.parse(text);
+}
 
 // Define AST Node interfaces based on wikiparser-node output
 interface ASTNode {
@@ -310,16 +313,25 @@ export function parseWikitext(wikitext: string): GameData {
     }
 
     // --- Game Data ---
-    const findNodesInSection = (headingName: string): ASTNode[] => {
+    const getNodesInSection = (headingPattern: string | RegExp): ASTNode[] => {
         const nodesInSec: ASTNode[] = [];
         let capture = false;
         for (const node of rootNodes) {
             if (node.name === 'Heading' || (node as any).type === 'heading') {
                 const title = getTextContent(node.childNodes || []).trim();
-                if (title.toLowerCase().includes(headingName.toLowerCase())) {
+                let isMatch = false;
+                if (typeof headingPattern === 'string') {
+                    isMatch = title.toLowerCase().includes(headingPattern.toLowerCase());
+                } else {
+                    isMatch = headingPattern.test(title);
+                }
+
+                if (isMatch) {
                     capture = true;
                 } else {
-                    if ((node as any).level <= 2) capture = false;
+                    if ((node as any).level <= 2 && capture) {
+                        capture = false;
+                    }
                 }
             } else if (capture) {
                 nodesInSec.push(node);
@@ -328,46 +340,58 @@ export function parseWikitext(wikitext: string): GameData {
         return nodesInSec;
     };
 
-    const configNodes = findNodesInSection('Configuration file(s) location');
-    const configRows: any[] = [];
-    configNodes.forEach(node => {
-        // Use loose check for Game data/config
-        if (node.name) {
-            const n = cleanTemplateName(node.name);
-            if (n === 'game data/config' || n === 'game data/config tv' || n === 'game data/config mac' || n === 'game data/config linux') {
-                configRows.push({
-                    platform: getParam(node, '1'),
-                    paths: [getParam(node, '2')]
-                });
+    // Helper to extract rows from either a direct list of nodes OR a nested {{Game data|...}} template
+    const extractGameDataRows = (sectionNodes: ASTNode[], rowTemplateNames: string[], legacyHeadingPattern?: RegExp): any[] => {
+        let candidateNodes: ASTNode[] = sectionNodes;
+
+        // 1. Look for {{Game data}} wrapper *within* the section nodes
+        const gameDataWrapper = sectionNodes.find(n => n.name && cleanTemplateName(n.name) === 'game data');
+
+        if (gameDataWrapper) {
+            // If wrapper found, the rows are inside its first parameter (usually '1')
+            // wikiparser-node parses content of params, so we check childNodes of the param
+            const paramNodes = getParamValueNodes(gameDataWrapper, '1');
+            if (paramNodes && paramNodes.length > 0) {
+                candidateNodes = paramNodes;
             }
         }
-    });
-    // If we found any, update. Otherwise leave default empty (or user might have deleted it).
-    // Actually we should clear defaults if we are parsing? 
-    // data.config.configFiles is initially empty array in my code above (GameData.ts might differ, checking...).
-    // In initialGameData it is undefined? No, see ViewFile 1.
-    // initialGameData doesn't define configFiles?
-    // Checking GameData.ts:
-    // export interface GameDataConfig { configFiles: GameDataPathRow[]; ... }
-    // initialGameData does NOT seem to initialize config fully in the snippet I saw?
-    // Wait, let me check strictness if I missed it.
-    // If not initialized, JSON.parse might not have it.
-    // I will assume it's there or I should init it.
+
+        // 2. Iterate candidates to find rows
+        const foundRows: any[] = [];
+
+        candidateNodes.forEach(node => {
+            if (node.name) {
+                const n = cleanTemplateName(node.name);
+                if (rowTemplateNames.includes(n)) {
+                    const paths: string[] = [];
+                    // Support multi-arg paths: |2=Path1|3=Path2...
+                    // Start checking from index 2
+                    let i = 2;
+                    while (true) {
+                        const p = getParam(node, i.toString());
+                        if (!p) break;
+                        paths.push(p);
+                        i++;
+                    }
+                    foundRows.push({
+                        platform: getParam(node, '1'),
+                        paths: paths
+                    });
+                }
+            }
+        });
+
+        return foundRows;
+    };
+
+    // Config
+    const configSectionNodes = getNodesInSection(/Configuration file(s|\(s\))? location/i);
+    const configRows = extractGameDataRows(configSectionNodes, ['game data/config', 'game data/config tv', 'game data/config mac', 'game data/config linux']);
     data.config.configFiles = configRows;
 
-    const saveNodes = findNodesInSection('Save game data location');
-    const saveRows: any[] = [];
-    saveNodes.forEach(node => {
-        if (node.name) {
-            const n = cleanTemplateName(node.name);
-            if (n === 'game data/saves' || n === 'game data/saves mac' || n === 'game data/saves linux') {
-                saveRows.push({
-                    platform: getParam(node, '1'),
-                    paths: [getParam(node, '2')]
-                });
-            }
-        }
-    });
+    // Save Data
+    const saveSectionNodes = getNodesInSection(/Save game data location/i);
+    const saveRows = extractGameDataRows(saveSectionNodes, ['game data/saves', 'game data/saves mac', 'game data/saves linux']);
     data.config.saveData = saveRows;
 
     // Cloud Sync
