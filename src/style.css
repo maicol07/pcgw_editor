@@ -1,12 +1,130 @@
-/* Import custom animations */
+@import 'tailwindcss';
 @import './styles/animations.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@plugin 'tailwindcss-animate';
+
+@theme {
+  /* Colors - Surface */
+  --color-surface-0: #ffffff;
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+
+  /* Colors - Primary (Violet) */
+  --color-primary-50: #faf5ff;
+  --color-primary-100: #f3e8ff;
+  --color-primary-200: #e9d5ff;
+  --color-primary-300: #d8b4fe;
+  --color-primary-400: #c084fc;
+  --color-primary-500: #a855f7;
+  --color-primary-600: #9333ea;
+  --color-primary-700: #7e22ce;
+  --color-primary-800: #6b21a8;
+  --color-primary-900: #581c87;
+  --color-primary-950: #3b0764;
+
+  /* Colors - Accent - Teal */
+  --color-accent-teal-50: #f0fdfa;
+  --color-accent-teal-500: #14b8a6;
+  --color-accent-teal-600: #0d9488;
+
+  /* Colors - Accent - Orange */
+  --color-accent-orange-50: #fff7ed;
+  --color-accent-orange-500: #f97316;
+  --color-accent-orange-600: #ea580c;
+
+  /* Colors - Accent - Emerald */
+  --color-accent-emerald-50: #ecfdf5;
+  --color-accent-emerald-500: #10b981;
+  --color-accent-emerald-600: #059669;
+
+  /* Spacing */
+  --spacing-0_75: 0.1875rem;
+  --spacing-1_25: 0.3125rem;
+  --spacing-2_25: 0.5625rem;
+  --spacing-3_5: 0.875rem;
+  --spacing-4_5: 1.125rem;
+
+  /* Font Size */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Box Shadow */
+  --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-soft-lg: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px -5px rgba(168, 85, 247, 0.4);
+  --shadow-glow-sm: 0 0 10px -3px rgba(168, 85, 247, 0.3);
+
+  /* Animations & Keyframes */
+  --animate-fade-in: fadeIn 0.2s ease-out;
+  --animate-slide-in: slideIn 0.2s ease-out;
+  --animate-scale-in: scaleIn 0.15s ease-out;
+  --animate-pulse-soft: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideIn {
+    0% {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    0% {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulseSoft {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  /* Backdrop Blur */
+  --blur-xs: 2px;
+}
+
+/* Custom Variant for Dark Mode (Selector Strategy) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* CSS Reset & Base Styles */
 :root {
+  /* PrimeVue Compatibility Colors */
   --p-primary-50: #faf5ff;
   --p-primary-100: #f3e8ff;
   --p-primary-200: #e9d5ff;
@@ -88,24 +206,22 @@ body {
 }
 
 /* Utility Classes */
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@utility text-balance {
+  text-wrap: balance;
+}
 
-  .glass {
-    @apply bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md;
-  }
+@utility glass {
+  @apply bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md;
+}
 
-  .glass-border {
-    @apply border border-surface-200/50 dark:border-surface-700/50;
-  }
+@utility glass-border {
+  @apply border border-surface-200/50 dark:border-surface-700/50;
+}
 
-  .shadow-soft {
-    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
-  }
+@utility shadow-soft {
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
+}
 
-  .shadow-soft-lg {
-    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
-  }
+@utility shadow-soft-lg {
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 }
