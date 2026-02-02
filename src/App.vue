@@ -897,6 +897,7 @@ watch(searchQuery, (val) => {
         <div class="flex flex-col gap-4">
             <p class="text-surface-600 dark:text-surface-400 text-sm">
                 To generate AI-powered summaries, please provide your Gemini API key.
+                This feature uses the <strong>Gemini 3 Flash</strong> model, which is free to use.
                 Get one for free at <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary-500 hover:underline">Google AI Studio</a>.
             </p>
             
