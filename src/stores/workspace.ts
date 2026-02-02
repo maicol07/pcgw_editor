@@ -56,7 +56,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         const newPage: Page = {
             id,
             title,
-            wikitext: '',
+            wikitext: generateWikitext(initialGameData, ''),
             baseWikitext: '',
             lastModified: Date.now()
         };
