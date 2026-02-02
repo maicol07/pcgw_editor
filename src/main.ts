@@ -5,7 +5,7 @@ import Tooltip from 'primevue/tooltip';
 import './style.css';
 import './styles/preview/index.scss';
 import './styles/preview/_icons.scss';
-import 'primeicons/primeicons.css';
+
 import App from './App.vue';
 
 import { createPinia } from 'pinia';

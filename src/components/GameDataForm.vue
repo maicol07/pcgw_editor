@@ -7,6 +7,7 @@ import RatingSelect from './RatingSelect.vue';
 import RatingRow from './RatingRow.vue';
 import HelpIcon from './HelpIcon.vue';
 import NotesButton from './NotesButton.vue';
+import { Server, MessageCircle, AppWindow, Box, Cloud } from 'lucide-vue-next';
 
 import { inject, reactive, watch } from 'vue';
 
@@ -43,14 +44,14 @@ if (uiBus) {
 
 const getCloudIcon = (key: string) => {
     const k = key.toLowerCase();
-    if (k.includes('steam')) return 'pi pi-server'; // No specific steam icon in primeicons? defaults to generic
-    if (k.includes('discord')) return 'pi pi-discord'; // if avail, otherwise generic
-    if (k.includes('xbox')) return 'pi pi-microsoft';
-    if (k.includes('gog')) return 'pi pi-box'; 
-    if (k.includes('epic')) return 'pi pi-box';
-    if (k.includes('ubisoft')) return 'pi pi-box';
-    if (k.includes('ea')) return 'pi pi-box';
-    return 'pi pi-cloud';
+    if (k.includes('steam')) return Server; 
+    if (k.includes('discord')) return MessageCircle;
+    if (k.includes('xbox')) return AppWindow;
+    if (k.includes('gog')) return Box; 
+    if (k.includes('epic')) return Box;
+    if (k.includes('ubisoft')) return Box;
+    if (k.includes('ea')) return Box;
+    return Cloud;
 }
 
 </script>

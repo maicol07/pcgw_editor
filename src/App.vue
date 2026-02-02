@@ -41,6 +41,13 @@ import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import { GoogleGenAI } from '@google/genai';
+import { 
+  Menu, Loader2, FileEdit, ChevronsDown, ChevronsUp, Search, 
+  File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle, 
+  Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, 
+  TriangleAlert, Settings, Cpu, Globe, List, Key, Trash, X, Check,
+  Share2, Sparkles, Copy
+} from 'lucide-vue-next';
 import iconBulletDocument from './assets/icons/bullet-document.svg';
 import { reactive, provide } from 'vue';
 
@@ -477,12 +484,15 @@ watch(searchQuery, (val) => {
         <Toolbar class="!border-b !border-0 !rounded-none glass glass-border shadow-soft z-20 !p-1.5 sticky top-0">
             <template #start>
                 <div class="flex items-center gap-2 md:gap-3">
-                    <Button icon="pi pi-bars" text size="small" @click="sidebarVisible = true" class="lg:hidden hover-scale" severity="secondary" />
+                    <Button text @click="sidebarVisible = true" class="lg:hidden hover-scale !h-8 !w-8 !p-0" severity="secondary">
+                        <template #icon>
+                            <Menu class="!w-5 !h-5" />
+                        </template>
+                    </Button>
                     <span class="font-bold text-base md:text-lg bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">PCGamingWiki Editor</span>
                     <span class="text-surface-300 dark:text-surface-600 hidden lg:block text-xs">•</span>
                     <InputText v-model="pageTitle" placeholder="Page Title..." class="w-48 lg:w-64 !py-1.5 !px-2.5 text-sm hidden md:block" />
                     <Button 
-                        :icon="isGeneratingSummary ? 'pi pi-spin pi-spinner' : 'pi pi-file-edit'" 
                         text 
                         size="small" 
                         @click="generateShareSummary" 
@@ -490,7 +500,12 @@ watch(searchQuery, (val) => {
                         class="!text-xs !px-2 !py-1 hover-scale"
                         v-tooltip.bottom="'Generate share summary'"
                         :disabled="isGeneratingSummary"
-                    />
+                    >
+                        <template #icon>
+                            <Loader2 v-if="isGeneratingSummary" class="w-4 h-4 animate-spin" />
+                            <FileEdit v-else class="w-4 h-4" />
+                        </template>
+                    </Button>
                 </div>
             </template>
             <template #end>
@@ -502,7 +517,7 @@ watch(searchQuery, (val) => {
         <Transition name="fade-fast">
             <div v-if="isModeSwitching" class="absolute inset-0 bg-surface-0/80 dark:bg-surface-950/80 backdrop-blur-sm z-30 flex items-center justify-center">
                 <div class="flex flex-col items-center gap-3">
-                    <i class="pi pi-spin pi-spinner text-4xl text-primary-500"></i>
+                    <Loader2 class="w-10 h-10 animate-spin text-primary-500" />
                     <span class="text-surface-600 dark:text-surface-300 font-medium">Parsing wikitext...</span>
                 </div>
             </div>
@@ -519,7 +534,7 @@ watch(searchQuery, (val) => {
                 <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
                 <div class="flex items-center justify-center h-32">
                     <div class="flex flex-col items-center gap-3">
-                        <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                        <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
                         <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading editor...</span>
                     </div>
                 </div>
@@ -531,14 +546,24 @@ watch(searchQuery, (val) => {
               <!-- Quick Actions Toolbar -->
               <div class="flex items-center justify-between glass glass-border p-2.5 rounded-lg shadow-soft sticky top-0 z-20 animate-slide-in-down">
                   <div class="flex items-center gap-1.5">
-                       <Button icon="pi pi-angle-double-down" label="Expand" text size="small" @click="expandAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale" />
-                       <Button icon="pi pi-angle-double-up" label="Collapse" text size="small" @click="collapseAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale" />
+                       <Button label="Expand" text size="small" @click="expandAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
+                           <template #icon>
+                               <ChevronsDown class="w-3 h-3" />
+                           </template>
+                       </Button>
+                       <Button label="Collapse" text size="small" @click="collapseAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
+                           <template #icon>
+                               <ChevronsUp class="w-3 h-3" />
+                           </template>
+                       </Button>
                        <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
                        <span class="text-2xs text-surface-500 dark:text-surface-400 hidden sm:inline">⌘K to search</span>
                   </div>
                   <div class="flex items-center gap-2">
                        <IconField iconPosition="left">
-                            <InputIcon class="pi pi-search text-surface-400" />
+                            <InputIcon>
+                                <Search class="w-4 h-4 text-surface-400" />
+                            </InputIcon>
                             <InputText v-model="searchQuery" placeholder="Search..." size="small" class="w-40 sm:w-48 lg:w-64 !text-sm" />
                        </IconField>
                   </div>
@@ -547,7 +572,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.articleState" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-file text-primary-500 text-sm"></i>
+                          <File class="text-primary-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Article State</span>
                       </div>
                   </template>
@@ -557,7 +582,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.infobox" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-info-circle text-accent-teal-500 text-sm"></i>
+                          <Info class="text-accent-teal-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Infobox</span>
                       </div>
                   </template>
@@ -567,7 +592,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.introduction" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-align-left text-accent-orange-500 text-sm"></i>
+                          <AlignLeft class="text-accent-orange-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Introduction</span>
                       </div>
                   </template>
@@ -602,7 +627,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.availability" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-shopping-cart text-accent-emerald-500 text-sm"></i>
+                          <ShoppingCart class="text-accent-emerald-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Availability</span>
                       </div>
                   </template>
@@ -612,7 +637,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.monetization" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-dollar text-accent-orange-500 text-sm"></i>
+                          <DollarSign class="text-accent-orange-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Monetization</span>
                       </div>
                   </template>
@@ -622,7 +647,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.dlc" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-plus-circle text-primary-600 text-sm"></i>
+                          <PlusCircle class="text-primary-600 w-4 h-4" />
                           <span class="font-semibold text-sm">DLC & Expansions</span>
                       </div>
                   </template>
@@ -632,7 +657,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.essentialImprovements" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-star text-yellow-500 text-sm"></i>
+                          <Star class="text-yellow-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Essential Improvements</span>
                       </div>
                   </template>
@@ -642,7 +667,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.gameData" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-save text-indigo-500 text-sm"></i>
+                          <Save class="text-indigo-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Game Data (Config, Saves, Cloud)</span>
                       </div>
                   </template>
@@ -652,7 +677,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.video" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-desktop text-blue-500 text-sm"></i>
+                          <Monitor class="text-blue-500 w-4 h-4" />
                           <span class="font-semibold text-sm">Video</span>
                       </div>
                   </template>
@@ -665,7 +690,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.input" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-keyboard text-sm"></i>
+                          <Keyboard class="w-4 h-4" />
                           <span class="font-semibold text-sm">Input</span>
                       </div>
                   </template>
@@ -678,7 +703,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.audio" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-volume-up text-sm"></i>
+                          <Volume2 class="w-4 h-4" />
                           <span class="font-semibold text-sm">Audio</span>
                       </div>
                   </template>
@@ -691,7 +716,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.network" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-wifi text-sm"></i>
+                          <Wifi class="w-4 h-4" />
                           <span class="font-semibold text-sm">Network</span>
                       </div>
                   </template>
@@ -704,7 +729,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.vr" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-eye text-sm"></i>
+                          <Eye class="w-4 h-4" />
                           <span class="font-semibold text-sm">VR Support</span>
                       </div>
                   </template>
@@ -717,7 +742,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.issues" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-exclamation-triangle text-sm"></i>
+                          <TriangleAlert class="w-4 h-4" />
                           <span class="font-semibold text-sm">Issues</span>
                       </div>
                   </template>
@@ -730,7 +755,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.other" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-cog text-sm"></i>
+                          <Settings class="w-4 h-4" />
                           <span class="font-semibold text-sm">Other Information (API, Middleware)</span>
                       </div>
                   </template>
@@ -744,7 +769,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.systemReq" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-microchip text-sm"></i>
+                          <Cpu class="w-4 h-4" />
                           <span class="font-semibold text-sm">System Requirements</span>
                       </div>
                   </template>
@@ -757,7 +782,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.l10n" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-globe text-sm"></i>
+                          <Globe class="w-4 h-4" />
                           <span class="font-semibold text-sm">Localizations</span>
                       </div>
                   </template>
@@ -767,7 +792,7 @@ watch(searchQuery, (val) => {
               <Panel toggleable v-model:collapsed="panelState.general" class="panel-modern shadow-soft hover-lift">
                   <template #header>
                       <div class="flex items-center gap-2">
-                          <i class="pi pi-list text-sm"></i>
+                          <List class="w-4 h-4" />
                           <span class="font-semibold text-sm">General Information</span>
                       </div>
                   </template>
@@ -784,7 +809,7 @@ watch(searchQuery, (val) => {
                         <div class="h-full w-full p-4 animate-pulse">
                             <div class="h-full w-full bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 flex items-center justify-center">
                                 <div class="flex flex-col items-center gap-3">
-                                    <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                                    <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
                                     <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading Code Editor...</span>
                                 </div>
                             </div>
@@ -810,7 +835,7 @@ watch(searchQuery, (val) => {
                <div v-if="isPending || isLoading" class="fixed inset-0 bg-surface-0/90 dark:bg-surface-950/90 flex items-center justify-center backdrop-blur-sm" style="left: 50%; right: 0; z-index: 9999;">
                     <div class="flex flex-col items-center gap-4 p-8 rounded-lg bg-surface-50/80 dark:bg-surface-800/80 border border-surface-200 dark:border-surface-700 shadow-xl">
                         <div class="relative">
-                            <i class="pi pi-spin pi-spinner text-5xl text-primary-500"></i>
+                            <Loader2 class="w-12 h-12 animate-spin text-primary-500" />
                             <div class="absolute inset-0 rounded-full border-4 border-primary-500/30 animate-ping"></div>
                         </div>
                         <div class="flex flex-col items-center gap-1">
@@ -840,7 +865,7 @@ watch(searchQuery, (val) => {
     <Dialog v-model:visible="showApiKeyDialog" modal :style="{ width: '35rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
         <template #header>
             <div class="flex items-center gap-2">
-                <i class="pi pi-key text-primary-500"></i>
+                <Key class="text-primary-500 w-5 h-5" />
                 <span class="font-bold text-lg">Gemini API Key</span>
             </div>
         </template>
@@ -853,7 +878,7 @@ watch(searchQuery, (val) => {
             
             <div class="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
                 <div class="flex gap-2">
-                    <i class="pi pi-exclamation-triangle text-orange-500 mt-0.5"></i>
+                    <TriangleAlert class="text-orange-500 w-4 h-4 mt-0.5" />
                     <div class="flex-1">
                         <p class="text-sm font-semibold text-orange-800 dark:text-orange-200 mb-1">Security Notice</p>
                         <p class="text-xs text-orange-700 dark:text-orange-300">
@@ -879,25 +904,34 @@ watch(searchQuery, (val) => {
                 <Button 
                     v-if="geminiApiKey"
                     label="Clear Key" 
-                    icon="pi pi-trash" 
                     @click="clearApiKey"
                     severity="danger"
                     outlined
-                />
+                >
+                    <template #icon>
+                        <Trash class="w-4 h-4 gap-2" />
+                    </template>
+                </Button>
                 <Button 
                     label="Cancel" 
-                    icon="pi pi-times" 
                     @click="showApiKeyDialog = false"
                     severity="secondary"
                     outlined
-                />
+                >
+                    <template #icon>
+                        <X class="w-4 h-4 gap-2" />
+                    </template>
+                </Button>
                 <Button 
                     label="Save" 
-                    icon="pi pi-check" 
                     @click="saveApiKey"
                     severity="primary"
                     :disabled="!tempApiKey.trim()"
-                />
+                >
+                    <template #icon>
+                        <Check class="w-4 h-4 gap-2" />
+                    </template>
+                </Button>
             </div>
         </div>
     </Dialog>
@@ -906,9 +940,9 @@ watch(searchQuery, (val) => {
     <Dialog v-model:visible="shareSummaryVisible" modal :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
         <template #header>
             <div class="flex items-center gap-2">
-                <i class="pi pi-share-alt text-primary-500"></i>
+                <Share2 class="text-primary-500 w-5 h-5" />
                 <span class="font-bold text-lg">Share Summary</span>
-                <i v-if="geminiApiKey" class="pi pi-sparkles text-primary-500 text-sm ml-1" title="AI-Generated"></i>
+                <Sparkles v-if="geminiApiKey" class="text-primary-500 w-4 h-4 ml-1" title="AI-Generated" />
             </div>
         </template>
         
@@ -919,18 +953,21 @@ watch(searchQuery, (val) => {
                 </p>
                 <Button 
                     v-if="geminiApiKey"
-                    icon="pi pi-cog" 
                     text
                     size="small"
                     @click="showApiKeyDialog = true; shareSummaryVisible = false"
                     severity="secondary"
                     v-tooltip.left="'API Settings'"
-                />
+                >
+                    <template #icon>
+                        <Settings class="w-4 h-4" />
+                    </template>
+                </Button>
             </div>
             
             <div v-if="isGeneratingSummary" class="flex items-center justify-center p-8">
                 <div class="flex flex-col items-center gap-3">
-                    <i class="pi pi-spin pi-spinner text-3xl text-primary-500"></i>
+                    <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
                     <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Generating summary with AI...</span>
                 </div>
             </div>
@@ -947,18 +984,24 @@ watch(searchQuery, (val) => {
             <div class="flex gap-2 justify-end">
                 <Button 
                     label="Copy to Clipboard" 
-                    icon="pi pi-copy" 
                     @click="copyShareSummary"
                     severity="primary"
                     :disabled="isGeneratingSummary || !shareSummaryText"
-                />
+                >
+                    <template #icon>
+                        <Copy class="w-4 h-4 gap-2" />
+                    </template>
+                </Button>
                 <Button 
                     label="Close" 
-                    icon="pi pi-times" 
                     @click="shareSummaryVisible = false"
                     severity="secondary"
                     outlined
-                />
+                >
+                    <template #icon>
+                        <X class="w-4 h-4 gap-2" />
+                    </template>
+                </Button>
             </div>
         </div>
     </Dialog>

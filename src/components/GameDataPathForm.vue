@@ -3,6 +3,7 @@ import { GameDataPathRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
+import { Plus, Trash, X } from 'lucide-vue-next';
 
 // Icons
 import iconWindows from '../assets/icons/os-windows.svg';
@@ -91,7 +92,9 @@ const getPlatformIcon = (val: string) => {
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2">
       <h3 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ title }}</h3>
-      <Button icon="pi pi-plus" label="Add Platform" size="small" text @click="addRow" />
+      <Button label="Add Platform" size="small" text @click="addRow">
+        <template #icon><Plus class="w-4 h-4" /></template>
+      </Button>
     </div>
 
     <div v-for="(row, rowIndex) in rows" :key="rowIndex" class="p-4 rounded-lg bg-surface-50 dark:bg-surface-900/50 border border-surface-200 dark:border-surface-800 flex flex-col gap-4">
@@ -114,13 +117,17 @@ const getPlatformIcon = (val: string) => {
             </template>
           </Select>
         </div>
-        <Button icon="pi pi-trash" severity="danger" text rounded @click="removeRow(rowIndex)" />
+        <Button severity="danger" text rounded @click="removeRow(rowIndex)">
+            <template #icon><Trash class="w-4 h-4" /></template>
+        </Button>
       </div>
 
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
           <label class="text-xs font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">File Paths</label>
-          <Button v-if="row.paths.length < 4" icon="pi pi-plus" label="Add Path" size="small" text @click="addPath(rowIndex)" />
+          <Button v-if="row.paths.length < 4" label="Add Path" size="small" text @click="addPath(rowIndex)">
+            <template #icon><Plus class="w-4 h-4" /></template>
+          </Button>
         </div>
         
         <div class="grid grid-cols-1 gap-2">
@@ -128,7 +135,9 @@ const getPlatformIcon = (val: string) => {
             <InputText v-model="row.paths[pathIndex]" placeholder="e.g. {{p|appdata}}\GameName\" class="flex-1" />
             <Select :options="quickPaths" optionLabel="label" optionValue="value" placeholder="Insert Path..." 
                     class="w-40" @change="(e) => { insertQuickPath(rowIndex, pathIndex, e.value); e.value = null; }" />
-            <Button v-if="row.paths.length > 1" icon="pi pi-times" severity="danger" text rounded size="small" @click="removePath(rowIndex, pathIndex)" />
+            <Button v-if="row.paths.length > 1" severity="danger" text rounded size="small" @click="removePath(rowIndex, pathIndex)">
+                <template #icon><X class="w-4 h-4" /></template>
+            </Button>
           </div>
         </div>
       </div>

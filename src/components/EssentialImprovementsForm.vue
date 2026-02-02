@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Textarea from 'primevue/textarea';
+import { Download, Info } from 'lucide-vue-next';
 
 defineProps<{
   modelValue: string;
@@ -12,7 +13,7 @@ const emit = defineEmits(['update:modelValue']);
   <div class="flex flex-col gap-4">
     <div class="flex flex-col gap-2">
       <h3 class="text-lg font-semibold text-surface-900 dark:text-surface-0 border-b border-surface-200 dark:border-surface-700 pb-2 flex items-center gap-2">
-        <i class="pi pi-download text-primary" />
+        <Download class="w-5 h-5 text-primary" />
         Essential improvements
       </h3>
       <p class="text-sm text-surface-500 dark:text-surface-400">
@@ -30,7 +31,7 @@ const emit = defineEmits(['update:modelValue']);
         class="w-full font-mono text-sm"
       />
       <div class="flex items-start gap-2 text-[11px] text-surface-400 dark:text-surface-500 bg-surface-50 dark:bg-surface-900/50 p-2 rounded-md">
-        <i class="pi pi-info-circle mt-0.5" />
+        <Info class="w-4 h-4 mt-0.5" />
         <span>Use basic wikitext formatting (bullet points, links). Fixes for bugs or feature support should go in their respective sections instead.</span>
       </div>
     </div>

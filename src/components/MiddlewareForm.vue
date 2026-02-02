@@ -3,6 +3,7 @@ import { GameMiddleware, MiddlewareRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Panel from 'primevue/panel';
+import { Trash2, Plus } from 'lucide-vue-next';
 
 const props = defineProps<{
   middleware: GameMiddleware;
@@ -40,7 +41,9 @@ const removeRow = (type: keyof GameMiddleware, index: number) => {
       <div v-for="(row, index) in middleware[type.key]" :key="index" class="p-4 mb-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-4">
         <div class="flex justify-between items-center">
              <div class="font-bold text-sm">#{{ index + 1 }}</div>
-             <Button icon="pi pi-trash" severity="danger" text @click="removeRow(type.key, index)" size="small" />
+             <Button severity="danger" text @click="removeRow(type.key, index)" size="small">
+                <template #icon><Trash2 class="w-4 h-4" /></template>
+             </Button>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,7 +59,9 @@ const removeRow = (type: keyof GameMiddleware, index: number) => {
         </div>
       </div>
       
-      <Button label="Add Middleware" icon="pi pi-plus" size="small" @click="addRow(type.key)" />
+      <Button label="Add Middleware" size="small" @click="addRow(type.key)">
+        <template #icon><Plus class="w-4 h-4" /></template>
+      </Button>
     </Panel>
   </div>
 </template>

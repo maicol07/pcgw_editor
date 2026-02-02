@@ -4,6 +4,7 @@ import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
 import { computed } from 'vue';
+import { Plus, Pencil, Download, Trash2 } from 'lucide-vue-next';
 
 const store = useWorkspaceStore();
 
@@ -46,7 +47,9 @@ const customRename = (page: any) => {
             
             <!-- Actions -->
             <div class="flex gap-2">
-                <Button label="New Page" icon="pi pi-plus" class="flex-1" @click="store.createPage('Untitled Page')" />
+                <Button label="New Page" class="flex-1" @click="store.createPage('Untitled Page')">
+                    <template #icon><Plus class="w-4 h-4" /></template>
+                </Button>
             </div>
 
             <!-- Page List -->
@@ -65,9 +68,15 @@ const customRename = (page: any) => {
                         
                         <!-- Actions -->
                          <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-surface-0 dark:bg-surface-900 shadow-sm rounded transition-opacity duration-200">
-                            <Button icon="pi pi-pencil" text rounded size="small" class="!h-7 !w-7" @click.stop="customRename(page)" v-tooltip.top="'Rename'" />
-                            <Button icon="pi pi-download" text rounded size="small" class="!h-7 !w-7" @click.stop="store.exportPage(page.id)" v-tooltip.top="'Export JSON'" />
-                            <Button icon="pi pi-trash" text rounded severity="danger" size="small" class="!h-7 !w-7" @click.stop="store.deletePage(page.id)" v-tooltip.top="'Delete'" />
+                            <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="customRename(page)" v-tooltip.top="'Rename'">
+                                <template #icon><Pencil class="!w-6 !h-6" /></template>
+                            </Button>
+                            <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="store.exportPage(page.id)" v-tooltip.top="'Export JSON'">
+                                <template #icon><Download class="!w-6 !h-6" /></template>
+                            </Button>
+                            <Button text rounded severity="danger" size="small" class="!h-[34px] !w-[34px]" @click.stop="store.deletePage(page.id)" v-tooltip.top="'Delete'">
+                                <template #icon><Trash2 class="!w-6 !h-6" /></template>
+                            </Button>
                          </div>
                     </div>
                     <div class="text-xs text-surface-500 mt-2">

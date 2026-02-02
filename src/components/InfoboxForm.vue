@@ -13,6 +13,10 @@ import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
 import Checkbox from 'primevue/checkbox';
 import NotesButton from './NotesButton.vue';
+import { 
+  Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, 
+  IdCard, ShoppingCart, ShoppingBag, Globe, Trash2, Plus, Terminal, Box 
+} from 'lucide-vue-next';
 
 // Search
 const searchQuery = inject('searchQuery', ref(''));
@@ -238,9 +242,9 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">
                     <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
-                         <i class="pi pi-image text-primary-500"></i> Cover Image Filename
+                         <Image class="text-primary-500 w-4 h-4" /> Cover Image Filename
                     </label>
-                    <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Search PCGW files or enter name. Click Upload to add new.'"></i>
+                    <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Search PCGW files or enter name. Click Upload to add new.'" />
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <AutocompleteField 
@@ -252,21 +256,22 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     class="flex-1 min-w-[200px]"
                   />
                   <Button 
-                    icon="pi pi-upload" 
                     label="Upload" 
                     severity="secondary"
                     @click="openUploadPage"
                     size="small"
-                  />
+                  >
+                    <template #icon><Upload class="w-4 h-4" /></template>
+                  </Button>
                 </div>
                 <!-- Image Preview -->
                 <div v-if="modelValue.cover" class="mt-2 p-4 border border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-800">
                   <div v-if="coverImageLoading" class="flex items-center justify-center py-8">
-                    <i class="pi pi-spin pi-spinner text-2xl text-surface-400"></i>
+                    <Loader2 class="text-2xl text-surface-400 animate-spin w-8 h-8" />
                   </div>
                   <div v-else-if="!coverImageError && coverImageUrl" class="flex flex-col gap-3">
                     <div class="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
-                      <i class="pi pi-image text-lg"></i>
+                      <Image class="text-lg w-5 h-5" />
                       <span class="font-medium">{{ modelValue.cover }}</span>
                     </div>
                     <a 
@@ -275,24 +280,24 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                     >
-                      <i class="pi pi-external-link"></i>
+                      <ExternalLink class="w-4 h-4" />
                       View Cover on PCGW
                     </a>
-                    <p class="text-xs text-surface-500 dark:text-surface-400">
-                      <i class="pi pi-info-circle"></i> Preview not available due to CORS policy. Click above to view.
+                    <p class="text-xs text-surface-500 dark:text-surface-400 flex items-center gap-1">
+                      <Info class="w-3 h-3" /> Preview not available due to CORS policy. Click above to view.
                     </p>
                   </div>
-                  <div v-else class="text-sm text-red-500 dark:text-red-400 py-4 text-center">
-                    <i class="pi pi-exclamation-triangle"></i> Image not found on PCGW
+                  <div v-else class="text-sm text-red-500 dark:text-red-400 py-4 text-center flex flex-col items-center gap-2">
+                    <TriangleAlert class="w-6 h-6" /> Image not found on PCGW
                   </div>
                 </div>
               </div>
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">
                     <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
-                        <i class="pi pi-id-card text-orange-500"></i> License
+                        <IdCard class="text-orange-500 w-4 h-4" /> License
                     </label>
-                    <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Software distribution license type'"></i>
+                    <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Software distribution license type'" />
                 </div>
                 <Select 
                   v-model="modelValue.license" 
@@ -316,7 +321,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">
                     <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Developers')">Developers</label>
-                    <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Search and select multiple developers'"></i>
+                    <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Search and select multiple developers'" />
                 </div>
                 <AutocompleteField 
                   :modelValue="modelValue.developers.map(d => d.name)"
@@ -348,7 +353,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">
                     <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Publishers')">Publishers</label>
-                    <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Search and select multiple publishers'"></i>
+                    <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Search and select multiple publishers'" />
                 </div>
                 <AutocompleteField 
                   :modelValue="modelValue.publishers.map(p => p.name)"
@@ -379,7 +384,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">
                      <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Engines')">Engines</label>
-                     <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Search and select game engine(s)'"></i>
+                     <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Search and select game engine(s)'" />
                 </div>
                 <AutocompleteField 
                   :modelValue="modelValue.engines.map(e => e.name)"
@@ -419,7 +424,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-1">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Release Dates')">Release Dates</label>
-                  <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Use the editor above for standard dates. Advanced options allow for special states like TBA/EA.'"></i>
+                  <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Use the editor above for standard dates. Advanced options allow for special states like TBA/EA.'" />
               </div>
               <div class="flex flex-col gap-3 p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50">
                 <div v-for="(rd, index) in structuredDates" :key="index" class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
@@ -427,7 +432,9 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="flex-1" size="small" />
                     <div class="flex items-center gap-1">
                         <NotesButton v-model="rd.ref" type="ref" />
-                        <Button icon="pi pi-trash" severity="danger" text @click="removeReleaseDate(index)" size="small" />
+                        <Button severity="danger" text @click="removeReleaseDate(index)" size="small">
+                            <template #icon><Trash2 class="w-4 h-4" /></template>
+                        </Button>
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
@@ -449,12 +456,13 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 </div>
                 <Button 
                   label="Add Release Date" 
-                  icon="pi pi-plus" 
                   severity="secondary" 
                   size="small" 
                   @click="addReleaseDate"
                   class="w-full"
-                />
+                >
+                    <template #icon><Plus class="w-4 h-4" /></template>
+                </Button>
               </div>
 
             </div>
@@ -472,7 +480,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Monetization')">Monetization</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Primary business model(s)'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Primary business model(s)'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.monetization.note" @update:modelValue="v => updateTaxonomyParam('monetization', 'note', v)" type="note" />
@@ -492,7 +500,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Microtransactions')">Microtransactions</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Type of in-game purchases'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Type of in-game purchases'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.microtransactions.note" @update:modelValue="v => updateTaxonomyParam('microtransactions', 'note', v)" type="note" />
@@ -512,7 +520,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Modes')">Modes</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Available game modes'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Available game modes'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.modes.note" @update:modelValue="v => updateTaxonomyParam('modes', 'note', v)" type="note" />
@@ -534,7 +542,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                  <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                          <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Pacing')">Pacing</label>
-                         <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Game pacing type'"></i>
+                         <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Game pacing type'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.pacing.note" @update:modelValue="v => updateTaxonomyParam('pacing', 'note', v)" type="note" />
@@ -554,7 +562,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Perspectives')">Perspectives</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Camera perspectives'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Camera perspectives'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.perspectives.note" @update:modelValue="v => updateTaxonomyParam('perspectives', 'note', v)" type="note" />
@@ -574,7 +582,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Controls')">Controls</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Control scheme type'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Control scheme type'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.controls.note" @update:modelValue="v => updateTaxonomyParam('controls', 'note', v)" type="note" />
@@ -596,7 +604,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Genres')">Genres</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Game genre(s)'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Game genre(s)'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.genres.note" @update:modelValue="v => updateTaxonomyParam('genres', 'note', v)" type="note" />
@@ -616,7 +624,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Sports')">Sports</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Sports category (if applicable)'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Sports category (if applicable)'" />
                     </div>
                      <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.sports.note" @update:modelValue="v => updateTaxonomyParam('sports', 'note', v)" type="note" />
@@ -636,7 +644,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Vehicles')">Vehicles</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Vehicle types (if applicable)'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Vehicle types (if applicable)'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.vehicles.note" @update:modelValue="v => updateTaxonomyParam('vehicles', 'note', v)" type="note" />
@@ -658,7 +666,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Art Styles')">Art Styles</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Visual art style'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Visual art style'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.artStyles.note" @update:modelValue="v => updateTaxonomyParam('artStyles', 'note', v)" type="note" />
@@ -678,7 +686,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Themes')">Themes</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Story/setting themes'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Story/setting themes'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.themes.note" @update:modelValue="v => updateTaxonomyParam('themes', 'note', v)" type="note" />
@@ -698,7 +706,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Series')">Series</label>
-                        <i class="pi pi-info-circle text-surface-400 text-xs" v-tooltip.top="'Game series/franchise'"></i>
+                        <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Game series/franchise'" />
                     </div>
                     <div class="flex gap-1">
                         <NotesButton :modelValue="modelValue.taxonomy.series.note" @update:modelValue="v => updateTaxonomyParam('series', 'note', v)" type="note" />
@@ -729,7 +737,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex flex-col gap-2">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2" :class="highlightClass('Steam App ID')">
-                    <i class="pi pi-shopping-cart text-blue-500"></i> Steam App ID
+                    <ShoppingCart class="text-blue-500 w-4 h-4" /> Steam App ID
                   </label>
                   <InputText v-model="modelValue.links.steamAppId" placeholder="e.g. 440" class="w-full" />
                   <div class="flex flex-col gap-2 mt-1">
@@ -741,7 +749,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                 
                 <div class="flex flex-col gap-2">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2" :class="highlightClass('GOG.com ID')">
-                    <i class="pi pi-shopping-bag text-purple-500"></i> GOG.com ID
+                    <ShoppingBag class="text-purple-500 w-4 h-4" /> GOG.com ID
                   </label>
                   <InputText v-model="modelValue.links.gogComId" placeholder="e.g. the_witcher_3_wild_hunt" class="w-full" />
                   <div class="flex flex-col gap-2 mt-1">
@@ -753,7 +761,7 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
 
                 <div class="flex flex-col gap-2">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2" :class="highlightClass('Official Site')">
-                    <i class="pi pi-globe text-green-500"></i> Official Site
+                    <Globe class="text-green-500 w-4 h-4" /> Official Site
                   </label>
                   <InputText v-model="modelValue.links.officialSite" placeholder="https://..." class="w-full" />
                   <p class="text-xs text-surface-400">Full official website URL</p>
@@ -805,14 +813,18 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2" :class="highlightClass('Lutris Slug')">
-                    <i class="pi pi-linux text-orange-500"></i> Lutris Slug
+                    <div class="flex items-center gap-2 font-bold mb-1">
+                        <Terminal class="w-4 h-4 text-orange-500" /> Lutris Slug
+                    </div>
                   </label>
                   <InputText v-model="modelValue.links.lutris" placeholder="e.g. half-life-2" class="w-full" />
                 </div>
                 
                 <div class="flex flex-col gap-2">
                   <label class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2" :class="highlightClass('WineHQ Slug')">
-                    <i class="pi pi-box text-red-500"></i> WineHQ Slug
+                    <div class="flex items-center gap-2 font-bold mb-1">
+                        <Box class="w-4 h-4 text-red-500" /> WineHQ Slug
+                    </div>
                   </label>
                   <InputText v-model="modelValue.links.wineHq" placeholder="e.g. half-life" class="w-full" />
                   <div class="flex flex-col gap-2 mt-1">
@@ -857,25 +869,28 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
                     size="small"
                   />
                   <Button 
-                    icon="pi pi-trash" 
+                    label="Remove Reception Row" 
                     severity="danger" 
                     text 
+                    rounded
                     @click="removeReceptionRow(index)"
                     size="small"
-                  />
+                  >
+                    <template #icon><Trash2 class="w-4 h-4" /></template>
+                  </Button>
                 </div>
                 <p class="text-[10px] text-surface-400">
                   Aggregator name, ID from URL, and current score (e.g. 85 or 85/100).
                 </p>
               </div>
               <Button 
-                label="Add Reception Score" 
-                icon="pi pi-plus" 
+                label="Add Reception Row" 
                 severity="secondary" 
                 size="small" 
                 @click="addReceptionRow"
-                class="w-full mt-2"
-              />
+              >
+                <template #icon><Plus class="w-4 h-4" /></template>
+              </Button>
             </div>
           </div>
         </AccordionContent>

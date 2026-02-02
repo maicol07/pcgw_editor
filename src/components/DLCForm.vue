@@ -3,6 +3,7 @@ import { DLCRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
+import { X, Plus, Info } from 'lucide-vue-next';
 
 const props = defineProps<{
   modelValue: DLCRow[];
@@ -48,7 +49,9 @@ function getOsArray(osString: string): string[] {
          class="p-4 border border-surface-200 dark:border-surface-700 rounded-lg bg-surface-0 dark:bg-surface-900/50 flex flex-col gap-4 relative group transition-all hover:border-primary-300 dark:hover:border-primary-700">
       
       <div class="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button icon="pi pi-times" severity="danger" rounded aria-label="Remove" size="small" @click="removeRow(index)" />
+          <Button severity="danger" rounded aria-label="Remove" size="small" @click="removeRow(index)">
+            <template #icon><X class="w-3 h-3" /></template>
+          </Button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -79,10 +82,12 @@ function getOsArray(osString: string): string[] {
       </div>
     </div>
 
-    <Button label="Add DLC/Expansion" icon="pi pi-plus" severity="secondary" outlined class="w-full border-dashed" @click="addRow" />
+    <Button label="Add DLC/Expansion" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
+        <template #icon><Plus class="w-4 h-4" /></template>
+    </Button>
     
     <div class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800 flex gap-3 text-xs text-blue-700 dark:text-blue-300">
-        <i class="pi pi-info-circle mt-0.5"></i>
+        <Info class="w-4 h-4 mt-0.5" />
         <div>
             <p class="font-bold mb-1">Naming Conventions:</p>
             <ul class="list-disc pl-4 flex flex-col gap-1">

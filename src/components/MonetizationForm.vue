@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { GameMonetization, GameMicrotransactions } from '../models/GameData';
 import InputText from 'primevue/inputtext';
+import { DollarSign, ShoppingCart } from 'lucide-vue-next';
 
 defineProps<{
   monetization: GameMonetization;
@@ -13,7 +14,7 @@ defineProps<{
     <!-- Monetization Section -->
     <div class="flex flex-col gap-6">
         <div class="flex items-center gap-3 border-b border-surface-200 dark:border-surface-700 pb-2">
-            <i class="pi pi-dollar text-primary-500 font-bold"></i>
+            <DollarSign class="text-primary-500 font-bold w-4 h-4" />
             <h3 class="text-base font-bold uppercase text-surface-700 dark:text-surface-200 tracking-wider">Monetization</h3>
         </div>
         
@@ -69,7 +70,7 @@ defineProps<{
     <!-- Microtransactions Section -->
     <div class="flex flex-col gap-6">
         <div class="flex items-center gap-3 border-b border-surface-200 dark:border-surface-700 pb-2">
-            <i class="pi pi-shopping-cart text-primary-500 font-bold"></i>
+            <ShoppingCart class="text-primary-500 font-bold w-4 h-4" />
             <h3 class="text-base font-bold uppercase text-surface-700 dark:text-surface-200 tracking-wider">Microtransactions</h3>
         </div>
 

@@ -4,6 +4,7 @@ import type { GeneralInfoRow } from '../models/GameData';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import { X, Plus } from 'lucide-vue-next';
 
 const model = defineModel<GeneralInfoRow[]>({ required: true });
 
@@ -33,14 +34,15 @@ function removeRow(index: number) {
              class="p-4 bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl flex flex-col gap-4 relative group">
             
             <Button 
-                icon="pi pi-times" 
                 severity="danger" 
                 text 
                 rounded 
                 size="small" 
                 class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-0 dark:bg-surface-950 shadow-md"
                 @click="removeRow(index)"
-            />
+            >
+                <template #icon><X class="w-3 h-3" /></template>
+            </Button>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="flex flex-col gap-1">
@@ -99,11 +101,12 @@ function removeRow(index: number) {
 
         <Button 
             label="Add Link" 
-            icon="pi pi-plus" 
             outlined 
             size="small" 
             class="w-full border-dashed"
             @click="addRow"
-        />
+        >
+            <template #icon><Plus class="w-4 h-4" /></template>
+        </Button>
     </div>
 </template>

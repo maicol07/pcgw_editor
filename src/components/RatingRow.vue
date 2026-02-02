@@ -20,7 +20,7 @@ const props = defineProps<{
   value?: string;
   notes?: string;
   options?: string[];
-  icon?: string;
+  icon?: any;
   title?: string;
   compact?: boolean;
 }>();
@@ -64,7 +64,7 @@ const getIconSrc = (val: string) => {
         :class="[statusColor, compact ? 'w-28 text-xs' : 'w-48']"
         :title="label"
       >
-        <i v-if="icon" :class="icon"></i>
+        <component v-if="icon" :is="icon" class="w-4 h-4" />
         <span class="truncate">{{ label }}</span>
       </InputGroupAddon>
       <Select 

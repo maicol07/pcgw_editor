@@ -3,6 +3,11 @@ import { SettingsVideo } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
 import Panel from 'primevue/panel';
 import InputText from 'primevue/inputtext';
+import { 
+  Monitor, Grid2X2, Maximize, Star, Eye, Minimize, Image, 
+  ScanLine, LineChart, ArrowUpRight, FastForward, RefreshCcw, 
+  Clock, Zap, Sun, Sparkles, Palette 
+} from 'lucide-vue-next';
 
 defineProps<{
   video: SettingsVideo;
@@ -38,24 +43,24 @@ defineProps<{
 
     <Panel header="Resolution & Display" toggleable>
       <div class="flex flex-col gap-2">
-        <RatingRow icon="pi pi-desktop" label="Widescreen Resolution" v-model:value="video.widescreenResolution" v-model:notes="video.widescreenResolutionNotes" v-model:reference="video.widescreenResolutionRef" />
-        <RatingRow icon="pi pi-th-large" label="Multi-monitor" v-model:value="video.multiMonitor" v-model:notes="video.multiMonitorNotes" v-model:reference="video.multiMonitorRef" />
-        <RatingRow icon="pi pi-window-maximize" label="Ultra-widescreen" v-model:value="video.ultraWidescreen" v-model:notes="video.ultraWidescreenNotes" v-model:reference="video.ultraWidescreenRef" />
-        <RatingRow icon="pi pi-star" label="4K Ultra HD" v-model:value="video.fourKUltraHd" v-model:notes="video.fourKUltraHdNotes" v-model:reference="video.fourKUltraHdRef" />
-        <RatingRow icon="pi pi-eye" label="FOV" v-model:value="video.fov" v-model:notes="video.fovNotes" v-model:reference="video.fovRef" />
-        <RatingRow icon="pi pi-window-minimize" label="Windowed" v-model:value="video.windowed" v-model:notes="video.windowedNotes" v-model:reference="video.windowedRef" />
-        <RatingRow icon="pi pi-image" label="Borderless Windowed" v-model:value="video.borderlessWindowed" v-model:notes="video.borderlessWindowedNotes" v-model:reference="video.borderlessWindowedRef" />
+        <RatingRow :icon="Monitor" label="Widescreen Resolution" v-model:value="video.widescreenResolution" v-model:notes="video.widescreenResolutionNotes" v-model:reference="video.widescreenResolutionRef" />
+        <RatingRow :icon="Grid2X2" label="Multi-monitor" v-model:value="video.multiMonitor" v-model:notes="video.multiMonitorNotes" v-model:reference="video.multiMonitorRef" />
+        <RatingRow :icon="Maximize" label="Ultra-widescreen" v-model:value="video.ultraWidescreen" v-model:notes="video.ultraWidescreenNotes" v-model:reference="video.ultraWidescreenRef" />
+        <RatingRow :icon="Star" label="4K Ultra HD" v-model:value="video.fourKUltraHd" v-model:notes="video.fourKUltraHdNotes" v-model:reference="video.fourKUltraHdRef" />
+        <RatingRow :icon="Eye" label="FOV" v-model:value="video.fov" v-model:notes="video.fovNotes" v-model:reference="video.fovRef" />
+        <RatingRow :icon="Minimize" label="Windowed" v-model:value="video.windowed" v-model:notes="video.windowedNotes" v-model:reference="video.windowedRef" />
+        <RatingRow :icon="Image" label="Borderless Windowed" v-model:value="video.borderlessWindowed" v-model:notes="video.borderlessWindowedNotes" v-model:reference="video.borderlessWindowedRef" />
       </div>
     </Panel>
 
     <Panel header="Graphics Settings" toggleable>
       <div class="flex flex-col gap-2">
-        <RatingRow icon="pi pi-sort-amount-up" label="Anisotropic Filtering" v-model:value="video.anisotropic" v-model:notes="video.anisotropicNotes" v-model:reference="video.anisotropicRef" />
-        <RatingRow icon="pi pi-chart-line" label="Anti-aliasing" v-model:value="video.antiAliasing" v-model:notes="video.antiAliasingNotes" v-model:reference="video.antiAliasingRef" />
+        <RatingRow :icon="ScanLine" label="Anisotropic Filtering" v-model:value="video.anisotropic" v-model:notes="video.anisotropicNotes" v-model:reference="video.anisotropicRef" />
+        <RatingRow :icon="LineChart" label="Anti-aliasing" v-model:value="video.antiAliasing" v-model:notes="video.antiAliasingNotes" v-model:reference="video.antiAliasingRef" />
         
         <!-- Upscaling with Tech -->
         <div class="flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
-            <RatingRow icon="pi pi-arrow-up-right" label="Upscaling" v-model:value="video.upscaling" v-model:notes="video.upscalingNotes" v-model:reference="video.upscalingRef" />
+            <RatingRow :icon="ArrowUpRight" label="Upscaling" v-model:value="video.upscaling" v-model:notes="video.upscalingNotes" v-model:reference="video.upscalingRef" />
             <div class="pl-[200px] pr-4 pb-2" v-if="video.upscaling !== 'false' && video.upscaling !== 'unknown' && video.upscaling !== 'n/a'">
                 <InputText v-model="video.upscalingTech" placeholder="Tech (e.g. DLSS 2, FSR 2)" class="w-full" />
             </div>
@@ -63,18 +68,18 @@ defineProps<{
 
         <!-- Frame Gen with Tech -->
         <div class="flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
-             <RatingRow icon="pi pi-fast-forward" label="Frame Generation" v-model:value="video.frameGen" v-model:notes="video.frameGenNotes" v-model:reference="video.frameGenRef" />
+             <RatingRow :icon="FastForward" label="Frame Generation" v-model:value="video.frameGen" v-model:notes="video.frameGenNotes" v-model:reference="video.frameGenRef" />
              <div class="pl-[200px] pr-4 pb-2" v-if="video.frameGen !== 'false' && video.frameGen !== 'unknown' && video.frameGen !== 'n/a'">
                  <InputText v-model="video.frameGenTech" placeholder="Tech (e.g. DLSS 3, FSR 3)" class="w-full" />
              </div>
         </div>
 
-        <RatingRow icon="pi pi-sync" label="VSync" v-model:value="video.vsync" v-model:notes="video.vsyncNotes" v-model:reference="video.vsyncRef" />
-        <RatingRow icon="pi pi-clock" label="60 FPS" v-model:value="video.fps60" v-model:notes="video.fps60Notes" v-model:reference="video.fps60Ref" />
-        <RatingRow icon="pi pi-bolt" label="120+ FPS" v-model:value="video.fps120" v-model:notes="video.fps120Notes" v-model:reference="video.fps120Ref" />
-        <RatingRow icon="pi pi-sun" label="HDR" v-model:value="video.hdr" v-model:notes="video.hdrNotes" v-model:reference="video.hdrRef" />
-        <RatingRow icon="pi pi-sparkles" label="Ray Tracing" v-model:value="video.rayTracing" v-model:notes="video.rayTracingNotes" v-model:reference="video.rayTracingRef" />
-        <RatingRow icon="pi pi-palette" label="Color Blind Mode" v-model:value="video.colorBlind" v-model:notes="video.colorBlindNotes" v-model:reference="video.colorBlindRef" />
+        <RatingRow :icon="RefreshCcw" label="VSync" v-model:value="video.vsync" v-model:notes="video.vsyncNotes" v-model:reference="video.vsyncRef" />
+        <RatingRow :icon="Clock" label="60 FPS" v-model:value="video.fps60" v-model:notes="video.fps60Notes" v-model:reference="video.fps60Ref" />
+        <RatingRow :icon="Zap" label="120+ FPS" v-model:value="video.fps120" v-model:notes="video.fps120Notes" v-model:reference="video.fps120Ref" />
+        <RatingRow :icon="Sun" label="HDR" v-model:value="video.hdr" v-model:notes="video.hdrNotes" v-model:reference="video.hdrRef" />
+        <RatingRow :icon="Sparkles" label="Ray Tracing" v-model:value="video.rayTracing" v-model:notes="video.rayTracingNotes" v-model:reference="video.rayTracingRef" />
+        <RatingRow :icon="Palette" label="Color Blind Mode" v-model:value="video.colorBlind" v-model:notes="video.colorBlindNotes" v-model:reference="video.colorBlindRef" />
       </div>
     </Panel>
   </div>

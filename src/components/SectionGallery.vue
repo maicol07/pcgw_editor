@@ -6,6 +6,7 @@ import Carousel from 'primevue/carousel';
 import Dialog from 'primevue/dialog';
 import Textarea from 'primevue/textarea';
 import InputText from 'primevue/inputtext';
+import { Images, Plus, Image, ExternalLink, Pencil, Trash2 } from 'lucide-vue-next';
 import { pcgwApi } from '../services/pcgwApi';
 import type { GalleryImage } from '../models/GameData';
 
@@ -81,10 +82,11 @@ const resolvedUrls = ref<Record<string, string>>({});
 // Fetch URLs for images
 watchEffect(() => {
     props.modelValue?.forEach(async (img) => {
-        if (!resolvedUrls.value[img.name]) {
-             const url = await pcgwApi.getImageUrl(img.name);
+        const name = typeof img === 'string' ? img : img.name;
+        if (!resolvedUrls.value[name]) {
+             const url = await pcgwApi.getImageUrl(name);
              if (url) {
-                 resolvedUrls.value[img.name] = url;
+                 resolvedUrls.value[name] = url;
              }
         }
     });
@@ -95,11 +97,11 @@ watchEffect(() => {
     <div class="flex flex-col gap-4 p-4 bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl relative overflow-hidden">
         <!-- Decoration -->
         <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-            <i class="pi pi-images text-6xl"></i>
+            <Images class="w-24 h-24" />
         </div>
 
-        <label class="font-bold text-sm text-surface-500 uppercase tracking-widest relative z-10">
-            <i class="pi pi-images mr-2"></i> Gallery
+        <label class="font-bold text-sm text-surface-500 uppercase tracking-widest relative z-10 flex items-center">
+            <Images class="mr-2 w-4 h-4" /> Gallery
         </label>
         
         <div class="flex gap-2 relative z-10">
@@ -110,7 +112,9 @@ watchEffect(() => {
                 :multiple="true"
                 class="flex-1"
             />
-            <Button icon="pi pi-plus" label="Add" @click="addImage" :disabled="!newImage || newImage.length === 0" />
+            <Button label="Add" @click="addImage" :disabled="!newImage || newImage.length === 0">
+                <template #icon><Plus class="w-4 h-4" /></template>
+            </Button>
         </div>
 
         <div v-if="displayImages.length > 0" class="w-full">
@@ -129,7 +133,7 @@ watchEffect(() => {
                                 class="max-h-[150px] max-w-full object-contain" 
                             />
                             <div v-else class="flex flex-col items-center justify-center text-surface-500 h-[150px]">
-                                <i class="pi pi-image text-3xl mb-2"></i>
+                                <Image class="w-8 h-8 mb-2" />
                                 <span class="text-xs text-center break-all px-2">{{ slotProps.data.name }}</span>
                             </div>
                             
@@ -142,15 +146,21 @@ watchEffect(() => {
                         <!-- Actions -->
                         <div class="flex justify-between items-center mt-3 gap-2">
                              <div class="flex gap-1">
-                                <Button icon="pi pi-external-link" text rounded size="small" 
+                                <Button text rounded size="small" 
                                     v-tooltip="'View on PCGW'"
-                                    @click="openPcgwImage(slotProps.data.name)" />
-                                <Button icon="pi pi-pencil" text rounded size="small" 
+                                    @click="openPcgwImage(slotProps.data.name)">
+                                    <template #icon><ExternalLink class="w-3.5 h-3.5" /></template>
+                                </Button>
+                                <Button text rounded size="small" 
                                     v-tooltip="'Edit Caption'"
                                     :class="slotProps.data.caption ? 'text-primary-500' : 'text-surface-500'"
-                                    @click="openCaptionDialog(slotProps.data)" />
+                                    @click="openCaptionDialog(slotProps.data)">
+                                    <template #icon><Pencil class="w-3.5 h-3.5" /></template>
+                                </Button>
                             </div>
-                            <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="removeImage(slotProps.index)" />
+                            <Button severity="danger" text rounded size="small" @click="removeImage(slotProps.index)">
+                                <template #icon><Trash2 class="w-3.5 h-3.5" /></template>
+                            </Button>
                         </div>
                     </div>
                 </template>

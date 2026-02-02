@@ -9,6 +9,10 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import AutoComplete from 'primevue/autocomplete';
 import Toolbar from 'primevue/toolbar';
 import { renderWikitextToHtml } from '../utils/renderer';
+import { 
+  Book, MessageSquare, Check, Link, CircleHelp, X, AlignLeft, 
+  List, Code, CheckCircle, ExternalLink 
+} from 'lucide-vue-next';
 
 const props = defineProps<{
   modelValue?: string;
@@ -143,8 +147,8 @@ const searchUser = async (event: { query: string }) => {
 
 const hasContent = computed(() => !!props.modelValue && props.modelValue.trim().length > 0);
 const icon = computed(() => {
-    if (props.type === 'ref') return 'pi pi-book'; 
-    return 'pi pi-comment';
+    if (props.type === 'ref') return Book; 
+    return MessageSquare;
 });
 
 const tooltipText = computed(() => {
@@ -315,15 +319,16 @@ const insertReference = () => {
 <template>
   <div>
     <Button 
-      :icon="icon" 
       :severity="hasContent ? 'primary' : 'secondary'" 
       :variant="hasContent ? 'filled' : 'outlined'"
       rounded 
       text
-      size="small"
+      class="w-full h-full !p-0 flex items-center justify-center"
       v-tooltip.top="tooltipText"
       @click="openDialog"
-    />
+    >
+        <component :is="icon" class="!w-[17px] !h-[17px]" />
+    </Button>
 
     <Dialog v-model:visible="visible" :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal :class="type === 'note' ? 'w-full max-w-6xl' : 'w-full max-w-2xl'">
       <div class="flex flex-col gap-4">
@@ -331,9 +336,15 @@ const insertReference = () => {
         <!-- Reference Editor -->
         <div v-if="type === 'ref'">
             <div class="flex gap-2 mb-4">
-                <Button label="Refcheck" icon="pi pi-check" size="small" severity="secondary" variant="outlined" @click="addReference('Refcheck')" />
-                <Button label="Refurl" icon="pi pi-link" size="small" severity="secondary" variant="outlined" @click="addReference('Refurl')" />
-                <Button label="Citation" icon="pi pi-question" size="small" severity="secondary" variant="outlined" @click="addReference('cn')" />
+                <Button label="Refcheck" size="small" severity="secondary" variant="outlined" @click="addReference('Refcheck')">
+                    <template #icon><Check class="w-4 h-4" /></template>
+                </Button>
+                <Button label="Refurl" size="small" severity="secondary" variant="outlined" @click="addReference('Refurl')">
+                    <template #icon><Link class="w-4 h-4" /></template>
+                </Button>
+                <Button label="Citation" size="small" severity="secondary" variant="outlined" @click="addReference('cn')">
+                    <template #icon><CircleHelp class="w-4 h-4" /></template>
+                </Button>
             </div>
 
             <div v-if="references.length === 0" class="text-surface-500 italic text-center py-4 border border-dashed rounded border-surface-300 dark:border-surface-700">
@@ -347,15 +358,17 @@ const insertReference = () => {
                          <!-- Header with type and close button -->
                         <div class="flex justify-between items-center mb-2 border-b pb-2 border-surface-200 dark:border-surface-700">
                             <div class="font-bold flex items-center gap-2">
-                                <i v-if="ref.type === 'Refcheck'" class="pi pi-check-circle text-primary-600"></i>
-                                <i v-if="ref.type === 'Refurl'" class="pi pi-link text-primary-600"></i>
-                                <i v-if="ref.type === 'cn'" class="pi pi-question-circle text-orange-500"></i>
-                                <i v-if="ref.type === 'text'" class="pi pi-align-left text-surface-500"></i>
+                                <CheckCircle v-if="ref.type === 'Refcheck'" class="text-primary-600 w-4 h-4" />
+                                <Link v-if="ref.type === 'Refurl'" class="text-primary-600 w-4 h-4" />
+                                <CircleHelp v-if="ref.type === 'cn'" class="text-orange-500 w-4 h-4" />
+                                <AlignLeft v-if="ref.type === 'text'" class="text-surface-500 w-4 h-4" />
                                 <span :class="{'text-primary-600': ref.type !== 'cn' && ref.type !== 'text', 'text-orange-500': ref.type === 'cn', 'text-surface-700': ref.type === 'text'}">
                                     {{ ref.type === 'cn' ? 'Citation Needed' : (ref.type === 'text' ? 'Text Content' : ref.type) }}
                                 </span>
                             </div>
-                            <Button icon="pi pi-times" text rounded severity="danger" size="small" @click="removeReference(index)" />
+                            <Button text rounded severity="danger" size="small" @click="removeReference(index)">
+                                <template #icon><X class="w-4 h-4" /></template>
+                            </Button>
                         </div>
 
                         <!-- Refcheck Form -->
@@ -435,7 +448,9 @@ const insertReference = () => {
                             v-tooltip.top="'Bold (wikitext)'"
                             @click="insertBold"
                             class="!font-bold !min-w-[2rem]"
-                        />
+                        >
+                            <!-- <template #icon><Bold class="w-4 h-4" /></template> Maybe use text B for clarity? User has label="B" -->
+                        </Button>
                         <Button 
                             label="I"
                             text 
@@ -446,22 +461,24 @@ const insertReference = () => {
                             class="!italic !min-w-[2rem]"
                         />
                         <Button 
-                            icon="pi pi-link" 
                             text 
                             size="small" 
                             severity="secondary"
                             v-tooltip.top="'Wikilink'"
                             @click="insertWikilink"
-                        />
+                        >
+                            <template #icon><Link class="w-4 h-4" /></template>
+                        </Button>
                         <div class="h-6 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
                         <Button 
-                            icon="pi pi-list" 
                             text 
                             size="small" 
                             severity="secondary"
                             v-tooltip.top="'Bullet list'"
                             @click="insertBulletList"
-                        />
+                        >
+                            <template #icon><List class="w-4 h-4" /></template>
+                        </Button>
                         <Button 
                             label="1."
                             text 
@@ -472,38 +489,42 @@ const insertReference = () => {
                             class="!min-w-[2rem]"
                         />
                         <Button 
-                            icon="pi pi-code" 
                             text 
                             size="small" 
                             severity="secondary"
                             v-tooltip.top="'Code block'"
                             @click="insertCodeBlock"
-                        />
+                        >
+                            <template #icon><Code class="w-4 h-4" /></template>
+                        </Button>
                         <div class="h-6 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
                         <Button 
-                            icon="pi pi-check" 
                             label="Refcheck"
                             text 
                             size="small" 
                             severity="secondary"
                             @click="openRefDialog('Refcheck')"
-                        />
+                        >
+                            <template #icon><Check class="w-4 h-4" /></template>
+                        </Button>
                         <Button 
-                            icon="pi pi-external-link" 
                             label="Refurl"
                             text 
                             size="small" 
                             severity="secondary"
                             @click="openRefDialog('Refurl')"
-                        />
+                        >
+                            <template #icon><ExternalLink class="w-4 h-4" /></template>
+                        </Button>
                         <Button 
-                            icon="pi pi-question" 
                             label="Citation"
                             text 
                             size="small" 
                             severity="secondary"
                             @click="openRefDialog('cn')"
-                        />
+                        >
+                            <template #icon><CircleHelp class="w-4 h-4" /></template>
+                        </Button>
                     </div>
                 </template>
             </Toolbar>

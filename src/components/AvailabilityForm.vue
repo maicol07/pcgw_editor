@@ -4,6 +4,11 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
+import { 
+  Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play, 
+  Gift, Heart, Command, AppWindow, Globe, Box, Code, 
+  Building2, Plus, Trash2 
+} from 'lucide-vue-next';
 
 const props = defineProps<{
   modelValue: AvailabilityRow[];
@@ -14,21 +19,21 @@ const emit = defineEmits<{
 }>();
 
 const storefrontOptions = [
-    { label: 'Steam', value: 'Steam', icon: 'pi pi-desktop' },
-    { label: 'GOG.com', value: 'GOG.com', icon: 'pi pi-shopping-bag' },
-    { label: 'Epic Games Store', value: 'Epic Games Store', icon: 'pi pi-bolt' },
-    { label: 'Amazon.com', value: 'Amazon.com', icon: 'pi pi-amazon' },
-    { label: 'Amazon.co.uk', value: 'Amazon.co.uk', icon: 'pi pi-amazon' },
-    { label: 'Battle.net', value: 'Battle.net', icon: 'pi pi-shield' },
-    { label: 'EA app', value: 'EA app', icon: 'pi pi-play' },
-    { label: 'Humble Store', value: 'Humble Store', icon: 'pi pi-gift' },
-    { label: 'itch.io', value: 'itch.io', icon: 'pi pi-heart-fill' },
-    { label: 'Mac App Store', value: 'MacApp', icon: 'pi pi-apple' },
-    { label: 'Microsoft Store', value: 'Microsoft Store', icon: 'pi pi-microsoft' },
-    { label: 'Ubisoft Store', value: 'Ubisoft Store', icon: 'pi pi-globe' },
-    { label: 'Retail', value: 'Retail', icon: 'pi pi-box' },
-    { label: 'Developer', value: 'Developer', icon: 'pi pi-code' },
-    { label: 'Publisher', value: 'Publisher', icon: 'pi pi-building' },
+    { label: 'Steam', value: 'Steam', icon: Monitor },
+    { label: 'GOG.com', value: 'GOG.com', icon: ShoppingBag },
+    { label: 'Epic Games Store', value: 'Epic Games Store', icon: Zap },
+    { label: 'Amazon.com', value: 'Amazon.com', icon: ShoppingCart },
+    { label: 'Amazon.co.uk', value: 'Amazon.co.uk', icon: ShoppingCart },
+    { label: 'Battle.net', value: 'Battle.net', icon: Shield },
+    { label: 'EA app', value: 'EA app', icon: Play },
+    { label: 'Humble Store', value: 'Humble Store', icon: Gift },
+    { label: 'itch.io', value: 'itch.io', icon: Heart },
+    { label: 'Mac App Store', value: 'MacApp', icon: Command },
+    { label: 'Microsoft Store', value: 'Microsoft Store', icon: AppWindow },
+    { label: 'Ubisoft Store', value: 'Ubisoft Store', icon: Globe },
+    { label: 'Retail', value: 'Retail', icon: Box },
+    { label: 'Developer', value: 'Developer', icon: Code },
+    { label: 'Publisher', value: 'Publisher', icon: Building2 },
 ];
 
 const stateOptions = [
@@ -72,7 +77,9 @@ const getProductIdHelp = (source: string) => {
   <div class="flex flex-col gap-4">
     <div class="flex justify-between items-center">
         <h3 class="text-sm font-semibold uppercase tracking-wider text-surface-500">Availability Table</h3>
-        <Button label="Add Store" icon="pi pi-plus" size="small" @click="addRow" severity="primary" class="h-8" />
+        <Button label="Add Store" size="small" @click="addRow" severity="primary" class="h-8">
+            <template #icon><Plus class="w-4 h-4" /></template>
+        </Button>
     </div>
     
     <div v-for="(row, index) in modelValue" :key="index" class="p-4 rounded-xl bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 flex flex-col gap-4">
@@ -90,14 +97,14 @@ const getProductIdHelp = (source: string) => {
                 >
                     <template #value="slotProps">
                         <div v-if="slotProps.value" class="flex items-center gap-2">
-                            <i :class="storefrontOptions.find(o => o.value === slotProps.value)?.icon" class="text-xs"></i>
+                             <component :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon" class="w-3 h-3" />
                             <span class="text-xs">{{ storefrontOptions.find(o => o.value === slotProps.value)?.label }}</span>
                         </div>
                         <span v-else class="text-xs">Select Store</span>
                     </template>
-                    <template #option="slotProps">
+                     <template #option="slotProps">
                         <div class="flex items-center gap-2">
-                            <i :class="slotProps.option.icon" class="text-xs"></i>
+                            <component :is="slotProps.option.icon" class="w-3 h-3" />
                             <span class="text-xs">{{ slotProps.option.label }}</span>
                         </div>
                     </template>
@@ -112,7 +119,9 @@ const getProductIdHelp = (source: string) => {
                     class="scale-75 origin-left"
                 />
             </div>
-            <Button icon="pi pi-trash" text severity="danger" size="small" @click="removeRow(index)" />
+            <Button text severity="danger" size="small" @click="removeRow(index)">
+                <template #icon><Trash2 class="w-4 h-4" /></template>
+            </Button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

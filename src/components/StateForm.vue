@@ -9,6 +9,7 @@ import InputChips from 'primevue/inputchips';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import Message from 'primevue/message';
+import { Filter, Network, TriangleAlert } from 'lucide-vue-next';
 
 const model = defineModel<ArticleState>({ required: true });
 
@@ -69,7 +70,7 @@ const missingElements = computed(() => {
                 </label>
                 <InputGroup>
                     <InputGroupAddon>
-                        <i class="pi pi-filter"></i>
+                        <Filter class="w-4 h-4" />
                     </InputGroupAddon>
                     <InputText 
                         v-model="model.disambig" 
@@ -86,7 +87,7 @@ const missingElements = computed(() => {
                 </label>
                 <InputGroup class="flex-1">
                      <InputGroupAddon>
-                        <i class="pi pi-sitemap"></i>
+                        <Network class="w-4 h-4" />
                     </InputGroupAddon>
                     <InputChips 
                         v-model="model.distinguish" 
@@ -109,7 +110,8 @@ const missingElements = computed(() => {
                     </label>
                 </div>
                 <div v-if="model.stub" class="flex flex-col gap-2">
-                    <Message severity="warn" icon="pi pi-exclamation-triangle" class="text-sm shadow-sm">
+                    <Message severity="warn" class="text-sm shadow-sm">
+                        <template #icon><TriangleAlert class="w-5 h-5 mr-2" /></template>
                         <div class="flex flex-col gap-2">
                             <div v-if="missingElements.length > 0">
                                 <span class="font-bold">Detected Missing:</span> {{ missingElements.join(', ') }}
