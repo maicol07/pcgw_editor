@@ -457,6 +457,9 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.playstationControllersNotes = getParam(input, 'playstation controllers notes');
         data.input.trackedMotionControllers = getParam(input, 'tracked motion controllers') as any;
         data.input.trackedMotionControllersNotes = getParam(input, 'tracked motion controllers notes');
+
+        data.input.touchscreen = getParam(input, 'touchscreen') as any;
+        data.input.touchscreenNotes = getParam(input, 'touchscreen notes');
     }
 
     // --- Audio ---
@@ -468,6 +471,7 @@ export function parseWikitext(wikitext: string): GameData {
         data.audio.closedCaptions = getParam(audio, 'closed captions') as any;
         data.audio.muteOnFocusLost = getParam(audio, 'mute on focus lost') as any;
         data.audio.royaltyFree = getParam(audio, 'royalty free audio') as any;
+        data.audio.royaltyFreeNotes = getParam(audio, 'royalty free audio notes');
     }
 
     // --- Network ---

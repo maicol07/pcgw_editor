@@ -292,7 +292,9 @@ ${rows}
             simultaneousInput: 'simultaneous input',
             simultaneousInputNotes: 'simultaneous input notes',
             steamInputApi: 'steam input api',
-            steamInputApiNotes: 'steam input api notes'
+            steamInputApiNotes: 'steam input api notes',
+            touchscreen: 'touchscreen',
+            touchscreenNotes: 'touchscreen notes'
         };
         this.updateSection('Input', data, map);
     }
@@ -304,7 +306,8 @@ ${rows}
             subtitles: 'subtitles',
             closedCaptions: 'closed captions',
             muteOnFocusLost: 'mute on focus lost',
-            royaltyFree: 'royalty free audio'
+            royaltyFree: 'royalty free audio',
+            royaltyFreeNotes: 'royalty free audio notes'
         };
         this.updateSection('Audio', data, map);
     }
