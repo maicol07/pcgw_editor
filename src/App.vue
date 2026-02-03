@@ -34,26 +34,25 @@ import EditorToolbar, { EditorMode } from './components/editor/EditorToolbar.vue
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 
 // Forms
-import InfoboxForm from './components/InfoboxForm.vue';
-import AvailabilityForm from './components/AvailabilityForm.vue';
-import MonetizationForm from './components/MonetizationForm.vue';
-import GameDataForm from './components/GameDataForm.vue';
-import StateForm from './components/StateForm.vue';
-import SectionGallery from './components/SectionGallery.vue';
-import DLCForm from './components/DLCForm.vue';
-import EssentialImprovementsForm from './components/EssentialImprovementsForm.vue';
-import VideoForm from './components/VideoForm.vue';
-import InputForm from './components/InputForm.vue';
-import AudioForm from './components/AudioForm.vue';
-import NetworkForm from './components/NetworkForm.vue';
-import VRSupportForm from './components/VRSupportForm.vue';
-import APIForm from './components/APIForm.vue';
-import MiddlewareForm from './components/MiddlewareForm.vue';
-import IssuesForm from './components/IssuesForm.vue';
-import SystemRequirementsForm from './components/SystemRequirementsForm.vue'; // Included in panel list but import missing in old file? 
-// Actually SystemReq wasn't fully implemented in the snippet provided but it was in the panel list. 
-// Assuming the component exists or we leave it for now. Based on line 21 of original it exists.
-import LocalizationsForm from './components/LocalizationsForm.vue'; // Also seen in imports
+// Forms - Lazy Loaded
+const InfoboxForm = defineAsyncComponent(() => import('./components/InfoboxForm.vue'));
+const AvailabilityForm = defineAsyncComponent(() => import('./components/AvailabilityForm.vue'));
+const MonetizationForm = defineAsyncComponent(() => import('./components/MonetizationForm.vue'));
+const GameDataForm = defineAsyncComponent(() => import('./components/GameDataForm.vue'));
+const StateForm = defineAsyncComponent(() => import('./components/StateForm.vue'));
+const SectionGallery = defineAsyncComponent(() => import('./components/SectionGallery.vue'));
+const DLCForm = defineAsyncComponent(() => import('./components/DLCForm.vue'));
+const EssentialImprovementsForm = defineAsyncComponent(() => import('./components/EssentialImprovementsForm.vue'));
+const VideoForm = defineAsyncComponent(() => import('./components/VideoForm.vue'));
+const InputForm = defineAsyncComponent(() => import('./components/InputForm.vue'));
+const AudioForm = defineAsyncComponent(() => import('./components/AudioForm.vue'));
+const NetworkForm = defineAsyncComponent(() => import('./components/NetworkForm.vue'));
+const VRSupportForm = defineAsyncComponent(() => import('./components/VRSupportForm.vue'));
+const APIForm = defineAsyncComponent(() => import('./components/APIForm.vue'));
+const MiddlewareForm = defineAsyncComponent(() => import('./components/MiddlewareForm.vue'));
+const IssuesForm = defineAsyncComponent(() => import('./components/IssuesForm.vue'));
+const SystemRequirementsForm = defineAsyncComponent(() => import('./components/SystemRequirementsForm.vue'));
+const LocalizationsForm = defineAsyncComponent(() => import('./components/LocalizationsForm.vue'));
 
 // Lazy load CodeEditor
 const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
@@ -85,7 +84,8 @@ let isSyncingFromStore = false;
 
 watch(() => store.activeGameData, (newData) => {
     isSyncingFromStore = true;
-    gameData.value = JSON.parse(JSON.stringify(newData));
+    gameData.value = structuredClone(newData);
+
     setTimeout(() => { isSyncingFromStore = false; }, 0);
 }, { immediate: true, deep: true });
 

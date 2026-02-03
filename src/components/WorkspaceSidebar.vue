@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '../stores/workspace';
 import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
+import VirtualScroller from 'primevue/virtualscroller';
 import { computed } from 'vue';
 import { Plus, Pencil, Download, Trash2 } from 'lucide-vue-next';
 
@@ -53,36 +54,41 @@ const customRename = (page: any) => {
             </div>
 
             <!-- Page List -->
-            <div class="flex-1 overflow-y-auto border border-surface-200 dark:border-surface-700 rounded-lg p-2">
-                <div v-for="page in store.pages" :key="page.id" 
-                    class="p-3 mb-2 rounded-lg cursor-pointer transition-colors border group relative"
-                    :class="[
-                        page.id === store.activePageId 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500' 
-                        : 'bg-surface-50 dark:bg-surface-800 border-transparent hover:border-surface-300 dark:hover:border-surface-600'
-                    ]"
-                    @click="store.setActivePage(page.id)"
-                >
-                    <div class="flex justify-between items-start">
-                        <div class="font-medium truncate pr-20" :title="page.title">{{ page.title }}</div>
-                        
-                        <!-- Actions -->
-                         <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-surface-0 dark:bg-surface-900 shadow-sm rounded transition-opacity duration-200">
-                            <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="customRename(page)" v-tooltip.top="'Rename'">
-                                <template #icon><Pencil class="!w-6 !h-6" /></template>
-                            </Button>
-                            <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="store.exportPage(page.id)" v-tooltip.top="'Export JSON'">
-                                <template #icon><Download class="!w-6 !h-6" /></template>
-                            </Button>
-                            <Button text rounded severity="danger" size="small" class="!h-[34px] !w-[34px]" @click.stop="store.deletePage(page.id)" v-tooltip.top="'Delete'">
-                                <template #icon><Trash2 class="!w-6 !h-6" /></template>
-                            </Button>
-                         </div>
-                    </div>
-                    <div class="text-xs text-surface-500 mt-2">
-                        {{ formatDate(page.lastModified) }}
-                    </div>
-                </div>
+            <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                <VirtualScroller :items="store.pages" :itemSize="90" class="h-full w-full" :autoSize="false">
+                    <template v-slot:item="{ item: page, options }">
+                        <div 
+                            class="mx-2 mt-2 p-3 rounded-lg cursor-pointer transition-colors border group relative box-border"
+                            style="height: 82px"
+                            :class="[
+                                page.id === store.activePageId 
+                                ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500' 
+                                : 'bg-surface-50 dark:bg-surface-800 border-transparent hover:border-surface-300 dark:hover:border-surface-600'
+                            ]"
+                            @click="store.setActivePage(page.id)"
+                        >
+                            <div class="flex justify-between items-start">
+                                <div class="font-medium truncate pr-20" :title="page.title">{{ page.title }}</div>
+                                
+                                <!-- Actions -->
+                                <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-surface-0 dark:bg-surface-900 shadow-sm rounded transition-opacity duration-200">
+                                    <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="customRename(page)" v-tooltip.top="'Rename'">
+                                        <template #icon><Pencil class="!w-6 !h-6" /></template>
+                                    </Button>
+                                    <Button text rounded size="small" class="!h-[34px] !w-[34px]" @click.stop="store.exportPage(page.id)" v-tooltip.top="'Export JSON'">
+                                        <template #icon><Download class="!w-6 !h-6" /></template>
+                                    </Button>
+                                    <Button text rounded severity="danger" size="small" class="!h-[34px] !w-[34px]" @click.stop="store.deletePage(page.id)" v-tooltip.top="'Delete'">
+                                        <template #icon><Trash2 class="!w-6 !h-6" /></template>
+                                    </Button>
+                                </div>
+                            </div>
+                            <div class="text-xs text-surface-500 mt-2">
+                                {{ formatDate(page.lastModified) }}
+                            </div>
+                        </div>
+                    </template>
+                </VirtualScroller>
             </div>
 
             <!-- Import -->
