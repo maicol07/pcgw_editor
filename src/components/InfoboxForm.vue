@@ -1,30 +1,17 @@
 <script setup lang="ts">
-import { ref, watch, inject, computed } from 'vue';
 import { GameInfobox } from '../models/GameData';
-import { pcgwApi } from '../services/pcgwApi';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import AutocompleteField from './AutocompleteField.vue';
 import Accordion from 'primevue/accordion';
 import AccordionPanel from 'primevue/accordionpanel';
 import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
-import Checkbox from 'primevue/checkbox';
-import NotesButton from './NotesButton.vue';
-import { 
-  Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, 
-  IdCard, ShoppingCart, ShoppingBag, Globe, Trash2, Plus, Terminal, Box, Calendar 
-} from 'lucide-vue-next';
 
-// Search
-const searchQuery = inject('searchQuery', ref(''));
-const isMatch = (text: string) => {
-    if (!searchQuery.value || searchQuery.value.length < 3) return false;
-    return text.toLowerCase().includes(searchQuery.value.toLowerCase());
-};
-const highlightClass = (text: string) => isMatch(text) ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/10 px-1 rounded' : '';
+// Sub-components
+import InfoboxBasicInfo from './infobox/InfoboxBasicInfo.vue';
+import InfoboxCompanies from './infobox/InfoboxCompanies.vue';
+import InfoboxReleaseDates from './infobox/InfoboxReleaseDates.vue';
+import InfoboxTaxonomy from './infobox/InfoboxTaxonomy.vue';
+import InfoboxLinks from './infobox/InfoboxLinks.vue';
+import InfoboxReception from './infobox/InfoboxReception.vue';
 
 const props = defineProps<{
   modelValue: GameInfobox;

@@ -1,26 +1,47 @@
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, watch, defineAsyncComponent, reactive, provide, onMounted } from 'vue';
 import { useWorkspaceStore } from './stores/workspace';
 import { GameData, initialGameData } from './models/GameData';
-import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
 import { parseWikitext } from './utils/parser';
-import { renderWikitextToHtml } from './utils/renderer';
+import { GoogleGenAI } from '@google/genai';
+
+// Composables
 import { useAutoTheme } from './composables/useAutoTheme';
+import { useSearch } from './composables/useSearch';
+import { usePreview } from './composables/usePreview';
+
+// Layout & UI
+import Splitter from 'primevue/splitter';
+import SplitterPanel from 'primevue/splitterpanel';
+import Panel from 'primevue/panel';
+import Textarea from 'primevue/textarea';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import SelectButton from 'primevue/selectbutton';
+import Dialog from 'primevue/dialog';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import { 
+    File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle, 
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, 
+    TriangleAlert, Settings, Cpu, Search, ChevronsDown, ChevronsUp,
+    Loader2, Key, Trash, X, Check, Sparkles, Copy, Globe,
+    Server, MessageCircle, AppWindow, Box, Cloud
+} from 'lucide-vue-next';
+
+import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
+import EditorToolbar, { EditorMode } from './components/editor/EditorToolbar.vue';
+import PreviewPanel from './components/editor/PreviewPanel.vue';
+
+// Forms
 import InfoboxForm from './components/InfoboxForm.vue';
 import AvailabilityForm from './components/AvailabilityForm.vue';
 import MonetizationForm from './components/MonetizationForm.vue';
 import GameDataForm from './components/GameDataForm.vue';
-// Lazy load CodeEditor only when switching to Code mode
-const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
 import StateForm from './components/StateForm.vue';
 import SectionGallery from './components/SectionGallery.vue';
-import GeneralInfoForm from './components/GeneralInfoForm.vue';
 import DLCForm from './components/DLCForm.vue';
-import LocalizationsForm from './components/LocalizationsForm.vue';
 import EssentialImprovementsForm from './components/EssentialImprovementsForm.vue';
-import SystemRequirementsForm from './components/SystemRequirementsForm.vue';
-import IssuesForm from './components/IssuesForm.vue';
-
 import VideoForm from './components/VideoForm.vue';
 import InputForm from './components/InputForm.vue';
 import AudioForm from './components/AudioForm.vue';
@@ -28,409 +49,122 @@ import NetworkForm from './components/NetworkForm.vue';
 import VRSupportForm from './components/VRSupportForm.vue';
 import APIForm from './components/APIForm.vue';
 import MiddlewareForm from './components/MiddlewareForm.vue';
+import IssuesForm from './components/IssuesForm.vue';
+import SystemRequirementsForm from './components/SystemRequirementsForm.vue'; // Included in panel list but import missing in old file? 
+// Actually SystemReq wasn't fully implemented in the snippet provided but it was in the panel list. 
+// Assuming the component exists or we leave it for now. Based on line 21 of original it exists.
+import LocalizationsForm from './components/LocalizationsForm.vue'; // Also seen in imports
 
-import Splitter from 'primevue/splitter';
-import SplitterPanel from 'primevue/splitterpanel';
-import Textarea from 'primevue/textarea';
-import Dialog from 'primevue/dialog';
-import SelectButton from 'primevue/selectbutton';
-import Panel from 'primevue/panel';
-import InputText from 'primevue/inputtext';
-import Toolbar from 'primevue/toolbar';
-import Button from 'primevue/button';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
-import { GoogleGenAI } from '@google/genai';
-import { 
-  Menu, Loader2, ChevronsDown, ChevronsUp, Search, 
-  File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle, 
-  Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, 
-  TriangleAlert, Settings, Cpu, Globe, List, Key, Trash, X, Check,
-  Sparkles, Copy, Wand2
-} from 'lucide-vue-next';
-import iconBulletDocument from './assets/icons/bullet-document.svg';
-import { reactive, provide } from 'vue';
+// Lazy load CodeEditor
+const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
 
-// Modes
-type EditorMode = 'Visual' | 'Code';
+// --- Initialization ---
+useAutoTheme();
+const store = useWorkspaceStore();
+
+const uiBus = reactive({
+    expandAllCount: 0,
+    collapseAllCount: 0
+});
+provide('uiBus', uiBus);
+
+// --- State ---
+const sidebarVisible = ref(false);
 const editorMode = ref<EditorMode>('Visual');
 const isModeSwitching = ref(false);
 const isCodeEditorLoaded = ref(false);
-type PreviewMode = 'Local' | 'API';
-const previewMode = ref<PreviewMode>('API');
-
-// Progressive rendering - defer heavy components
 const isInitialLoad = ref(true);
 
-// After initial mount, defer rendering of collapsed panels
-import { onMounted } from 'vue';
-onMounted(() => {
-    // Small delay to let the page render first
-    requestAnimationFrame(() => {
-        setTimeout(() => {
-            isInitialLoad.value = false;
-        }, 100);
-    });
-});
+// API Keys
+const geminiApiKey = ref(localStorage.getItem('gemini-api-key') || '');
+provide('geminiApiKey', geminiApiKey);
 
-// Auto theme based on system preference
-// Auto theme based on system preference
-useAutoTheme();
-
-const store = useWorkspaceStore();
-
-// Create a local mutable copy of gameData for editing
-// The store's activeGameData is a computed with getter/setter that parses wikitext on every access
-// We need a stable ref we can mutate and deep-watch
+// Game Data & Sync
 const gameData = ref<GameData>(initialGameData);
-
-// Flag to prevent infinite loops when syncing between store and local gameData
 let isSyncingFromStore = false;
 
-// Watch store's activeGameData and sync to our local copy when the page changes
 watch(() => store.activeGameData, (newData) => {
     isSyncingFromStore = true;
-    // Create a deep copy to avoid reference issues
     gameData.value = JSON.parse(JSON.stringify(newData));
-    // Use nextTick to ensure the flag is reset after all watchers have run
     setTimeout(() => { isSyncingFromStore = false; }, 0);
 }, { immediate: true, deep: true });
 
-// Watch our local gameData for changes and save back to store
 watch(gameData, (newData) => {
-    // Only save if we're not currently syncing from the store (to avoid loops)
     if (!isSyncingFromStore) {
-        // Save mutations back to the store (which will generate wikitext)
         store.activeGameData = newData;
     }
 }, { deep: true });
- 
 
-// baseWikitext is now stored in the workspace store, accessed via activePage
-const baseWikitext = computed({
-    get: () => store.activePage?.baseWikitext || '',
-    set: (val) => {
-        if (store.activePage) {
-            store.activePage.baseWikitext = val;
-            store.activePage.lastModified = Date.now();
-        }
-    }
-});
-
-// Page Title mapping
+// Page Title
 const pageTitle = computed({
     get: () => store.activePage?.title || '',
-    set: (val) => {
-        if (store.activePage) store.renamePage(store.activePage.id, val);
-    }
+    set: (val) => { if (store.activePage) store.renamePage(store.activePage.id, val); }
 });
 
-const sidebarVisible = ref(false);
-const shareSummaryVisible = ref(false);
-const shareSummaryText = ref('');
-const isGeneratingSummary = ref(false);
-
-// Gemini API Key Management
-const geminiApiKey = ref(localStorage.getItem('gemini-api-key') || '');
-const showApiKeyDialog = ref(false);
-const tempApiKey = ref('');
-
-// Save API key to localStorage
-function saveApiKey() {
-    if (tempApiKey.value.trim()) {
-        geminiApiKey.value = tempApiKey.value.trim();
-        localStorage.setItem('gemini-api-key', geminiApiKey.value);
-        showApiKeyDialog.value = false;
-        tempApiKey.value = '';
-    }
-}
-
-// Clear API key
-function clearApiKey() {
-    geminiApiKey.value = '';
-    localStorage.removeItem('gemini-api-key');
-    tempApiKey.value = '';
-}
-
-// Generate share summary based on game data
-// Generate share summary using Gemini AI
-async function generateShareSummary() {
-    // Check if API key exists
-    if (!geminiApiKey.value) {
-        showApiKeyDialog.value = true;
-        tempApiKey.value = '';
-        return;
-    }
-
-    isGeneratingSummary.value = true;
-    
-    try {
-        const data = gameData.value;
-        const title = pageTitle.value || 'Unknown Game';
-        
-        // Initialize Google Generative AI with API key
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey.value });
-        
-        // Create a structured prompt for Gemini
-        const prompt = `You are creating a feature list for a PCGamingWiki article about "${title}".
-
-Game Data:
-${JSON.stringify({
-    video: data.video,
-    input: data.input,
-    audio: data.audio,
-    network: data.network,
-    vr: data.vr
-}, null, 2)}
-
-Instructions:
-- Create ONLY a bullet-point list of features
-- Include BOTH positive features (things supported/available) AND negative features (limitations/missing features)
-- Use natural, readable language
-- Focus on video settings, input support, audio options, and multiplayer features
-- Be brief and factual
-- Only include features explicitly set in the data (ignore "false", "unknown", "hackable", or empty values for positive features)
-- For negative features, mention notable limitations (e.g., "No native ultrawide support", "Limited to stereo audio")
-
-Output format (no introduction, just the list):
-- Native 4K resolution support.
-- Options for FXAA and SMAA anti-aliasing.
-- No native ultrawide support.
-- Xbox and DualShock 4 controllers are natively supported.
-- Separate volume sliders for master, music, and sound effects.
-- Audio limited to stereo (no surround sound).`;
-
-        // Call Gemini API using the SDK
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-        });
-
-        const generatedText = response.text;
-        
-        if (!generatedText) {
-            throw new Error('No response from AI');
-        }
-
-        shareSummaryText.value = generatedText.trim();
-        shareSummaryVisible.value = true;
-        
-    } catch (error: any) {
-        console.error('Failed to generate summary:', error);
-        alert(`Failed to generate summary: ${error.message || 'Unknown error'}\n\nPlease check your API key and try again.`);
-        
-        // Optionally show API key dialog on error
-        if (error.message?.includes('API key') || error.message?.includes('API_KEY')) {
-            showApiKeyDialog.value = true;
-        }
-    } finally {
-        isGeneratingSummary.value = false;
-    }
-}
-
-// Copy share summary to clipboard
-async function copyShareSummary() {
-    try {
-        await navigator.clipboard.writeText(shareSummaryText.value);
-        // Show success feedback (you can add a toast notification here if needed)
-        console.log('Copied to clipboard!');
-    } catch (err) {
-        console.error('Failed to copy:', err);
-    }
-}
-
-// Wikitext is now managed by the store - when we update gameData, the store generates wikitext
-// We just read it from the store's activePage
+// Wikitext Data
 const wikitext = computed(() => store.activePage?.wikitext || '');
-
-// Logic for active wikitext source
 const manualWikitext = ref('');
+const currentWikitext = computed(() => editorMode.value === 'Visual' ? wikitext.value : manualWikitext.value);
 
-const currentWikitext = computed(() => {
-    return editorMode.value === 'Visual' ? wikitext.value : manualWikitext.value;
+// --- Preview Logic (Extracted) ---
+const { 
+    previewMode, 
+    renderedHtml, 
+    isLoading: isPreviewLoading, 
+    error: previewError 
+} = usePreview(() => currentWikitext.value, () => pageTitle.value);
+
+// --- Search Logic (Extracted) ---
+const panelKeys = [
+    'articleState', 'infobox', 'introduction', 'availability', 'monetization', 
+    'dlc', 'essentialImprovements', 'gameData', 'video', 'input', 'audio', 
+    'network', 'vr', 'issues', 'other', 'systemReq', 'l10n', 'general'
+];
+
+const searchKeywords: Record<string, string[]> = {
+    articleState: ['stub', 'cleanup', 'delete', 'state', 'disambig'],
+    infobox: ['cover', 'developer', 'publisher', 'engine', 'genre', 'taxonomy', 'release'],
+    introduction: ['introduction', 'release history', 'current state', 'title'],
+    availability: ['store', 'drm', 'launcher', 'steam', 'gog', 'notes'],
+    monetization: ['ad', 'dlc', 'microtransactions', 'loot'],
+    dlc: ['dlc', 'expansions'],
+    essentialImprovements: ['patch', 'mod'],
+    gameData: ['config', 'save', 'cloud', 'path'],
+    video: ['res', 'fps', 'hdr', 'ray tracing', 'fov', 'upscaling'],
+    input: ['mouse', 'keyboard', 'controller', 'bind', 'touch'],
+    audio: ['surround', 'volume', 'voice', 'mute', 'subtitles'],
+    network: ['multiplayer', 'server', 'p2p', 'crossplay', 'lan'],
+    vr: ['hmd', 'trackir', 'oculus', 'vive', 'steamvr'],
+    issues: ['bug', 'crash', 'freeze', 'fix'],
+    other: ['api', 'middleware', 'directx', 'vulkan'],
+    systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os'],
+    l10n: ['lang', 'dub', 'sub', 'ui'],
+    general: ['info']
+};
+
+const { searchQuery, panelVisibility, setSearchQuery } = useSearch(panelKeys, searchKeywords, (key) => {
+    // Auto-expand found panels
+    (panelState as any)[key] = false; 
 });
 
-// Preview State
-const renderedHtml = ref('');
-const isLoading = ref(false);
-const isPending = ref(false); // True during debounce, false when actually fetching
-const error = ref('')
-
-;
-
-// Simple Debounce with pending state
-const debounce = (fn: Function, delay: number) => {
-    let timeoutId: any;
-    return (...args: any[]) => {
-        isPending.value = true; // Show loading immediately when user makes changes
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            isPending.value = false; // Clear pending when actually executing
-            fn(...args);
-        }, delay);
-    };
-};
-
-// API Fetcher
-const fetchPreview = async (text: string) => {
-    if (previewMode.value === 'Local') {
-        renderedHtml.value = renderWikitextToHtml(text);
-        return;
-    }
-
-    isLoading.value = true;
-    error.value = '';
-    
-    // Direct POST request to PCGamingWiki API
-    // We use POST to avoid URL length limits.
-    const params = new URLSearchParams({
-        action: 'parse',
-        format: 'json',
-        contentmodel: 'wikitext',
-        prop: 'text',
-        disablelimitreport: 'true',
-        origin: '*', // Required for CORS
-        text: text,
-        title: pageTitle.value || 'Main Page' // Include title for {{PAGENAME}} context
-    });
-
-    try {
-        const response = await fetch('https://www.pcgamingwiki.com/w/api.php', {
-            method: 'POST',
-            body: params
-        });
-
-        if (!response.ok) {
-             const body = await response.text();
-             throw new Error(`HTTP ${response.status}: ${body.substring(0, 100)}`);
-        }
-        
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error.info || 'API Error');
-        }
-        renderedHtml.value = data.parse.text['*'];
-    } catch (e: any) {
-        console.error("Preview fetch failed:", e);
-        error.value = `Failed to load preview: ${e.message}. Using local renderer.`;
-        // Fallback to local on hard failure
-        renderedHtml.value = renderWikitextToHtml(text); 
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-// Debounced Watcher - Faster for better UX
-const debouncedFetch = debounce((newText: string) => {
-    fetchPreview(newText);
-}, 500); // 500ms delay for snappier feel
-
-watch(currentWikitext, (newVal) => {
-    debouncedFetch(newVal);
-}, { immediate: true });
-
-watch(previewMode, () => {
-    fetchPreview(currentWikitext.value);
-});
-
-// UI Functions
-const expandAll = () => {
-    Object.keys(panelState).forEach(k => (panelState as any)[k] = false);
-    uiBus.expandAllCount++;
-};
-
-const collapseAll = () => {
-    Object.keys(panelState).forEach(k => (panelState as any)[k] = true);
-    uiBus.collapseAllCount++;
-};
-
-// UI Constants
-const editorModeOptions = ref(['Visual', 'Code']);
-const previewOptions = ref(['Local', 'API']);
-
-// Watch title change to update preview if in API mode
-watch(pageTitle, () => {
-    if (previewMode.value === 'API') {
-       debouncedFetch(currentWikitext.value);
-    }
-});
-
-async function handleModeChange(newMode: EditorMode) {
-    const oldMode = editorMode.value === newMode ? (newMode === 'Visual' ? 'Code' : 'Visual') : editorMode.value;
-    
-    if (newMode === 'Code' && oldMode === 'Visual') {
-        // Fast: just copy the generated wikitext
-        manualWikitext.value = wikitext.value;
-        // Mark that CodeEditor is being loaded (lazy)
-        if (!isCodeEditorLoaded.value) {
-            isCodeEditorLoaded.value = true;
-        }
-    } else if (newMode === 'Visual' && oldMode === 'Code') {
-        // Show skeleton during parsing and rendering
-        isInitialLoad.value = true;
-        isModeSwitching.value = true;
-        
-        // Use setTimeout to allow UI to update before heavy parsing
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        try {
-            const parsedData = parseWikitext(manualWikitext.value);
-            gameData.value = parsedData;
-            baseWikitext.value = manualWikitext.value;
-        } catch (e) {
-            console.error("Failed to parse wikitext:", e);
-        } finally {
-            isModeSwitching.value = false;
-            // Keep skeleton visible a bit longer while components mount
-            await new Promise(resolve => setTimeout(resolve, 100));
-            isInitialLoad.value = false;
-        }
-    }
-}
+provide('searchQuery', searchQuery);
 
 
-
-// ... existing imports
-
-// Panel State for Expand/Collapse
+// --- Panel State ---
 const panelState = reactive({
-    articleState: true,
-    infobox: true,
-    introduction: true,
-    availability: true,
-    monetization: true,
-    dlc: true,
-    essentialImprovements: true,
-    gameData: true,
-    video: true,
-    input: true,
-    audio: true,
-    network: true,
-    vr: true,
-    issues: true,
-    other: true,
-    systemReq: true,
-    l10n: true,
-    general: true,
+    articleState: true, infobox: true, introduction: true, availability: true,
+    monetization: true, dlc: true, essentialImprovements: true, gameData: true,
+    video: true, input: true, audio: true, network: true, vr: true,
+    issues: true, other: true, systemReq: true, l10n: true, general: true,
 });
 
-// Panel Visibility for Search (Default all visible)
-const panelVisibility = reactive<Record<string, boolean>>({});
-// Initialize visibility
-Object.keys(panelState).forEach(key => {
-    panelVisibility[key] = true;
-});
-
-// Lazy rendering - only render panel content if expanded or has been expanded
 const panelsRendered = ref<Record<string, boolean>>({});
 
-// Initialize: only render panels that are initially expanded (collapsed=false)
+// Initialize panels logic
 Object.keys(panelState).forEach(key => {
     panelsRendered.value[key] = !(panelState as any)[key];
 });
 
-// Watch for panel expansions to trigger rendering
 watch(panelState, (newState) => {
     Object.keys(newState).forEach(key => {
         if (!(newState as any)[key] && !panelsRendered.value[key]) {
@@ -439,64 +173,102 @@ watch(panelState, (newState) => {
     });
 });
 
-// Global Event Bus for deep components
-const uiBus = reactive({
-    expandAllCount: 0,
-    collapseAllCount: 0
-});
-provide('uiBus', uiBus);
+const expandAll = () => {
+    Object.keys(panelState).forEach(k => (panelState as any)[k] = false);
+    uiBus.expandAllCount++;
+};
+const collapseAll = () => {
+    Object.keys(panelState).forEach(k => (panelState as any)[k] = true);
+    uiBus.collapseAllCount++;
+};
 
-const searchQuery = ref('');
-const performSearch = () => {
-    const q = searchQuery.value.toLowerCase();
-    
-    // If query is empty/short, show all and don't change collapse state
-    if (!q || q.length < 2) {
-        Object.keys(panelVisibility).forEach(k => panelVisibility[k] = true);
+
+// --- Gemini Summary ---
+const isGeneratingSummary = ref(false);
+const shareSummaryVisible = ref(false);
+const shareSummaryText = ref('');
+const showApiKeyDialog = ref(false);
+const tempApiKey = ref('');
+
+const saveApiKey = () => {
+    if (tempApiKey.value.trim()) {
+        geminiApiKey.value = tempApiKey.value.trim();
+        localStorage.setItem('gemini-api-key', geminiApiKey.value);
+        showApiKeyDialog.value = false;
+        tempApiKey.value = '';
+    }
+};
+
+const clearApiKey = () => {
+    geminiApiKey.value = '';
+    localStorage.removeItem('gemini-api-key');
+    tempApiKey.value = '';
+};
+
+const handleApiKeyKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') saveApiKey();
+};
+
+const copyShareSummary = async () => {
+    if (shareSummaryText.value) {
+        await navigator.clipboard.writeText(shareSummaryText.value);
+        alert('Copied to clipboard!');
+    }
+};
+
+const generateShareSummary = async () => {
+    if (!geminiApiKey.value) {
+        showApiKeyDialog.value = true;
         return;
     }
     
-    // Map keywords to panels
-    const keywords: Record<string, string[]> = {
-        articleState: ['stub', 'cleanup', 'delete', 'state', 'disambig'],
-        infobox: ['cover', 'developer', 'publisher', 'engine', 'genre', 'taxonomy'],
-        introduction: ['introduction', 'release history', 'current state', 'title'],
-        availability: ['store', 'drm', 'launcher', 'steam', 'gog', 'notes'],
-        monetization: ['ad-supported', 'dlc', 'expansion', 'freeware', 'free-to-play', 'purchase', 'subscription', 'microtransactions', 'loot box'],
-        dlc: ['dlc', 'expansions'],
-        essentialImprovements: ['essential', 'improvements', 'patches', 'mods'],
-        gameData: ['config', 'save', 'cloud', 'path', 'location'],
-        video: ['resolution', 'fps', 'widescreen', 'hdr', 'ray tracing', 'fov', 'windowed', 'borderless', 'upscaling', 'framegen'],
-        input: ['mouse', 'keyboard', 'controller', 'remap', 'bind', 'touchscreen', 'haptic', 'ps4', 'ps5', 'xbox'],
-        audio: ['surround', 'volume', 'voice', 'mute', 'subtitles', 'captions', 'royalty free'],
-        network: ['multiplayer', 'server', 'p2p', 'crossplay', 'lan', 'online', 'matchmaking'],
-        vr: ['hmd', 'trackir', 'oculus', 'vive', 'steamvr', 'openxr'],
-        issues: ['issues', 'fixes', 'bugs', 'crash', 'freeze'],
-        other: ['api', 'middleware', 'directx', 'vulkan', 'opengl', 'physics', 'anticheat'],
-        systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os', 'windows', 'linux', 'mac'],
-        l10n: ['localization', 'language', 'dubbing', 'subtitles', 'ui'],
-        general: ['general', 'info'],
-    };
-
-    // Check keys and keywords
-    Object.keys(panelState).forEach(key => {
-        const matchKey = key.toLowerCase().includes(q);
-        const matchKeywords = keywords[key]?.some(k => k.includes(q)) ?? false;
+    isGeneratingSummary.value = true;
+    shareSummaryVisible.value = true;
+    
+    try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey.value });
+        const prompt = `Create a feature list for "${pageTitle.value || 'Unknown'}". Data: ${JSON.stringify({ 
+            video: gameData.value.video, input: gameData.value.input 
+        })}. Format: Bullet points, factual.`;
         
-        if (matchKey || matchKeywords) {
-            (panelState as any)[key] = false; // Expand matches
-            panelVisibility[key] = true;      // Show matches
-        } else {
-            panelVisibility[key] = false;     // Hide non-matches
+        const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
+        shareSummaryText.value = response.text || 'No summary generated.';
+    } catch (e: any) {
+        shareSummaryText.value = 'Error generating summary: ' + e.message;
+        if (e.message.includes('API key')) {
+             localStorage.removeItem('gemini-api-key');
+             geminiApiKey.value = '';
         }
-    });
+    } finally {
+        isGeneratingSummary.value = false;
+    }
 };
 
-provide('searchQuery', searchQuery);
-provide('geminiApiKey', geminiApiKey);
+// --- Mode Switching ---
+const handleModeChange = async (newMode: EditorMode) => {
+    const oldMode = editorMode.value;
+    editorMode.value = newMode;
 
-watch(searchQuery, (val) => {
-    performSearch();
+    if (newMode === 'Code' && oldMode === 'Visual') {
+        manualWikitext.value = wikitext.value;
+        if (!isCodeEditorLoaded.value) isCodeEditorLoaded.value = true;
+    } else if (newMode === 'Visual' && oldMode === 'Code') {
+        isModeSwitching.value = true;
+        try {
+            await new Promise(r => setTimeout(r, 50));
+            const parsed = parseWikitext(manualWikitext.value);
+            gameData.value = parsed;
+        } catch (e) {
+            console.error("Parse error", e);
+        } finally {
+            isModeSwitching.value = false;
+        }
+    }
+};
+
+onMounted(() => {
+    // Progressive rendering delay
+    setTimeout(() => { isInitialLoad.value = false; }, 100);
 });
 
 </script>
@@ -504,388 +276,335 @@ watch(searchQuery, (val) => {
 <template>
   <div class="h-screen w-screen overflow-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-0 transition-colors duration-200">
     <WorkspaceSidebar v-model:visible="sidebarVisible" />
+
     <Splitter style="height: 100vh" class="border-none !mb-0 !rounded-none bg-transparent splitter-modern">
+      
+      <!-- Left Panel: Editor -->
       <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
-        <Toolbar class="!border-b !border-0 !rounded-none glass glass-border shadow-soft z-20 !p-1.5 sticky top-0">
-            <template #start>
-                <div class="flex items-center gap-2 md:gap-3">
-                    <Button text @click="sidebarVisible = true" class="lg:hidden hover-scale !h-8 !w-8 !p-0" severity="secondary">
-                        <template #icon>
-                            <Menu class="!w-5 !h-5" />
-                        </template>
-                    </Button>
-                    <span class="font-bold text-base md:text-lg bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">PCGamingWiki Editor</span>
-                    <span class="text-surface-300 dark:text-surface-600 hidden lg:block text-xs">•</span>
-                    <InputText v-model="pageTitle" placeholder="Page Title..." class="w-48 lg:w-64 !py-1.5 !px-2.5 text-sm hidden md:block" />
-                    <Button 
-                        text 
-                        size="small" 
-                        @click="generateShareSummary" 
-                        severity="secondary" 
-                        class="!text-xs !px-2 !py-1 hover-scale"
-                        v-tooltip.bottom="'Generate summary'"
-                        :disabled="isGeneratingSummary"
-                    >
-                        <template #icon>
-                            <Loader2 v-if="isGeneratingSummary" class="w-4 h-4 animate-spin" />
-                            <Wand2 v-else class="w-4 h-4" />
-                        </template>
-                    </Button>
-                </div>
-            </template>
-            <template #end>
-                <SelectButton v-model="editorMode" :options="editorModeOptions" :allowEmpty="false" size="small" @update:modelValue="handleModeChange" class="transition-fast" />
-            </template>
-        </Toolbar>
         
-        <!-- Loading Overlay for Mode Switching -->
-        <Transition name="fade-fast">
-            <div v-if="isModeSwitching" class="absolute inset-0 bg-surface-0/80 dark:bg-surface-950/80 backdrop-blur-sm z-30 flex items-center justify-center">
-                <div class="flex flex-col items-center gap-3">
-                    <Loader2 class="w-10 h-10 animate-spin text-primary-500" />
-                    <span class="text-surface-600 dark:text-surface-300 font-medium">Parsing wikitext...</span>
-                </div>
-            </div>
-        </Transition>
-        
-        <div class="flex-1 overflow-y-auto custom-scrollbar bg-gradient-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900">
-          <Transition name="fade" mode="out-in">
-            <!-- Skeleton Screen during initial load -->
-            <div v-if="editorMode === 'Visual' && isInitialLoad" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="skeleton">
-                <div class="h-12 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
-                <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
-                <div class="h-24 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
-                <div class="h-48 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
-                <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
-                <div class="flex items-center justify-center h-32">
+        <EditorToolbar 
+            :title="pageTitle"
+            @update:title="pageTitle = $event"
+            :editorMode="editorMode"
+            @update:editorMode="handleModeChange"
+            :isGeneratingSummary="isGeneratingSummary"
+            @toggleSidebar="sidebarVisible = true"
+            @generateSummary="generateShareSummary"
+        />
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-gradient-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
+            
+            <!-- Loading Overlay for Mode Switching -->
+            <Transition name="fade-fast">
+                <div v-if="isModeSwitching" class="absolute inset-0 bg-surface-0/80 dark:bg-surface-950/80 backdrop-blur-sm z-30 flex items-center justify-center">
                     <div class="flex flex-col items-center gap-3">
-                        <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
-                        <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading editor...</span>
+                        <Loader2 class="w-10 h-10 animate-spin text-primary-500" />
+                        <span class="text-surface-600 dark:text-surface-300 font-medium">Parsing wikitext...</span>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Actual Visual Editor -->
-            <div v-else-if="editorMode === 'Visual'" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="visual">
-              
-              <!-- Quick Actions Toolbar -->
-              <div class="flex items-center justify-between glass glass-border p-2.5 rounded-lg shadow-soft sticky top-0 z-20 animate-slide-in-down">
-                  <div class="flex items-center gap-1.5">
-                       <Button label="Expand" text size="small" @click="expandAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
-                           <template #icon>
-                               <ChevronsDown class="w-3 h-3" />
-                           </template>
-                       </Button>
-                       <Button label="Collapse" text size="small" @click="collapseAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
-                           <template #icon>
-                               <ChevronsUp class="w-3 h-3" />
-                           </template>
-                       </Button>
-                       <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                       <span class="text-2xs text-surface-500 dark:text-surface-400 hidden sm:inline">⌘K to search</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                       <IconField iconPosition="left">
-                            <InputIcon>
-                                <Search class="w-4 h-4 text-surface-400" />
-                            </InputIcon>
-                            <InputText v-model="searchQuery" placeholder="Search..." size="small" class="w-40 sm:w-48 lg:w-64 !text-sm" />
-                       </IconField>
-                  </div>
-              </div>
+            </Transition>
 
-              <Panel toggleable v-model:collapsed="panelState.articleState" v-show="panelVisibility.articleState" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <File class="text-primary-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Article State</span>
-                      </div>
-                  </template>
-                  <StateForm v-if="panelsRendered.articleState" v-model="gameData.articleState" :gameData="gameData" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.infobox" v-show="panelVisibility.infobox" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Info class="text-accent-teal-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Infobox</span>
-                      </div>
-                  </template>
-                  <InfoboxForm v-if="panelsRendered.infobox" v-model="gameData.infobox" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.introduction" v-show="panelVisibility.introduction" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <AlignLeft class="text-accent-orange-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Introduction</span>
-                      </div>
-                  </template>
-                <div class="flex flex-col gap-4">
-                    <p class="text-2xs text-surface-500 dark:text-surface-400 italic bg-surface-100 dark:bg-surface-800/50 p-2 rounded">
-                        The first instance of the game title in introduction should be written as <code class="text-primary-600 dark:text-primary-400">'''''Title'''''</code>.
-                    </p>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
-                           <span class="px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded text-[10px] uppercase font-bold tracking-wider">Introduction</span>
-                        </label>
-                        <Textarea v-model="gameData.introduction.introduction" rows="4" autoResize class="w-full !text-sm !p-2.5" placeholder="'''''Title''''' is a..." />
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1.5">
-                             <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[10px] uppercase font-bold tracking-wider">Release History</span>
-                            </label>
-                            <Textarea v-model="gameData.introduction.releaseHistory" rows="3" autoResize class="w-full !text-sm !p-2.5" placeholder="Game was first released on..." />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                             <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 bg-accent-teal-50 dark:bg-teal-900/30 text-accent-teal-600 dark:text-accent-teal-400 rounded text-[10px] uppercase font-bold tracking-wider">Current State</span>
-                            </label>
-                            <Textarea v-model="gameData.introduction.currentState" rows="3" autoResize class="w-full !text-sm !p-2.5" placeholder="Current major issues..." />
+            <Transition name="fade" mode="out-in">
+                <!-- Skeleton Screen during initial load -->
+                <div v-if="editorMode === 'Visual' && isInitialLoad" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="skeleton">
+                    <div class="h-12 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                    <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                    <div class="h-24 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                    <div class="h-48 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                    <div class="h-32 bg-surface-200 dark:bg-surface-700 rounded-lg animate-pulse"></div>
+                    <div class="flex items-center justify-center h-32">
+                        <div class="flex flex-col items-center gap-3">
+                            <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
+                            <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading editor...</span>
                         </div>
                     </div>
                 </div>
-              </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.availability" v-show="panelVisibility.availability" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <ShoppingCart class="text-accent-emerald-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Availability</span>
+                <!-- Actual Visual Editor -->
+                <div v-else-if="editorMode === 'Visual'" class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="visual">
+                  
+                  <!-- Quick Actions Toolbar -->
+                  <div class="flex items-center justify-between glass glass-border p-2.5 rounded-lg shadow-soft sticky top-0 z-20 animate-slide-in-down">
+                      <div class="flex items-center gap-1.5">
+                           <Button label="Expand" text size="small" @click="expandAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
+                               <template #icon>
+                                   <ChevronsDown class="w-3 h-3" />
+                               </template>
+                           </Button>
+                           <Button label="Collapse" text size="small" @click="collapseAll" severity="secondary" class="!text-xs !px-2 !py-1 hover-scale">
+                               <template #icon>
+                                   <ChevronsUp class="w-3 h-3" />
+                               </template>
+                           </Button>
+                           <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                           <span class="text-2xs text-surface-500 dark:text-surface-400 hidden sm:inline">⌘K to search</span>
                       </div>
-                  </template>
-                <AvailabilityForm v-model="gameData.availability" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.monetization" v-show="panelVisibility.monetization" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
                       <div class="flex items-center gap-2">
-                          <DollarSign class="text-accent-orange-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Monetization</span>
+                           <IconField iconPosition="left">
+                                <InputIcon>
+                                    <Search class="w-4 h-4 text-surface-400" />
+                                </InputIcon>
+                                <InputText v-model="searchQuery" placeholder="Search..." size="small" class="w-40 sm:w-48 lg:w-64 !text-sm" />
+                           </IconField>
                       </div>
-                  </template>
-                <MonetizationForm :monetization="gameData.monetization" :microtransactions="gameData.microtransactions" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.dlc" v-show="panelVisibility.dlc" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <PlusCircle class="text-primary-600 w-4 h-4" />
-                          <span class="font-semibold text-sm">DLC & Expansions</span>
-                      </div>
-                  </template>
-                <DLCForm v-model="gameData.dlc" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.essentialImprovements" v-show="panelVisibility.essentialImprovements" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Star class="text-yellow-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Essential Improvements</span>
-                      </div>
-                  </template>
-                  <EssentialImprovementsForm v-model="gameData.essentialImprovements" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.gameData" v-show="panelVisibility.gameData" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Save class="text-indigo-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Game Data (Config, Saves, Cloud)</span>
-                      </div>
-                  </template>
-                  <GameDataForm :config="gameData.config" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.video" v-show="panelVisibility.video" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Monitor class="text-blue-500 w-4 h-4" />
-                          <span class="font-semibold text-sm">Video</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.video" section="video" />
-                    <VideoForm :video="gameData.video" />
                   </div>
-              </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.input" v-show="panelVisibility.input" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Keyboard class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Input</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.input" section="input" />
-                    <InputForm :input="gameData.input" />
-                  </div>
-              </Panel>
+                  <Panel toggleable v-model:collapsed="panelState.articleState" v-show="panelVisibility.articleState" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <File class="text-primary-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Article State</span>
+                          </div>
+                      </template>
+                      <StateForm v-if="panelsRendered.articleState" v-model="gameData.articleState" :gameData="gameData" />
+                  </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.audio" v-show="panelVisibility.audio" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Volume2 class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Audio</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.audio" section="audio" />
-                    <AudioForm :audio="gameData.audio" />
-                  </div>
-              </Panel>
+                  <Panel toggleable v-model:collapsed="panelState.infobox" v-show="panelVisibility.infobox" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Info class="text-accent-teal-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Infobox</span>
+                          </div>
+                      </template>
+                      <InfoboxForm v-if="panelsRendered.infobox" v-model="gameData.infobox" />
+                  </Panel>
 
-              <Panel toggleable v-model:collapsed="panelState.network" v-show="panelVisibility.network" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Wifi class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Network</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.network" section="network" />
-                    <NetworkForm :network="gameData.network" />
-                  </div>
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.vr" v-show="panelVisibility.vr" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Eye class="w-4 h-4" />
-                          <span class="font-semibold text-sm">VR Support</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.vr" section="vr" />
-                    <VRSupportForm :vr="gameData.vr" />
-                  </div>
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.issues" v-show="panelVisibility.issues" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <TriangleAlert class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Issues</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.issues" section="issues" />
-                    <IssuesForm v-model="gameData.issues" />
-                  </div>
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.other" v-show="panelVisibility.other" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Settings class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Other Information (API, Middleware)</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.other" section="other" />
-                    <APIForm :api="gameData.api" />
-                    <MiddlewareForm :middleware="gameData.middleware" />
-                  </div>
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.systemReq" v-show="panelVisibility.systemReq" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Cpu class="w-4 h-4" />
-                          <span class="font-semibold text-sm">System Requirements</span>
-                      </div>
-                  </template>
-                  <div class="flex flex-col gap-6">
-                    <SectionGallery v-model="gameData.galleries.systemReq" section="systemReq" />
-                    <SystemRequirementsForm v-model="gameData.requirements" />
-                  </div>
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.l10n" v-show="panelVisibility.l10n" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <Globe class="w-4 h-4" />
-                          <span class="font-semibold text-sm">Localizations</span>
-                      </div>
-                  </template>
-                  <LocalizationsForm :localizations="gameData.localizations" />
-              </Panel>
-
-              <Panel toggleable v-model:collapsed="panelState.general" v-show="panelVisibility.general" class="panel-modern shadow-soft hover-lift">
-                  <template #header>
-                      <div class="flex items-center gap-2">
-                          <List class="w-4 h-4" />
-                          <span class="font-semibold text-sm">General Information</span>
-                      </div>
-                  </template>
-                  <GeneralInfoForm v-model="gameData.generalInformation" />
-              </Panel>
-            </div>
-            
-            <div v-else class="h-full flex flex-col" key="code">
-                <Suspense>
-                    <template #default>
-                        <CodeEditor v-model="manualWikitext" />
-                    </template>
-                    <template #fallback>
-                        <div class="h-full w-full p-4 animate-pulse">
-                            <div class="h-full w-full bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 flex items-center justify-center">
-                                <div class="flex flex-col items-center gap-3">
-                                    <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
-                                    <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading Code Editor...</span>
-                                </div>
+                  <Panel toggleable v-model:collapsed="panelState.introduction" v-show="panelVisibility.introduction" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <AlignLeft class="text-accent-orange-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Introduction</span>
+                          </div>
+                      </template>
+                    <div class="flex flex-col gap-4">
+                        <p class="text-2xs text-surface-500 dark:text-surface-400 italic bg-surface-100 dark:bg-surface-800/50 p-2 rounded">
+                            The first instance of the game title in introduction should be written as <code class="text-primary-600 dark:text-primary-400">'''''Title'''''</code>.
+                        </p>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
+                               <span class="px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded text-[10px] uppercase font-bold tracking-wider">Introduction</span>
+                            </label>
+                            <Textarea v-model="gameData.introduction.introduction" rows="4" autoResize class="w-full !text-sm !p-2.5" placeholder="'''''Title''''' is a..." />
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                 <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
+                                    <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[10px] uppercase font-bold tracking-wider">Release History</span>
+                                </label>
+                                <Textarea v-model="gameData.introduction.releaseHistory" rows="3" autoResize class="w-full !text-sm !p-2.5" placeholder="Game was first released on..." />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                 <label class="font-medium text-xs text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
+                                    <span class="px-1.5 py-0.5 bg-accent-teal-50 dark:bg-teal-900/30 text-accent-teal-600 dark:text-accent-teal-400 rounded text-[10px] uppercase font-bold tracking-wider">Current State</span>
+                                </label>
+                                <Textarea v-model="gameData.introduction.currentState" rows="3" autoResize class="w-full !text-sm !p-2.5" placeholder="Current major issues..." />
                             </div>
                         </div>
-                    </template>
-                </Suspense>
-            </div>
-          </Transition>
+                    </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.availability" v-show="panelVisibility.availability" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <ShoppingCart class="text-accent-emerald-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Availability</span>
+                          </div>
+                      </template>
+                    <AvailabilityForm v-model="gameData.availability" />
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.monetization" v-show="panelVisibility.monetization" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <DollarSign class="text-accent-orange-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Monetization</span>
+                          </div>
+                      </template>
+                    <MonetizationForm :monetization="gameData.monetization" :microtransactions="gameData.microtransactions" />
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.dlc" v-show="panelVisibility.dlc" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <PlusCircle class="text-primary-600 w-4 h-4" />
+                              <span class="font-semibold text-sm">DLC & Expansions</span>
+                          </div>
+                      </template>
+                    <DLCForm v-model="gameData.dlc" />
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.essentialImprovements" v-show="panelVisibility.essentialImprovements" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Star class="text-yellow-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Essential Improvements</span>
+                          </div>
+                      </template>
+                      <EssentialImprovementsForm v-model="gameData.essentialImprovements" />
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.gameData" v-show="panelVisibility.gameData" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Save class="text-indigo-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Game Data (Config, Saves, Cloud)</span>
+                          </div>
+                      </template>
+                      <GameDataForm :config="gameData.config" />
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.video" v-show="panelVisibility.video" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Monitor class="text-blue-500 w-4 h-4" />
+                              <span class="font-semibold text-sm">Video</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.video" section="video" />
+                        <VideoForm :video="gameData.video" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.input" v-show="panelVisibility.input" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Keyboard class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Input</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.input" section="input" />
+                        <InputForm :input="gameData.input" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.audio" v-show="panelVisibility.audio" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Volume2 class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Audio</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.audio" section="audio" />
+                        <AudioForm :audio="gameData.audio" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.network" v-show="panelVisibility.network" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Wifi class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Network</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.network" section="network" />
+                        <NetworkForm :network="gameData.network" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.vr" v-show="panelVisibility.vr" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Eye class="w-4 h-4" />
+                              <span class="font-semibold text-sm">VR Support</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.vr" section="vr" />
+                        <VRSupportForm :vr="gameData.vr" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.issues" v-show="panelVisibility.issues" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <TriangleAlert class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Issues</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.issues" section="issues" />
+                        <IssuesForm v-model="gameData.issues" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.other" v-show="panelVisibility.other" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Settings class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Other Information (API, Middleware)</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.other" section="other" />
+                        <APIForm :api="gameData.api" />
+                        <MiddlewareForm :middleware="gameData.middleware" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.systemReq" v-show="panelVisibility.systemReq" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Cpu class="w-4 h-4" />
+                              <span class="font-semibold text-sm">System Requirements</span>
+                          </div>
+                      </template>
+                      <div class="flex flex-col gap-6">
+                        <SectionGallery v-model="gameData.galleries.systemReq" section="systemReq" />
+                        <SystemRequirementsForm v-model="gameData.requirements" />
+                      </div>
+                  </Panel>
+
+                  <Panel toggleable v-model:collapsed="panelState.l10n" v-show="panelVisibility.l10n" class="panel-modern shadow-soft hover-lift">
+                      <template #header>
+                          <div class="flex items-center gap-2">
+                              <Globe class="w-4 h-4" />
+                              <span class="font-semibold text-sm">Localizations</span>
+                          </div>
+                      </template>
+                      <LocalizationsForm :localizations="gameData.localizations" />
+                  </Panel>
+                </div>
+            
+                <div v-else class="h-full flex flex-col" key="code">
+                    <Suspense>
+                        <template #default>
+                             <CodeEditor v-model="manualWikitext" class="flex-1" />
+                        </template>
+                        <template #fallback>
+                            <div class="h-full w-full p-4 animate-pulse">
+                                <div class="h-full w-full bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 flex items-center justify-center">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <Loader2 class="w-8 h-8 animate-spin text-primary-500" />
+                                        <span class="text-surface-500 dark:text-surface-400 text-sm font-medium">Loading Code Editor...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </Suspense>
+                </div>
+
+            </Transition>
         </div>
       </SplitterPanel>
       
-      <SplitterPanel class="flex flex-col overflow-hidden bg-surface-0 dark:bg-surface-900 border-l border-surface-200 dark:border-surface-700 relative" :size="50" :minSize="30">
-        <header class="px-4 py-3 border-b border-surface-200 dark:border-surface-700 bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md flex justify-between items-center z-10">
-          <h2 class="font-semibold text-lg text-surface-700 dark:text-surface-200">PREVIEW</h2>
-          <div class="flex items-center gap-2">
-             <SelectButton v-model="previewMode" :options="previewOptions" :allowEmpty="false" size="small" />
-          </div>
-        </header>
-        
-        <div class="flex-1 overflow-y-auto custom-scrollbar relative">
-           <!-- Loading Overlay -->
-           <Transition name="fade">
-               <div v-if="isPending || isLoading" class="fixed inset-0 bg-surface-0/90 dark:bg-surface-950/90 flex items-center justify-center backdrop-blur-sm" style="left: 50%; right: 0; z-index: 9999;">
-                    <div class="flex flex-col items-center gap-4 p-8 rounded-lg bg-surface-50/80 dark:bg-surface-800/80 border border-surface-200 dark:border-surface-700 shadow-xl">
-                        <div class="relative">
-                            <Loader2 class="w-12 h-12 animate-spin text-primary-500" />
-                            <div class="absolute inset-0 rounded-full border-4 border-primary-500/30 animate-ping"></div>
-                        </div>
-                        <div class="flex flex-col items-center gap-1">
-                            <span class="text-surface-700 dark:text-surface-200 font-semibold text-lg">
-                                {{ isPending && !isLoading ? 'Waiting for changes...' : 'Rendering Preview...' }}
-                            </span>
-                            <span class="text-surface-500 dark:text-surface-400 text-sm">
-                                {{ isPending && !isLoading ? 'Debouncing input' : 'Fetching from PCGamingWiki API' }}
-                            </span>
-                        </div>
-                        <div class="w-48 h-1 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full animate-progress"></div>
-                        </div>
-                    </div>
-               </div>
-           </Transition>
-
-          <div v-if="error" class="p-4 m-4 bg-red-100 text-red-700 rounded border border-red-300">
-             {{ error }}
-          </div>
-          <div class="rendered-view mw-body mw-body-with-ads mw-parser-output p-8 max-w-none" v-html="renderedHtml"></div>
-        </div>
+      <!-- Right Panel: Preview -->
+      <SplitterPanel class="flex flex-col overflow-hidden bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700" :size="50" :minSize="30">
+        <PreviewPanel 
+          :html="renderedHtml"
+          :loading="isPreviewLoading"
+          :error="previewError"
+          :previewMode="previewMode"
+          @update:previewMode="previewMode = $event"
+        />
       </SplitterPanel>
+
     </Splitter>
-    
+
     <!-- Gemini API Key Settings Dialog -->
     <Dialog v-model:visible="showApiKeyDialog" modal :style="{ width: '35rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
         <template #header>
@@ -922,7 +641,7 @@ watch(searchQuery, (val) => {
                     type="password"
                     placeholder="Enter your Gemini API key..."
                     class="w-full"
-                    @keyup.enter="saveApiKey"
+                    @keydown="handleApiKeyKeydown"
                 />
             </div>
             
