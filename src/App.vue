@@ -493,6 +493,7 @@ const performSearch = () => {
 };
 
 provide('searchQuery', searchQuery);
+provide('geminiApiKey', geminiApiKey);
 
 watch(searchQuery, (val) => {
     performSearch();
