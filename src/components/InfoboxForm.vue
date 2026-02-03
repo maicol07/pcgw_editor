@@ -68,73 +68,7 @@ const platformOptions = [
   'Xbox One', 'Xbox Series X|S'
 ];
 
-interface StructuredReleaseDate {
-  platform: string;
-  date: Date | null;
-  rawDate?: string; // For things like TBA, EA, etc.
-  ref?: string;
-}
 
-const structuredDates = ref<StructuredReleaseDate[]>([]);
-
-// Watch for external changes to parse them
-watch(() => props.modelValue.releaseDates, (val) => {
-  if (!val || val.length === 0) {
-    if (structuredDates.value.length > 0) structuredDates.value = [];
-    return;
-  }
-  
-  const newStructured = val.map(rd => {
-    const d = new Date(rd.date);
-    return {
-      platform: rd.platform,
-      date: isNaN(d.getTime()) ? null : d, // Store Date object if valid, else handled by raw string if needed
-      rawDate: rd.date, // Store the actual string for special states like TBA/EA
-      ref: rd.ref || ''
-    };
-  });
-  
-  // Only update if different to avoid cycles
-  const currentStr = JSON.stringify(structuredDates.value);
-  const newStr = JSON.stringify(newStructured);
-  if (currentStr !== newStr) {
-    structuredDates.value = newStructured;
-  }
-}, { immediate: true });
-
-// Sync changes back to the model array
-watch(structuredDates, (newDates) => {
-  const newModelDates = newDates
-    .filter(d => d.platform && (d.date || d.rawDate))
-    .map(d => {
-      let dateStr = d.rawDate || '';
-      if (d.date && !d.rawDate) {
-        dateStr = d.date.toLocaleDateString('en-US', { 
-            month: 'long', 
-            day: 'numeric', 
-            year: 'numeric' 
-        });
-      }
-      return {
-        platform: d.platform,
-        date: dateStr,
-        ref: d.ref
-      };
-    });
-  
-  // Compare contents to avoid recursive loops
-  if (JSON.stringify(newModelDates) !== JSON.stringify(props.modelValue.releaseDates)) {
-    updateField('releaseDates', newModelDates);
-  }
-}, { deep: true });
-
-const addReleaseDate = () => {
-  structuredDates.value.push({ platform: 'Windows', date: null, rawDate: '', ref: '' });
-};
-
-const removeReleaseDate = (index: number) => {
-  structuredDates.value.splice(index, 1);
-};
 
 const openUploadPage = () => {
   window.open('https://www.pcgamingwiki.com/wiki/Special:Upload', '_blank', 'noopener,noreferrer');
@@ -408,61 +342,12 @@ const updateLink = (field: keyof GameInfobox['links'], value: string | boolean) 
               </div>
             </div>
             
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center gap-1">
-                  <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="highlightClass('Release Dates')">Release Dates</label>
-                  <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Use the editor above for standard dates. Advanced options allow for special states like TBA/EA.'" />
-              </div>
-              <div class="flex flex-col gap-3 p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50">
-                <div v-for="(rd, index) in structuredDates" :key="index" class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
-                  <div class="flex items-center justify-between gap-3">
-                    <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small" />
-                    
-                    <div class="flex-1 relative">
-                        <InputText 
-                            v-model="rd.rawDate" 
-                            placeholder="Select date or type custom (e.g. TBA)" 
-                            class="w-full pr-10" 
-                            size="small"
-                            @update:model-value="rd.date = null"
-                        />
-                        <div class="absolute right-1 top-1/2 -translate-y-1/2">
-                            <Button severity="secondary" text rounded size="small" class="relative overflow-hidden w-8 h-8 !p-0">
-                                <Calendar class="w-4 h-4 text-surface-500" />
-                                <DatePicker 
-                                    v-model="rd.date" 
-                                    class="opacity-0 !absolute inset-0 w-full h-full p-0 !cursor-pointer" 
-                                    @update:model-value="(d) => { if(d instanceof Date) rd.rawDate = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }"
-                                />
-                            </Button>
-                        </div>
-                    </div>
+            <InfoboxReleaseDates 
+              :model-value="modelValue.releaseDates" 
+              @update:model-value="val => updateField('releaseDates', val)" 
+            />
 
-                    <Button severity="danger" variant="outlined" @click="removeReleaseDate(index)" size="small" class="!p-2">
-                        <template #icon><Trash2 class="w-5 h-5" /></template>
-                    </Button>
-                  </div>
-                  <div class="flex flex-col gap-1.5 pt-1 border-t border-surface-100 dark:border-surface-700/50">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-[10px] uppercase font-bold text-surface-400 whitespace-nowrap">Special:</span>
-                      <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                        <Button v-for="s in ['TBA', 'EA', 'Unknown', 'LC', 'Cancelled']" :key="s" :label="s" class="text-[9px] !px-2 !py-0.5" :variant="rd.rawDate === s ? 'filled' : 'outlined'" severity="secondary" @click="rd.rawDate = s; rd.date = null" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  label="Add Release Date" 
-                  severity="secondary" 
-                  size="small" 
-                  @click="addReleaseDate"
-                  class="w-full"
-                >
-                    <template #icon><Plus class="w-4 h-4" /></template>
-                </Button>
-              </div>
 
-            </div>
 
         </AccordionContent>
       </AccordionPanel>

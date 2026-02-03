@@ -167,20 +167,18 @@ const insertReferenceToNote = () => {
 };
 
 
+import { pcgwApi } from '../../services/pcgwApi';
+import { useDebounceFn } from '@vueuse/core';
+
+// ... (imports remain)
+
 // User Autocomplete (Shared)
 const userSuggestions = ref<string[]>([]);
-const searchUser = async (event: { query: string }) => {
-    if (!event.query || event.query.length < 2) return;
-    try {
-        const response = await fetch(`https://www.pcgamingwiki.com/w/api.php?action=query&list=allusers&auprefix=${event.query}&format=json&origin=*`);
-        const data = await response.json();
-        if (data.query && data.query.allusers) {
-            userSuggestions.value = data.query.allusers.map((u: any) => u.name);
-        }
-    } catch (e) {
-        console.error("Failed to fetch users", e);
-    }
-};
+
+// Debounced search using API service
+const searchUser = useDebounceFn(async (event: { query: string }) => {
+    userSuggestions.value = await pcgwApi.searchUsers(event.query);
+}, 300);
 
 </script>
 

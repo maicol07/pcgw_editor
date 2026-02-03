@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { inject, ref } from 'vue';
 import { useInfoboxDates, ReleaseDate } from '../../composables/useInfoboxDates';
+import { format } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import DatePicker from 'primevue/datepicker';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
@@ -59,7 +61,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
                         <DatePicker 
                             v-model="rd.date" 
                             class="opacity-0 !absolute inset-0 w-full h-full p-0 !cursor-pointer" 
-                            @update:model-value="(d) => { if(d instanceof Date) rd.rawDate = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }"
+                            @update:model-value="(d) => { if(d instanceof Date) rd.rawDate = format(d, 'MMMM d, yyyy', { locale: enUS }) }"
                         />
                     </Button>
                 </div>
