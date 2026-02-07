@@ -69,8 +69,26 @@ const toggleGroup = (idx: number) => {
 </script>
 
 <template>
-    <div class="dynamic-section">
-        <div v-if="section.groups">
+    <div class="dynamic-section flex flex-col gap-6">
+        <!-- Top-level Fields -->
+        <div v-if="section.fields && section.fields.length > 0" class="gap-4" :class="{
+            'flex flex-col': !section.gridCols,
+            'grid grid-cols-1': !!section.gridCols,
+            'md:grid-cols-2': section.gridCols === 2,
+            'md:grid-cols-3': section.gridCols === 3
+        }">
+            <template v-for="field in section.fields" :key="field.key">
+                <DynamicField :field="field" :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
+                    @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
+                        'col-span-1': true,
+                        'md:col-span-2': field.colSpan === 2,
+                        'md:col-span-3': field.colSpan === 3
+                    }" />
+            </template>
+        </div>
+
+        <!-- Groups -->
+        <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-4">
                 <div v-for="(group, idx) in section.groups" :key="idx"
                     class="bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-lg overflow-hidden transition-all duration-200">
@@ -109,22 +127,6 @@ const toggleGroup = (idx: number) => {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div v-else class="gap-4" :class="{
-            'flex flex-col': !section.gridCols,
-            'grid grid-cols-1': !!section.gridCols,
-            'md:grid-cols-2': section.gridCols === 2,
-            'md:grid-cols-3': section.gridCols === 3
-        }">
-            <template v-for="field in section.fields" :key="field.key">
-                <DynamicField :field="field" :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
-                    @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
-                        'col-span-1': true,
-                        'md:col-span-2': field.colSpan === 2,
-                        'md:col-span-3': field.colSpan === 3
-                    }" />
-            </template>
         </div>
     </div>
 </template>
