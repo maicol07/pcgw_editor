@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, watch, nextTick, computed } from 'vue';
 import { usePreview, PreviewMode } from '../../composables/usePreview';
 import SelectButton from 'primevue/selectbutton';
 import { Loader2, AlertTriangle, Monitor, Sparkles, RefreshCw } from 'lucide-vue-next';
+import PreviewLegend from './PreviewLegend.vue';
 
 // This component accepts the logic from usePreview as props or we can bind v-models?
 // Ideally, the parent owns the composable and passes the state down.
@@ -19,55 +20,131 @@ const emit = defineEmits<{
 
 const previewOptions = ['Local', 'API'];
 
+// Legend Logic
+const scrollContainer = ref<HTMLElement | null>(null);
+
+const processedContent = computed(() => {
+    if (!props.html) {
+        return { html: '', headings: [] };
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(props.html, 'text/html');
+    const nodes = doc.querySelectorAll('h2, h3, h4');
+    const extractedHeadings: { id: string, text: string, level: number }[] = [];
+
+    nodes.forEach((node) => {
+        const el = node as HTMLElement;
+        const text = el.textContent?.trim() || '';
+
+        // Use existing ID or generate one
+        if (!el.id && text) {
+            el.id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        }
+
+        if (el.id && text) {
+            // Clone for text extraction to remove edit links
+            const clone = el.cloneNode(true) as HTMLElement;
+            clone.querySelectorAll('.mw-editsection').forEach(e => e.remove());
+            const cleanText = clone.textContent?.trim() || text;
+
+            extractedHeadings.push({
+                id: el.id,
+                text: cleanText,
+                level: parseInt(el.tagName.substring(1))
+            });
+        }
+    });
+
+    // Rewrite links to be absolute
+    const links = doc.querySelectorAll('a');
+    links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('/wiki')) {
+            link.setAttribute('href', `https://pcgamingwiki.com${href}`);
+            link.setAttribute('target', '_blank'); // Open external links in new tab
+            link.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+
+    return {
+        html: doc.body.innerHTML,
+        headings: extractedHeadings
+    };
+});
+
+const headings = computed(() => processedContent.value.headings);
+
+const scrollToHeading = (id: string) => {
+    if (!scrollContainer.value) {
+        return;
+    }
+
+    const escapedId = CSS.escape(id);
+    const element = scrollContainer.value.querySelector(`#${escapedId}`);
+
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        const fallback = scrollContainer.value.querySelector(`[id="${id}"]`);
+        if (fallback) {
+            fallback.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+};
+
 </script>
 
 <template>
-    <div class="flex flex-col h-full bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700">
+    <div
+        class="flex flex-col h-full bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700">
         <!-- Floating Header -->
         <!-- Floating Header -->
-        <div class="flex items-center justify-between p-2 border-b border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 sticky top-0 z-10 glass">
+        <div
+            class="flex items-center justify-between p-2 border-b border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 sticky top-0 z-10 glass">
             <div class="flex items-center gap-2">
-                 <Monitor class="w-4 h-4 text-surface-500" />
-                 <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Preview</span>
+                <Monitor class="w-4 h-4 text-surface-500" />
+                <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Preview</span>
             </div>
-            
-            <SelectButton 
-                :modelValue="previewMode" 
-                @update:modelValue="emit('update:previewMode', $event)" 
-                :options="previewOptions" 
-                :allowEmpty="false" 
-                size="small" 
-                class="scale-90 origin-right transition-fast" 
-            />
+
+            <SelectButton :modelValue="previewMode" @update:modelValue="emit('update:previewMode', $event)"
+                :options="previewOptions" :allowEmpty="false" size="small"
+                class="scale-90 origin-right transition-fast" />
         </div>
 
         <!-- Content -->
         <div class="flex-1 relative min-h-0">
-             <!-- Loading Overlay -->
-             <!-- Loading Overlay -->
-             <div v-if="loading" class="absolute inset-0 bg-surface-0/50 dark:bg-surface-950/50 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300">
-                 <div class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 shadow-xl rounded-xl p-4 flex flex-col items-center gap-3">
-                     <div class="flex items-center gap-1.5 h-8">
-                         <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite]"></div>
-                         <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_100ms]"></div>
-                         <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_200ms]"></div>
-                     </div>
-                     <span class="text-xs font-semibold text-surface-500 uppercase tracking-wide">Rendering</span>
-                 </div>
-             </div>
+            <!-- Loading Overlay -->
+            <!-- Loading Overlay -->
+            <div v-if="loading"
+                class="absolute inset-0 bg-surface-0/50 dark:bg-surface-950/50 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300">
+                <div
+                    class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 shadow-xl rounded-xl p-4 flex flex-col items-center gap-3">
+                    <div class="flex items-center gap-1.5 h-8">
+                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite]"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_100ms]"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_200ms]"></div>
+                    </div>
+                    <span class="text-xs font-semibold text-surface-500 uppercase tracking-wide">Rendering</span>
+                </div>
+            </div>
 
-             <!-- Scrollable Area -->
-             <div class="h-full overflow-auto p-4 custom-scrollbar">
-                 <div v-if="error" class="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-center gap-2 mb-4 text-sm">
-                     <AlertTriangle class="w-5 h-5 flex-shrink-0" />
-                     <span>{{ error }}</span>
-                 </div>
+            <!-- Legend -->
+            <PreviewLegend v-if="headings.length > 0" :headings="headings" @scroll="scrollToHeading"
+                class="absolute top-4 right-4 z-40" />
 
-                 <div 
-                    class="prose dark:prose-invert max-w-none text-sm pcgw-content rendered-view" 
-                    v-html="html || '<span class=\'text-surface-400 italic\'>Preview will appear here...</span>'"
-                ></div>
-             </div>
+            <!-- Scrollable Area -->
+            <div class="h-full overflow-auto p-4 custom-scrollbar scroll-smooth" ref="scrollContainer">
+                <div v-if="error"
+                    class="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-center gap-2 mb-4 text-sm">
+                    <AlertTriangle class="w-5 h-5 flex-shrink-0" />
+                    <span>{{ error }}</span>
+                </div>
+
+                <div class="prose dark:prose-invert max-w-none text-sm pcgw-content rendered-view"
+                    v-html="processedContent.html || '<span class=\'text-surface-400 italic\'>Preview will appear here...</span>'">
+                </div>
+            </div>
         </div>
     </div>
 </template>

@@ -513,8 +513,17 @@ export const renderWikitextToHtml = (wikitext: string): string => {
     });
 
     // Formatting
-    bodyText = bodyText.replace(/^==\s*(.*?)\s*==$/gm, '<h2>$1</h2>');
-    bodyText = bodyText.replace(/^===\s*(.*?)\s*===$/gm, '<h3>$1</h3>');
+    const slugify = (text: string) => {
+        return text.toString().toLowerCase()
+            .replace(/\s+/g, '-')           // Replace spaces with -
+            .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+            .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+            .replace(/^-+/, '')             // Trim - from start of text
+            .replace(/-+$/, '');            // Trim - from end of text
+    };
+
+    bodyText = bodyText.replace(/^==\s*(.*?)\s*==$/gm, (_match, title) => `<h2 id="${slugify(title)}">${title}</h2>`);
+    bodyText = bodyText.replace(/^===\s*(.*?)\s*===$/gm, (_match, title) => `<h3 id="${slugify(title)}">${title}</h3>`);
     bodyText = bodyText.replace(/'''(.*?)'''/g, '<b>$1</b>');
     bodyText = bodyText.replace(/''(.*?)''/g, '<i>$1</i>');
 
