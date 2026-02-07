@@ -330,7 +330,9 @@ export const renderWikitextToHtml = (wikitext: string): string => {
     // Audio
     renderSpecs('Audio', 'table-settings-audio', 'Audio feature', ['separate volume', 'surround sound', 'subtitles', 'closed captions', 'mute on focus lost']);
     // Network
-    renderSpecs('Network', 'table-network', 'Network feature', ['multiplayer', 'lan play', 'online play', 'crossplay']);
+    renderSpecs('Network/Multiplayer', 'table-network-multiplayer', 'Multiplayer types', ['local play', 'lan play', 'online play', 'asynchronous', 'crossplay']);
+    renderSpecs('Network/Connections', 'table-network-connections', 'Connection types', ['matchmaking', 'p2p', 'dedicated', 'self-hosting', 'direct ip']);
+    renderSpecs('Network/Ports', 'table-network-ports', 'Ports', ['tcp', 'udp', 'upnp']);
     // VR
     renderSpecs('VR support', 'table-vr', 'VR Support', ['native 3d', 'nvidia 3d vision', 'vorpx', 'openxr', 'steamvr', 'oculus', 'windows mixed reality']);
 
@@ -392,17 +394,7 @@ export const renderWikitextToHtml = (wikitext: string): string => {
         </div>`);
     }
 
-    // 7. Issues (Fixbox)
-    const fixboxes = findBalancedTemplate(bodyText, 'Fixbox');
-    fixboxes.forEach(fb => {
-        const d = parseTemplate('Fixbox', fb.content) || {};
-        // Simple render
-        const html = `<div class="fixbox" style="border:1px solid red; padding:5px; margin:5px 0;">
-            <strong>${d['description'] || 'Issue'}</strong><br>
-            ${d['fix'] ? `Fix: ${d['fix']}` : ''}
-         </div>`;
-        bodyText = bodyText.replace(fb.content, html);
-    });
+
 
     // 8. API
     const apiTemplates = findBalancedTemplate(bodyText, 'API');

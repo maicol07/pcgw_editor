@@ -137,37 +137,35 @@ const onFilter = async (event: { value?: string, query?: string }) => {
 </script>
 
 <template>
-    <div class="w-full">
-        <!-- Multiple Selection Mode -->
-        <MultiSelect
-            v-if="multiple"
-            v-model="localValue"
-            :options="suggestions"
-            :loading="loading"
-            :placeholder="placeholder"
-            filter
-            autoFilterFocus
-            :filterMatchMode="'contains'"
-            @filter="onFilter"
-            class="w-full"
-            display="chip"
-            :showToggleAll="false"
-        />
+    <!-- Multiple Selection Mode -->
+    <MultiSelect
+        v-if="multiple"
+        v-model="localValue"
+        :options="suggestions"
+        :loading="loading"
+        :placeholder="placeholder"
+        filter
+        autoFilterFocus
+        :filterMatchMode="'contains'"
+        @filter="onFilter"
+        class="w-full"
+        display="chip"
+        :showToggleAll="false"
+    />
 
-        <!-- Single Selection Mode -->
-        <AutoComplete
-            v-else
-            v-model="localValue"
-            :suggestions="suggestions"
-            :loading="loading"
-            :placeholder="placeholder"
-            :dropdown="false"
-            :forceSelection="false"
-            completeOnFocus
-            class="w-full"
-            @complete="onFilter"
-        />
-    </div>
+    <!-- Single Selection Mode -->
+    <AutoComplete
+        v-else
+        v-model="localValue"
+        :suggestions="suggestions"
+        :loading="loading"
+        :placeholder="placeholder"
+        :dropdown="false"
+        :forceSelection="false"
+        completeOnFocus
+        class="w-full"
+        @complete="onFilter"
+    />
 </template>
 
 <style scoped>

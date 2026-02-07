@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { LocalizationRow } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
-import Panel from 'primevue/panel';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import Checkbox from 'primevue/checkbox';
-import Select from 'primevue/select';
+// import Checkbox from 'primevue/checkbox';
+// import Select from 'primevue/select';
+// Actually best to just remove lines or comment them out.
+// Removing them.
 import { Trash2, Plus } from 'lucide-vue-next';
+import { FlagIcon } from '@placetopay/flagicons-vue';
 
-const props = defineProps<{
-  localizations: LocalizationRow[];
-}>();
+const localizations = defineModel<LocalizationRow[]>('localizations', { required: true });
 
 const addRow = () => {
-  props.localizations.push({
+  localizations.value.push({
     language: '',
     interface: false,
     audio: 'unknown',
@@ -25,48 +25,48 @@ const addRow = () => {
 };
 
 const removeRow = (index: number) => {
-  props.localizations.splice(index, 1);
+  localizations.value.splice(index, 1);
 };
 
-// Common languages map to flags
+// Common languages map to ISO codes for flag icons
 const commonLanguages = [
-    { label: 'English', value: 'English', flag: '🇬🇧' },
-    { label: 'French', value: 'French', flag: '🇫🇷' },
-    { label: 'Italian', value: 'Italian', flag: '🇮🇹' },
-    { label: 'German', value: 'German', flag: '🇩🇪' },
-    { label: 'Spanish', value: 'Spanish', flag: '🇪🇸' },
-    { label: 'Japanese', value: 'Japanese', flag: '🇯🇵' },
-    { label: 'Korean', value: 'Korean', flag: '🇰🇷' },
-    { label: 'Portuguese', value: 'Portuguese', flag: '🇵🇹' },
-    { label: 'Russian', value: 'Russian', flag: '🇷🇺' },
-    { label: 'Chinese (Simplified)', value: 'Chinese (Simplified)', flag: '🇨🇳' },
-    { label: 'Chinese (Traditional)', value: 'Chinese (Traditional)', flag: '🇹🇼' },
-    { label: 'Polish', value: 'Polish', flag: '🇵🇱' },
-    { label: 'Czech', value: 'Czech', flag: '🇨🇿' },
-    { label: 'Turkish', value: 'Turkish', flag: '🇹🇷' },
-    { label: 'Ukrainian', value: 'Ukrainian', flag: '🇺🇦' },
+    { label: 'English', value: 'English', code: 'GB' },
+    { label: 'French', value: 'French', code: 'FR' },
+    { label: 'Italian', value: 'Italian', code: 'IT' },
+    { label: 'German', value: 'German', code: 'DE' },
+    { label: 'Spanish', value: 'Spanish', code: 'ES' },
+    { label: 'Japanese', value: 'Japanese', code: 'JP' },
+    { label: 'Korean', value: 'Korean', code: 'KR' },
+    { label: 'Portuguese', value: 'Portuguese', code: 'PT' },
+    { label: 'Brazilian Portuguese', value: 'Brazilian Portuguese', code: 'BR' },
+    { label: 'Russian', value: 'Russian', code: 'RU' },
+    { label: 'Chinese (Simplified)', value: 'Chinese (Simplified)', code: 'CN' },
+    { label: 'Chinese (Traditional)', value: 'Chinese (Traditional)', code: 'TW' },
+    { label: 'Polish', value: 'Polish', code: 'PL' },
+    { label: 'Czech', value: 'Czech', code: 'CZ' },
+    { label: 'Turkish', value: 'Turkish', code: 'TR' },
+    { label: 'Ukrainian', value: 'Ukrainian', code: 'UA' },
+    { label: 'Hungarian', value: 'Hungarian', code: 'HU' },
+    { label: 'Dutch', value: 'Dutch', code: 'NL' },
+    { label: 'Swedish', value: 'Swedish', code: 'SE' },
+    { label: 'Norwegian', value: 'Norwegian', code: 'NO' },
+    { label: 'Danish', value: 'Danish', code: 'DK' },
+    { label: 'Finnish', value: 'Finnish', code: 'FI' },
 ];
 
-const getFlag = (lang: string) => {
+const getFlagCode = (lang: string) => {
     const found = commonLanguages.find(l => l.value === lang);
-    return found ? found.flag : '🏳️';
+    return found ? found.code : undefined;
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <Panel header="Localizations" toggleable>
-      <div v-for="(row, index) in localizations" :key="index" class="p-4 mb-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-4">
-        <div class="flex justify-between items-center">
-             <div class="font-bold">Language #{{ index + 1 }}</div>
-             <Button severity="danger" text @click="removeRow(index)">
-                <template #icon><Trash2 class="w-4 h-4" /></template>
-             </Button>
-        </div>
+  <div class="flex flex-col gap-2">
+      <div v-for="(row, index) in localizations" :key="index" class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group">
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
             <!-- Language -->
-            <div class="lg:col-span-4 flex flex-col gap-1">
+            <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
                 <label class="text-xs font-bold text-surface-500">Language</label>
                 <div class="flex gap-2">
                     <Select 
@@ -80,14 +80,15 @@ const getFlag = (lang: string) => {
                     >
                         <template #value="slotProps">
                             <div class="flex items-center gap-2" v-if="slotProps.value">
-                                <span>{{ getFlag(slotProps.value) }}</span>
+                                <FlagIcon :flag="getFlagCode(slotProps.value) as any" v-if="getFlagCode(slotProps.value)" size="M" class="rounded" />
+                                <span v-else>🏳️</span>
                                 <span>{{ slotProps.value }}</span>
                             </div>
                             <span v-else>{{ slotProps.placeholder }}</span>
                         </template>
                         <template #option="slotProps">
                             <div class="flex items-center gap-2">
-                                <span>{{ slotProps.option.flag }}</span>
+                                <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
                                 <span>{{ slotProps.option.label }}</span>
                             </div>
                         </template>
@@ -96,7 +97,7 @@ const getFlag = (lang: string) => {
             </div>
             
             <!-- Interface -->
-            <div class="lg:col-span-1 flex flex-col gap-1 items-center">
+            <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
                 <label class="text-xs font-bold text-surface-500">UI</label>
                 <div class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
                     <Checkbox v-model="row.interface" binary />
@@ -104,19 +105,19 @@ const getFlag = (lang: string) => {
             </div>
 
             <!-- Audio -->
-            <div class="lg:col-span-2 flex flex-col gap-1">
+            <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
                  <label class="text-xs font-bold text-surface-500">Audio</label>
                  <RatingSelect v-model="row.audio" />
             </div>
 
             <!-- Subtitles -->
-            <div class="lg:col-span-2 flex flex-col gap-1">
+            <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
                  <label class="text-xs font-bold text-surface-500">Subtitles</label>
                  <RatingSelect v-model="row.subtitles" />
             </div>
             
              <!-- Notes & Fan -->
-            <div class="lg:col-span-3 flex gap-2 items-end">
+            <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
                  <div class="flex-1 flex flex-col gap-1">
                      <label class="text-xs font-bold text-surface-500">Notes</label>
                      <InputText v-model="row.notes" class="w-full" placeholder="Notes..." />
@@ -126,12 +127,18 @@ const getFlag = (lang: string) => {
                       <Checkbox v-model="row.fan" binary />
                  </div>
             </div>
+
+            <!-- Delete Button (Last column) -->
+             <div class="md:col-span-2 lg:col-span-1 flex justify-end pb-1">
+                <Button severity="danger" text @click="removeRow(index)" title="Remove Language">
+                    <template #icon><Trash2 class="w-4 h-4" /></template>
+                 </Button>
+            </div>
         </div>
       </div>
       
-      <Button label="Add Language" @click="addRow">
+      <Button label="Add Language" @click="addRow" outlined class="w-full border-dashed">
         <template #icon><Plus class="w-4 h-4" /></template>
       </Button>
-    </Panel>
   </div>
 </template>

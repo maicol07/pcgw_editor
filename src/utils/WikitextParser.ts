@@ -35,7 +35,9 @@ export class WikitextParser {
      * Returns the outermost matching template.
      */
     findTemplate(name: string): TemplateLocation | null {
-        const regex = new RegExp(`\\{\\{\\s*${this.escapeRegex(name)}`, 'i');
+        // Handle spaces and underscores interchangeably
+        const normalizedName = this.escapeRegex(name).replace(/ /g, '[\\s_]+');
+        const regex = new RegExp(`\\{\\{\\s*${normalizedName}`, 'i');
         const match = this.wikitext.match(regex);
 
         if (!match || match.index === undefined) {
@@ -77,6 +79,55 @@ export class WikitextParser {
 
         // Unclosed template
         return null;
+    }
+
+    /**
+     * Find all instances of a template by name.
+     */
+    findTemplates(name: string): TemplateLocation[] {
+        // Handle spaces and underscores interchangeably
+        const normalizedName = this.escapeRegex(name).replace(/ /g, '[\\s_]+');
+        const regex = new RegExp(`\\{\\{\\s*${normalizedName}`, 'gi');
+        const matches = [...this.wikitext.matchAll(regex)];
+        const results: TemplateLocation[] = [];
+
+        for (const match of matches) {
+            if (match.index === undefined) continue;
+
+            const start = match.index;
+            let depth = 0;
+            let i = start;
+            let found = false;
+
+            while (i < this.wikitext.length) {
+                const char = this.wikitext[i];
+                const nextChar = i + 1 < this.wikitext.length ? this.wikitext[i + 1] : '';
+
+                if (char === '{' && nextChar === '{') {
+                    depth++;
+                    i += 2;
+                    continue;
+                }
+
+                if (char === '}' && nextChar === '}') {
+                    depth--;
+                    if (depth === 0) {
+                        const end = i + 2;
+                        results.push({
+                            start,
+                            end,
+                            content: this.wikitext.substring(start, end)
+                        });
+                        found = true;
+                        break;
+                    }
+                    i += 2;
+                    continue;
+                }
+                i++;
+            }
+        }
+        return results;
     }
 
     /**
@@ -297,12 +348,27 @@ export class WikitextParser {
      * Format nested row templates with proper whitespace.
      * Example: developers list with multiple {{Infobox game/row/developer|...}}
      */
-    formatNestedRows(items: Array<{ type: string; name: string }>): string {
+    /**
+     * Format nested row templates with proper whitespace.
+     * Example: developers list with multiple {{Infobox game/row/developer|...}}
+     */
+    formatNestedRows(items: Array<{ type: string; name: string; params?: Record<string, string | undefined> }>): string {
         if (!items || items.length === 0) {
             return '';
         }
 
-        return items.map(item => `{{Infobox game/row/${item.type}|${item.name}}}`).join('\n');
+        return items.map(item => {
+            let row = `{{Infobox game/row/${item.type}|${item.name}`;
+            if (item.params) {
+                Object.entries(item.params).forEach(([key, value]) => {
+                    if (value !== undefined && value !== null && value !== '') {
+                        row += `|${key}=${value}`;
+                    }
+                });
+            }
+            row += `}}`;
+            return row;
+        }).join('\n');
     }
 
     /**

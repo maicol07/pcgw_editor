@@ -22,7 +22,7 @@ const osOptions = [
 ];
 
 function addRow() {
-  const newRows = [...props.modelValue, { name: '', notes: '', os: '' }];
+  const newRows = [...(props.modelValue || []), { name: '', notes: '', os: '' }];
   emit('update:modelValue', newRows);
 }
 

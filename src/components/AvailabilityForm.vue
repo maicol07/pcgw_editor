@@ -4,14 +4,14 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
-import { 
-  Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play, 
-  Gift, Heart, Command, AppWindow, Globe, Box, Code, 
-  Building2, Plus, Trash2 
+import {
+    Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play,
+    Gift, Heart, Command, AppWindow, Globe, Box, Code,
+    Building2, Plus, Trash2
 } from 'lucide-vue-next';
 
 const props = defineProps<{
-  modelValue: AvailabilityRow[];
+    modelValue: AvailabilityRow[];
 }>();
 
 const emit = defineEmits<{
@@ -74,88 +74,108 @@ const getProductIdHelp = (source: string) => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="flex justify-between items-center">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-surface-500">Availability Table</h3>
-        <Button label="Add Store" size="small" @click="addRow" severity="primary" class="h-8">
-            <template #icon><Plus class="w-4 h-4" /></template>
-        </Button>
-    </div>
-    
-    <div v-for="(row, index) in modelValue" :key="index" class="p-4 rounded-xl bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 flex flex-col gap-4">
+    <div class="flex flex-col gap-4">
         <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <Select 
-                    :modelValue="row.distribution" 
-                    @update:modelValue="v => updateRow(index, 'distribution', v)"
-                    :options="storefrontOptions" 
-                    optionLabel="label" 
-                    optionValue="value"
-                    placeholder="Select Store"
-                    class="w-48 p-inputtext-sm"
-                    size="small"
-                >
-                    <template #value="slotProps">
-                        <div v-if="slotProps.value" class="flex items-center gap-2">
-                             <component :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon" class="w-3 h-3" />
-                            <span class="text-xs">{{ storefrontOptions.find(o => o.value === slotProps.value)?.label }}</span>
-                        </div>
-                        <span v-else class="text-xs">Select Store</span>
-                    </template>
-                     <template #option="slotProps">
-                        <div class="flex items-center gap-2">
-                            <component :is="slotProps.option.icon" class="w-3 h-3" />
-                            <span class="text-xs">{{ slotProps.option.label }}</span>
-                        </div>
-                    </template>
-                </Select>
-                
-                <SelectButton 
-                    :modelValue="row.state || 'normal'" 
-                    @update:modelValue="v => updateRow(index, 'state', v || 'normal')"
-                    :options="stateOptions" 
-                    optionLabel="label" 
-                    optionValue="value"
-                    class="scale-75 origin-left"
-                />
-            </div>
-            <Button text severity="danger" size="small" @click="removeRow(index)">
-                <template #icon><Trash2 class="w-4 h-4" /></template>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400">Availability
+                Table</h3>
+            <Button label="Add Store" size="small" @click="addRow" severity="primary" class="h-7 text-xs">
+                <template #icon>
+                    <Plus class="w-3.5 h-3.5" />
+                </template>
             </Button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold uppercase text-surface-400">Product ID</label>
-                <InputText 
-                    :value="row.id" 
-                    @input="updateRow(index, 'id', ($event.target as HTMLInputElement).value)" 
-                    :placeholder="getProductIdHelp(row.distribution)"
-                    class="w-full p-inputtext-sm text-xs" 
-                />
-            </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold uppercase text-surface-400">DRM Used</label>
-                <InputText :value="row.drm" @input="updateRow(index, 'drm', ($event.target as HTMLInputElement).value)" placeholder="e.g. Steam, DRM-free" class="w-full p-inputtext-sm text-xs" />
-            </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold uppercase text-surface-400">Supported OS</label>
-                <InputText :value="row.os" @input="updateRow(index, 'os', ($event.target as HTMLInputElement).value)" placeholder="e.g. Windows, OS X, Linux" class="w-full p-inputtext-sm text-xs" />
-            </div>
-        </div>
+        <TransitionGroup name="list" tag="div" class="flex flex-col gap-3">
+            <div v-for="(row, index) in modelValue" :key="index"
+                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex flex-col gap-3 transition-all group">
+                <div class="flex flex-wrap items-center gap-2">
+                    <Select :modelValue="row.distribution" @update:modelValue="v => updateRow(index, 'distribution', v)"
+                        :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
+                        class="w-full sm:w-44 text-xs! flex-none h-9! flex! items-center!" size="small" editable>
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex items-center gap-2">
+                                <component :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon || Box"
+                                    class="w-3.5 h-3.5"
+                                    :class="{ 'text-surface-400': !storefrontOptions.find(o => o.value === slotProps.value) }" />
+                                <span class="text-xs truncate">{{storefrontOptions.find(o => o.value ===
+                                    slotProps.value)?.label || slotProps.value}}</span>
+                            </div>
+                            <span v-else class="text-xs">Select Store</span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center gap-2">
+                                <component :is="slotProps.option.icon" class="w-3.5 h-3.5" />
+                                <span class="text-xs">{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold uppercase text-surface-400">Extra Keys</label>
-                <InputText :value="row.keys" @input="updateRow(index, 'keys', ($event.target as HTMLInputElement).value)" placeholder="e.g. Steam" class="w-full p-inputtext-sm text-xs" />
+                    <SelectButton :modelValue="row.state || 'normal'"
+                        @update:modelValue="v => updateRow(index, 'state', v || 'normal')" :options="stateOptions"
+                        optionLabel="label" optionValue="value" size="small"
+                        class="flex-1 min-w-min whitespace-nowrap compact-select-button" :pt="{
+                            root: { class: 'flex' },
+                            button: { class: '!px-2 !py-0.5 !text-[10px] flex-1' },
+                            label: { class: '!font-semibold' }
+                        }" />
+
+                    <Button text severity="danger" size="small" @click="removeRow(index)"
+                        class="ml-auto !p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md">
+                        <template #icon>
+                            <Trash2 class="w-4 h-4 text-red-500" />
+                        </template>
+                    </Button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold uppercase text-surface-400">Product ID</label>
+                        <InputText :value="row.id"
+                            @input="updateRow(index, 'id', ($event.target as HTMLInputElement).value)"
+                            :placeholder="getProductIdHelp(row.distribution)" class="w-full !text-xs !p-2" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold uppercase text-surface-400">DRM Used</label>
+                        <InputText :value="row.drm"
+                            @input="updateRow(index, 'drm', ($event.target as HTMLInputElement).value)"
+                            placeholder="e.g. Steam, DRM-free" class="w-full !text-xs !p-2" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold uppercase text-surface-400">Supported OS</label>
+                        <InputText :value="row.os"
+                            @input="updateRow(index, 'os', ($event.target as HTMLInputElement).value)"
+                            placeholder="e.g. Windows, OS X, Linux" class="w-full !text-xs !p-2" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold uppercase text-surface-400">Extra Keys</label>
+                        <InputText :value="row.keys"
+                            @input="updateRow(index, 'keys', ($event.target as HTMLInputElement).value)"
+                            placeholder="e.g. Steam" class="w-full !text-xs !p-2" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold uppercase text-surface-400">Notes</label>
+                        <InputText :value="row.notes"
+                            @input="updateRow(index, 'notes', ($event.target as HTMLInputElement).value)"
+                            placeholder="e.g. Includes all DLC" class="w-full !text-xs !p-2" />
+                    </div>
+                </div>
             </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold uppercase text-surface-400">Notes</label>
-                <InputText :value="row.notes" @input="updateRow(index, 'notes', ($event.target as HTMLInputElement).value)" placeholder="e.g. Includes all DLC" class="w-full p-inputtext-sm text-xs" />
-            </div>
-        </div>
+        </TransitionGroup>
     </div>
-  </div>
 </template>
 
+<style scoped>
+.list-enter-active,
+.list-leave-active {
+    transition: all 0.3s ease;
+}
 
+.list-enter-from,
+.list-leave-to {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+</style>

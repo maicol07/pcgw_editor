@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { GameDataConfig } from '../models/GameData';
 import Select from 'primevue/select';
-import Panel from 'primevue/panel';
 import GameDataPathForm from './GameDataPathForm.vue';
-import RatingSelect from './RatingSelect.vue';
-import RatingRow from './RatingRow.vue';
-import HelpIcon from './HelpIcon.vue';
-import NotesButton from './NotesButton.vue';
-import { Server, MessageCircle, AppWindow, Box, Cloud } from 'lucide-vue-next';
+import { Settings2 } from 'lucide-vue-next';
 
 import { inject, reactive, watch } from 'vue';
 
 // ... other imports
 
 const props = defineProps<{
-  config: GameDataConfig;
+  modelValue: GameDataConfig;
 }>();
-
 const xdgOptions = [
   { label: 'Supported', value: true },
   { label: 'Not Supported', value: false },
@@ -25,71 +19,52 @@ const xdgOptions = [
 
 // Panel logic
 const sectionState = reactive({
-    paths: true,
-    cloud: true
+  paths: true,
 });
 
 const uiBus = inject<{ expandAllCount: number, collapseAllCount: number }>('uiBus');
 
 if (uiBus) {
-    watch(() => uiBus.expandAllCount, () => {
-        sectionState.paths = false;
-        sectionState.cloud = false;
-    });
-    watch(() => uiBus.collapseAllCount, () => {
-        sectionState.paths = true;
-        sectionState.cloud = true;
-    });
+  watch(() => uiBus.expandAllCount, () => {
+    sectionState.paths = false;
+  });
+  watch(() => uiBus.collapseAllCount, () => {
+    sectionState.paths = true;
+  });
 }
+// Panel logic and sectionState usage for paths removed
 
-const getCloudIcon = (key: string) => {
-    const k = key.toLowerCase();
-    if (k.includes('steam')) return Server; 
-    if (k.includes('discord')) return MessageCircle;
-    if (k.includes('xbox')) return AppWindow;
-    if (k.includes('gog')) return Box; 
-    if (k.includes('epic')) return Box;
-    if (k.includes('ubisoft')) return Box;
-    if (k.includes('ea')) return Box;
-    return Cloud;
-}
+// uiBus logic removed as it was tied to sectionState.paths
 
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
     <!-- Game Data Paths -->
-    <Panel header="Game Data Paths" toggleable v-model:collapsed="sectionState.paths">
-        <div class="flex flex-col gap-6">
-        <GameDataPathForm :rows="config.configFiles" title="Configuration file(s) location" />
-        
-        <div class="flex items-center gap-4 bg-surface-50 dark:bg-surface-900/50 p-4 rounded-lg border border-surface-200 dark:border-surface-800">
-            <label class="flex items-center text-sm font-medium text-surface-600 dark:text-surface-300">
-                XDG Base Directory Support
-                <HelpIcon text="Does the game support XDG Base Directory standards on Linux?" />
-            </label>
-            <Select v-model="config.xdg" :options="xdgOptions" optionLabel="label" optionValue="value" placeholder="Select XDG support" class="w-64" />
-        </div>
+    <div class="flex flex-col gap-8">
+      <GameDataPathForm v-model:rows="modelValue.configFiles" title="Configuration Locations" icon="folder"
+        description="Where the game stores its configuration files (ini, xml, cfg, etc.)" />
 
-        <GameDataPathForm :rows="config.saveData" title="Save game data location" />
+      <div
+        class="flex items-center gap-4 p-4 border-y border-surface-200 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/20">
+        <div class="p-2 bg-surface-100 dark:bg-surface-800 rounded-full text-surface-500 dark:text-surface-400">
+          <Settings2 class="w-5 h-5" />
         </div>
-    </Panel>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold text-surface-700 dark:text-surface-200">
+            XDG Base Directory Support
+          </label>
+          <p class="text-xs text-surface-500 dark:text-surface-400">Does the game respect XDG standards on Linux?</p>
+        </div>
+        <Select v-model="modelValue.xdg" :options="xdgOptions" optionLabel="label" optionValue="value"
+          placeholder="Select..." class="w-48" />
+      </div>
 
-    <!-- Cloud Sync -->
-    <Panel header="Save Game Cloud Syncing" toggleable v-model:collapsed="sectionState.cloud">
-        <div class="flex flex-col gap-2">
-            <RatingRow 
-                v-for="(service, key) in config.cloudSync" 
-                :key="key"
-                :label="key.replace(/([A-Z])/g, ' $1').trim()"
-                :icon="getCloudIcon(key)"
-                v-model:value="service.status"
-                v-model:notes="service.notes"
-            />
-        </div>
-    </Panel>
+      <GameDataPathForm v-model:rows="modelValue.saveData" title="Save Game Locations" icon="save"
+        description="Where the game stores its save files." />
+    </div>
+
+
   </div>
 </template>
-
-
-
+```

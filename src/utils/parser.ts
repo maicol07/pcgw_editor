@@ -1,8 +1,8 @@
-import { GameData, initialGameData, CloudSync, SystemRequirementsOS } from '../models/GameData';
+import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue } from '../models/GameData';
 import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 
-const wiki = (globalThis as any).Parser as Parser;
+let wiki = (globalThis as any).Parser as Parser;
 
 export function parseRaw(text: string) {
     return wiki.parse(text);
@@ -24,6 +24,13 @@ export function parseWikitext(wikitext: string): GameData {
     // Parse AST
     let ast: any;
     try {
+        if (!wiki) {
+            wiki = (globalThis as any).Parser;
+            if (!wiki) {
+                console.error("CRITICAL: WikitextParser (globalThis.Parser) is undefined. Check bundle loading.");
+                return data;
+            }
+        }
         ast = wiki.parse(wikitext);
     } catch (e) {
         console.error("Failed to parse wikitext:", e);
@@ -228,7 +235,8 @@ export function parseWikitext(wikitext: string): GameData {
         const engRows = parseRows('engines', 'Infobox game/row/engine');
         data.infobox.engines = engRows.map(r => ({
             name: getParam(r, '1'),
-            build: getParam(r, 'build')
+            build: getParam(r, 'build'),
+            ref: getParam(r, 'ref')
         }));
 
         const dateRows = parseRows('release dates', 'Infobox game/row/date');
@@ -398,8 +406,10 @@ export function parseWikitext(wikitext: string): GameData {
     const cloud = findTemplateGlobal('Save game cloud syncing');
     if (cloud) {
         const mapCloud = (key: string, field: keyof CloudSync) => {
-            data.config.cloudSync[field].status = getParam(cloud, key) as any;
-            data.config.cloudSync[field].notes = getParam(cloud, key + ' notes');
+            // @ts-ignore
+            data.config.cloudSync[field] = getParam(cloud, key) as any;
+            // @ts-ignore
+            data.config.cloudSync[field + 'Notes'] = getParam(cloud, key + ' notes');
         };
         mapCloud('discord', 'discord');
         mapCloud('epic games launcher', 'epicGamesLauncher');
@@ -543,7 +553,7 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.steamControllerPrompts = getParam(input, 'steam controller prompts') as any;
         data.input.steamControllerPromptsNotes = getParam(input, 'steam controller prompts notes');
         data.input.steamInputMotionSensors = getParam(input, 'steam input motion sensors') as any;
-        data.input.steamInputMotionSensorsNotes = getParam(input, 'steam input motion sensors notes');
+        data.input.steamInputMotionSensorsModes = getParam(input, 'steam input motion sensors modes');
         data.input.steamCursorDetection = getParam(input, 'steam cursor detection') as any;
         data.input.steamCursorDetectionNotes = getParam(input, 'steam cursor detection notes');
 
@@ -570,6 +580,9 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.otherButtonPrompts = getParam(input, 'other button prompts');
         data.input.otherButtonPromptsNotes = getParam(input, 'other button prompts notes');
 
+        data.input.simultaneousInput = getParam(input, 'simultaneous input') as any;
+        data.input.simultaneousInputNotes = getParam(input, 'simultaneous input notes');
+
     }
 
     // --- Audio ---
@@ -582,51 +595,66 @@ export function parseWikitext(wikitext: string): GameData {
         data.audio.muteOnFocusLost = getParam(audio, 'mute on focus lost') as any;
         data.audio.royaltyFree = getParam(audio, 'royalty free audio') as any;
         data.audio.royaltyFreeNotes = getParam(audio, 'royalty free audio notes');
+
+        data.audio.eaxSupport = getParam(audio, 'eax support') as any;
+        data.audio.eaxSupportNotes = getParam(audio, 'eax support notes');
+
+        data.audio.redBookCdAudio = getParam(audio, 'red book cd audio') as any;
+        data.audio.redBookCdAudioNotes = getParam(audio, 'red book cd audio notes');
+
+        data.audio.generalMidiAudio = getParam(audio, 'general midi audio') as any;
+        data.audio.generalMidiAudioNotes = getParam(audio, 'general midi audio notes');
     }
 
     // --- Network ---
-    const network = findTemplateGlobal('Network');
-    if (network) {
-        data.network.localPlay = getParam(network, 'local play') as any;
-        data.network.localPlayPlayers = getParam(network, 'local play players');
-        data.network.localPlayModes = getParam(network, 'local play modes');
-        data.network.localPlayNotes = getParam(network, 'local play notes');
+    const netMulti = findTemplateGlobal('Network/Multiplayer');
+    if (netMulti) {
+        data.network.localPlay = getParam(netMulti, 'local play') as any;
+        data.network.localPlayPlayers = getParam(netMulti, 'local play players');
+        data.network.localPlayModes = getParam(netMulti, 'local play modes');
+        data.network.localPlayNotes = getParam(netMulti, 'local play notes');
 
-        data.network.lanPlay = getParam(network, 'lan play') as any;
-        data.network.lanPlayPlayers = getParam(network, 'lan play players');
-        data.network.lanPlayModes = getParam(network, 'lan play modes');
-        data.network.lanPlayNotes = getParam(network, 'lan play notes');
+        data.network.lanPlay = getParam(netMulti, 'lan play') as any;
+        data.network.lanPlayPlayers = getParam(netMulti, 'lan play players');
+        data.network.lanPlayModes = getParam(netMulti, 'lan play modes');
+        data.network.lanPlayNotes = getParam(netMulti, 'lan play notes');
 
-        data.network.onlinePlay = getParam(network, 'online play') as any;
-        data.network.onlinePlayPlayers = getParam(network, 'online play players');
-        data.network.onlinePlayModes = getParam(network, 'online play modes');
-        data.network.onlinePlayNotes = getParam(network, 'online play notes');
+        data.network.onlinePlay = getParam(netMulti, 'online play') as any;
+        data.network.onlinePlayPlayers = getParam(netMulti, 'online play players');
+        data.network.onlinePlayModes = getParam(netMulti, 'online play modes');
+        data.network.onlinePlayNotes = getParam(netMulti, 'online play notes');
 
-        data.network.asynchronous = getParam(network, 'asynchronous') as any;
-        data.network.asynchronousNotes = getParam(network, 'asynchronous notes');
+        data.network.asynchronous = getParam(netMulti, 'asynchronous') as any;
+        data.network.asynchronousNotes = getParam(netMulti, 'asynchronous notes');
 
-        data.network.crossplay = getParam(network, 'crossplay') as any;
-        data.network.crossplayPlatforms = getParam(network, 'crossplay platforms');
-        data.network.crossplayNotes = getParam(network, 'crossplay notes');
+        data.network.crossplay = getParam(netMulti, 'crossplay') as any;
+        data.network.crossplayPlatforms = getParam(netMulti, 'crossplay platforms');
+        data.network.crossplayNotes = getParam(netMulti, 'crossplay notes');
+    }
 
-        data.network.matchmaking = getParam(network, 'matchmaking') as any;
-        data.network.matchmakingNotes = getParam(network, 'matchmaking notes');
+    const netConn = findTemplateGlobal('Network/Connections');
+    if (netConn) {
+        data.network.matchmaking = getParam(netConn, 'matchmaking') as any;
+        data.network.matchmakingNotes = getParam(netConn, 'matchmaking notes');
 
-        data.network.p2p = getParam(network, 'p2p') as any;
-        data.network.p2pNotes = getParam(network, 'p2p notes');
+        data.network.p2p = getParam(netConn, 'p2p') as any;
+        data.network.p2pNotes = getParam(netConn, 'p2p notes');
 
-        data.network.dedicated = getParam(network, 'dedicated') as any;
-        data.network.dedicatedNotes = getParam(network, 'dedicated notes');
+        data.network.dedicated = getParam(netConn, 'dedicated') as any;
+        data.network.dedicatedNotes = getParam(netConn, 'dedicated notes');
 
-        data.network.selfHosting = getParam(network, 'self-hosting') as any;
-        data.network.selfHostingNotes = getParam(network, 'self-hosting notes');
+        data.network.selfHosting = getParam(netConn, 'self-hosting') as any;
+        data.network.selfHostingNotes = getParam(netConn, 'self-hosting notes');
 
-        data.network.directIp = getParam(network, 'direct ip') as any;
-        data.network.directIpNotes = getParam(network, 'direct ip notes');
+        data.network.directIp = getParam(netConn, 'direct ip') as any;
+        data.network.directIpNotes = getParam(netConn, 'direct ip notes');
+    }
 
-        data.network.tcpPorts = getParam(network, 'tcp ports');
-        data.network.udpPorts = getParam(network, 'udp ports');
-        data.network.upnp = getParam(network, 'upnp') as any;
+    const netPorts = findTemplateGlobal('Network/Ports');
+    if (netPorts) {
+        data.network.tcpPorts = getParam(netPorts, 'tcp');
+        data.network.udpPorts = getParam(netPorts, 'udp');
+        data.network.upnp = getParam(netPorts, 'upnp') as any;
     }
 
     // --- VR ---
@@ -644,21 +672,46 @@ export function parseWikitext(wikitext: string): GameData {
         data.vr.openXrNotes = getParam(vr, 'openxr notes');
         data.vr.steamVr = getParam(vr, 'steamvr') as any;
         data.vr.steamVrNotes = getParam(vr, 'steamvr notes');
-        data.vr.oculusVr = getParam(vr, 'oculus') as any;
-        data.vr.oculusVrNotes = getParam(vr, 'oculus notes');
+        data.vr.oculusVr = getParam(vr, 'oculusvr') as any;
+        data.vr.oculusVrNotes = getParam(vr, 'oculusvr notes');
         data.vr.windowsMixedReality = getParam(vr, 'windows mixed reality') as any;
         data.vr.windowsMixedRealityNotes = getParam(vr, 'windows mixed reality notes');
         data.vr.osvr = getParam(vr, 'osvr') as any;
         data.vr.osvrNotes = getParam(vr, 'osvr notes');
         data.vr.forteNsx1 = getParam(vr, 'forte vfx1') as any;
         data.vr.forteNsx1Notes = getParam(vr, 'forte vfx1 notes');
-        data.vr.keyboardMouse = getParam(vr, 'kbm') as any;
-        data.vr.keyboardMouseNotes = getParam(vr, 'kbm notes');
-        data.vr.handTracking = getParam(vr, 'motion controllers') as any;
-        data.vr.handTrackingNotes = getParam(vr, 'motion controllers notes');
-        data.vr.bodyTracking = getParam(vr, 'tracked motion controllers') as any;
-        data.vr.bodyTrackingNotes = getParam(vr, 'tracked motion controllers notes');
-        // ... others
+        data.vr.keyboardMouse = getParam(vr, 'keyboard-mouse') as any;
+        data.vr.keyboardMouseNotes = getParam(vr, 'keyboard-mouse notes');
+        data.vr.handTracking = getParam(vr, 'hand tracking') as any;
+        data.vr.handTrackingNotes = getParam(vr, 'hand tracking notes');
+        data.vr.bodyTracking = getParam(vr, 'body tracking') as any;
+        data.vr.bodyTrackingNotes = getParam(vr, 'body tracking notes');
+
+        data.vr.faceTracking = getParam(vr, 'face tracking') as any;
+        data.vr.faceTrackingNotes = getParam(vr, 'face tracking notes');
+
+        data.vr.eyeTracking = getParam(vr, 'eye tracking') as any;
+        data.vr.eyeTrackingNotes = getParam(vr, 'eye tracking notes');
+
+        data.vr.tobiiEyeTracking = getParam(vr, 'tobii eye tracking') as any;
+        data.vr.tobiiEyeTrackingNotes = getParam(vr, 'tobii eye tracking notes');
+
+        data.vr.trackIr = getParam(vr, 'trackir') as any;
+        data.vr.trackIrNotes = getParam(vr, 'trackir notes');
+
+        data.vr.thirdSpaceGamingVest = getParam(vr, '3rd space gaming vest') as any;
+        data.vr.thirdSpaceGamingVestNotes = getParam(vr, '3rd space gaming vest notes');
+
+        data.vr.novintFalcon = getParam(vr, 'novint falcon') as any;
+        data.vr.novintFalconNotes = getParam(vr, 'novint falcon notes');
+
+        data.vr.playAreaSeated = getParam(vr, 'play area seated') as any;
+        data.vr.playAreaSeatedNotes = getParam(vr, 'play area seated notes');
+        data.vr.playAreaStanding = getParam(vr, 'play area standing') as any;
+        data.vr.playAreaStandingNotes = getParam(vr, 'play area standing notes');
+        data.vr.playAreaRoomScale = getParam(vr, 'play area room-scale') as any;
+        data.vr.playAreaRoomScaleNotes = getParam(vr, 'play area room-scale notes');
+        data.vr.trackIrNotes = getParam(vr, 'trackir notes');
     }
 
     // --- API ---
@@ -666,25 +719,61 @@ export function parseWikitext(wikitext: string): GameData {
     if (api) {
         data.api.dxVersion = getParam(api, 'direct3d versions');
         data.api.dxNotes = getParam(api, 'direct3d notes');
+
+        data.api.directDrawVersion = getParam(api, 'directdraw versions');
+        data.api.directDrawNotes = getParam(api, 'directdraw notes');
+
         data.api.openGlVersion = getParam(api, 'opengl versions');
         data.api.openGlNotes = getParam(api, 'opengl notes');
+
         data.api.vulkanVersion = getParam(api, 'vulkan versions');
         data.api.vulkanNotes = getParam(api, 'vulkan notes');
+
+        data.api.glideVersion = getParam(api, 'glide versions');
+        data.api.glideNotes = getParam(api, 'glide notes');
+
+        data.api.wing = getParam(api, 'wing') as any;
+        data.api.wingNotes = getParam(api, 'wing notes');
+
+        data.api.softwareMode = getParam(api, 'software mode') as any;
+        data.api.softwareModeNotes = getParam(api, 'software mode notes');
+
+        data.api.mantle = getParam(api, 'mantle support') as any;
+        data.api.mantleNotes = getParam(api, 'mantle support notes');
+
+        data.api.metal = getParam(api, 'metal support') as any;
+        data.api.metalNotes = getParam(api, 'metal support notes');
+
+        data.api.dosModes = getParam(api, 'dos modes') as any;
+        data.api.dosModesNotes = getParam(api, 'dos modes notes');
+
         data.api.windows32 = getParam(api, 'windows 32-bit exe') as any;
         data.api.windows64 = getParam(api, 'windows 64-bit exe') as any;
         data.api.windowsArm = getParam(api, 'windows arm app') as any;
-        data.api.windowsNotes = getParam(api, 'windows notes');
-        // ... map rest
+        data.api.windowsNotes = getParam(api, 'windows exe notes');
+
+        data.api.macOsXPowerPc = getParam(api, 'mac os x powerpc app') as any;
+        data.api.macOsIntel32 = getParam(api, 'macos intel 32-bit app') as any;
+        data.api.macOsIntel64 = getParam(api, 'macos intel 64-bit app') as any;
+        data.api.macOsArm = getParam(api, 'macos arm app') as any;
+        data.api.macOs68k = getParam(api, 'mac os 68k app') as any;
+        data.api.macOsPowerPc = getParam(api, 'mac os powerpc app') as any;
+        data.api.macOsNotes = getParam(api, 'mac os executable notes');
+        data.api.macOsAppNotes = getParam(api, 'macos app notes');
+
+        data.api.linux32 = getParam(api, 'linux 32-bit executable') as any;
+        data.api.linux64 = getParam(api, 'linux 64-bit executable') as any;
+        data.api.linuxArm = getParam(api, 'linux arm app') as any;
+        data.api.linuxPowerPc = getParam(api, 'linux powerpc app') as any;
+        data.api.linux68k = getParam(api, 'linux 68k app') as any;
+        data.api.linuxNotes = getParam(api, 'linux executable notes');
     }
 
     // --- System Requirements ---
     const sysReqs = findAllTemplates(rootNodes, 'System requirements');
     sysReqs.forEach(req => {
-        // Try to get OS from either 'OS' or 'OSfamily' parameter
-        let os = getParam(req, 'OS');
-        if (!os) {
-            os = getParam(req, 'OSfamily');
-        }
+        // Try to get OS from 'OSfamily' parameter (legacy 'OS' support removed)
+        let os = getParam(req, 'OSfamily');
 
         let target: SystemRequirementsOS;
 
@@ -729,6 +818,42 @@ export function parseWikitext(wikitext: string): GameData {
         data.middleware.anticheat = getParam(middleware, 'anticheat') as any;
         data.middleware.anticheatNotes = getParam(middleware, 'anticheat notes');
     }
+    // Helper for RatingValues
+    const getRatingParam = (node: ASTNode, paramName: string): RatingValue => {
+        const val = getParam(node, paramName);
+        if (!val || val.trim() === '') return 'unknown';
+        // Basic normalization if needed
+        return val.toLowerCase() as RatingValue;
+    };
+
+    // --- Localizations ---
+    const l10n = findTemplateGlobal('L10n');
+    if (l10n) {
+        const rows: any[] = [];
+        const contentParam = getParamValueNodes(l10n, 'content'); // L10n takes content param with rows
+        // We need to find L10n/row or L10n/switch templates INSIDE the content param
+        if (contentParam) {
+            const switchRowNodes = findAllTemplates(contentParam, 'L10n/switch');
+            switchRowNodes.forEach(node => {
+                rows.push({
+                    language: getParam(node, 'language'),
+                    interface: getParam(node, 'interface') === 'true',
+                    audio: getRatingParam(node, 'audio'),
+                    subtitles: getRatingParam(node, 'subtitles'),
+                    notes: getParam(node, 'notes'),
+                    fan: getParam(node, 'fan') === 'true',
+                    ref: getParam(node, 'ref')
+                });
+            });
+        }
+        data.localizations = rows;
+    }
+
+
+
+    // Also check for global {{Issue}} templates if not in sections?
+    // Usually they are in sections.
 
     return data;
 }
+

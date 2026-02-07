@@ -142,6 +142,11 @@ app.use(PrimeVue, {
     }
 });
 
+import Checkbox from 'primevue/checkbox';
+import Select from 'primevue/select';
+app.component('Checkbox', Checkbox);
+app.component('Select', Select);
+
 app.directive('tooltip', Tooltip);
 
 app.mount('#app');

@@ -7,7 +7,7 @@ import DatePicker from 'primevue/datepicker';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import { Info, Calendar, Trash2, Plus } from 'lucide-vue-next';
+import { Calendar, Trash2, Plus } from 'lucide-vue-next';
 
 // Platform options
 const platformOptions = [
@@ -31,17 +31,11 @@ const { structuredDates, addReleaseDate, removeReleaseDate } = useInfoboxDates(p
 
 // Search highlight check
 const searchQuery = inject('searchQuery', ref(''));
-const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includes(searchQuery.value.toLowerCase());
+const isMatch = (text: string) => false;
 </script>
 
 <template>
     <div class="flex flex-col gap-2">
-      <div class="flex items-center gap-1">
-          <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="{'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/10 px-1 rounded': isMatch('Release Dates')}">
-              Release Dates
-          </label>
-          <Info class="text-surface-400 w-3 h-3" v-tooltip.top="'Use the editor above for standard dates. Advanced options allow for special states like TBA/EA.'" />
-      </div>
       <div class="flex flex-col gap-3 p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50">
         <div v-for="(rd, index) in structuredDates" :key="index" class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">

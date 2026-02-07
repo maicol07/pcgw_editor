@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import AutocompleteField from '../AutocompleteField.vue';
+import AutocompleteField, { DataSource } from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
-import { Trash2, Info } from 'lucide-vue-next';
+import { Info } from 'lucide-vue-next';
 
 export interface ListItem {
     name: string;
@@ -17,9 +14,10 @@ const props = defineProps<{
     modelValue: ListItem[];
     label: string;
     tooltip?: string;
-    dataSource: string; // for Autocomplete
+    dataSource: DataSource; // for Autocomplete
     placeholder?: string;
-    highlight?: boolean; // logic for coloring label
+    highlight?: boolean;
+    hideLabel?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -50,7 +48,7 @@ const updateItem = (index: number, field: string, value: any) => {
 
 <template>
     <div class="flex flex-col gap-2">
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1" v-if="!hideLabel">
             <label class="text-sm font-medium text-surface-600 dark:text-surface-300" :class="{'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/10 px-1 rounded': highlight}">
                 {{ label }}
             </label>

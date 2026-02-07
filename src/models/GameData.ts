@@ -288,9 +288,10 @@ export interface SettingsInput {
     steamControllerPrompts?: RatingValue;
     steamControllerPromptsNotes?: string;
     steamControllerPromptsRef?: string;
-    steamInputMotionSensors?: RatingValue;
+    steamInputMotionSensors?: string; // comma separated
     steamInputMotionSensorsNotes?: string;
     steamInputMotionSensorsRef?: string;
+    steamInputMotionSensorsModes?: string; // comma separated
     steamCursorDetection?: RatingValue;
     steamCursorDetectionNotes?: string;
     steamCursorDetectionRef?: string;
@@ -523,13 +524,20 @@ export interface CloudSyncService {
 }
 
 export interface CloudSync {
-    discord: CloudSyncService;
-    epicGamesLauncher: CloudSyncService;
-    gogGalaxy: CloudSyncService;
-    eaApp: CloudSyncService;
-    steamCloud: CloudSyncService;
-    ubisoftConnect: CloudSyncService;
-    xboxCloud: CloudSyncService;
+    discord: RatingValue;
+    discordNotes?: string;
+    epicGamesLauncher: RatingValue;
+    epicGamesLauncherNotes?: string;
+    gogGalaxy: RatingValue;
+    gogGalaxyNotes?: string;
+    eaApp: RatingValue;
+    eaAppNotes?: string;
+    steamCloud: RatingValue;
+    steamCloudNotes?: string;
+    ubisoftConnect: RatingValue;
+    ubisoftConnectNotes?: string;
+    xboxCloud: RatingValue;
+    xboxCloudNotes?: string;
 }
 
 export interface GameDataPathRow {
@@ -562,18 +570,6 @@ export interface SystemRequirements {
     windows: SystemRequirementsOS;
     mac: SystemRequirementsOS;
     linux: SystemRequirementsOS;
-}
-
-export interface Issue {
-    description: string;
-    fix?: string;
-    ref?: string;
-    os?: string; // Windows, Linux, OS X, All
-}
-
-export interface GameIssues {
-    unresolved: Issue[];
-    fixed: Issue[];
 }
 
 export interface SettingsAPI {
@@ -684,7 +680,7 @@ export interface GameData {
     localizations: LocalizationRow[];
     api: SettingsAPI;
     middleware: GameMiddleware;
-    issues: GameIssues;
+
     config: GameDataConfig;
     requirements: SystemRequirements;
     dlc: DLCRow[];
@@ -803,6 +799,7 @@ export const initialGameData: GameData = {
         steamDeckPrompts: 'unknown',
         controllerHotplug: 'unknown',
         hapticFeedback: 'unknown',
+        otherButtonPrompts: '',
         simultaneousInput: 'unknown',
         steamHookInput: 'unknown',
         steamInput: 'unknown', // legacy or alias? Keeping for now but steamHookInput is the new one
@@ -924,13 +921,20 @@ export const initialGameData: GameData = {
         ],
         xdg: null,
         cloudSync: {
-            discord: { status: 'unknown', notes: '' },
-            epicGamesLauncher: { status: 'unknown', notes: '' },
-            gogGalaxy: { status: 'unknown', notes: '' },
-            eaApp: { status: 'unknown', notes: '' },
-            steamCloud: { status: 'unknown', notes: '' },
-            ubisoftConnect: { status: 'unknown', notes: '' },
-            xboxCloud: { status: 'unknown', notes: '' },
+            discord: 'unknown',
+            discordNotes: '',
+            epicGamesLauncher: 'unknown',
+            epicGamesLauncherNotes: '',
+            gogGalaxy: 'unknown',
+            gogGalaxyNotes: '',
+            eaApp: 'unknown',
+            eaAppNotes: '',
+            steamCloud: 'unknown',
+            steamCloudNotes: '',
+            ubisoftConnect: 'unknown',
+            ubisoftConnectNotes: '',
+            xboxCloud: 'unknown',
+            xboxCloudNotes: '',
         }
     },
     requirements: {
@@ -950,10 +954,6 @@ export const initialGameData: GameData = {
             notes: '',
         },
     },
-    issues: {
-        unresolved: [],
-        fixed: [],
-    },
     dlc: [],
     galleries: {
         video: [],
@@ -961,8 +961,8 @@ export const initialGameData: GameData = {
         audio: [],
         vr: [],
         network: [],
-        issues: [],
         other: [],
         systemReq: [],
+        game_data: [],
     },
 };
