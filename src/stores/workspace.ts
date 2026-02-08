@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
 import { initialGameData, GameData } from '../models/GameData';
-import { computed } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
 import { generateWikitext } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
 
@@ -25,30 +25,54 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         return pages.value.find(p => p.id === activePageId.value);
     });
 
-    // Computed: Game Data of Active Page (read-write proxy or just access?)
-    // Parse wikitext to GameData on get, generate wikitext from GameData on set
-    const activeGameData = computed({
-        get: () => {
-            if (!activePage.value) return initialGameData;
+    // State for the parsed game data to avoid redundant parsing
+    const _activeGameData = shallowRef<GameData>(initialGameData);
 
-            // If wikitext is empty, return initial data
-            if (!activePage.value.wikitext) return initialGameData;
-
+    // Watch for page changes to reset/parse data
+    watch(activePageId, () => {
+        if (activePage.value && activePage.value.wikitext) {
             try {
-                return parseWikitext(activePage.value.wikitext);
+                _activeGameData.value = parseWikitext(activePage.value.wikitext);
             } catch (e) {
-                console.error('Failed to parse wikitext:', e);
-                return initialGameData;
+                console.error('Failed to parse wikitext on page switch:', e);
+                _activeGameData.value = initialGameData;
             }
-        },
+        } else {
+            _activeGameData.value = initialGameData;
+        }
+    }, { immediate: true });
+
+    const activeGameData = computed({
+        get: () => _activeGameData.value,
         set: (newData: GameData) => {
+            _activeGameData.value = newData;
+            // Debounced or explicit sync to wikitext is better, 
+            // but for compatibility with existing App.vue watchers we keep direct set for now
+            // and optimize the App.vue side next.
             if (activePage.value) {
-                // Generate wikitext from GameData and save it
                 activePage.value.wikitext = generateWikitext(newData, activePage.value.baseWikitext);
                 activePage.value.lastModified = Date.now();
             }
         }
     });
+
+    // Explicit sync methods if needed by UI
+    function syncToWikitext() {
+        if (activePage.value && _activeGameData.value) {
+            activePage.value.wikitext = generateWikitext(_activeGameData.value, activePage.value.baseWikitext);
+            activePage.value.lastModified = Date.now();
+        }
+    }
+
+    function syncFromWikitext() {
+        if (activePage.value) {
+            try {
+                _activeGameData.value = parseWikitext(activePage.value.wikitext);
+            } catch (e) {
+                console.error('Failed to sync from wikitext:', e);
+            }
+        }
+    }
 
     // Actions
     function createPage(title: string = 'Untitled Page') {
@@ -170,6 +194,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         setActivePage,
         renamePage,
         importPage,
-        exportPage
+        exportPage,
+        syncToWikitext,
+        syncFromWikitext
     };
 });

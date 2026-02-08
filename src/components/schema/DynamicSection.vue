@@ -16,49 +16,26 @@ const getDeep = (obj: any, path: string) => {
     return path.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
 };
 
-const setDeep = (obj: any, path: string, value: any) => {
-    if (!path.includes('.')) {
-        obj[path] = value;
-        return obj;
-    }
+const updateDeep = (obj: any, path: string, value: any): any => {
     const parts = path.split('.');
-    let current = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
-        // We need to clone objects as we go to avoid mutation if props are readonly, 
-        // but here we are mutating a clone of top level?
-        // Actually, we should clone the whole state or use structuredClone.
-        // For simplicity, we assume we can mutate the structuredClone we make at start.
-        if (!current[parts[i]]) current[parts[i]] = {};
-        current = current[parts[i]];
+    const key = parts[0];
+    if (parts.length === 1) {
+        return { ...obj, [key]: value };
     }
-    current[parts[parts.length - 1]] = value;
-    return obj;
+    return {
+        ...obj,
+        [key]: updateDeep(obj[key] || {}, parts.slice(1).join('.'), value)
+    };
 };
 
 const handleFieldUpdate = (key: string, value: any) => {
-    // Clone logic for immutability
-    // structuredClone can fail on proxies even with toRaw if nested objects are proxies
-    // Using simple spread for top level since we use setDeep which mutates?
-    // Actually setDeep mutates. We need a deep clone.
-    // Try JSON clone which is safe for data objects (removes functions/symbols)
-    try {
-        const newState = JSON.parse(JSON.stringify(props.modelValue));
-        setDeep(newState, key, value);
-        emit('update:modelValue', newState);
-    } catch (e) {
-        console.error('Failed to clone modelValue', e);
-        // Fallback: shallow clone + modify? or emit value directly?
-        // If clone fails, we can't ensure immutability, but we must try to emit.
-        // Let's assume shallow clone for now if deep fails.
-        const newState = { ...props.modelValue };
-        setDeep(newState, key, value);
-        emit('update:modelValue', newState);
-    }
+    const newState = updateDeep(props.modelValue, key, value);
+    emit('update:modelValue', newState);
 };
 
 // Collapsible state
 import { ref } from 'vue';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ChevronDown } from 'lucide-vue-next';
 
 const collapsedGroups = ref<Record<number, boolean>>({});
 
@@ -78,7 +55,8 @@ const toggleGroup = (idx: number) => {
             'md:grid-cols-3': section.gridCols === 3
         }">
             <template v-for="field in section.fields" :key="field.key">
-                <DynamicField :field="field" :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
+                <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
+                    :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                     @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                         'col-span-1': true,
                         'md:col-span-2': field.colSpan === 2,
@@ -118,8 +96,8 @@ const toggleGroup = (idx: number) => {
                             }"
                                 :style="typeof group.gridCols === 'string' ? { gridTemplateColumns: group.gridCols } : {}">
                                 <template v-for="field in group.fields" :key="field.key">
-                                    <DynamicField :field="field" :modelValue="getDeep(modelValue, field.key)"
-                                        :formModel="modelValue"
+                                    <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
+                                        :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                                         @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                                             'col-span-1': true,
                                             'md:col-span-2': field.colSpan === 2,

@@ -9,8 +9,14 @@ import RatingRow from '../RatingRow.vue';
 import GenericListForm from '../common/GenericListForm.vue';
 import CoverImageField from '../common/CoverImageField.vue';
 import AutocompleteField from '../AutocompleteField.vue';
-import GameDataForm from '../GameDataForm.vue';
-import DLCForm from '../DLCForm.vue';
+// --- Heavy Forms (Loaded Synchronously initially, converting some to Async) ---
+import { defineAsyncComponent } from 'vue';
+const AvailabilityForm = defineAsyncComponent(() => import('../AvailabilityForm.vue'));
+const DLCForm = defineAsyncComponent(() => import('../DLCForm.vue'));
+const GameDataForm = defineAsyncComponent(() => import('../GameDataForm.vue'));
+const SystemRequirementsForm = defineAsyncComponent(() => import('../../components/SystemRequirementsForm.vue'));
+const LocalizationsForm = defineAsyncComponent(() => import('../../components/LocalizationsForm.vue'));
+const OperatingSystemSupportForm = defineAsyncComponent(() => import('./OperatingSystemSupportForm.vue'));
 
 import { getIconSrc } from '../../utils/icons';
 
@@ -18,25 +24,20 @@ import InfoboxDevelopersEditor from '../infobox/InfoboxDevelopersEditor.vue';
 import InfoboxPublishersEditor from '../infobox/InfoboxPublishersEditor.vue';
 import InfoboxEnginesEditor from '../infobox/InfoboxEnginesEditor.vue';
 import InfoboxReleaseDates from '../infobox/InfoboxReleaseDates.vue';
-import InfoboxReception from '../infobox/InfoboxReception.vue';
+const InfoboxReception = defineAsyncComponent(() => import('../infobox/InfoboxReception.vue'));
 import TaxonomyField from '../infobox/TaxonomyField.vue';
 import CompoundRatingField from './CompoundRatingField.vue';
 import Textarea from 'primevue/textarea';
 import { Info } from 'lucide-vue-next';
 import InputChips from 'primevue/inputchips';
 import StubValidator from '../StubValidator.vue';
-import AvailabilityForm from '../AvailabilityForm.vue';
+// (AvailabilityForm moved to async above)
 import VideoAnalysis from '../video/VideoAnalysis.vue';
 import SectionGallery from '../SectionGallery.vue';
 import InputWithNotes from './InputWithNotes.vue';
 import WikitextEditor from '../common/WikitextEditor.vue';
 
-import { defineAsyncComponent } from 'vue';
-
-const OperatingSystemSupportForm = defineAsyncComponent(() => import('./OperatingSystemSupportForm.vue'));
-
-const SystemRequirementsForm = defineAsyncComponent(() => import('../../components/SystemRequirementsForm.vue'));
-const LocalizationsForm = defineAsyncComponent(() => import('../../components/LocalizationsForm.vue'));
+// (Async components moved to top)
 
 const props = defineProps<{
     field: FieldDefinition;
