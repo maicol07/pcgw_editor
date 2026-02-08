@@ -393,12 +393,12 @@ export function parseWikitext(wikitext: string): GameData {
     };
 
     // Config
-    const configSectionNodes = getNodesInSection(/Configuration file(s|\(s\))? location/i);
+    const configSectionNodes = getNodesInSection(/Configuration file(s|\(s\))? location|Game data/i);
     const configRows = extractGameDataRows(configSectionNodes, ['game data/config', 'game data/config tv', 'game data/config mac', 'game data/config linux']);
     data.config.configFiles = configRows;
 
     // Save Data
-    const saveSectionNodes = getNodesInSection(/Save game data location/i);
+    const saveSectionNodes = getNodesInSection(/Save game data location|Game data/i);
     const saveRows = extractGameDataRows(saveSectionNodes, ['game data/saves', 'game data/saves mac', 'game data/saves linux']);
     data.config.saveData = saveRows;
 
@@ -424,6 +424,10 @@ export function parseWikitext(wikitext: string): GameData {
     const video = findTemplateGlobal('Video');
     if (video) {
         data.video.wsgfLink = getParam(video, 'wsgf link');
+        data.video.widescreenWsgfAward = getParam(video, 'widescreen award');
+        data.video.multiMonitorWsgfAward = getParam(video, 'multimonitor award');
+        data.video.ultraWidescreenWsgfAward = getParam(video, 'ultrawidescreen award');
+        data.video.fourKUltraHdWsgfAward = getParam(video, '4k ultra hd award');
         data.video.widescreenResolution = getParam(video, 'widescreen resolution') as any;
         data.video.widescreenResolutionNotes = getParam(video, 'widescreen resolution notes');
         data.video.multiMonitor = getParam(video, 'multimonitor') as any;
@@ -825,6 +829,37 @@ export function parseWikitext(wikitext: string): GameData {
         // Basic normalization if needed
         return val.toLowerCase() as RatingValue;
     };
+
+
+    // --- Monetization ---
+    const monetization = findTemplateGlobal('Monetization');
+    if (monetization) {
+        data.monetization.adSupported = getParam(monetization, 'ad-supported') as any;
+        data.monetization.dlc = getParam(monetization, 'dlc') as any;
+        data.monetization.expansionPack = getParam(monetization, 'expansion pack') as any;
+        data.monetization.freeware = getParam(monetization, 'freeware') as any;
+        data.monetization.freeToPlay = getParam(monetization, 'free-to-play') as any;
+        data.monetization.oneTimePurchase = getParam(monetization, 'one-time game purchase') as any;
+        data.monetization.subscription = getParam(monetization, 'subscription') as any;
+        data.monetization.subscriptionGamingService = getParam(monetization, 'subscription gaming service') as any;
+        data.monetization.crossGameBonus = getParam(monetization, 'cross-game bonus') as any;
+    }
+
+    // --- Microtransactions ---
+    const mtx = findTemplateGlobal('Microtransactions');
+    if (mtx) {
+        data.microtransactions.boost = getParam(mtx, 'boost') as any;
+        data.microtransactions.cosmetic = getParam(mtx, 'cosmetic') as any;
+        data.microtransactions.currency = getParam(mtx, 'currency') as any;
+        data.microtransactions.finiteSpend = getParam(mtx, 'finite spend') as any;
+        data.microtransactions.infiniteSpend = getParam(mtx, 'infinite spend') as any;
+        data.microtransactions.freeToGrind = getParam(mtx, 'free-to-grind') as any;
+        data.microtransactions.lootBox = getParam(mtx, 'loot box') as any;
+        data.microtransactions.none = getParam(mtx, 'none') as any;
+        data.microtransactions.playerTrading = getParam(mtx, 'player trading') as any;
+        data.microtransactions.timeLimited = getParam(mtx, 'time-limited') as any;
+        data.microtransactions.unlock = getParam(mtx, 'unlock') as any;
+    }
 
     // --- Localizations ---
     const l10n = findTemplateGlobal('L10n');

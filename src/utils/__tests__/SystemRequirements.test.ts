@@ -48,7 +48,7 @@ describe('System Requirements', () => {
     it('should parse Mac and Linux requirements correctly', () => {
         const wikitext = `
 {{System requirements
-|OS       = Mac
+|OSfamily = Mac
 |minOS    = macOS 12
 |minCPU   = M1
 |minRAM   = 8 GB
@@ -56,7 +56,7 @@ describe('System Requirements', () => {
 |minGPU   = Apple Silicon
 }}
 {{System requirements
-|OS       = Linux
+|OSfamily = Linux
 |minOS    = Ubuntu 20.04
 |minCPU   = Ryzen 5
 |minRAM   = 16 GB
@@ -91,7 +91,7 @@ describe('System Requirements', () => {
     it('should update existing Windows requirements correctly', () => {
         const originalWikitext = `
 {{System requirements
-|OS       = Windows
+|OSfamily = Windows
 |minOS    = Windows 7
 |minCPU   = Dual Core
 |minRAM   = 4 GB
@@ -122,13 +122,13 @@ describe('System Requirements', () => {
         expect(newWikitext).toMatch(/\|\s*notes\s*=\s*Updated notes/);
 
         // Should preserve OS=Windows
-        expect(newWikitext).toMatch(/\|\s*OS\s*=\s*Windows/);
+        expect(newWikitext).toMatch(/\|\s*OSfamily\s*=\s*Windows/);
     });
 
     it('should handle updating multiple OS blocks independently', () => {
         const originalWikitext = `
-{{System requirements | OS = Windows | minOS = 7 }}
-{{System requirements | OS = Linux | minOS = Ubuntu }}
+{{System requirements | OSfamily = Windows | minOS = 7 }}
+{{System requirements | OSfamily = Linux | minOS = Ubuntu }}
 `;
         const editor = new PCGWEditor(originalWikitext);
         const data = JSON.parse(JSON.stringify(initialGameData));
@@ -139,12 +139,11 @@ describe('System Requirements', () => {
         editor.updateSystemRequirements(data.requirements);
         const newWikitext = editor.getText();
 
-        expect(newWikitext).toMatch(/\|\s*OS\s*=\s*Windows[\s\S]*\|\s*minOS\s*=\s*Windows 11/);
-        expect(newWikitext).toMatch(/\|\s*OS\s*=\s*Linux[\s\S]*\|\s*minOS\s*=\s*Arch/);
+        expect(newWikitext).toMatch(/\|\s*OSfamily\s*=\s*Windows[\s\S]*\|\s*minOS\s*=\s*Windows 11/);
+        expect(newWikitext).toMatch(/\|\s*OSfamily\s*=\s*Linux[\s\S]*\|\s*minOS\s*=\s*Arch/);
     });
 
-    it('should not write anything if template does not exist', () => {
-        // Current limitation test
+    it('should create System Requirements section if it does not exist', () => {
         const originalWikitext = `No specs here`;
         const editor = new PCGWEditor(originalWikitext);
         const data = JSON.parse(JSON.stringify(initialGameData));
@@ -153,8 +152,8 @@ describe('System Requirements', () => {
         editor.updateSystemRequirements(data.requirements);
         const newWikitext = editor.getText();
 
-        expect(newWikitext).toBe(originalWikitext);
-        expect(newWikitext).not.toContain('Windows 10');
+        expect(newWikitext).toContain('== System requirements ==');
+        expect(newWikitext).toContain('|minOS    = Windows 10');
     });
 
 });

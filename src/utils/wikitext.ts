@@ -144,6 +144,22 @@ export class PCGWEditor {
                 this.parser = new WikitextParser(newDisambig + '\n' + wikitext);
             }
         }
+
+        if (state.distinguish && state.distinguish.length > 0) {
+            const template = this.parser.findTemplate('Distinguish');
+            const newDistinguish = `{{Distinguish|${state.distinguish.join('|')}}}`;
+
+            if (template) {
+                const wikitext = this.parser.getText();
+                this.parser = new WikitextParser(
+                    wikitext.substring(0, template.start) + newDistinguish + wikitext.substring(template.end)
+                );
+            } else {
+                const wikitext = this.parser.getText();
+                // Distinguish usually goes after Disambig or at top
+                this.parser = new WikitextParser(newDistinguish + '\n' + wikitext);
+            }
+        }
     }
 
     updateInfobox(infobox: GameInfobox) {
@@ -306,7 +322,9 @@ ${rows}
             freeware: 'freeware',
             freeToPlay: 'free-to-play',
             oneTimePurchase: 'one-time game purchase',
-            subscription: 'subscription'
+            subscription: 'subscription',
+            subscriptionGamingService: 'subscription gaming service',
+            crossGameBonus: 'cross-game bonus'
         });
     }
 
@@ -327,10 +345,15 @@ ${rows}
         });
     }
 
+
     updateVideo(data: SettingsVideo) {
         // Map GameData fields to PCGW Template fields
         const map: Record<string, string> = {
             wsgfLink: 'wsgf link',
+            widescreenWsgfAward: 'widescreen award',
+            multiMonitorWsgfAward: 'multimonitor award',
+            ultraWidescreenWsgfAward: 'ultrawidescreen award',
+            fourKUltraHdWsgfAward: '4k ultra hd award',
             widescreenResolution: 'widescreen resolution',
             widescreenResolutionNotes: 'widescreen resolution notes',
             multiMonitor: 'multimonitor',
