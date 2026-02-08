@@ -5,7 +5,7 @@ import { GameData, initialGameData } from './models/GameData';
 import { parseWikitext } from './utils/parser';
 import { fieldsConfig } from './config/fields';
 
-import { GoogleGenAI } from '@google/genai';
+import { GeminiService } from './services/GeminiService';
 import iconBulletDocument from './assets/icons/bullet-document.svg';
 
 // Composables
@@ -231,13 +231,8 @@ const generateShareSummary = async () => {
     shareSummaryVisible.value = true;
 
     try {
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey.value });
-        const prompt = `Create a feature list for "${pageTitle.value || 'Unknown'}". Data: ${JSON.stringify({
-            video: gameData.value.video, input: gameData.value.input
-        })}. Format: Bullet points, factual.`;
-
-        const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
-        shareSummaryText.value = response.text || 'No summary generated.';
+        const geminiService = new GeminiService(geminiApiKey.value);
+        shareSummaryText.value = await geminiService.generateShareSummary(pageTitle.value, gameData.value);
     } catch (e: any) {
         shareSummaryText.value = 'Error generating summary: ' + e.message;
         if (e.message.includes('API key')) {

@@ -68,4 +68,16 @@ export class GeminiService {
             throw error;
         }
     }
+
+    /**
+     * Generates a feature list summary for a game.
+     */
+    async generateShareSummary(gameTitle: string, gameData: any, model: string = 'gemini-3-flash-preview'): Promise<string> {
+        const prompt = `Create a feature list for "${gameTitle || 'Unknown'}". Data: ${JSON.stringify({
+            video: gameData.video,
+            input: gameData.input
+        })}. Format: Bullet points, factual.`;
+
+        return this.generateContent(prompt, model);
+    }
 }
