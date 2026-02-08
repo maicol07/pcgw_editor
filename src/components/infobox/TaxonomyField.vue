@@ -2,8 +2,6 @@
 import { computed } from 'vue';
 import AutocompleteField from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
 
 interface TaxonomyValue {
     value: string;
@@ -44,17 +42,30 @@ const updateNote = (note: string) => {
 
 <template>
     <div class="flex flex-col gap-2">
-        <InputGroup class="w-full">
-            <AutocompleteField 
-                :modelValue="arrayValue"
-                @update:modelValue="updateArray"
-                :data-source="(dataSource as any)"
-                :placeholder="placeholder" 
-                class="flex-1"
-            />
-            <InputGroupAddon class="p-0 min-w-[3rem]">
-                <NotesButton :modelValue="modelValue?.note" @update:modelValue="updateNote" type="note" class="w-full h-full !rounded-none !border-none" />
-            </InputGroupAddon>
-        </InputGroup>
+        <div class="flex items-center w-full">
+            <AutocompleteField :modelValue="arrayValue" @update:modelValue="updateArray"
+                :data-source="(dataSource as any)" :placeholder="placeholder" class="flex-1 min-w-0 taxonomy-input" />
+            <NotesButton :modelValue="modelValue?.note" @update:modelValue="updateNote" type="note"
+                class="border border-surface-300 dark:border-surface-600 rounded-r-md bg-surface-50 dark:bg-surface-800 flex items-center justify-center w-10 h-10 shrink-0 shadow-sm hover:border-surface-400 dark:hover:border-surface-500 transition-colors -ml-px z-0" />
+        </div>
     </div>
 </template>
+
+<style scoped>
+:deep(.taxonomy-input .p-multiselect),
+:deep(.taxonomy-input .p-autocomplete),
+:deep(.taxonomy-input .p-inputtext) {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* Force center the icon inside the button */
+/* Force center the icon inside the button */
+:deep(button svg) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin-top: 3px;
+}
+</style>

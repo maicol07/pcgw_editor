@@ -16,7 +16,10 @@ import { usePreview } from './composables/usePreview';
 // Layout & UI
 import Splitter from 'primevue/splitter';
 import SplitterPanel from 'primevue/splitterpanel';
-import Panel from 'primevue/panel';
+import Panel from 'primevue/panel'; // Keep for now if used elsewhere, although we replaced usage. 
+// Actually, I should check if I missed any. But I'll replace it with ModernPanel import.
+// Wait, the instruction above replaced usages. 
+import ModernPanel from './components/common/ModernPanel.vue';
 const articleStateSchema = computed(() => fieldsConfig.find(s => s.id === 'article_state'));
 const infoboxSchema = computed(() => fieldsConfig.find(s => s.id === 'infobox'));
 const introductionSchema = computed(() => fieldsConfig.find(s => s.id === 'introduction'));
@@ -362,8 +365,8 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <Panel toggleable v-model:collapsed="panelState.articleState"
-                                v-show="panelVisibility.articleState" class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.articleState"
+                                v-show="panelVisibility.articleState">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <File class="text-slate-500 w-4 h-4" />
@@ -372,10 +375,9 @@ onMounted(() => {
                                 </template>
                                 <DynamicSection v-if="panelsRendered.articleState && articleStateSchema"
                                     :section="articleStateSchema" v-model="gameData" />
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.infobox" v-show="panelVisibility.infobox"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.infobox" v-show="panelVisibility.infobox">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Info class="text-blue-600 w-4 h-4" />
@@ -384,10 +386,10 @@ onMounted(() => {
                                 </template>
                                 <DynamicSection v-if="panelsRendered.infobox && infoboxSchema" :section="infoboxSchema"
                                     v-model="gameData.infobox" />
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.introduction"
-                                v-show="panelVisibility.introduction" class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.introduction"
+                                v-show="panelVisibility.introduction">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlignLeft class="text-orange-500 w-4 h-4" />
@@ -403,10 +405,10 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.introduction && introductionSchema"
                                         :section="introductionSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.availability"
-                                v-show="panelVisibility.availability" class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.availability"
+                                v-show="panelVisibility.availability">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <ShoppingCart class="text-emerald-500 w-4 h-4" />
@@ -415,10 +417,10 @@ onMounted(() => {
                                 </template>
                                 <DynamicSection v-if="panelsRendered.availability && availabilitySchema"
                                     :section="availabilitySchema" v-model="gameData" />
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.monetization"
-                                v-show="panelVisibility.monetization" class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.monetization"
+                                v-show="panelVisibility.monetization">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <DollarSign class="text-amber-500 w-4 h-4" />
@@ -432,10 +434,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.monetization && microtransactionsSchema"
                                         :section="microtransactionsSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.dlc" v-show="panelVisibility.dlc"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.dlc" v-show="panelVisibility.dlc">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-purple-500 w-4 h-4" />
@@ -444,11 +445,10 @@ onMounted(() => {
                                 </template>
                                 <DynamicSection v-if="panelsRendered.dlc && dlcSchema" :section="dlcSchema"
                                     v-model="gameData" />
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.essentialImprovements"
-                                v-show="panelVisibility.essentialImprovements"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.essentialImprovements"
+                                v-show="panelVisibility.essentialImprovements">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Star class="text-yellow-500 w-4 h-4" />
@@ -458,10 +458,9 @@ onMounted(() => {
                                 <DynamicSection
                                     v-if="panelsRendered.essentialImprovements && essentialImprovementsSchema"
                                     :section="essentialImprovementsSchema" v-model="gameData" />
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.gameData" v-show="panelVisibility.gameData"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.gameData" v-show="panelVisibility.gameData">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Save class="text-green-600 w-4 h-4" />
@@ -473,10 +472,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.gameData && gameDataSchema"
                                         :section="gameDataSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.video" v-show="panelVisibility.video"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.video" v-show="panelVisibility.video">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" />
@@ -487,10 +485,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.video && videoSchema" :section="videoSchema"
                                         v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.input" v-show="panelVisibility.input"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.input" v-show="panelVisibility.input">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" />
@@ -504,10 +501,9 @@ onMounted(() => {
                                             :section="inputSchema" v-model="gameData" />
                                     </div>
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.audio" v-show="panelVisibility.audio"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.audio" v-show="panelVisibility.audio">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-violet-500 w-4 h-4" />
@@ -519,10 +515,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.audio && audioSchema" :section="audioSchema"
                                         v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.network" v-show="panelVisibility.network"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.network" v-show="panelVisibility.network">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Wifi class="text-cyan-500 w-4 h-4" />
@@ -534,10 +529,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.network && networkSchema"
                                         :section="networkSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.vr" v-show="panelVisibility.vr"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.vr" v-show="panelVisibility.vr">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Eye class="text-pink-500 w-4 h-4" />
@@ -549,11 +543,10 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.vr && vrSchema" :section="vrSchema"
                                         v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
 
-                            <Panel toggleable v-model:collapsed="panelState.other" v-show="panelVisibility.other"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.other" v-show="panelVisibility.other">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" />
@@ -567,10 +560,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.other && middlewareSchema"
                                         :section="middlewareSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.systemReq"
-                                v-show="panelVisibility.systemReq" class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.systemReq" v-show="panelVisibility.systemReq">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Cpu class="text-lime-500 w-4 h-4" />
@@ -582,10 +574,9 @@ onMounted(() => {
                                     <DynamicSection v-if="panelsRendered.systemReq && systemReqSchema"
                                         :section="systemReqSchema" v-model="gameData" />
                                 </div>
-                            </Panel>
+                            </ModernPanel>
 
-                            <Panel toggleable v-model:collapsed="panelState.l10n" v-show="panelVisibility.l10n"
-                                class="panel-modern shadow-soft hover-lift">
+                            <ModernPanel v-model:collapsed="panelState.l10n" v-show="panelVisibility.l10n">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Globe class="text-teal-400 w-4 h-4" />
@@ -594,7 +585,7 @@ onMounted(() => {
                                 </template>
                                 <DynamicSection v-if="panelsRendered.l10n && l10nSchema" :section="l10nSchema"
                                     v-model="gameData" />
-                            </Panel>
+                            </ModernPanel>
                         </div>
 
                         <div v-else class="h-full flex flex-col" key="code">

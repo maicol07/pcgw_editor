@@ -34,8 +34,8 @@ export interface FieldGroup {
     title: string;
     icon?: any;
     iconClass?: string;
-    /** Number of grid columns for this group (1-12) */
-    gridCols?: number;
+    /** Number of grid columns for this group (1-12 or valid CSS grid value) */
+    gridCols?: number | string;
     fields: FieldDefinition[];
 }
 

@@ -142,7 +142,7 @@ export const fieldsConfig: SectionDefinition[] = [
             },
             {
                 title: 'Taxonomy',
-                gridCols: 3,
+                gridCols: 'repeat(auto-fill, minmax(350px, 1fr))',
                 fields: [
                     { key: 'taxonomy.monetization', label: 'Monetization', component: 'TaxonomyField', wikitextParam: 'monetization', defaultValue: { value: '' }, description: 'Primary business model(s)', componentProps: { dataSource: 'monetization', placeholder: 'Select...' } },
                     { key: 'taxonomy.microtransactions', label: 'Microtransactions', component: 'TaxonomyField', wikitextParam: 'microtransactions', defaultValue: { value: '' }, description: 'Type of in-game purchases', componentProps: { dataSource: 'microtransactions', placeholder: 'Select...' } },

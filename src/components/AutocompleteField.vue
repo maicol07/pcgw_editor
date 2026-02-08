@@ -11,11 +11,13 @@ interface Props {
     dataSource: DataSource;
     multiple?: boolean;
     placeholder?: string;
+    display?: 'chip' | 'comma';
 }
 
 const props = withDefaults(defineProps<Props>(), {
     multiple: true,
     placeholder: 'Search...',
+    display: 'chip',
 });
 
 const emit = defineEmits<{
@@ -47,10 +49,10 @@ watch(localValue, (newVal) => {
  */
 const onFilter = async (event: { value?: string, query?: string }) => {
     const query = (event.value || event.query || '').trim();
-    
+
     // Always include currently selected values in options for MultiSelect
     const selectedSet = new Set(Array.isArray(localValue.value) ? localValue.value : []);
-    
+
     if (!query || query.length < 2) {
         if (props.multiple) {
             suggestions.value = Array.from(selectedSet);
@@ -67,10 +69,10 @@ const onFilter = async (event: { value?: string, query?: string }) => {
 
     searchTimeout.value = window.setTimeout(async () => {
         loading.value = true;
-        
+
         try {
             let results: string[] = [];
-            
+
             switch (props.dataSource) {
                 case 'companies':
                     results = await pcgwApi.searchCompanies(query);
@@ -118,7 +120,7 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                     results = await pcgwApi.searchModes(query);
                     break;
             }
-            
+
             if (props.multiple) {
                 // Merge results with selected values to prevent them from disappearing in MultiSelect
                 const mergedSet = new Set([...results, ...selectedSet]);
@@ -138,34 +140,13 @@ const onFilter = async (event: { value?: string, query?: string }) => {
 
 <template>
     <!-- Multiple Selection Mode -->
-    <MultiSelect
-        v-if="multiple"
-        v-model="localValue"
-        :options="suggestions"
-        :loading="loading"
-        :placeholder="placeholder"
-        filter
-        autoFilterFocus
-        :filterMatchMode="'contains'"
-        @filter="onFilter"
-        class="w-full"
-        display="chip"
-        :showToggleAll="false"
-    />
+    <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
+        :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
+        class="w-full" :display="display" :showToggleAll="false" />
 
     <!-- Single Selection Mode -->
-    <AutoComplete
-        v-else
-        v-model="localValue"
-        :suggestions="suggestions"
-        :loading="loading"
-        :placeholder="placeholder"
-        :dropdown="false"
-        :forceSelection="false"
-        completeOnFocus
-        class="w-full"
-        @complete="onFilter"
-    />
+    <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading" :placeholder="placeholder"
+        :dropdown="false" :forceSelection="false" completeOnFocus class="w-full" @complete="onFilter" />
 </template>
 
 <style scoped>
