@@ -6,10 +6,11 @@ export const useUiStore = defineStore('ui', () => {
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
     const isInitialLoad = ref(true);
-    const isCompactMode = ref(localStorage.getItem('isCompactMode') === 'true');
+    type DensityMode = 'normal' | 'comfortable' | 'compact';
+    const densityMode = ref<DensityMode>((localStorage.getItem('densityMode') as DensityMode) || 'normal');
 
-    watch(isCompactMode, (val: boolean) => {
-        localStorage.setItem('isCompactMode', val.toString());
+    watch(densityMode, (val: DensityMode) => {
+        localStorage.setItem('densityMode', val);
     });
 
     const panelState = reactive({
@@ -59,7 +60,7 @@ export const useUiStore = defineStore('ui', () => {
         editorMode,
         isModeSwitching,
         isInitialLoad,
-        isCompactMode,
+        densityMode,
         panelState,
         panelsRendered,
         toggleSidebar,

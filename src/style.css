@@ -226,6 +226,137 @@ body {
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 }
 
+/* Comfortable Mode - Intermediate density */
+.comfortable-mode {
+  --spacing-main-section-gap: 1rem;
+  --spacing-section-gap: 0.75rem;
+  --spacing-field-gap: 0.4rem;
+  --spacing-panel-padding: 0.75rem;
+}
+
+.comfortable-mode .dynamic-section {
+  gap: var(--spacing-section-gap) !important;
+}
+
+.comfortable-mode .dynamic-field {
+  gap: 0.3rem !important;
+}
+
+.comfortable-mode .dynamic-section .p-4 {
+  padding: 0.65rem 1rem !important;
+}
+
+.comfortable-mode .dynamic-section .p-5 {
+  padding: 0.65rem 1rem !important;
+}
+
+.comfortable-mode .dynamic-section .text-base {
+  font-size: 0.9rem !important;
+}
+
+.comfortable-mode .dynamic-section .w-5 {
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+}
+
+.comfortable-mode .p-inputgroup,
+.comfortable-mode .p-inputgroup.h-8,
+.comfortable-mode .p-inputgroup.h-10 {
+  height: 2rem !important;
+}
+
+.comfortable-mode .p-inputgroupaddon {
+  padding-top: 0.125rem !important;
+  padding-bottom: 0.125rem !important;
+  font-size: 0.8rem !important;
+}
+
+.comfortable-mode .p-inputgroupaddon.w-48 {
+  width: 10rem !important;
+}
+
+.comfortable-mode .p-inputgroupaddon.w-28 {
+  width: 7rem !important;
+}
+
+.comfortable-mode .max-w-6xl.flex-col.gap-4 {
+  gap: var(--spacing-main-section-gap) !important;
+}
+
+.comfortable-mode div.gap-6,
+.comfortable-mode div.gap-5,
+.comfortable-mode div.gap-4:not(.max-w-6xl) {
+  gap: var(--spacing-field-gap) !important;
+}
+
+.comfortable-mode .dynamic-section.gap-6 {
+  gap: var(--spacing-section-gap) !important;
+}
+
+.comfortable-mode .p-select-label,
+.comfortable-mode .p-multiselect-label {
+  padding-top: 0.125rem !important;
+  padding-bottom: 0.125rem !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 1.75rem !important;
+  line-height: normal !important;
+}
+
+.comfortable-mode .p-select-input-icon {
+  font-size: 0.8rem !important;
+}
+
+.comfortable-mode .p-inputtext,
+.comfortable-mode .p-select,
+.comfortable-mode .p-multiselect {
+  padding-top: 0.125rem !important;
+  padding-bottom: 0.125rem !important;
+  font-size: 0.875rem !important;
+  height: 2rem !important;
+}
+
+.comfortable-mode .p-3.rounded-lg.bg-surface-50 {
+  padding: 0.6rem 0.75rem !important;
+  gap: 0.5rem !important;
+}
+
+.comfortable-mode .flex-col.gap-3,
+.comfortable-mode .flex-col.gap-4 {
+  gap: 0.4rem !important;
+}
+
+.comfortable-mode .grid.gap-3 {
+  gap: 0.4rem !important;
+}
+
+.comfortable-mode .h-9\!,
+.comfortable-mode .h-10\! {
+  height: 2rem !important;
+}
+
+.comfortable-mode .dynamic-field.flex-col {
+  gap: 0.3rem !important;
+}
+
+.comfortable-mode .dynamic-field+.dynamic-field {
+  margin-top: 0.25rem !important;
+}
+
+.comfortable-mode .p-panel .p-panel-content {
+  padding: var(--spacing-panel-padding) !important;
+}
+
+.comfortable-mode .p-panel .p-panel-header {
+  padding: 0.5rem 0.75rem !important;
+}
+
+.comfortable-mode label {
+  font-size: 0.8125rem !important;
+  margin-bottom: 0 !important;
+  line-height: 1.2 !important;
+}
+
 /* Compact Mode Overrides */
 .compact-mode {
   --spacing-main-section-gap: 0.75rem;

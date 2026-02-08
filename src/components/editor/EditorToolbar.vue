@@ -2,8 +2,10 @@
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
+import Slider from 'primevue/slider';
 import Toolbar from 'primevue/toolbar';
 import { Menu, Wand2, Loader2, LayoutList } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { useUiStore } from '../../stores/ui';
 
 export type EditorMode = 'Visual' | 'Code';
@@ -23,6 +25,20 @@ const emit = defineEmits<{
 
 const uiStore = useUiStore();
 const editorModeOptions = ['Visual', 'Code'];
+
+// Density mode mapping
+const densityModes: Array<'normal' | 'comfortable' | 'compact'> = ['normal', 'comfortable', 'compact'];
+const densityLabels = ['Normale', 'Comfortable', 'Compatta'];
+
+const densityValue = ref(densityModes.indexOf(uiStore.densityMode));
+const densityLabel = ref(densityLabels[densityValue.value]);
+
+const updateDensity = (value: number | number[]) => {
+    const index = Array.isArray(value) ? value[0] : value;
+    uiStore.densityMode = densityModes[index];
+    densityLabel.value = densityLabels[index];
+};
+
 
 </script>
 
@@ -62,13 +78,14 @@ const editorModeOptions = ['Visual', 'Code'];
 
         <template #end>
             <div class="flex items-center gap-2">
-                <Button text size="small" @click="uiStore.isCompactMode = !uiStore.isCompactMode"
-                    :severity="uiStore.isCompactMode ? 'primary' : 'secondary'" class="px-2! py-1! transition-all"
-                    v-tooltip.bottom="'Toggle Compact Mode'">
-                    <template #icon>
-                        <LayoutList class="w-4 h-4" />
-                    </template>
-                </Button>
+                <div class="flex items-center gap-2" v-tooltip.bottom="'Densità UI: Normale ⟷ Comfortable ⟷ Compatta'">
+                    <LayoutList class="w-4 h-4 text-surface-500 dark:text-surface-400" />
+                    <Slider v-model="densityValue" :min="0" :max="2" :step="1" class="w-20"
+                        @update:modelValue="updateDensity" />
+                    <span class="text-xs text-surface-600 dark:text-surface-400 min-w-20 select-none">
+                        {{ densityLabel }}
+                    </span>
+                </div>
 
                 <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
 

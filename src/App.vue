@@ -27,7 +27,7 @@ import DynamicSection from './components/schema/DynamicSection.vue';
 // Icons
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2
 } from 'lucide-vue-next';
 
 // Async Components
@@ -117,7 +117,10 @@ onMounted(() => {
 
 <template>
     <div class="h-screen w-screen overflow-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-0 transition-colors duration-200"
-        :class="{ 'compact-mode': uiStore.isCompactMode }">
+        :class="{
+            'comfortable-mode': uiStore.densityMode === 'comfortable',
+            'compact-mode': uiStore.densityMode === 'compact'
+        }">
         <WorkspaceSidebar v-model:visible="uiStore.sidebarVisible" />
 
         <Splitter style="height: 100vh" class="border-none !mb-0 !rounded-none bg-transparent splitter-modern">
