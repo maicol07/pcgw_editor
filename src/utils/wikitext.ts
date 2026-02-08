@@ -166,6 +166,59 @@ export class PCGWEditor {
         this.updateInfoboxList('publishers', infobox.publishers);
         this.updateInfoboxList('engines', infobox.engines);
         this.updateReleaseDates(infobox.releaseDates);
+        this.updateReception(infobox.reception);
+        this.updateTaxonomy(infobox.taxonomy);
+    }
+
+    private updateTaxonomy(taxonomy: GameInfobox['taxonomy']) {
+        if (!taxonomy) return;
+
+        const mapping: Record<string, string> = {
+            monetization: 'monetization',
+            microtransactions: 'microtransactions',
+            modes: 'modes',
+            pacing: 'pacing',
+            perspectives: 'perspectives',
+            controls: 'controls',
+            genres: 'genres',
+            sports: 'sports',
+            vehicles: 'vehicles',
+            artStyles: 'art styles',
+            themes: 'themes',
+            series: 'series'
+        };
+
+        const listContent = Object.entries(mapping).map(([key, templateSuffix]) => {
+            const item = (taxonomy as any)[key];
+            if (!item || !item.value) return '';
+
+            // {{Infobox game/row/taxonomy/modes|Value|note=...|ref=...}}
+            let row = `{{Infobox game/row/taxonomy/${templateSuffix}|${item.value}`;
+            if (item.ref) row += `|ref=${item.ref}`;
+            if (item.note) row += `|note=${item.note}`;
+            row += `}}`;
+            return row;
+        }).filter(Boolean).join('\n');
+
+        this.parser.replaceParameterContent('Infobox game', 'taxonomy', listContent);
+    }
+
+    private updateReception(rows: any[]) {
+        if (!rows || rows.length === 0) return;
+
+        // Formato: {{Infobox game/row/reception|Aggregator|ID|Score}}
+        const listContent = rows.map(r => {
+            // Allow partial rows to ensure UI state persists during round-trip
+            const agg = r.aggregator || '';
+            const id = r.id || '';
+            const score = r.score || '';
+
+            // Only skip if absolutely nothing is there, though addRow creates fully empty objects
+            // Use positional arguments: 1=Aggregator, 2=ID, 3=Score
+            return `{{Infobox game/row/reception|${agg}|${id}|${score}}}`;
+        }).join('');
+
+        this.parser.replaceParameterContent('Infobox game', 'reception', listContent);
     }
 
     private updateReleaseDates(dates: any[]) {

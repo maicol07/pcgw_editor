@@ -7,7 +7,7 @@ import {
     GitFork, Tags, AlertCircle, Brush, Trash2, Gamepad2, DollarSign, PlusCircle, Star,
     Monitor, Grid2X2, Maximize, Minimize, ScanLine, LineChart, ArrowUpRight, FastForward, RefreshCcw, Clock, Zap, Sun, Sparkles, Palette, Eye,
     Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet, Settings, Plug, Smartphone, Search, Hand, Wifi, Headset,
-    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, TriangleAlert, Server, MessageCircle
+    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle
 } from 'lucide-vue-next';
 
 // Helper for formatting Infobox Lists
@@ -128,6 +128,19 @@ export const fieldsConfig: SectionDefinition[] = [
                 ]
             },
             {
+                title: 'Reception',
+                fields: [
+                    {
+                        key: 'reception',
+                        label: 'Reception',
+                        component: 'InfoboxReception',
+                        wikitextParam: 'reception',
+                        defaultValue: [],
+                        description: 'Review scores from various aggregators.'
+                    }
+                ]
+            },
+            {
                 title: 'Taxonomy',
                 gridCols: 3,
                 fields: [
@@ -169,19 +182,7 @@ export const fieldsConfig: SectionDefinition[] = [
                     { key: 'links.wineHqSide', label: 'WineHQ Side Param', component: 'InputText', wikitextParam: 'winehq_side', description: 'Optional side parameter', componentProps: { placeholder: '' } }
                 ]
             },
-            {
-                title: 'Reception',
-                fields: [
-                    {
-                        key: 'reception',
-                        label: 'Reception',
-                        component: 'InfoboxReception',
-                        wikitextParam: 'reception',
-                        defaultValue: [],
-                        description: 'Review scores from various aggregators.'
-                    }
-                ]
-            }
+
         ]
     },
     {

@@ -285,7 +285,7 @@ const isVisible = computed(() => {
         :class="field.component === 'Checkbox' ? 'flex-row items-center gap-3' : 'flex-col gap-1'" v-if="isVisible">
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
-            v-if="!['RatingRow', 'InfoboxListEditor', 'GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InputWithNotes'].includes(field.component)"
+            v-if="!['RatingRow', 'InfoboxListEditor', 'GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InputWithNotes', 'InfoboxReception'].includes(field.component)"
             class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
