@@ -1,4 +1,4 @@
-import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue } from '../models/GameData';
+import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue, GalleryImage } from '../models/GameData';
 import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 
@@ -886,8 +886,117 @@ export function parseWikitext(wikitext: string): GameData {
 
 
 
-    // Also check for global {{Issue}} templates if not in sections?
-    // Usually they are in sections.
+    // --- Galleries ---
+    const extractGalleryImages = (content: string): GalleryImage[] => {
+        // First, handle lines (standard for <gallery> and {{Gallery|content=...}})
+        const lines = content.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0 && !l.startsWith('<') && !l.startsWith('{'));
+
+        const results: GalleryImage[] = [];
+
+        lines.forEach(line => {
+            // Strip parameter names if present (e.g. "content=File:..." or "1=File:...")
+            const cleanLine = line.replace(/^\s*[\w\s-]+\s*=\s*/, '');
+            if (!cleanLine) return;
+
+            const parts = cleanLine.split('|');
+            // Check if it looks like a file (PCGW uses File: prefix often)
+            if (parts[0].toLowerCase().includes('.jpg') ||
+                parts[0].toLowerCase().includes('.png') ||
+                parts[0].toLowerCase().includes('.jpeg') ||
+                parts[0].toLowerCase().startsWith('file:')) {
+                results.push({
+                    name: parts[0].trim().replace(/^File:/i, ''),
+                    caption: parts.slice(1).join('|').trim()
+                });
+            }
+        });
+
+        // If no lines matched, it might be a single-line pipe-separated template
+        if (results.length === 0 && content.includes('|')) {
+            const parts = content.split('|').map(p => p.trim());
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i].replace(/^\s*[\w\s-]+\s*=\s*/, '');
+                if (part.toLowerCase().includes('.jpg') || part.toLowerCase().includes('.png') || part.toLowerCase().startsWith('file:')) {
+                    const name = part.replace(/^File:/i, '');
+                    let caption = '';
+                    // If next part isn't another image, it's likely the caption
+                    if (i + 1 < parts.length) {
+                        const next = parts[i + 1].toLowerCase();
+                        if (!next.includes('.jpg') && !next.includes('.png') && !next.startsWith('file:')) {
+                            caption = parts[i + 1];
+                            i++; // Skip caption
+                        }
+                    }
+                    results.push({ name, caption });
+                }
+            }
+        }
+
+        return results;
+    };
+
+    // 1. Parse <gallery> tags
+    const tagMatches = wikitext.matchAll(/<gallery[^>]*>([\s\S]*?)<\/gallery>/gi);
+    for (const m of tagMatches) {
+        if (!data.galleries.video) data.galleries.video = [];
+        data.galleries.video.push(...extractGalleryImages(m[1]));
+    }
+
+    // 2. Parse {{Gallery}} templates (out-of-AST fallback)
+    const tplMatches = wikitext.matchAll(/\{\{Gallery\s*\|([\s\S]*?)\}\}/gi);
+    for (const m of tplMatches) {
+        if (!data.galleries.video) data.galleries.video = [];
+        data.galleries.video.push(...extractGalleryImages(m[1]));
+    }
+
+    // 3. Parse {{Image}} templates (single images)
+    const singleImgMatches = wikitext.matchAll(/\{\{Image\s*\|([^|}]*)\|?([^}]*)\}\}/gi);
+    for (const m of singleImgMatches) {
+        const name = m[1].trim().replace(/^File:/i, '');
+        const caption = (m[2] || '').trim();
+        if (name) {
+            if (!data.galleries.video) data.galleries.video = [];
+            if (!data.galleries.video.some(img => img.name.toLowerCase() === name.toLowerCase())) {
+                data.galleries.video.push({ name, caption });
+            }
+        }
+    }
+
+    // 4. Parse single images [[File:Name|...]] (fallback)
+    const imgMatches = wikitext.matchAll(/\[\[File:\s*([^|\]\n]+)(?:\|([^\]\n]*))?\]\]/gi);
+    const knownFileExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
+
+    for (const m of imgMatches) {
+        const name = m[1].trim();
+        const params = m[2] || '';
+
+        // Basic heuristic: must have a known extension to be a screenshot
+        const hasExtension = knownFileExtensions.some(ext => name.toLowerCase().endsWith(ext));
+        if (!hasExtension) continue;
+
+        // Exclude common icons
+        if (name.toLowerCase().includes('icon')) continue;
+
+        // Extract caption: usually the last pipe-separated part that isn't a known attribute
+        const parts = params.split('|').map(p => p.trim());
+        const knownAttributes = ['thumb', 'thumbnail', 'left', 'right', 'center', 'none', 'frame', 'framed', 'frameless', 'border'];
+        let caption = '';
+
+        if (parts.length > 0) {
+            const lastPart = parts[parts.length - 1];
+            if (!knownAttributes.includes(lastPart.toLowerCase()) && !/^\d+px$/.test(lastPart)) {
+                caption = lastPart;
+            }
+        }
+
+        if (!data.galleries.video) data.galleries.video = [];
+        // Avoid duplicates
+        if (!data.galleries.video.some(img => img.name.toLowerCase() === name.toLowerCase())) {
+            data.galleries.video.push({ name, caption });
+        }
+    }
 
     return data;
 }

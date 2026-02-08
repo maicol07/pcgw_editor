@@ -907,53 +907,43 @@ ${rows}
     }
 
     updateGalleries(galleries: GameData['galleries']) {
-        if (!galleries) return;
-
-        // Map section names to gallery template params if needed, or assume standard {{Gallery}} with section param?
-        // PCGW typically uses {{Gallery}} with images.
-        // It seems typically distinct galleries per section aren't standard PCGW wikitext structure?
-        // Usually it's just <gallery> or {{Gallery}} at bottom or specific places.
-        // But if the app separates them, we need to decide how to write them.
-        // Check how it was done before? Likely it wasn't.
-        // If we want to support section-specific galleries, we might need a convention.
-        // OR we just dump all into one {{Gallery}}?
-        // The user has 'galleries.video', 'galleries.input', etc.
-        // Let's implement a generic gallery writer that aggregates or writes specific section galleries if we can mark them.
-        // For now, let's just write the 'video' gallery to a {{Gallery}} section, or appending.
-
-        // Actually, PCGW uses <gallery> tags or {{Gallery}}.
-        // Let's stick to {{Gallery}} template.
-        // We can write strict wikitext for the gallery.
-
         const allImages: string[] = [];
         Object.values(galleries).forEach(list => {
             list.forEach(img => {
-                const name = typeof img === 'string' ? img : img.name;
-                const caption = typeof img === 'string' ? '' : img.caption;
-                allImages.push(`${name}${caption ? '|' + caption : ''}`);
+                const name = img.name.startsWith('File:') ? img.name : `File:${img.name}`;
+                allImages.push(`${name}${img.caption ? '|' + img.caption : ''}`);
             });
         });
 
-        if (allImages.length > 0) {
-            // Check if {{Gallery}} exists
-            let galleryContent = `\n${allImages.join('\n')}\n`;
-            if (this.parser.findTemplate('Gallery')) {
-                this.setTemplateParam('Gallery', 'content', galleryContent); // Hypothethical param? 
-                // Actually {{Gallery|Image.jpg|Caption...}} standard wikimedia gallery?
-                // Or {{Gallery}} template wrapper for <gallery>?
-                // Let's assume standard <gallery> tag behavior for now if we can't confirm template.
-                // But user likely wants the PCGW {{Gallery}} template if it exists.
-                // Assuming {{Gallery}} takes named params or unnamed?
-                // Let's use <gallery> tag as fallback if we are unsure, it's safer.
-                // Or better: update the parser to read/write specific gallery sections.
+        if (allImages.length === 0) return;
 
-                // For now, let's try to verify what parser does.
+        const galleryContent = `\n${allImages.join('\n')}\n`;
+
+        // 1. Try {{Gallery}} template
+        if (this.parser.findTemplate('Gallery')) {
+            const param = this.parser.findParameter('Gallery', 'content') || this.parser.findParameter('Gallery', '1');
+            if (param) {
+                this.parser.setParameter('Gallery', param.paramName, galleryContent);
             } else {
-                // Create a gallery section at the bottom
-                const text = this.parser.getText();
-                this.parser = new WikitextParser(text + `\n\n== Gallery ==\n<gallery>\n${galleryContent}</gallery>`);
+                this.parser.setParameter('Gallery', '1', galleryContent);
             }
+            return;
         }
+
+        // 2. Try <gallery> tag inside == Gallery == section
+        const section = this.parser.findSection(/Gallery/i);
+        if (section) {
+            if (section.content.includes('<gallery>')) {
+                const newSectionContent = section.content.replace(/<gallery>[\s\S]*?<\/gallery>/i, `<gallery>${galleryContent}</gallery>`);
+                this.parser.replaceSection(/Gallery/i, newSectionContent);
+            } else {
+                this.parser.replaceSection(/Gallery/i, section.content + `\n<gallery>${galleryContent}</gallery>\n`);
+            }
+            return;
+        }
+
+        // 3. Create new section
+        this.parser.replaceSection('Gallery', `<gallery>${galleryContent}</gallery>`);
     }
 
     updateLocalizations(data: GameData['localizations']) {
@@ -976,7 +966,6 @@ ${rows}
  |${pad('ref', 10)}= ${row.ref || ''}
 }}`;
         }).join('\n');
-
 
         this.ensureTemplate('L10n');
         this.setTemplateParam('L10n', 'content', '\n' + content + '\n');

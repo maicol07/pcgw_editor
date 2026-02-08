@@ -96,8 +96,7 @@ const scrollToHeading = (id: string) => {
 </script>
 
 <template>
-    <div
-        class="flex flex-col h-full bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700">
+    <div class="flex flex-col h-full bg-white border-l border-surface-200 dark:border-surface-700">
         <!-- Floating Header -->
         <!-- Floating Header -->
         <div
@@ -141,7 +140,7 @@ const scrollToHeading = (id: string) => {
                     <span>{{ error }}</span>
                 </div>
 
-                <div class="prose dark:prose-invert max-w-none text-sm pcgw-content rendered-view"
+                <div class="prose max-w-none text-sm pcgw-content rendered-view bg-white text-black p-4"
                     v-html="processedContent.html || '<span class=\'text-surface-400 italic\'>Preview will appear here...</span>'">
                 </div>
             </div>

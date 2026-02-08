@@ -91,6 +91,7 @@ watchEffect(() => {
         }
     });
 });
+const currentPage = ref(0);
 </script>
 
 <template>
@@ -116,14 +117,10 @@ watchEffect(() => {
         </div>
 
         <div v-if="displayImages.length > 0" class="w-full">
-            <Carousel :value="displayImages" :numVisible="3" :numScroll="1" :responsiveOptions="[
-                { breakpoint: '1024px', numVisible: 3, numScroll: 1 },
-                { breakpoint: '768px', numVisible: 2, numScroll: 1 },
-                { breakpoint: '560px', numVisible: 1, numScroll: 1 }
-            ]" circular :autoplayInterval="3000">
+            <Carousel :value="displayImages" v-model:page="currentPage" :numVisible="1" :numScroll="1" class="w-full">
                 <template #item="slotProps">
-                    <div
-                        class="border border-surface-200 dark:border-surface-700 rounded m-2 p-3 bg-surface-0 dark:bg-surface-800 relative group min-h-[250px] flex flex-col">
+                    <div v-show="slotProps.index === currentPage"
+                        class="border border-surface-200 dark:border-surface-700 rounded my-2 p-3 bg-surface-0 dark:bg-surface-800 relative group min-h-[250px] flex flex-col">
                         <div
                             class="relative flex-1 flex items-center justify-center p-2 rounded bg-surface-100 dark:bg-surface-900 overflow-hidden">
                             <img v-if="resolvedUrls[slotProps.data.name]" :src="resolvedUrls[slotProps.data.name]"
@@ -144,23 +141,23 @@ watchEffect(() => {
                         <!-- Actions -->
                         <div class="flex justify-between items-center mt-3 gap-2">
                             <div class="flex gap-1">
-                                <Button text rounded size="small" v-tooltip="'View on PCGW'"
+                                <Button text rounded v-tooltip="'View on PCGW'"
                                     @click="openPcgwImage(slotProps.data.name)">
                                     <template #icon>
-                                        <ExternalLink class="w-3.5 h-3.5" />
+                                        <ExternalLink style="width: 18px !important; height: 18px !important;" />
                                     </template>
                                 </Button>
-                                <Button text rounded size="small" v-tooltip="'Edit Caption'"
+                                <Button text rounded v-tooltip="'Edit Caption'"
                                     :class="slotProps.data.caption ? 'text-primary-500' : 'text-surface-500'"
                                     @click="openCaptionDialog(slotProps.data)">
                                     <template #icon>
-                                        <Pencil class="w-3.5 h-3.5" />
+                                        <Pencil style="width: 18px !important; height: 18px !important;" />
                                     </template>
                                 </Button>
                             </div>
-                            <Button severity="danger" text rounded size="small" @click="removeImage(slotProps.index)">
+                            <Button severity="danger" text rounded @click="removeImage(slotProps.index)">
                                 <template #icon>
-                                    <Trash2 class="w-3.5 h-3.5" />
+                                    <Trash2 style="width: 18px !important; height: 18px !important;" />
                                 </template>
                             </Button>
                         </div>
