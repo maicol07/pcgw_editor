@@ -15,7 +15,7 @@ A modern, high-performance visual editor for PCGamingWiki. Transform wikitext ed
 
 This project wasn't just built; it was **manifested**.
 
-Developing this editor was an exercise in *Vibecoding*—a synergy between human intent and artificial intelligence. By leveraging **Google Gemini 1.5 Pro** and **Claude 3.5 Sonnet** via the [Antigravity](https://deepmind.google/technologies/antigravity/) platform, we achieved:
+Developing this editor was an exercise in *Vibecoding*—a synergy between human intent and artificial intelligence. By leveraging **Google Gemini 3 Pro**, **Google Gemini 3 Flash**, and **Claude 3.5 Sonnet** via the [Antigravity](https://deepmind.google/technologies/antigravity/) platform, we achieved:
 
 -   **Velocity**: Accelerating from concept to production-ready code in hours.
 -   **Precision**: Generating complex parsing logic and type-safe interfaces instantly.
