@@ -1,11 +1,16 @@
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 
 export const useUiStore = defineStore('ui', () => {
     const sidebarVisible = ref(false);
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
     const isInitialLoad = ref(true);
+    const isCompactMode = ref(localStorage.getItem('isCompactMode') === 'true');
+
+    watch(isCompactMode, (val: boolean) => {
+        localStorage.setItem('isCompactMode', val.toString());
+    });
 
     const panelState = reactive({
         articleState: true,
@@ -54,6 +59,7 @@ export const useUiStore = defineStore('ui', () => {
         editorMode,
         isModeSwitching,
         isInitialLoad,
+        isCompactMode,
         panelState,
         panelsRendered,
         toggleSidebar,

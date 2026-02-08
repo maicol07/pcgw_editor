@@ -225,3 +225,145 @@ body {
 @utility shadow-soft-lg {
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 }
+
+/* Compact Mode Overrides */
+.compact-mode {
+  --spacing-main-section-gap: 0.75rem;
+  --spacing-section-gap: 0.5rem;
+  --spacing-field-gap: 0.2rem;
+  --spacing-panel-padding: 0.4rem;
+}
+
+.compact-mode .dynamic-section {
+  gap: var(--spacing-section-gap) !important;
+}
+
+.compact-mode .dynamic-field {
+  gap: 0.15rem !important;
+}
+
+/* Compact Section/Group Headers */
+.compact-mode .dynamic-section .p-4 {
+  padding: 0.5rem 0.75rem !important;
+}
+
+.compact-mode .dynamic-section .p-5 {
+  padding: 0.5rem 0.75rem !important;
+}
+
+.compact-mode .dynamic-section .text-base {
+  font-size: 0.875rem !important;
+}
+
+.compact-mode .dynamic-section .w-5 {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Specific RatingRow / InputGroup adjustments */
+.compact-mode .p-inputgroup,
+.compact-mode .p-inputgroup.h-8,
+.compact-mode .p-inputgroup.h-10 {
+  height: 1.6rem !important;
+}
+
+.compact-mode .p-inputgroupaddon {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 0.7rem !important;
+  min-width: 0 !important;
+}
+
+/* Force reduction for w-48 and w-28 in compact addon */
+.compact-mode .p-inputgroupaddon.w-48 {
+  width: 8rem !important;
+}
+
+.compact-mode .p-inputgroupaddon.w-28 {
+  width: 6rem !important;
+}
+
+/* FIX GAPS: Differentiate main container from internal ones */
+.compact-mode .max-w-6xl.flex-col.gap-4 {
+  gap: var(--spacing-main-section-gap) !important;
+}
+
+/* Fix grid gaps in DynamicSection and other components */
+.compact-mode div.gap-6,
+.compact-mode div.gap-5,
+.compact-mode div.gap-4:not(.max-w-6xl) {
+  gap: var(--spacing-field-gap) !important;
+}
+
+.compact-mode .dynamic-section.gap-6 {
+  gap: var(--spacing-section-gap) !important;
+}
+
+/* Fix Select / MultiSelect visibility and alignment */
+.compact-mode .p-select-label,
+.compact-mode .p-multiselect-label {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 1.5rem !important;
+  /* Matches enough to fit in 1.6rem group */
+  line-height: normal !important;
+}
+
+.compact-mode .p-select-input-icon {
+  font-size: 0.7rem !important;
+}
+
+.compact-mode .p-inputtext,
+.compact-mode .p-select,
+.compact-mode .p-multiselect {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 0.8125rem !important;
+  height: 1.6rem !important;
+  /* Ensure it matches group height */
+}
+
+/* Handle Availability / DLC Form rows */
+.compact-mode .p-3.rounded-lg.bg-surface-50 {
+  padding: 0.4rem 0.6rem !important;
+  gap: 0.3rem !important;
+}
+
+.compact-mode .flex-col.gap-3,
+.compact-mode .flex-col.gap-4 {
+  gap: 0.2rem !important;
+}
+
+.compact-mode .grid.gap-3 {
+  gap: 0.2rem !important;
+}
+
+/* Target fixed height utilities used in forms */
+.compact-mode .h-9\!,
+.compact-mode .h-10\! {
+  height: 1.6rem !important;
+}
+
+.compact-mode .dynamic-field.flex-col {
+  gap: 0.15rem !important;
+}
+
+.compact-mode .dynamic-field+.dynamic-field {
+  margin-top: 0.1rem !important;
+}
+
+.compact-mode .p-panel .p-panel-content {
+  padding: var(--spacing-panel-padding) !important;
+}
+
+.compact-mode .p-panel .p-panel-header {
+  padding: 0.3rem 0.6rem !important;
+}
+
+.compact-mode label {
+  font-size: 0.75rem !important;
+  margin-bottom: 0 !important;
+  line-height: 1.1 !important;
+}

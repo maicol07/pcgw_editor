@@ -116,8 +116,8 @@ onMounted(() => {
 </script>
 
 <template>
-    <div
-        class="h-screen w-screen overflow-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-0 transition-colors duration-200">
+    <div class="h-screen w-screen overflow-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-0 transition-colors duration-200"
+        :class="{ 'compact-mode': uiStore.isCompactMode }">
         <WorkspaceSidebar v-model:visible="uiStore.sidebarVisible" />
 
         <Splitter style="height: 100vh" class="border-none !mb-0 !rounded-none bg-transparent splitter-modern">
