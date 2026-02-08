@@ -2,8 +2,6 @@
 import { SettingsInput } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
 import Panel from 'primevue/panel';
-import RatingRow from './RatingRow.vue';
-import Panel from 'primevue/panel';
 import {
   Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet,
   Gamepad2, CheckCircle, Settings, SlidersHorizontal, Plug,
@@ -11,23 +9,13 @@ import {
 } from 'lucide-vue-next';
 
 import DynamicField from './schema/DynamicField.vue';
-import { fieldsConfig } from '../config/fields';
-import { FieldDefinition } from '../types/schema';
+import { useFields } from '../composables/useFields';
 
 defineProps<{
   input: SettingsInput;
 }>();
 
-const getField = (key: string): FieldDefinition | undefined => {
-  for (const section of fieldsConfig) {
-    for (const group of section.groups || []) {
-      for (const field of group.fields) {
-        if (field.key === key) return field;
-      }
-    }
-  }
-  return undefined;
-};
+const { getField } = useFields();
 </script>
 
 <template>
@@ -65,9 +53,9 @@ const getField = (key: string): FieldDefinition | undefined => {
           v-model:notes="input.controllerHotplugNotes" v-model:reference="input.controllerHotplugRef" />
         <RatingRow :icon="Smartphone" label="Haptic Feedback" v-model:value="input.hapticFeedback"
           v-model:notes="input.hapticFeedbackNotes" v-model:reference="input.hapticFeedbackRef" />
-        <!-- New: HD Haptics -->
         <RatingRow :icon="Smartphone" label="Haptic Feedback HD" v-model:value="input.hapticFeedbackHd"
           v-model:notes="input.hapticFeedbackHdNotes" v-model:reference="input.hapticFeedbackHdRef" />
+
         <DynamicField v-if="getField('input.hapticFeedbackHdControllerModels')"
           :field="getField('input.hapticFeedbackHdControllerModels')!"
           v-model="input.hapticFeedbackHdControllerModels" />
@@ -98,26 +86,22 @@ const getField = (key: string): FieldDefinition | undefined => {
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Gamepad2" label="PlayStation Controllers" v-model:value="input.playstationControllers"
           v-model:notes="input.playstationControllersNotes" v-model:reference="input.playstationControllersRef" />
-
         <DynamicField v-if="getField('input.playstationControllerModels')"
           :field="getField('input.playstationControllerModels')!" v-model="input.playstationControllerModels" />
-
         <RatingRow :icon="Box" label="PlayStation Prompts" v-model:value="input.playstationPrompts"
           v-model:notes="input.playstationPromptsNotes" v-model:reference="input.playstationPromptsRef" />
         <RatingRow :icon="Move" label="Motion Sensors" v-model:value="input.playstationMotionSensors"
           v-model:notes="input.playstationMotionSensorsNotes" v-model:reference="input.playstationMotionSensorsRef" />
-
         <DynamicField v-if="getField('input.playstationMotionSensorsModes')"
           :field="getField('input.playstationMotionSensorsModes')!" v-model="input.playstationMotionSensorsModes" />
-
         <RatingRow :icon="Zap" label="Light Bar Support" v-model:value="input.glightBar"
           v-model:notes="input.glightBarNotes" v-model:reference="input.glightBarRef" />
         <RatingRow :icon="Zap" label="Adaptive Triggers" v-model:value="input.dualSenseAdaptiveTrigger"
           v-model:notes="input.dualSenseAdaptiveTriggerNotes" v-model:reference="input.dualSenseAdaptiveTriggerRef" />
         <RatingRow :icon="Smartphone" label="DualSense Haptics" v-model:value="input.dualSenseHaptics"
           v-model:notes="input.dualSenseHapticsNotes" v-model:reference="input.dualSenseHapticsRef" />
-
-        <DynamicField v-if="getField('input')" :field="getField('input.playstationConnectionModes')!" v-model="input" />
+        <DynamicField v-if="getField('input.playstationConnectionModes')"
+          :field="getField('input.playstationConnectionModes')!" v-model="input.playstationConnectionModes" />
       </div>
     </Panel>
 
@@ -125,21 +109,18 @@ const getField = (key: string): FieldDefinition | undefined => {
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Gamepad2" label="Nintendo Controllers" v-model:value="input.nintendoControllers"
           v-model:notes="input.nintendoControllersNotes" v-model:reference="input.nintendoControllersRef" />
-
         <DynamicField v-if="getField('input.nintendoControllerModels')"
           :field="getField('input.nintendoControllerModels')!" v-model="input.nintendoControllerModels" />
-
         <RatingRow :icon="Box" label="Nintendo Prompts" v-model:value="input.nintendoPrompts"
           v-model:notes="input.nintendoPromptsNotes" v-model:reference="input.nintendoPromptsRef" />
         <RatingRow :icon="Settings" label="Button Layout" v-model:value="input.nintendoButtonLayout"
           v-model:notes="input.nintendoButtonLayoutNotes" v-model:reference="input.nintendoButtonLayoutRef" />
         <RatingRow :icon="Move" label="Motion Sensors" v-model:value="input.nintendoMotionSensors"
           v-model:notes="input.nintendoMotionSensorsNotes" v-model:reference="input.nintendoMotionSensorsRef" />
-
         <DynamicField v-if="getField('input.nintendoMotionSensorsModes')"
           :field="getField('input.nintendoMotionSensorsModes')!" v-model="input.nintendoMotionSensorsModes" />
-
-        <DynamicField v-if="getField('input')" :field="getField('input.nintendoConnectionModes')!" v-model="input" />
+        <DynamicField v-if="getField('input.nintendoConnectionModes')"
+          :field="getField('input.nintendoConnectionModes')!" v-model="input.nintendoConnectionModes" />
       </div>
     </Panel>
 
@@ -151,13 +132,10 @@ const getField = (key: string): FieldDefinition | undefined => {
           v-model:notes="input.steamHookInputNotes" v-model:reference="input.steamHookInputRef" />
         <RatingRow :icon="Box" label="Steam Input Prompts" v-model:value="input.steamInputPrompts"
           v-model:notes="input.steamInputPromptsNotes" v-model:reference="input.steamInputPromptsRef" />
-
         <DynamicField v-if="getField('input.steamInputPromptsIcons')" :field="getField('input.steamInputPromptsIcons')!"
           v-model="input.steamInputPromptsIcons" />
-
         <DynamicField v-if="getField('input.steamInputPromptsStyles')"
           :field="getField('input.steamInputPromptsStyles')!" v-model="input.steamInputPromptsStyles" />
-
         <RatingRow :icon="Tablet" label="Steam Deck Prompts" v-model:value="input.steamDeckPrompts"
           v-model:notes="input.steamDeckPromptsNotes" v-model:reference="input.steamDeckPromptsRef" />
         <RatingRow :icon="Gamepad2" label="Steam Controller Prompts" v-model:value="input.steamControllerPrompts"
@@ -185,12 +163,10 @@ const getField = (key: string): FieldDefinition | undefined => {
           v-model:notes="input.otherButtonPromptsNotes" v-model:reference="input.otherButtonPromptsRef" freeText />
         <RatingRow :icon="Monitor" label="Digital Movement" v-model:value="input.digitalMovementSupported"
           v-model:notes="input.digitalMovementSupportedNotes" v-model:reference="input.digitalMovementSupportedRef" />
-
         <RatingRow :icon="Settings" label="Peripheral Devices" v-model:value="input.peripheralDevices"
           v-model:notes="input.peripheralDevicesNotes" v-model:reference="input.peripheralDevicesRef" />
         <DynamicField v-if="getField('input.peripheralDeviceTypes')" :field="getField('input.peripheralDeviceTypes')!"
           v-model="input.peripheralDeviceTypes" />
-
         <RatingRow :icon="Zap" label="Input Prompt Override" v-model:value="input.inputPromptOverride"
           v-model:notes="input.inputPromptOverrideNotes" v-model:reference="input.inputPromptOverrideRef" />
       </div>
