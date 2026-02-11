@@ -2,8 +2,9 @@ import { ref, inject, type Ref } from 'vue';
 import { GeminiService } from '../../services/GeminiService';
 import { GameData } from '../../models/GameData';
 
-export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>) {
-    const geminiApiKey = inject<Ref<string>>('geminiApiKey');
+export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>, apiKey?: Ref<string>) {
+    const injectedApiKey = inject<Ref<string>>('geminiApiKey');
+    const geminiApiKey = apiKey || injectedApiKey;
     const isGeneratingSummary = ref(false);
     const shareSummaryVisible = ref(false);
     const shareSummaryText = ref('');

@@ -84,7 +84,7 @@ const {
     isGeneratingSummary, shareSummaryVisible, shareSummaryText,
     showApiKeyDialog, tempApiKey, saveApiKey, clearApiKey,
     generateShareSummary, copyShareSummary
-} = useGeminiSummary(pageTitle, gameData);
+} = useGeminiSummary(pageTitle, gameData, geminiApiKey);
 
 // --- Schema Helpers ---
 const getSchema = (id: string) => computed(() => fieldsConfig.find(s => s.id === id));
