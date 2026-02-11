@@ -73,10 +73,49 @@ export class GeminiService {
      * Generates a feature list summary for a game.
      */
     async generateShareSummary(gameTitle: string, gameData: any, model: string = 'gemini-3-flash-preview'): Promise<string> {
-        const prompt = `Create a feature list for "${gameTitle || 'Unknown'}". Data: ${JSON.stringify({
+        const summaryData = {
             video: gameData.video,
-            input: gameData.input
-        })}. Format: Bullet points, factual.`;
+            input: gameData.input,
+            audio: gameData.audio,
+            vr: gameData.vr,
+            network: gameData.network,
+        };
+
+        const prompt = `
+            Create a feature list for "${gameTitle || 'Unknown'}".
+            The output should be divided into two sections: "Pros" and "Cons".
+            Each section should be a bullet point list, with each point starting with "- ".
+            The tone should be factual and concise.
+            Do not include information about API, monetization, or microtransactions.
+            
+            Use the following data to generate the summary:
+            ${JSON.stringify(summaryData)}
+
+            Here is an example of the desired output format and style:
+            
+            Pros
+            - Native 4K Ultra HD and widescreen support.
+            - Windowed and borderless windowed display modes.
+            - Anti-aliasing options including FXAA, TAA, and TSR.
+            - Supports DLSS 4, FSR 3, and XeSS 2 upscaling.
+            - Frame generation support for DLSS, FSR, and XeSS.
+            - Vsync and high frame rate support up to 120 FPS.
+            - Color blind accessibility mode available.
+            - Fully rebindable keyboard keys with adjustable mouse sensitivity.
+            - Full controller support with native compatibility for XInput, DualShock 4, and DualSense controllers (USB).
+            - Includes on-screen button prompts for both Xbox and PlayStation controllers.
+            - Steam Input API and haptic feedback support.
+            - Separate volume sliders and subtitle support.
+            - Includes a dedicated streamer mode for royalty-free music.
+
+            Cons
+            - No field of view (FOV) slider.
+            - No support for HDR or ray tracing.
+            - Controller button remapping is not supported.
+            - Controllers must be connected before launching (no hotplugging support).
+            - No support for Xbox Impulse Triggers or DualSense adaptive triggers.
+            - Audio is limited to stereo (no surround sound support).
+        `;
 
         return this.generateContent(prompt, model);
     }
