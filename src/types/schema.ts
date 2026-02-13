@@ -1,4 +1,6 @@
-export interface FieldDefinition<T = any> {
+import { FieldComponent } from './components';
+
+export type FieldDefinition<T = any> = FieldComponent & {
     /** Internal unique identifier for the field (matches logic model key) */
     key: string;
     /** Display label for the UI */
@@ -7,10 +9,6 @@ export interface FieldDefinition<T = any> {
     icon?: any;
     /** Optional CSS class for the icon */
     iconClass?: string;
-    /** The UI component to render (e.g. 'InputText', 'MultiSelect', 'RatingRow') */
-    component: string;
-    /** Props to pass to the UI component */
-    componentProps?: Record<string, any>;
     /** The parameter name in the Wikitext template (e.g. 'developers', 'release_date') */
     wikitextParam: string;
     /** Default value if not found */
@@ -24,11 +22,10 @@ export interface FieldDefinition<T = any> {
     /** Grid column span (default 1) */
     colSpan?: number;
     /** Help text/description displayed below the field */
-    /** Help text/description displayed below the field */
     description?: string;
     /** Conditional rendering logic */
     showIf?: (model: any) => boolean;
-}
+};
 
 export interface FieldGroup {
     title: string;
