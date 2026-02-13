@@ -1,4 +1,4 @@
-import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue, GalleryImage } from '../models/GameData';
+import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue, GalleryImage, Issue } from '../models/GameData';
 import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 
@@ -131,6 +131,8 @@ export function parseWikitext(wikitext: string): GameData {
         if (!templateNode || !templateNode.childNodes) return [];
 
         const paramNode = templateNode.childNodes.find(child => {
+            // debug
+            // if (paramName === '7') console.log('Checking child', child.name, 'against', paramName);
             return child.name && child.name.trim().toLowerCase() === paramName.toLowerCase();
         });
 
@@ -146,9 +148,8 @@ export function parseWikitext(wikitext: string): GameData {
     };
 
     const getParam = (templateNode: ASTNode, paramName: string): string => {
-        const nodes = getParamValueNodes(templateNode, paramName);
-        // Use getWikitextContent to preserve nested templates
-        return getWikitextContent(nodes).trim();
+        const valNodes = getParamValueNodes(templateNode, paramName);
+        return getWikitextContent(valNodes).trim();
     };
 
     // --- Parse Article State ---
@@ -160,7 +161,17 @@ export function parseWikitext(wikitext: string): GameData {
     const cleanup = findTemplateGlobal('cleanup');
     if (cleanup) {
         data.articleState.cleanup = true;
-        data.articleState.cleanupDescription = getParam(cleanup, '1') || getParam(cleanup, 'reason');
+        const p1 = getParam(cleanup, '1');
+        const p2 = getParam(cleanup, '2');
+        const reason = getParam(cleanup, 'reason');
+
+        if (p2) {
+            // If param 2 exists, param 1 is the section
+            data.articleState.cleanupDescription = `${p1}|${p2}`;
+        } else {
+            // Otherwise param 1 checks for reason or uses named reason
+            data.articleState.cleanupDescription = p1 || reason;
+        }
     }
 
     const state = findTemplateGlobal('State');
@@ -176,7 +187,15 @@ export function parseWikitext(wikitext: string): GameData {
 
     const disambig = findTemplateGlobal('Disambig');
     if (disambig) {
-        data.articleState.disambig = getParam(disambig, '1');
+        const dParams: string[] = [];
+        let i = 1;
+        while (true) {
+            const val = getParam(disambig, i.toString());
+            if (!val) break;
+            dParams.push(val);
+            i++;
+        }
+        data.articleState.disambig = dParams;
     }
 
     const distinguish = findTemplateGlobal('Distinguish');
@@ -233,11 +252,35 @@ export function parseWikitext(wikitext: string): GameData {
         data.infobox.publishers = pubRows.map(r => ({ name: getParam(r, '1') }));
 
         const engRows = parseRows('engines', 'Infobox game/row/engine');
-        data.infobox.engines = engRows.map(r => ({
-            name: getParam(r, '1'),
-            build: getParam(r, 'build'),
-            ref: getParam(r, 'ref')
-        }));
+        data.infobox.engines = engRows.map(r => {
+            const rawName = getParam(r, '1');
+            let name = rawName;
+            let displayName = '';
+
+            // Handle piped links: [[Engine|Engine 2]]
+            if (rawName.startsWith('[[') && rawName.endsWith(']]')) {
+                const inner = rawName.substring(2, rawName.length - 2);
+                if (inner.includes('|')) {
+                    const parts = inner.split('|');
+                    name = parts[0];
+                    displayName = parts[1];
+                    name = inner;
+                }
+            }
+
+            // Allow name param to override or set displayName
+            const nameParam = getParam(r, 'name');
+            if (nameParam) displayName = nameParam;
+
+            return {
+                name,
+                displayName: displayName || undefined,
+                build: getParam(r, 'build'),
+                note: getParam(r, 'note'),
+                ref: getParam(r, 'ref'),
+                extra: getParam(r, '2') // Used For
+            };
+        });
 
         const dateRows = parseRows('release dates', 'Infobox game/row/date');
         data.infobox.releaseDates = dateRows.map(r => ({
@@ -284,8 +327,17 @@ export function parseWikitext(wikitext: string): GameData {
         data.infobox.links.steamAppId = getParam(infobox, 'steam appid');
         data.infobox.links.steamAppIdSide = getParam(infobox, 'steam appid side');
         data.infobox.links.gogComId = getParam(infobox, 'gogcom id');
+        data.infobox.links.gogComIdSide = getParam(infobox, 'gogcom id side');
         data.infobox.links.officialSite = getParam(infobox, 'official site');
+        data.infobox.links.hltb = getParam(infobox, 'hltb');
+        data.infobox.links.igdb = getParam(infobox, 'igdb');
+        data.infobox.links.lutris = getParam(infobox, 'lutris');
+        data.infobox.links.mobygames = getParam(infobox, 'mobygames');
+        data.infobox.links.vndb = getParam(infobox, 'vndb');
+        data.infobox.links.strategyWiki = getParam(infobox, 'strategywiki');
         data.infobox.links.wikipedia = getParam(infobox, 'wikipedia');
+        data.infobox.links.wineHq = getParam(infobox, 'winehq');
+        data.infobox.links.wineHqSide = getParam(infobox, 'winehq side');
     }
 
     // --- Introduction ---
@@ -305,13 +357,35 @@ export function parseWikitext(wikitext: string): GameData {
         nodes.forEach((child: any) => {
             if (child.name) {
                 if (cleanTemplateName(child.name) === 'availability/row') {
+                    // Just try to get params 1 through 7 directly.
+                    // getParam handles unnamed params by index if they are standard.
+                    // If wikiparser-node parses them as unnamed, getParam(node, '1') should work.
+
+                    let state = getParam(child, '7');
+
+                    if (!state) {
+                        // Fallback: Parsing the full wikitext of the row to find the state at the end
+                        // This avoids issues with AST node structure for mixed/unnamed params
+                        const fullText = getWikitextContent([child]);
+
+                        const lower = fullText.toLowerCase();
+                        // Simple includes check as a robust fallback
+                        // We expect unavailable or upcoming to be present if they are meaningful states here
+                        if (lower.includes('unavailable')) {
+                            state = 'unavailable';
+                        } else if (lower.includes('upcoming')) {
+                            state = 'upcoming';
+                        }
+                    }
+
                     rows.push({
                         distribution: getParam(child, '1'),
                         id: getParam(child, '2'),
                         drm: getParam(child, '3'),
                         notes: getParam(child, '4'),
                         keys: getParam(child, '5'),
-                        os: getParam(child, '6')
+                        os: getParam(child, '6'),
+                        state: state
                     });
                 }
             }
@@ -320,13 +394,68 @@ export function parseWikitext(wikitext: string): GameData {
         if (rows.length > 0) data.availability = rows;
     }
 
+    // --- Parse DLC ---
+    const dlc = findTemplateGlobal('DLC');
+    if (dlc) {
+        const rows: any[] = [];
+        const nodes = getParamValueNodes(dlc, '1');
+
+        nodes.forEach((child: any) => {
+            if (child.name) {
+                if (cleanTemplateName(child.name) === 'dlc/row') {
+                    rows.push({
+                        name: getParam(child, '1'),
+                        notes: getParam(child, '2'),
+                        os: getParam(child, '3')
+                    });
+                }
+            }
+        });
+
+        if (rows.length > 0) data.dlc = rows;
+    }
+
     // --- Game Data ---
     const getNodesInSection = (headingPattern: string | RegExp): ASTNode[] => {
         const nodesInSec: ASTNode[] = [];
         let capture = false;
-        for (const node of rootNodes) {
+
+        for (let i = 0; i < rootNodes.length; i++) {
+            const node = rootNodes[i];
+            let isHeading = false;
+            let title = '';
+
+            // Check standard headings
             if (node.name === 'Heading' || (node as any).type === 'heading') {
-                const title = getTextContent(node.childNodes || []).trim();
+                title = getTextContent(node.childNodes || []).trim();
+                isHeading = true;
+            } else {
+                // Check for custom headers.
+                const raw = getWikitextContent([node]).trim();
+
+                // Case 1: Single node containing ''' Header '''
+                if (/^'''\s*.*\s*'''$/.test(raw)) {
+                    title = raw.replace(/^'''\s*|\s*'''$/g, '');
+                    isHeading = true;
+                }
+                // Case 2: Fragmented nodes: ''' + Text + '''
+                else if (raw === "'''") {
+                    const nextNode = i + 1 < rootNodes.length ? rootNodes[i + 1] : null;
+                    const nextNextNode = i + 2 < rootNodes.length ? rootNodes[i + 2] : null;
+
+                    if (nextNode && nextNextNode) {
+                        const nextRaw = getWikitextContent([nextNode]).trim();
+                        const nextNextRaw = getWikitextContent([nextNextNode]).trim();
+
+                        if (nextNextRaw === "'''") {
+                            title = nextRaw.trim();
+                            isHeading = true;
+                        }
+                    }
+                }
+            }
+
+            if (isHeading) {
                 let isMatch = false;
                 if (typeof headingPattern === 'string') {
                     isMatch = title.toLowerCase().includes(headingPattern.toLowerCase());
@@ -336,9 +465,22 @@ export function parseWikitext(wikitext: string): GameData {
 
                 if (isMatch) {
                     capture = true;
+                    // If fragmented and matched, skip the other parts of the header
+                    if (getWikitextContent([node]).trim() === "'''") {
+                        i += 2;
+                    }
                 } else {
-                    if ((node as any).level <= 2 && capture) {
-                        capture = false;
+                    // Stop capturing if we hit a NEW heading
+                    if (capture) {
+                        if (node.name === 'Heading' || (node as any).type === 'heading') {
+                            if ((node as any).level <= 2) capture = false;
+                        } else {
+                            capture = false;
+                            // Also skip fragmented parts of non-matching header
+                            if (getWikitextContent([node]).trim() === "'''") {
+                                i += 2;
+                            }
+                        }
                     }
                 }
             } else if (capture) {
@@ -348,8 +490,53 @@ export function parseWikitext(wikitext: string): GameData {
         return nodesInSec;
     };
 
+    // --- General Information ---
+    const genInfoNodes = getNodesInSection('General information');
+    if (genInfoNodes.length > 0) {
+        const genText = getWikitextContent(genInfoNodes);
+        const genRows: any[] = [];
+        const lines = genText.split('\n');
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            // Handle {{mm}} [Url Label] Note
+            if (trimmed.includes('{{mm}}')) {
+                const linkMatch = trimmed.match(/\[(https?:\/\/[^\s]+)\s+([^\]]+)\](.*)/);
+                if (linkMatch) {
+                    const [, url, label, noteRaw] = linkMatch;
+                    let note = noteRaw.trim();
+                    // Remove leading hyphens or dashes often used as separators
+                    if (note.startsWith('-') || note.startsWith('–')) {
+                        note = note.substring(1).trim();
+                    }
+                    genRows.push({
+                        type: 'link',
+                        label: label,
+                        url: url,
+                        note: note
+                    });
+                }
+            }
+            // Handle {{GOG.com links|id|slug}}
+            else if (trimmed.toLowerCase().includes('{{gog.com links')) {
+                const gogMatch = trimmed.match(/\{\{GOG\.com links\|([^|]+)\|([^}]+)\}\}/i);
+                if (gogMatch) {
+                    genRows.push({
+                        type: 'gog',
+                        label: 'GOG.com links', // Placeholder label, usually rendered by template
+                        id: gogMatch[1],
+                        url: gogMatch[2] // slug
+                    });
+                }
+            }
+        }
+        data.generalInfo = genRows;
+    }
+
     // Helper to extract rows from either a direct list of nodes OR a nested {{Game data|...}} template
-    const extractGameDataRows = (sectionNodes: ASTNode[], rowTemplateNames: string[], legacyHeadingPattern?: RegExp): any[] => {
+    const extractGameDataRows = (sectionNodes: ASTNode[], rowTemplateNames: string[]): any[] => {
         let candidateNodes: ASTNode[] = sectionNodes;
 
         // 1. Look for {{Game data}} wrapper *within* the section nodes
@@ -369,12 +556,59 @@ export function parseWikitext(wikitext: string): GameData {
 
         candidateNodes.forEach(node => {
             if (node.name) {
-                const n = cleanTemplateName(node.name);
-                if (rowTemplateNames.includes(n)) {
+                const n = cleanTemplateName(node.name).toLowerCase();
+                // console.log('Checking node:', n);
+                let isMatch = false;
+                let platform = '';
+                let pathStartIdx = 2;
+
+                // Check for {{Game data|...}} wrapper
+                if (n === 'game data') {
+                    // Case A: Wrapper mode {{Game data| {{Game data/config...}} }}
+                    // In this case, param '1' contains the rows. We need to parse that content.
+                    let contentValues = getParamValueNodes(node, '1');
+
+                    if (contentValues && contentValues.length > 0) {
+                        // Recursively extract from these nodes
+                        const childRows = extractGameDataRows(contentValues, rowTemplateNames);
+                        foundRows.push(...childRows);
+                    }
+
+                    // Case B: Inline mode {{Game data|config|Platform|Path}}
+                    const typeParam = getParam(node, '1');
+                    if (typeParam) {
+                        const typeParamLower = typeParam.toLowerCase();
+                        // Map 'config' -> matches 'game data/config'
+                        // We check if any of rowTemplateNames ends with /typeParam
+                        if (rowTemplateNames.some(rt => rt.endsWith('/' + typeParamLower))) {
+                            isMatch = true;
+                            // Check if '2' is platform (Case B)
+                            // But if we are in Case A (wrapper), param '1' matched 'config', so it IS inline?
+                            // Wait, if it has content nodes (Case A), we recurse. 
+                            // If it has NO content nodes but has param '1' as 'config' (Case B), we treat as inline.
+                            // But {{Game data | ... }} where '...' starts with {{Game data/config...}}
+                            // Param '1' is the *entire* inner content.
+                            // getParam(node, '1') would be "{{Game data/config...}}".
+                            // It won't match "config".
+                            // So Case B only triggers if param '1' is literally "config" or similar.
+
+                            isMatch = true;
+                            platform = getParam(node, '2');
+                            pathStartIdx = 3;
+                        }
+                    }
+                }
+                // Check for direct {{Game data/config}} etc.
+                else if (rowTemplateNames.includes(n)) {
+                    isMatch = true;
+                    platform = getParam(node, '1');
+                    pathStartIdx = 2;
+                }
+
+                if (isMatch) {
                     const paths: string[] = [];
-                    // Support multi-arg paths: |2=Path1|3=Path2...
-                    // Start checking from index 2
-                    let i = 2;
+                    // Support multi-arg paths
+                    let i = pathStartIdx;
                     while (true) {
                         const p = getParam(node, i.toString());
                         if (!p) break;
@@ -382,7 +616,7 @@ export function parseWikitext(wikitext: string): GameData {
                         i++;
                     }
                     foundRows.push({
-                        platform: getParam(node, '1'),
+                        platform: platform,
                         paths: paths
                     });
                 }
@@ -393,12 +627,30 @@ export function parseWikitext(wikitext: string): GameData {
     };
 
     // Config
-    const configSectionNodes = getNodesInSection(/Configuration file(s|\(s\))? location|Game data/i);
+    let configSectionNodes = getNodesInSection(/Configuration file(s|\(s\))? location|Game data/i);
+
+    // Fallback: If no section found, look for {{Game data}} in root nodes
+    if (configSectionNodes.length === 0) {
+        const globalGameData = findTemplateGlobal('Game data');
+        if (globalGameData) {
+            configSectionNodes = [globalGameData];
+        }
+    }
+
     const configRows = extractGameDataRows(configSectionNodes, ['game data/config', 'game data/config tv', 'game data/config mac', 'game data/config linux']);
     data.config.configFiles = configRows;
 
     // Save Data
-    const saveSectionNodes = getNodesInSection(/Save game data location|Game data/i);
+    let saveSectionNodes = getNodesInSection(/Save game data location|Game data/i);
+
+    // Fallback: If no section found, look for {{Game data}} in root nodes
+    if (saveSectionNodes.length === 0) {
+        const globalGameData = findTemplateGlobal('Game data');
+        if (globalGameData) {
+            saveSectionNodes = [globalGameData];
+        }
+    }
+
     const saveRows = extractGameDataRows(saveSectionNodes, ['game data/saves', 'game data/saves mac', 'game data/saves linux']);
     data.config.saveData = saveRows;
 
@@ -418,16 +670,24 @@ export function parseWikitext(wikitext: string): GameData {
         mapCloud('gog galaxy', 'gogGalaxy');
         mapCloud('ea app', 'eaApp');
         mapCloud('xbox cloud', 'xboxCloud');
+        mapCloud('status', 'status');
+        data.config.cloudSync.notes = getParam(cloud, 'notes') || '';
+    }
+
+    // Essential Improvements
+    const essentialNodes = getNodesInSection('Essential improvements');
+    if (essentialNodes.length > 0) {
+        data.essentialImprovements = getWikitextContent(essentialNodes).trim();
     }
 
     // --- Video ---
     const video = findTemplateGlobal('Video');
     if (video) {
         data.video.wsgfLink = getParam(video, 'wsgf link');
-        data.video.widescreenWsgfAward = getParam(video, 'widescreen award');
-        data.video.multiMonitorWsgfAward = getParam(video, 'multimonitor award');
-        data.video.ultraWidescreenWsgfAward = getParam(video, 'ultrawidescreen award');
-        data.video.fourKUltraHdWsgfAward = getParam(video, '4k ultra hd award');
+        data.video.widescreenWsgfAward = getParam(video, 'widescreen wsgf award');
+        data.video.multiMonitorWsgfAward = getParam(video, 'multimonitor wsgf award');
+        data.video.ultraWidescreenWsgfAward = getParam(video, 'ultrawidescreen wsgf award');
+        data.video.fourKUltraHdWsgfAward = getParam(video, '4k ultra hd wsgf award');
         data.video.widescreenResolution = getParam(video, 'widescreen resolution') as any;
         data.video.widescreenResolutionNotes = getParam(video, 'widescreen resolution notes');
         data.video.multiMonitor = getParam(video, 'multimonitor') as any;
@@ -487,8 +747,8 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.controllerSensitivityNotes = getParam(input, 'controller sensitivity notes');
         data.input.invertControllerY = getParam(input, 'invert controller y-axis') as any;
         data.input.invertControllerYNotes = getParam(input, 'invert controller y-axis notes');
-        data.input.controllerHotplug = getParam(input, 'controller hotplugging') as any;
-        data.input.controllerHotplugNotes = getParam(input, 'controller hotplugging notes');
+        data.input.controllerHotplug = getParam(input, 'controller hotplug') as any;
+        data.input.controllerHotplugNotes = getParam(input, 'controller hotplug notes');
         data.input.hapticFeedback = getParam(input, 'haptic feedback') as any;
         data.input.hapticFeedbackNotes = getParam(input, 'haptic feedback notes');
         // ... missing fields can be mapped here as needed
@@ -557,6 +817,7 @@ export function parseWikitext(wikitext: string): GameData {
         data.input.steamControllerPrompts = getParam(input, 'steam controller prompts') as any;
         data.input.steamControllerPromptsNotes = getParam(input, 'steam controller prompts notes');
         data.input.steamInputMotionSensors = getParam(input, 'steam input motion sensors') as any;
+        data.input.steamInputMotionSensorsNotes = getParam(input, 'steam input motion sensors notes');
         data.input.steamInputMotionSensorsModes = getParam(input, 'steam input motion sensors modes');
         data.input.steamCursorDetection = getParam(input, 'steam cursor detection') as any;
         data.input.steamCursorDetectionNotes = getParam(input, 'steam cursor detection notes');
@@ -593,10 +854,15 @@ export function parseWikitext(wikitext: string): GameData {
     const audio = findTemplateGlobal('Audio');
     if (audio) {
         data.audio.separateVolume = getParam(audio, 'separate volume') as any;
+        data.audio.separateVolumeNotes = getParam(audio, 'separate volume notes');
         data.audio.surroundSound = getParam(audio, 'surround sound') as any;
+        data.audio.surroundSoundNotes = getParam(audio, 'surround sound notes');
         data.audio.subtitles = getParam(audio, 'subtitles') as any;
+        data.audio.subtitlesNotes = getParam(audio, 'subtitles notes');
         data.audio.closedCaptions = getParam(audio, 'closed captions') as any;
+        data.audio.closedCaptionsNotes = getParam(audio, 'closed captions notes');
         data.audio.muteOnFocusLost = getParam(audio, 'mute on focus lost') as any;
+        data.audio.muteOnFocusLostNotes = getParam(audio, 'mute on focus lost notes');
         data.audio.royaltyFree = getParam(audio, 'royalty free audio') as any;
         data.audio.royaltyFreeNotes = getParam(audio, 'royalty free audio notes');
 
@@ -778,6 +1044,10 @@ export function parseWikitext(wikitext: string): GameData {
     sysReqs.forEach(req => {
         // Try to get OS from 'OSfamily' parameter (legacy 'OS' support removed)
         let os = getParam(req, 'OSfamily');
+        console.log(`SysReqs: Parsing OSfamily=${os}`);
+        if (req.childNodes) {
+            console.log('SysReqs children:', req.childNodes.map(c => c.name).join(', '));
+        }
 
         let target: SystemRequirementsOS;
 
@@ -789,17 +1059,63 @@ export function parseWikitext(wikitext: string): GameData {
         target.notes = getParam(req, 'notes');
 
         // Use minOS and recOS for the OS version, not OSfamily
+        target.minimum.target = getParam(req, 'minTGT');
         target.minimum.os = getParam(req, 'minOS');
         target.minimum.cpu = getParam(req, 'minCPU');
+        target.minimum.cpu2 = getParam(req, 'minCPU2');
         target.minimum.ram = getParam(req, 'minRAM');
         target.minimum.hdd = getParam(req, 'minHD');
         target.minimum.gpu = getParam(req, 'minGPU');
+        target.minimum.gpu2 = getParam(req, 'minGPU2');
+        target.minimum.gpu3 = getParam(req, 'minGPU3');
+        target.minimum.vram = getParam(req, 'minVRAM');
+        target.minimum.ogl = getParam(req, 'minOGL');
+        target.minimum.dx = getParam(req, 'minDX');
+        target.minimum.sm = getParam(req, 'minSM');
+        target.minimum.audio = getParam(req, 'minaudio');
+        target.minimum.cont = getParam(req, 'mincont');
+        target.minimum.other = getParam(req, 'minother');
 
+        target.recommended.target = getParam(req, 'recTGT');
         target.recommended.os = getParam(req, 'recOS');
         target.recommended.cpu = getParam(req, 'recCPU');
+        target.recommended.cpu2 = getParam(req, 'recCPU2');
         target.recommended.ram = getParam(req, 'recRAM');
         target.recommended.hdd = getParam(req, 'recHD');
         target.recommended.gpu = getParam(req, 'recGPU');
+        target.recommended.gpu2 = getParam(req, 'recGPU2');
+        target.recommended.gpu3 = getParam(req, 'recGPU3');
+        target.recommended.vram = getParam(req, 'recVRAM');
+        target.recommended.ogl = getParam(req, 'recOGL');
+        target.recommended.dx = getParam(req, 'recDX');
+        target.recommended.sm = getParam(req, 'recSM');
+        target.recommended.audio = getParam(req, 'recaudio');
+        target.recommended.cont = getParam(req, 'reccont');
+        target.recommended.other = getParam(req, 'recother');
+
+        // Alternatives
+        const parseAlt = (prefix: string): any => ({
+            title: getParam(req, `${prefix}Title`),
+            target: getParam(req, `${prefix}TGT`),
+            os: getParam(req, `${prefix}OS`),
+            cpu: getParam(req, `${prefix}CPU`),
+            cpu2: getParam(req, `${prefix}CPU2`),
+            ram: getParam(req, `${prefix}RAM`),
+            hdd: getParam(req, `${prefix}HD`),
+            gpu: getParam(req, `${prefix}GPU`),
+            gpu2: getParam(req, `${prefix}GPU2`),
+            gpu3: getParam(req, `${prefix}GPU3`),
+            vram: getParam(req, `${prefix}VRAM`),
+            ogl: getParam(req, `${prefix}OGL`),
+            dx: getParam(req, `${prefix}DX`),
+            sm: getParam(req, `${prefix}SM`),
+            audio: getParam(req, `${prefix}audio`),
+            cont: getParam(req, `${prefix}cont`),
+            other: getParam(req, `${prefix}other`),
+        });
+
+        if (getParam(req, 'alt1OS') || getParam(req, 'alt1Title')) target.alt1 = parseAlt('alt1');
+        if (getParam(req, 'alt2OS') || getParam(req, 'alt2Title')) target.alt2 = parseAlt('alt2');
     });
 
     // --- Middleware ---
@@ -872,7 +1188,7 @@ export function parseWikitext(wikitext: string): GameData {
             switchRowNodes.forEach(node => {
                 rows.push({
                     language: getParam(node, 'language'),
-                    interface: getParam(node, 'interface') === 'true',
+                    interface: getRatingParam(node, 'interface'),
                     audio: getRatingParam(node, 'audio'),
                     subtitles: getRatingParam(node, 'subtitles'),
                     notes: getParam(node, 'notes'),
@@ -885,6 +1201,36 @@ export function parseWikitext(wikitext: string): GameData {
     }
 
 
+
+
+    // --- Issues ---
+    const parseIssues = (sectionName: string): Issue[] => {
+        // Regex to find the section and its content
+        // Matches ==Title== ... (until next ==Header== (Level 2) or end)
+        // ensure we don't stop at === (Level 3)
+        const sectionRegex = new RegExp(`==\\s*${sectionName}\\s*==([\\s\\S]*?)(?=\\n==(?!=)|$)`, 'i');
+        const match = wikitext.match(sectionRegex);
+        if (!match) return [];
+
+
+
+        const content = match[1];
+        const issues: Issue[] = [];
+
+        // Split by ===Title===
+        // Matches ===Title=== content
+        const issueMatches = content.matchAll(/===\s*(.*?)\s*===([\s\S]*?)(?=\n===|$)/g);
+        for (const m of issueMatches) {
+            issues.push({
+                title: m[1].trim(),
+                body: m[2].trim()
+            });
+        }
+        return issues;
+    };
+
+    data.issuesUnresolved = parseIssues('Issues unresolved');
+    data.issuesFixed = parseIssues('Issues fixed');
 
     // --- Galleries ---
     const extractGalleryImages = (content: string): GalleryImage[] => {

@@ -110,6 +110,17 @@ const schemas = {
     l10n: getSchema('localizations'),
 };
 
+const updateGameData = (path: string, value: any) => {
+    const newData = { ...gameData.value };
+    if (path === 'infobox') {
+        newData.infobox = value;
+    } else if (path.startsWith('galleries.')) {
+        const galKey = path.split('.')[1] as keyof typeof newData.galleries;
+        newData.galleries = { ...newData.galleries, [galKey]: value };
+    }
+    gameData.value = newData;
+};
+
 onMounted(() => {
     setTimeout(() => { uiStore.isInitialLoad = false; }, 100);
 });
@@ -174,7 +185,8 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <DynamicSection v-if="!uiStore.panelState.infobox && schemas.infobox.value"
-                                    :section="schemas.infobox.value" v-model="gameData.infobox" />
+                                    :section="schemas.infobox.value" :modelValue="gameData.infobox"
+                                    @update:modelValue="val => updateGameData('infobox', val)" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.introduction"
@@ -262,7 +274,9 @@ onMounted(() => {
                                 </template>
                                 <div class="flex flex-col gap-6">
                                     <SectionGallery v-if="!uiStore.panelState.gameData"
-                                        v-model="gameData.galleries.game_data" section="game_data" />
+                                        :modelValue="gameData.galleries.game_data"
+                                        @update:modelValue="val => updateGameData('galleries.game_data', val)"
+                                        section="game_data" />
                                     <DynamicSection v-if="!uiStore.panelState.gameData && schemas.gameData.value"
                                         :section="schemas.gameData.value" v-model="gameData" />
                                 </div>
@@ -287,7 +301,9 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.input" v-model="gameData.galleries.input"
+                                    <SectionGallery v-if="!uiStore.panelState.input"
+                                        :modelValue="gameData.galleries.input"
+                                        @update:modelValue="val => updateGameData('galleries.input', val)"
                                         section="input" />
                                     <DynamicSection v-if="!uiStore.panelState.input && schemas.input.value"
                                         :section="schemas.input.value" v-model="gameData" />
@@ -302,7 +318,9 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.audio" v-model="gameData.galleries.audio"
+                                    <SectionGallery v-if="!uiStore.panelState.audio"
+                                        :modelValue="gameData.galleries.audio"
+                                        @update:modelValue="val => updateGameData('galleries.audio', val)"
                                         section="audio" />
                                     <DynamicSection v-if="!uiStore.panelState.audio && schemas.audio.value"
                                         :section="schemas.audio.value" v-model="gameData" />
@@ -319,7 +337,9 @@ onMounted(() => {
                                 </template>
                                 <div class="flex flex-col gap-6">
                                     <SectionGallery v-if="!uiStore.panelState.network"
-                                        v-model="gameData.galleries.network" section="network" />
+                                        :modelValue="gameData.galleries.network"
+                                        @update:modelValue="val => updateGameData('galleries.network', val)"
+                                        section="network" />
                                     <DynamicSection v-if="!uiStore.panelState.network && schemas.network.value"
                                         :section="schemas.network.value" v-model="gameData" />
                                 </div>
@@ -333,7 +353,9 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.vr" v-model="gameData.galleries.vr"
+                                    <SectionGallery v-if="!uiStore.panelState.vr"
+                                        :modelValue="gameData.galleries.vr"
+                                        @update:modelValue="val => updateGameData('galleries.vr', val)"
                                         section="vr" />
                                     <DynamicSection v-if="!uiStore.panelState.vr && schemas.vr.value"
                                         :section="schemas.vr.value" v-model="gameData" />
@@ -348,7 +370,9 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.other" v-model="gameData.galleries.other"
+                                    <SectionGallery v-if="!uiStore.panelState.other"
+                                        :modelValue="gameData.galleries.other"
+                                        @update:modelValue="val => updateGameData('galleries.other', val)"
                                         section="other" />
                                     <DynamicSection v-if="!uiStore.panelState.other && schemas.api.value"
                                         :section="schemas.api.value" v-model="gameData" />
@@ -367,7 +391,9 @@ onMounted(() => {
                                 </template>
                                 <div class="flex flex-col gap-6">
                                     <SectionGallery v-if="!uiStore.panelState.systemReq"
-                                        v-model="gameData.galleries.systemReq" section="systemReq" />
+                                        :modelValue="gameData.galleries.systemReq"
+                                        @update:modelValue="val => updateGameData('galleries.systemReq', val)"
+                                        section="systemReq" />
                                     <DynamicSection v-if="!uiStore.panelState.systemReq && schemas.systemReq.value"
                                         :section="schemas.systemReq.value" v-model="gameData" />
                                 </div>

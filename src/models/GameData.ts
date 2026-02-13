@@ -493,7 +493,7 @@ export interface SettingsVR {
 
 export interface LocalizationRow {
     language: string;
-    interface: boolean;
+    interface: RatingValue;
     audio: RatingValue;
     subtitles: RatingValue;
     notes?: string;
@@ -514,7 +514,7 @@ export interface ArticleState {
     delete?: boolean;
     deleteReason?: string;
     // Phase 7 refinements
-    disambig?: string;
+    disambig?: string[];
     distinguish?: string[];
 }
 
@@ -538,6 +538,8 @@ export interface CloudSync {
     ubisoftConnectNotes?: string;
     xboxCloud: RatingValue;
     xboxCloudNotes?: string;
+    status?: RatingValue;
+    notes?: string;
 }
 
 export interface GameDataPathRow {
@@ -553,16 +555,29 @@ export interface GameDataConfig {
 }
 
 export interface SystemSpecs {
+    target?: string;
     os: string;
     cpu: string;
+    cpu2?: string;
     ram: string;
     hdd: string;
     gpu: string;
+    gpu2?: string;
+    gpu3?: string;
+    vram?: string;
+    ogl?: string;
+    dx?: string;
+    sm?: string;
+    audio?: string;
+    cont?: string;
+    other?: string;
 }
 
 export interface SystemRequirementsOS {
     minimum: SystemSpecs;
     recommended: SystemSpecs;
+    alt1?: SystemSpecs & { title?: string };
+    alt2?: SystemSpecs & { title?: string };
     notes?: string;
 }
 
@@ -663,7 +678,14 @@ export interface GalleryImage {
     caption?: string;
 }
 
+export interface Issue {
+    title: string;
+    body: string;
+}
+
 export interface GameData {
+    issuesFixed: Issue[];
+    issuesUnresolved: Issue[];
     articleState: ArticleState;
     infobox: GameInfobox;
     introduction: GameIntroduction;
@@ -681,6 +703,10 @@ export interface GameData {
     api: SettingsAPI;
     middleware: GameMiddleware;
 
+    // General Info
+    generalInfo: GeneralInfoRow[];
+
+    // Configuration & Save Data
     config: GameDataConfig;
     requirements: SystemRequirements;
     dlc: DLCRow[];
@@ -912,6 +938,7 @@ export const initialGameData: GameData = {
         multiplayer: 'unknown',
         anticheat: 'unknown',
     },
+    generalInfo: [],
     config: {
         configFiles: [
             { platform: 'Windows', paths: [''] }
@@ -965,4 +992,6 @@ export const initialGameData: GameData = {
         systemReq: [],
         game_data: [],
     },
+    issuesFixed: [],
+    issuesUnresolved: [],
 };

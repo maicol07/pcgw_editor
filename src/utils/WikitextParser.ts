@@ -97,7 +97,6 @@ export class WikitextParser {
             const start = match.index;
             let depth = 0;
             let i = start;
-            let found = false;
 
             while (i < this.wikitext.length) {
                 const char = this.wikitext[i];
@@ -118,7 +117,6 @@ export class WikitextParser {
                             end,
                             content: this.wikitext.substring(start, end)
                         });
-                        found = true;
                         break;
                     }
                     i += 2;
@@ -352,13 +350,16 @@ export class WikitextParser {
      * Format nested row templates with proper whitespace.
      * Example: developers list with multiple {{Infobox game/row/developer|...}}
      */
-    formatNestedRows(items: Array<{ type: string; name: string; params?: Record<string, string | undefined> }>): string {
+    formatNestedRows(items: Array<{ type: string; name: string; extra?: string; params?: Record<string, string | undefined> }>): string {
         if (!items || items.length === 0) {
             return '';
         }
 
         return items.map(item => {
             let row = `{{Infobox game/row/${item.type}|${item.name}`;
+            if (item.extra) {
+                row += `|${item.extra}`;
+            }
             if (item.params) {
                 Object.entries(item.params).forEach(([key, value]) => {
                     if (value !== undefined && value !== null && value !== '') {
@@ -458,5 +459,34 @@ export class WikitextParser {
      */
     private escapeRegex(str: string): string {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+     * Replace a section with a custom header regex.
+     * Does not enforce == wrapping around the header.
+     */
+    replaceCustomSection(headerRegex: RegExp, newContent: string, defaultHeader: string): void {
+        const match = this.wikitext.match(headerRegex);
+
+        if (match && match.index !== undefined) {
+            const start = match.index + match[0].length;
+
+            // Find the next section or end of text
+            // We assume standard sections follow
+            const nextSectionRegex = /\n==/;
+            const remaining = this.wikitext.substring(start);
+            const nextMatch = remaining.match(nextSectionRegex);
+
+            const end = nextMatch && nextMatch.index !== undefined ? start + nextMatch.index : this.wikitext.length;
+
+            const before = this.wikitext.substring(0, start);
+            const after = this.wikitext.substring(end);
+
+            this.wikitext = before + '\n' + newContent + '\n' + after;
+        } else {
+            // Append new section
+            const needsNewline = this.wikitext.length > 0 && !this.wikitext.endsWith('\n');
+            this.wikitext += `${needsNewline ? '\n' : ''}\n${defaultHeader}\n${newContent}\n`;
+        }
     }
 }

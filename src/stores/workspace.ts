@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
 import { initialGameData, GameData } from '../models/GameData';
-import { computed, shallowRef, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { generateWikitext } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
 
@@ -25,8 +25,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         return pages.value.find(p => p.id === activePageId.value);
     });
 
-    // State for the parsed game data to avoid redundant parsing
-    const _activeGameData = shallowRef<GameData>(initialGameData);
+    // State for the parsed game data. Using ref + deep watch ensures real-time sync to wikitext.
+    const _activeGameData = ref<GameData>(JSON.parse(JSON.stringify(initialGameData)));
 
     // Watch for page changes to reset/parse data
     watch(activePageId, () => {
@@ -35,23 +35,36 @@ export const useWorkspaceStore = defineStore('workspace', () => {
                 _activeGameData.value = parseWikitext(activePage.value.wikitext);
             } catch (e) {
                 console.error('Failed to parse wikitext on page switch:', e);
-                _activeGameData.value = initialGameData;
+                _activeGameData.value = JSON.parse(JSON.stringify(initialGameData));
             }
         } else {
-            _activeGameData.value = initialGameData;
+            _activeGameData.value = JSON.parse(JSON.stringify(initialGameData));
         }
     }, { immediate: true });
+
+    // Deep watch to sync UI changes back to wikitext.
+    // This solves the issue where nested updates (like engines or galleries)
+    // bypass the computed setter in DynamicSection bindings.
+    watch(_activeGameData, (newData) => {
+        if (activePage.value) {
+            const newWikitext = generateWikitext(newData, activePage.value.baseWikitext);
+            if (activePage.value.wikitext !== newWikitext) {
+                activePage.value.wikitext = newWikitext;
+                activePage.value.lastModified = Date.now();
+            }
+        }
+    }, { deep: true });
 
     const activeGameData = computed({
         get: () => _activeGameData.value,
         set: (newData: GameData) => {
             _activeGameData.value = newData;
-            // Debounced or explicit sync to wikitext is better, 
-            // but for compatibility with existing App.vue watchers we keep direct set for now
-            // and optimize the App.vue side next.
             if (activePage.value) {
-                activePage.value.wikitext = generateWikitext(newData, activePage.value.baseWikitext);
-                activePage.value.lastModified = Date.now();
+                const newWikitext = generateWikitext(newData, activePage.value.baseWikitext);
+                if (activePage.value.wikitext !== newWikitext) {
+                    activePage.value.wikitext = newWikitext;
+                    activePage.value.lastModified = Date.now();
+                }
             }
         }
     });
