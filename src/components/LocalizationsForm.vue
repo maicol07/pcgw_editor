@@ -13,19 +13,19 @@ import { FlagIcon } from '@placetopay/flagicons-vue';
 const localizations = defineModel<LocalizationRow[]>('localizations', { required: true });
 
 const addRow = () => {
-  localizations.value.push({
-    language: '',
-    interface: false,
-    audio: 'unknown',
-    subtitles: 'unknown',
-    notes: '',
-    fan: false,
-    ref: ''
-  });
+    localizations.value = [...localizations.value, {
+        language: '',
+        interface: 'false',
+        audio: 'unknown',
+        subtitles: 'unknown',
+        notes: '',
+        fan: false,
+        ref: ''
+    }];
 };
 
 const removeRow = (index: number) => {
-  localizations.value.splice(index, 1);
+    localizations.value = localizations.value.filter((_, i) => i !== index);
 };
 
 // Common languages map to ISO codes for flag icons
@@ -61,84 +61,84 @@ const getFlagCode = (lang: string) => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-      <div v-for="(row, index) in localizations" :key="index" class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group">
-        
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
-            <!-- Language -->
-            <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
-                <label class="text-xs font-bold text-surface-500">Language</label>
-                <div class="flex gap-2">
-                    <Select 
-                        v-model="row.language" 
-                        :options="commonLanguages" 
-                        optionLabel="label" 
-                        optionValue="value"
-                        editable 
-                        placeholder="Select or type..." 
-                        class="w-full"
-                    >
-                        <template #value="slotProps">
-                            <div class="flex items-center gap-2" v-if="slotProps.value">
-                                <FlagIcon :flag="getFlagCode(slotProps.value) as any" v-if="getFlagCode(slotProps.value)" size="M" class="rounded" />
-                                <span v-else>🏳️</span>
-                                <span>{{ slotProps.value }}</span>
-                            </div>
-                            <span v-else>{{ slotProps.placeholder }}</span>
-                        </template>
-                        <template #option="slotProps">
-                            <div class="flex items-center gap-2">
-                                <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
-                                <span>{{ slotProps.option.label }}</span>
-                            </div>
-                        </template>
-                    </Select>
+    <div class="flex flex-col gap-2">
+        <div v-for="(row, index) in localizations" :key="index"
+            class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group">
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
+                <!-- Language -->
+                <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
+                    <label class="text-xs font-bold text-surface-500">Language</label>
+                    <div class="flex gap-2">
+                        <Select v-model="row.language" :options="commonLanguages" optionLabel="label"
+                            optionValue="value" editable placeholder="Select or type..." class="w-full">
+                            <template #value="slotProps">
+                                <div class="flex items-center gap-2" v-if="slotProps.value">
+                                    <FlagIcon :flag="getFlagCode(slotProps.value) as any"
+                                        v-if="getFlagCode(slotProps.value)" size="M" class="rounded" />
+                                    <span v-else>🏳️</span>
+                                    <span>{{ slotProps.value }}</span>
+                                </div>
+                                <span v-else>{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex items-center gap-2">
+                                    <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
+                                    <span>{{ slotProps.option.label }}</span>
+                                </div>
+                            </template>
+                        </Select>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Interface -->
-            <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
-                <label class="text-xs font-bold text-surface-500">UI</label>
-                <div class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
-                    <Checkbox v-model="row.interface" binary />
+
+                <!-- Interface -->
+                <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
+                    <label class="text-xs font-bold text-surface-500">UI</label>
+                    <div
+                        class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
+                        <Checkbox v-model="row.interface" true-value="true" false-value="false" />
+                    </div>
                 </div>
-            </div>
 
-            <!-- Audio -->
-            <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                 <label class="text-xs font-bold text-surface-500">Audio</label>
-                 <RatingSelect v-model="row.audio" />
-            </div>
+                <!-- Audio -->
+                <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
+                    <label class="text-xs font-bold text-surface-500">Audio</label>
+                    <RatingSelect v-model="row.audio" />
+                </div>
 
-            <!-- Subtitles -->
-            <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                 <label class="text-xs font-bold text-surface-500">Subtitles</label>
-                 <RatingSelect v-model="row.subtitles" />
-            </div>
-            
-             <!-- Notes & Fan -->
-            <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
-                 <div class="flex-1 flex flex-col gap-1">
-                     <label class="text-xs font-bold text-surface-500">Notes</label>
-                     <InputText v-model="row.notes" class="w-full" placeholder="Notes..." />
-                 </div>
-                 <div class="flex flex-col gap-1 items-center pb-2" title="Fan Translation">
-                      <label class="text-[10px] font-bold text-surface-400">FAN</label>
-                      <Checkbox v-model="row.fan" binary />
-                 </div>
-            </div>
+                <!-- Subtitles -->
+                <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
+                    <label class="text-xs font-bold text-surface-500">Subtitles</label>
+                    <RatingSelect v-model="row.subtitles" />
+                </div>
 
-            <!-- Delete Button (Last column) -->
-             <div class="md:col-span-2 lg:col-span-1 flex justify-end pb-1">
-                <Button severity="danger" text @click="removeRow(index)" title="Remove Language">
-                    <template #icon><Trash2 class="w-4 h-4" /></template>
-                 </Button>
+                <!-- Notes & Fan -->
+                <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
+                    <div class="flex-1 flex flex-col gap-1">
+                        <label class="text-xs font-bold text-surface-500">Notes</label>
+                        <InputText v-model="row.notes" class="w-full" placeholder="Notes..." />
+                    </div>
+                    <div class="flex flex-col gap-1 items-center pb-2" title="Fan Translation">
+                        <label class="text-[10px] font-bold text-surface-400">FAN</label>
+                        <Checkbox v-model="row.fan" binary />
+                    </div>
+                </div>
+
+                <!-- Delete Button (Last column) -->
+                <div class="md:col-span-2 lg:col-span-1 flex justify-end pb-1">
+                    <Button severity="danger" text @click="removeRow(index)" title="Remove Language">
+                        <template #icon>
+                            <Trash2 class="w-4 h-4" />
+                        </template>
+                    </Button>
+                </div>
             </div>
         </div>
-      </div>
-      
-      <Button label="Add Language" @click="addRow" outlined class="w-full border-dashed">
-        <template #icon><Plus class="w-4 h-4" /></template>
-      </Button>
-  </div>
+
+        <Button label="Add Language" @click="addRow" outlined class="w-full border-dashed">
+            <template #icon>
+                <Plus class="w-4 h-4" />
+            </template>
+        </Button>
+    </div>
 </template>
