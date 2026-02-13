@@ -28,7 +28,7 @@ const editorModeOptions = ['Visual', 'Code'];
 
 // Density mode mapping
 const densityModes: Array<'normal' | 'comfortable' | 'compact'> = ['normal', 'comfortable', 'compact'];
-const densityLabels = ['Normale', 'Comfortable', 'Compatta'];
+const densityLabels = ['Normal', 'Comfortable', 'Compact'];
 
 const densityValue = ref(densityModes.indexOf(uiStore.densityMode));
 const densityLabel = ref(densityLabels[densityValue.value]);
@@ -78,7 +78,7 @@ const updateDensity = (value: number | number[]) => {
 
         <template #end>
             <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2" v-tooltip.bottom="'Densità UI: Normale ⟷ Comfortable ⟷ Compatta'">
+                <div class="flex items-center gap-2" v-tooltip.bottom="'UI Density: Normal ⟷ Comfortable ⟷ Compact'">
                     <LayoutList class="w-4 h-4 text-surface-500 dark:text-surface-400" />
                     <Slider v-model="densityValue" :min="0" :max="2" :step="1" class="w-20"
                         @update:modelValue="updateDensity" />
