@@ -1,5 +1,5 @@
-import { SectionDefinition } from '../types/schema';
-import { InfoboxListItem } from '../models/GameData';
+import { SectionDefinition, FieldDefinition } from '../types/schema';
+import { FieldComponent } from '../types/components';
 import {
     Info, Save, Image, IdCard, Users, Building, Calendar,
     ShoppingCart, ShoppingBag, Globe, Terminal, Box,
@@ -9,20 +9,31 @@ import {
     Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet, Settings, Plug, Smartphone, Search, Hand, Wifi, Headset,
     Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle
 } from 'lucide-vue-next';
+import { FIELD_DEFINITIONS } from './fieldDefinitions';
+import * as h from './fieldHelpers';
 
-// Helper for formatting Infobox Lists
-const infoboxListParser = (_wikitext: string): InfoboxListItem[] => {
-    // Basic parser placeholder - relies on WikitextParser usually
-    return [];
-};
-
-const infoboxListFormatter = (values: InfoboxListItem[]): string => {
-    if (!Array.isArray(values) || values.length === 0) return '';
-    return values.map(item => `{{Infobox game/row/${item.type || 'developer'}|${item.name}}}`).join('\n');
-};
-
-const gameDataConfigParser = (wikitext: string): any => {
-    return { detected: true, raw: wikitext };
+// Helper to merge metadata with UI options
+// e.g. f('cover', { component: 'CoverImageField', label: 'Cover' })
+const f = <C extends FieldComponent>(
+    id: string,
+    uiOptions: C & Omit<Partial<FieldDefinition>, 'component' | 'componentProps'>
+): FieldDefinition => {
+    const meta = FIELD_DEFINITIONS[id];
+    if (!meta) {
+        console.warn(`Missing metadata for field: ${id}`);
+        // Return uiOptions as fallback, assuming it has required props if metadata is missing
+        return { key: id, ...uiOptions } as FieldDefinition;
+    }
+    // Metadata takes precedence for data logic, UI options for display
+    return {
+        key: id,
+        ...uiOptions,
+        wikitextParam: meta.wikitextParam,
+        defaultValue: meta.defaultValue,
+        parser: meta.parser,
+        formatter: meta.formatter,
+        writer: meta.writer
+    } as FieldDefinition;
 };
 
 export const fieldsConfig: SectionDefinition[] = [
@@ -39,147 +50,102 @@ export const fieldsConfig: SectionDefinition[] = [
                 title: 'Basic Information',
                 gridCols: 2,
                 fields: [
-                    {
-                        key: 'cover',
-                        label: 'Cover Image Filename',
+                    f('cover', h.cover('Cover Image Filename', {
+                        placeholder: 'e.g. GAME TITLE cover.jpg'
+                    }, {
                         icon: Image,
-                        component: 'CoverImageField',
-                        wikitextParam: 'cover',
-                        defaultValue: 'GAME TITLE cover.jpg',
-                        description: "Search PCGW files or enter name. Click Upload to add new.",
-                        componentProps: {
-                            placeholder: 'e.g. GAME TITLE cover.jpg'
-                        }
-                    },
-                    {
-                        key: 'license',
-                        label: 'License',
+                        description: "Search PCGW files or enter name. Click Upload to add new."
+                    })),
+                    f('license', h.select('License', {
+                        placeholder: 'Select license',
+                        options: [
+                            { label: 'Commercial', value: 'commercial', description: 'Proprietary software sold commercially' },
+                            { label: 'Freeware', value: 'freeware', description: 'Free to use but proprietary' },
+                            { label: 'Open Source / Free Software', value: 'open source', description: 'Free and open source licensed' },
+                            { label: 'Abandonware', value: 'abandonware', description: 'No longer supported or sold' },
+                            { label: 'Donationware', value: 'donationware', description: 'Free with optional donations' },
+                            { label: 'Shareware', value: 'shareware', description: 'Try before you buy' },
+                        ]
+                    }, {
                         icon: IdCard,
                         iconClass: 'text-orange-500',
-                        component: 'Select',
-                        wikitextParam: 'license',
-                        defaultValue: 'commercial',
-                        description: "The licensing model of the game.",
-                        componentProps: {
-                            placeholder: 'Select license',
-                            options: [
-                                { label: 'Commercial', value: 'commercial', description: 'Proprietary software sold commercially' },
-                                { label: 'Freeware', value: 'freeware', description: 'Free to use but proprietary' },
-                                { label: 'Open Source / Free Software', value: 'open source', description: 'Free and open source licensed' },
-                                { label: 'Abandonware', value: 'abandonware', description: 'No longer supported or sold' },
-                                { label: 'Donationware', value: 'donationware', description: 'Free with optional donations' },
-                                { label: 'Shareware', value: 'shareware', description: 'Try before you buy' },
-                            ]
-                        }
-                    },
-                    {
-                        key: 'developers',
-                        label: 'Developers',
+                        description: "The licensing model of the game."
+                    })),
+                    f('developers', h.developers('Developers', {
+                        dataSource: 'companies',
+                        placeholder: 'Search for developers...'
+                    }, {
                         icon: Users,
-                        component: 'InfoboxDevelopersEditor',
-                        wikitextParam: 'developers',
-                        defaultValue: [],
-                        description: 'The entity that created the game.',
-                        componentProps: {
-                            dataSource: 'companies',
-                            placeholder: 'Search for developers...'
-                        },
-                        parser: infoboxListParser,
-                        formatter: infoboxListFormatter
-                    },
-                    {
-                        key: 'publishers',
-                        label: 'Publishers',
+                        description: 'The entity that created the game.'
+                    })),
+                    f('publishers', h.publishers('Publishers', {
+                        dataSource: 'companies',
+                        placeholder: 'Search for publishers...'
+                    }, {
                         icon: Building,
-                        component: 'InfoboxPublishersEditor',
-                        wikitextParam: 'publishers',
-                        defaultValue: [],
-                        description: 'The entity that published the game.',
-                        componentProps: {
-                            dataSource: 'companies',
-                            placeholder: 'Search for publishers...'
-                        },
-                        parser: infoboxListParser,
-                        formatter: infoboxListFormatter
-                    },
-                    {
-                        key: 'engines',
-                        label: 'Engines',
-                        // icon: Settings, 
-                        component: 'InfoboxEnginesEditor',
-                        wikitextParam: 'engines',
-                        defaultValue: [],
+                        description: 'The entity that published the game.'
+                    })),
+                    f('engines', h.engines('Engines', {
+                        placeholder: 'Search for engines...'
+                    }, {
                         description: 'The game engine used.',
-                        colSpan: 2,
-                        componentProps: {
-                            placeholder: 'Search for engines...'
-                        }
-                    },
-                    {
-                        key: 'releaseDates',
-                        label: 'Release Dates',
+                        colSpan: 2
+                    })),
+                    f('releaseDates', h.releaseDates('Release Dates', {
                         icon: Calendar,
-                        component: 'InfoboxReleaseDates',
-                        wikitextParam: 'release_dates',
-                        defaultValue: [],
                         description: 'Original release dates for each platform.',
-                        colSpan: 2,
-                    }
+                        colSpan: 2
+                    }))
                 ]
             },
             {
                 title: 'Reception',
                 fields: [
-                    {
-                        key: 'reception',
-                        label: 'Reception',
-                        component: 'InfoboxReception',
-                        wikitextParam: 'reception',
-                        defaultValue: [],
+                    f('reception', h.reception('Reception', {
                         description: 'Review scores from various aggregators.'
-                    }
+                    }))
                 ]
             },
             {
                 title: 'Taxonomy',
                 gridCols: 'repeat(auto-fill, minmax(350px, 1fr))',
                 fields: [
-                    { key: 'taxonomy.monetization', label: 'Monetization', component: 'TaxonomyField', wikitextParam: 'monetization', defaultValue: { value: '' }, description: 'Primary business model(s)', componentProps: { dataSource: 'monetization', placeholder: 'Select...' } },
-                    { key: 'taxonomy.microtransactions', label: 'Microtransactions', component: 'TaxonomyField', wikitextParam: 'microtransactions', defaultValue: { value: '' }, description: 'Type of in-game purchases', componentProps: { dataSource: 'microtransactions', placeholder: 'Select...' } },
-                    { key: 'taxonomy.modes', label: 'Modes', component: 'TaxonomyField', wikitextParam: 'modes', defaultValue: { value: '' }, description: 'Available game modes', componentProps: { dataSource: 'modes', placeholder: 'Select...' } },
-                    { key: 'taxonomy.pacing', label: 'Pacing', component: 'TaxonomyField', wikitextParam: 'pacing', defaultValue: { value: '' }, description: 'Game pacing type', componentProps: { dataSource: 'pacing', placeholder: 'Select...' } },
-                    { key: 'taxonomy.perspectives', label: 'Perspectives', component: 'TaxonomyField', wikitextParam: 'perspectives', defaultValue: { value: '' }, description: 'Camera perspectives', componentProps: { dataSource: 'perspectives', placeholder: 'Select...' } },
-                    { key: 'taxonomy.controls', label: 'Controls', component: 'TaxonomyField', wikitextParam: 'controls', defaultValue: { value: '' }, description: 'Control scheme type', componentProps: { dataSource: 'controls', placeholder: 'Select...' } },
-                    { key: 'taxonomy.genres', label: 'Genres', component: 'TaxonomyField', wikitextParam: 'genres', defaultValue: { value: '' }, description: 'Game genre(s)', componentProps: { dataSource: 'genres', placeholder: 'Select...' } },
-                    { key: 'taxonomy.sports', label: 'Sports', component: 'TaxonomyField', wikitextParam: 'sports', defaultValue: { value: '' }, description: 'Sports category', componentProps: { dataSource: 'sports', placeholder: 'Select...' } },
-                    { key: 'taxonomy.vehicles', label: 'Vehicles', component: 'TaxonomyField', wikitextParam: 'vehicles', defaultValue: { value: '' }, description: 'Vehicle types', componentProps: { dataSource: 'vehicles', placeholder: 'Select...' } },
-                    { key: 'taxonomy.artStyles', label: 'Art Styles', component: 'TaxonomyField', wikitextParam: 'art_styles', defaultValue: { value: '' }, description: 'Visual art style', componentProps: { dataSource: 'artStyles', placeholder: 'Select...' } },
-                    { key: 'taxonomy.themes', label: 'Themes', component: 'TaxonomyField', wikitextParam: 'themes', defaultValue: { value: '' }, description: 'Story/setting themes', componentProps: { dataSource: 'themes', placeholder: 'Select...' } },
-                    { key: 'taxonomy.series', label: 'Series', component: 'TaxonomyField', wikitextParam: 'series', defaultValue: { value: '' }, description: 'Game series/franchise', componentProps: { dataSource: 'series', placeholder: 'Select...' } },
+                    f('taxonomy.monetization', h.taxonomy('Monetization', { dataSource: 'monetization', placeholder: 'Select...' }, { description: 'Primary business model(s)' })),
+                    f('taxonomy.microtransactions', h.taxonomy('Microtransactions', { dataSource: 'microtransactions', placeholder: 'Select...' }, { description: 'Type of in-game purchases' })),
+                    f('taxonomy.modes', h.taxonomy('Modes', { dataSource: 'modes', placeholder: 'Select...' }, { description: 'Available game modes' })),
+                    f('taxonomy.pacing', h.taxonomy('Pacing', { dataSource: 'pacing', placeholder: 'Select...' }, { description: 'Game pacing type' })),
+                    f('taxonomy.perspectives', h.taxonomy('Perspectives', { dataSource: 'perspectives', placeholder: 'Select...' }, { description: 'Camera perspectives' })),
+                    f('taxonomy.controls', h.taxonomy('Controls', { dataSource: 'controls', placeholder: 'Select...' }, { description: 'Control scheme type' })),
+                    f('taxonomy.genres', h.taxonomy('Genres', { dataSource: 'genres', placeholder: 'Select...' }, { description: 'Game genre(s)' })),
+                    f('taxonomy.sports', h.taxonomy('Sports', { dataSource: 'sports', placeholder: 'Select...' }, { description: 'Sports category' })),
+                    f('taxonomy.vehicles', h.taxonomy('Vehicles', { dataSource: 'vehicles', placeholder: 'Select...' }, { description: 'Vehicle types' })),
+                    f('taxonomy.artStyles', h.taxonomy('Art Styles', { dataSource: 'artStyles', placeholder: 'Select...' }, { description: 'Visual art style' })),
+                    f('taxonomy.themes', h.taxonomy('Themes', { dataSource: 'themes', placeholder: 'Select...' }, { description: 'Story/setting themes' })),
+                    f('taxonomy.series', h.taxonomy('Series', { dataSource: 'series', placeholder: 'Select...' }, { description: 'Game series/franchise' })),
                 ]
             },
             {
                 title: 'External Links',
                 gridCols: 3,
                 fields: [
-                    { key: 'links.steamAppId', label: 'Steam App ID', icon: ShoppingCart, iconClass: 'text-blue-500', component: 'InputText', wikitextParam: 'steam_appid', description: 'Numeric ID from URL', componentProps: { placeholder: 'e.g. 220' } },
-                    { key: 'links.steamAppIdSide', label: 'Steam Side Param', component: 'InputText', wikitextParam: 'steam_appid_side', description: 'Optional side parameter', componentProps: { placeholder: 'e.g. sub/123' } },
-                    { key: 'links.officialSite', label: 'Official Site', icon: Globe, iconClass: 'text-green-500', component: 'InputText', wikitextParam: 'official_site', description: 'URL to official website', componentProps: { placeholder: 'https://...' } },
+                    f('links.steamAppId', h.text('Steam App ID', { placeholder: 'e.g. 220' }, { icon: ShoppingCart, iconClass: 'text-blue-500', description: 'Numeric ID from URL' })),
+                    f('links.steamAppIdSide', h.text('Steam Side Param', { placeholder: 'e.g. sub/123' }, { description: 'Optional side parameter' })),
+                    f('links.officialSite', h.text('Official Site', { placeholder: 'https://...' }, { icon: Globe, iconClass: 'text-green-500', description: 'URL to official website' })),
 
-                    { key: 'links.gogComId', label: 'GOG.com ID', icon: ShoppingBag, iconClass: 'text-purple-500', component: 'InputText', wikitextParam: 'gogcom_id', description: 'Slug from URL', componentProps: { placeholder: 'e.g. game_title' } },
-                    { key: 'links.gogComIdSide', label: 'GOG Side Param', component: 'InputText', wikitextParam: 'gogcom_id_side', description: 'Optional side parameter', componentProps: { placeholder: '' } },
-                    { key: 'links.hltb', label: 'HLTB ID', component: 'InputText', wikitextParam: 'hltb', description: 'HowLongToBeat ID', componentProps: { placeholder: 'e.g. 12345' } },
+                    f('links.gogComId', h.text('GOG.com ID', { placeholder: 'e.g. game_title' }, { icon: ShoppingBag, iconClass: 'text-purple-500', description: 'Slug from URL' })),
+                    f('links.gogComIdSide', h.text('GOG Side Param', { placeholder: '' }, { description: 'Optional side parameter' })),
+                    f('links.hltb', h.text('HLTB ID', { placeholder: 'e.g. 12345' }, { description: 'HowLongToBeat ID' })),
 
-                    { key: 'links.igdb', label: 'IGDB Slug', component: 'InputText', wikitextParam: 'igdb', description: 'Slug from IGDB URL', componentProps: { placeholder: 'e.g. game-title' } },
-                    { key: 'links.mobygames', label: 'MobyGames Slug', component: 'InputText', wikitextParam: 'mobygames', description: 'Slug from MobyGames URL', componentProps: { placeholder: 'e.g. game-title' } },
-                    { key: 'links.strategyWiki', label: 'StrategyWiki', component: 'InputText', wikitextParam: 'strategywiki', description: 'Slug from StrategyWiki', componentProps: { placeholder: 'e.g. Game_Title' } },
+                    f('links.igdb', h.text('IGDB Slug', { placeholder: 'e.g. game-title' }, { description: 'Slug from IGDB URL' })),
+                    f('links.mobygames', h.text('MobyGames Slug', { placeholder: 'e.g. game-title' }, { description: 'Slug from MobyGames URL' })),
+                    f('links.strategyWiki', h.text('StrategyWiki', { placeholder: 'e.g. Game_Title' }, { description: 'Slug from StrategyWiki' })),
 
-                    { key: 'links.wikipedia', label: 'Wikipedia', component: 'InputText', wikitextParam: 'wikipedia', description: 'Article title', componentProps: { placeholder: 'e.g. Game Title' } },
-                    { key: 'links.vndb', label: 'VNDB ID', component: 'InputText', wikitextParam: 'vndb', description: 'ID starting with v', componentProps: { placeholder: 'e.g. v123' } },
-                    { key: 'links.lutris', label: 'Lutris Slug', icon: Terminal, iconClass: 'text-orange-500', component: 'InputText', wikitextParam: 'lutris', description: 'Slug from Lutris', componentProps: { placeholder: 'e.g. game-title' } },
+                    f('links.wikipedia', h.text('Wikipedia', { placeholder: 'e.g. Game Title' }, { description: 'Article title' })),
+                    f('links.vndb', h.text('VNDB ID', { placeholder: 'e.g. v123' }, { description: 'ID starting with v' })),
+                    f('links.lutris', h.text('Lutris Slug', { placeholder: 'e.g. game-title' }, { icon: Terminal, iconClass: 'text-orange-500', description: 'Slug from Lutris' })),
 
-                    { key: 'links.wineHq', label: 'WineHQ Slug', icon: Box, iconClass: 'text-red-500', component: 'InputText', wikitextParam: 'winehq', description: 'ID from WineHQ AppDB', componentProps: { placeholder: 'e.g. 1234' } },
-                    { key: 'links.wineHqSide', label: 'WineHQ Side Param', component: 'InputText', wikitextParam: 'winehq_side', description: 'Optional side parameter', componentProps: { placeholder: '' } }
+                    f('links.wineHq', h.text('WineHQ Slug', { placeholder: 'e.g. 1234' }, { icon: Box, iconClass: 'text-red-500', description: 'ID from WineHQ AppDB' })),
+                    f('links.wineHqSide', h.text('WineHQ Side Param', { placeholder: '' }, { description: 'Optional side parameter' }))
                 ]
             },
 
@@ -195,24 +161,8 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Clarification Tags',
                 fields: [
-                    {
-                        key: 'articleState.disambig',
-                        label: 'Disambiguation',
-                        icon: GitFork,
-                        component: 'InputText',
-                        wikitextParam: 'disambig',
-                        description: 'Used to distinguish movies/books or other games with the same name.',
-                        componentProps: { placeholder: 'e.g. the original game' }
-                    },
-                    {
-                        key: 'articleState.distinguish',
-                        label: 'Distinguish',
-                        icon: Tags,
-                        component: 'InputChips',
-                        wikitextParam: 'distinguish',
-                        description: 'List closely related but not identical titles.',
-                        componentProps: { placeholder: 'Type page name and press enter' }
-                    }
+                    f('articleState.disambig', h.text('Disambiguation', { placeholder: 'e.g. the original game' }, { icon: GitFork, description: 'Used to distinguish movies/books or other games with the same name.' })),
+                    f('articleState.distinguish', h.chips('Distinguish', { placeholder: 'Type page name and press enter' }, { icon: Tags, description: 'List closely related but not identical titles.' })),
                 ]
             },
             {
@@ -227,78 +177,29 @@ export const fieldsConfig: SectionDefinition[] = [
                         showIf: (m: any) => m.articleState?.stub,
                         colSpan: 2,
                     },
-                    {
-                        key: 'articleState.stub',
-                        label: 'Stub',
-                        icon: AlertCircle,
-                        iconClass: 'text-yellow-500',
-                        component: 'Checkbox',
-                        wikitextParam: '',
-                        description: 'Missing minimum requirements.',
-                        componentProps: { binary: true }
-                    },
-                    {
-                        key: 'articleState.cleanup',
-                        label: 'Needs Cleanup',
-                        icon: Brush,
-                        iconClass: 'text-orange-500',
-                        component: 'Checkbox',
-                        wikitextParam: '',
-                        description: 'Formatting or outdated content.',
-                        componentProps: { binary: true }
-                    },
-                    {
-                        key: 'articleState.cleanupDescription',
-                        label: 'Cleanup Reason',
-                        component: 'Textarea',
-                        wikitextParam: '',
-                        showIf: (m: any) => m.articleState?.cleanup,
-                        componentProps: { rows: 2, autoResize: true, placeholder: 'Reason for cleanup...' },
-                        colSpan: 2
-                    },
-                    {
-                        key: 'articleState.delete',
-                        label: 'Delete Request',
-                        icon: Trash2,
-                        iconClass: 'text-red-500',
-                        component: 'Checkbox',
-                        wikitextParam: '',
-                        description: 'Remove this page from wiki.',
-                        componentProps: { binary: true }
-                    },
-                    {
-                        key: 'articleState.deleteReason',
-                        label: 'Deletion Reason',
-                        component: 'Textarea',
-                        wikitextParam: '',
-                        showIf: (m: any) => m.articleState?.delete,
-                        componentProps: { rows: 2, autoResize: true, placeholder: 'Reason for deletion...' },
-                        colSpan: 2
-                    }
+                    f('articleState.stub', h.checkbox('Stub', { binary: true }, { icon: AlertCircle, iconClass: 'text-yellow-500', description: 'Missing minimum requirements.' })),
+                    f('articleState.cleanup', h.checkbox('Needs Cleanup', { binary: true }, { icon: Brush, iconClass: 'text-orange-500', description: 'Formatting or outdated content.' })),
+                    f('articleState.cleanupDescription', h.textarea('Cleanup Reason', { rows: 2, autoResize: true, placeholder: 'Reason for cleanup...' }, { showIf: (m: any) => m.articleState?.cleanup, colSpan: 2 })),
+                    f('articleState.delete', h.checkbox('Delete Request', { binary: true }, { icon: Trash2, iconClass: 'text-red-500', description: 'Remove this page from wiki.' })),
+                    f('articleState.deleteReason', h.textarea('Deletion Reason', { rows: 2, autoResize: true, placeholder: 'Reason for deletion...' }, { showIf: (m: any) => m.articleState?.delete, colSpan: 2 }))
                 ]
             },
             {
                 title: 'Development State',
                 fields: [
-                    {
-                        key: 'articleState.state',
-                        label: 'Game State',
-                        icon: Gamepad2,
-                        component: 'Select',
-                        wikitextParam: '',
-                        defaultValue: '',
-                        componentProps: {
-                            options: [
-                                { label: 'None', value: '', icon: '⚪', description: 'No development status' },
-                                { label: 'Prototype', value: 'prototype', icon: '🔬', description: 'Prototype version' },
-                                { label: 'Development / Early Access', value: 'dev', icon: '🚧', description: 'Active development or EA' },
-                                { label: 'Post-Development', value: 'postdev', icon: '🔄', description: 'Continued development post-release' },
-                                { label: 'Unknown', value: 'unknown', icon: '❓', description: 'No updates, unlikely' },
-                                { label: 'Abandoned', value: 'abandoned', icon: '💀', description: 'Officially cancelled' },
-                                { label: 'Unplayable', value: 'unplayable', icon: '🚫', description: 'Servers shut down' },
-                            ]
-                        }
-                    }
+                    f('articleState.state', h.select('Game State', {
+                        options: [
+                            { label: 'None', value: '', icon: '⚪', description: 'No development status' },
+                            { label: 'Prototype', value: 'prototype', icon: '🔬', description: 'Prototype version' },
+                            { label: 'Development / Early Access', value: 'dev', icon: '🚧', description: 'Active development or EA' },
+                            { label: 'Post-Development', value: 'postdev', icon: '🔄', description: 'Continued development post-release' },
+                            { label: 'Unknown', value: 'unknown', icon: '❓', description: 'No updates, unlikely' },
+                            { label: 'Abandoned', value: 'abandoned', icon: '💀', description: 'Officially cancelled' },
+                            { label: 'Unplayable', value: 'unplayable', icon: '🚫', description: 'Servers shut down' },
+                        ]
+                    }, {
+                        icon: Gamepad2
+                    }))
                 ]
             }
         ]
@@ -311,41 +212,22 @@ export const fieldsConfig: SectionDefinition[] = [
         order: 2,
         gridCols: 2,
         fields: [
-            {
-                key: 'introduction.introduction',
-                label: 'Introduction',
-                component: 'Textarea',
-                wikitextParam: 'introduction',
+            f('introduction.introduction', h.textarea('Introduction', {
+                rows: 4,
+                autoResize: true,
+                placeholder: "'''''Title''''' is a..."
+            }, {
                 description: "The first instance of the game title in introduction should be written as '''''Title'''''",
-                componentProps: {
-                    rows: 4,
-                    autoResize: true,
-                    placeholder: "'''''Title''''' is a..."
-                },
                 colSpan: 2
-            },
-            {
-                key: 'introduction.releaseHistory',
-                label: 'Release History',
-                component: 'Textarea',
-                wikitextParam: 'release_history',
-                componentProps: {
-                    rows: 3,
-                    autoResize: true,
-                    placeholder: "Game was first released on..."
-                }
-            },
-            {
-                key: 'introduction.currentState',
-                label: 'Current State',
-                component: 'Textarea',
-                wikitextParam: 'current_state',
-                componentProps: {
-                    rows: 3,
-                    autoResize: true,
-                    placeholder: "Current major issues..."
-                }
-            }
+            })),
+            f('introduction.releaseHistory', h.textarea('Release History', {
+                rows: 4,
+                autoResize: true,
+                placeholder: "'''Title''' was released on..."
+            }, {
+                description: "Notes about the original release, re-releases, and ports.",
+                colSpan: 2
+            }))
         ]
     },
     {
@@ -358,13 +240,7 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'Availability',
         fields: [
-            {
-                key: 'availability',
-                label: 'Availability',
-                component: 'AvailabilityForm',
-                wikitextParam: 'availability',
-                defaultValue: []
-            }
+            f('availability', h.custom('Availability', 'AvailabilityForm'))
         ]
     },
 
@@ -379,15 +255,15 @@ export const fieldsConfig: SectionDefinition[] = [
         order: 4,
         gridCols: 3,
         fields: [
-            { key: 'monetization.oneTimePurchase', label: 'One-time Game Purchase', component: 'InputText', wikitextParam: 'monetization', defaultValue: 'The game requires an upfront purchase to access.', description: 'Requires upfront purchase to access.' },
-            { key: 'monetization.freeToPlay', label: 'Free-to-play', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Access significant portion without paying.' },
-            { key: 'monetization.freeware', label: 'Freeware', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Completely free in its entirety.' },
-            { key: 'monetization.adSupported', label: 'Ad-supported', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Ads that are not part of gameplay.' },
-            { key: 'monetization.subscription', label: 'Subscription', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Game-specific periodic payment.' },
-            { key: 'monetization.subscriptionGamingService', label: 'Subscription Gaming Service', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Part of a collection/service (Game Pass).' },
-            { key: 'monetization.dlc', label: 'DLC', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Additional maps, levels, quests.' },
-            { key: 'monetization.expansionPack', label: 'Expansion Pack', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Large campaigns, significant new content.' },
-            { key: 'monetization.crossGameBonus', label: 'Cross-game Bonus', component: 'InputText', wikitextParam: 'monetization', defaultValue: '', description: 'Bonuses for owning/playing other games.' },
+            f('monetization.oneTimePurchase', { label: 'One-time Game Purchase', component: 'InputText', description: 'Requires upfront purchase to access.' }),
+            f('monetization.freeToPlay', { label: 'Free-to-play', component: 'InputText', description: 'Access significant portion without paying.' }),
+            f('monetization.freeware', { label: 'Freeware', component: 'InputText', description: 'Completely free in its entirety.' }),
+            f('monetization.adSupported', { label: 'Ad-supported', component: 'InputText', description: 'Ads that are not part of gameplay.' }),
+            f('monetization.subscription', { label: 'Subscription', component: 'InputText', description: 'Game-specific periodic payment.' }),
+            f('monetization.subscriptionGamingService', { label: 'Subscription Gaming Service', component: 'InputText', description: 'Part of a collection/service (Game Pass).' }),
+            f('monetization.dlc', { label: 'DLC', component: 'InputText', description: 'Additional maps, levels, quests.' }),
+            f('monetization.expansionPack', { label: 'Expansion Pack', component: 'InputText', description: 'Large campaigns, significant new content.' }),
+            f('monetization.crossGameBonus', { label: 'Cross-game Bonus', component: 'InputText', description: 'Bonuses for owning/playing other games.' }),
         ]
     },
     {
@@ -398,17 +274,17 @@ export const fieldsConfig: SectionDefinition[] = [
         order: 5,
         gridCols: 3,
         fields: [
-            { key: 'microtransactions.none', label: 'None', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: 'The game does not contain microtransactions.', description: 'Standard: No microtransactions present.' },
-            { key: 'microtransactions.cosmetic', label: 'Cosmetic', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Items that do not affect gameplay.' },
-            { key: 'microtransactions.currency', label: 'Currency', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Bought with real money.' },
-            { key: 'microtransactions.lootBox', label: 'Loot Box', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Randomized purchase for items.' },
-            { key: 'microtransactions.unlock', label: 'Unlock', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Content that affects gameplay.' },
-            { key: 'microtransactions.boost', label: 'Boost', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Accelerate speed, levelling, or skips.' },
-            { key: 'microtransactions.freeToGrind', label: 'Free-to-grind', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Can unlock everything by playing.' },
-            { key: 'microtransactions.finiteSpend', label: 'Finite Spend', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Fixed number of items to buy.' },
-            { key: 'microtransactions.infiniteSpend', label: 'Infinite Spend', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Can be bought over and over.' },
-            { key: 'microtransactions.playerTrading', label: 'Player Trading', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Trading items/currency between players.' },
-            { key: 'microtransactions.timeLimited', label: 'Time-limited', component: 'InputText', wikitextParam: 'microtransactions', defaultValue: '', description: 'Exclusive to a specific time/promo.' },
+            f('microtransactions.none', { label: 'None', component: 'InputText', description: 'Standard: No microtransactions present.' }),
+            f('microtransactions.cosmetic', { label: 'Cosmetic', component: 'InputText', description: 'Items that do not affect gameplay.' }),
+            f('microtransactions.currency', { label: 'Currency', component: 'InputText', description: 'Bought with real money.' }),
+            f('microtransactions.lootBox', { label: 'Loot Box', component: 'InputText', description: 'Randomized purchase for items.' }),
+            f('microtransactions.unlock', { label: 'Unlock', component: 'InputText', description: 'Content that affects gameplay.' }),
+            f('microtransactions.boost', { label: 'Boost', component: 'InputText', description: 'Accelerate speed, levelling, or skips.' }),
+            f('microtransactions.freeToGrind', { label: 'Free-to-grind', component: 'InputText', description: 'Can unlock everything by playing.' }),
+            f('microtransactions.finiteSpend', { label: 'Finite Spend', component: 'InputText', description: 'Fixed number of items to buy.' }),
+            f('microtransactions.infiniteSpend', { label: 'Infinite Spend', component: 'InputText', description: 'Can be bought over and over.' }),
+            f('microtransactions.playerTrading', { label: 'Player Trading', component: 'InputText', description: 'Trading items/currency between players.' }),
+            f('microtransactions.timeLimited', { label: 'Time-limited', component: 'InputText', description: 'Exclusive to a specific time/promo.' }),
         ]
     },
     {
@@ -420,13 +296,10 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'DLC',
         fields: [
-            {
-                key: 'dlc',
+            f('dlc', {
                 label: 'DLC',
-                component: 'DLCForm',
-                wikitextParam: 'dlc',
-                defaultValue: []
-            }
+                component: 'DLCForm'
+            })
         ]
     },
     {
@@ -436,16 +309,14 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-yellow-500',
         order: 7,
         fields: [
-            {
-                key: 'essentialImprovements',
+            f('essentialImprovements', {
                 label: 'Essential Improvements',
                 component: 'WikitextEditor',
-                wikitextParam: 'essential_improvements',
                 description: 'Patches, intro skip methods, major community mods, game-specific utilities.',
                 componentProps: {
                     rows: 10,
                 }
-            }
+            })
         ]
     },
     {
@@ -457,20 +328,20 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Audio Settings',
                 fields: [
-                    { key: 'audio', label: 'Separate Volume Controls', component: 'CompoundRatingField', wikitextParam: 'separate_volume', description: 'Can audio types be adjusted individually?', componentProps: { field: 'separateVolume', label: 'Separate Volume Controls', icon: SlidersHorizontal } },
-                    { key: 'audio', label: 'Surround Sound', component: 'CompoundRatingField', wikitextParam: 'surround_sound', description: 'Surround sound support (5.1, 7.1, etc.)', componentProps: { field: 'surroundSound', label: 'Surround Sound', icon: Volume2 } },
-                    { key: 'audio', label: 'Subtitles', component: 'CompoundRatingField', wikitextParam: 'subtitles', description: 'Subtitle support for dialogue/cutscenes.', componentProps: { field: 'subtitles', label: 'Subtitles', icon: AlignCenter } },
-                    { key: 'audio', label: 'Closed Captions', component: 'CompoundRatingField', wikitextParam: 'closed_captions', description: 'Support for closed captions (sound effects text).', componentProps: { field: 'closedCaptions', label: 'Closed Captions', icon: Captions } },
-                    { key: 'audio', label: 'Mute on Focus Lost', component: 'CompoundRatingField', wikitextParam: 'mute_on_focus_lost', description: 'Does game mute when alt-tabbed?', componentProps: { field: 'muteOnFocusLost', label: 'Mute on Focus Lost', icon: VolumeX } },
-                    { key: 'audio', label: 'Royalty Free Audio', component: 'CompoundRatingField', wikitextParam: 'royalty_free', description: 'Is the audio safe for streaming/recording?', componentProps: { field: 'royaltyFree', label: 'Royalty Free Audio', icon: CheckCircle } },
+                    f('audio.separateVolume', { key: 'audio', label: 'Separate Volume Controls', component: 'CompoundRatingField', description: 'Can audio types be adjusted individually?', componentProps: { field: 'separateVolume', label: 'Separate Volume Controls', icon: SlidersHorizontal } }),
+                    f('audio.surroundSound', { key: 'audio', label: 'Surround Sound', component: 'CompoundRatingField', description: 'Surround sound support (5.1, 7.1, etc.)', componentProps: { field: 'surroundSound', label: 'Surround Sound', icon: Volume2 } }),
+                    f('audio.subtitles', { key: 'audio', label: 'Subtitles', component: 'CompoundRatingField', description: 'Subtitle support for dialogue/cutscenes.', componentProps: { field: 'subtitles', label: 'Subtitles', icon: AlignCenter } }),
+                    f('audio.closedCaptions', { key: 'audio', label: 'Closed Captions', component: 'CompoundRatingField', description: 'Support for closed captions (sound effects text).', componentProps: { field: 'closedCaptions', label: 'Closed Captions', icon: Captions } }),
+                    f('audio.muteOnFocusLost', { key: 'audio', label: 'Mute on Focus Lost', component: 'CompoundRatingField', description: 'Does game mute when alt-tabbed?', componentProps: { field: 'muteOnFocusLost', label: 'Mute on Focus Lost', icon: VolumeX } }),
+                    f('audio.royaltyFree', { key: 'audio', label: 'Royalty Free Audio', component: 'CompoundRatingField', description: 'Is the audio safe for streaming/recording?', componentProps: { field: 'royaltyFree', label: 'Royalty Free Audio', icon: CheckCircle } }),
                 ]
             },
             {
                 title: 'API',
                 fields: [
-                    { key: 'audio', label: 'EAX Support', component: 'CompoundRatingField', wikitextParam: 'eax_support', componentProps: { field: 'eaxSupport', label: 'EAX Support' } },
-                    { key: 'audio', label: 'Red Book CD Audio', component: 'CompoundRatingField', wikitextParam: 'red_book_cd_audio', componentProps: { field: 'redBookCdAudio', label: 'Red Book CD Audio' } },
-                    { key: 'audio', label: 'General MIDI Audio', component: 'CompoundRatingField', wikitextParam: 'general_midi_audio', componentProps: { field: 'generalMidiAudio', label: 'General MIDI Audio' } },
+                    f('audio.eaxSupport', { key: 'audio', label: 'EAX Support', component: 'CompoundRatingField', componentProps: { field: 'eaxSupport', label: 'EAX Support' } }),
+                    f('audio.redBookCdAudio', { key: 'audio', label: 'Red Book CD Audio', component: 'CompoundRatingField', componentProps: { field: 'redBookCdAudio', label: 'Red Book CD Audio' } }),
+                    f('audio.generalMidiAudio', { key: 'audio', label: 'General MIDI Audio', component: 'CompoundRatingField', componentProps: { field: 'generalMidiAudio', label: 'General MIDI Audio' } }),
                 ]
             }
         ]
@@ -489,26 +360,22 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Configuration & Save Data',
                 fields: [
-                    {
-                        key: 'config',
+                    f('config', {
                         label: 'Configuration',
-                        component: 'GameDataForm',
-                        wikitextParam: 'config',
-                        defaultValue: {},
-                        parser: gameDataConfigParser
-                    }
+                        component: 'GameDataForm'
+                    })
                 ]
             },
             {
                 title: 'Save Game Cloud Syncing',
                 fields: [
-                    { key: 'config.cloudSync', label: 'Steam Cloud', component: 'CompoundRatingField', wikitextParam: 'steam_cloud', componentProps: { field: 'steamCloud', icon: Server } },
-                    { key: 'config.cloudSync', label: 'Discord', component: 'CompoundRatingField', wikitextParam: 'discord', componentProps: { field: 'discord', icon: MessageCircle } },
-                    { key: 'config.cloudSync', label: 'Epic Games Launcher', component: 'CompoundRatingField', wikitextParam: 'epic_games_launcher', componentProps: { field: 'epicGamesLauncher', icon: Box } },
-                    { key: 'config.cloudSync', label: 'GOG Galaxy', component: 'CompoundRatingField', wikitextParam: 'gog_galaxy', componentProps: { field: 'gogGalaxy', icon: Box } },
-                    { key: 'config.cloudSync', label: 'EA App', component: 'CompoundRatingField', wikitextParam: 'ea_app', componentProps: { field: 'eaApp', icon: Box } },
-                    { key: 'config.cloudSync', label: 'Ubisoft Connect', component: 'CompoundRatingField', wikitextParam: 'ubisoft_connect', componentProps: { field: 'ubisoftConnect', icon: Box } },
-                    { key: 'config.cloudSync', label: 'Xbox Cloud', component: 'CompoundRatingField', wikitextParam: 'xbox_cloud', componentProps: { field: 'xboxCloud', icon: AppWindow } },
+                    f('config.cloudSync.steamCloud', { key: 'config.cloudSync', label: 'Steam Cloud', component: 'CompoundRatingField', componentProps: { field: 'steamCloud', icon: Server } }),
+                    f('config.cloudSync.discord', { key: 'config.cloudSync', label: 'Discord', component: 'CompoundRatingField', componentProps: { field: 'discord', icon: MessageCircle } }),
+                    f('config.cloudSync.epicGamesLauncher', { key: 'config.cloudSync', label: 'Epic Games Launcher', component: 'CompoundRatingField', componentProps: { field: 'epicGamesLauncher', icon: Box } }),
+                    f('config.cloudSync.gogGalaxy', { key: 'config.cloudSync', label: 'GOG Galaxy', component: 'CompoundRatingField', componentProps: { field: 'gogGalaxy', icon: Box } }),
+                    f('config.cloudSync.eaApp', { key: 'config.cloudSync', label: 'EA App', component: 'CompoundRatingField', componentProps: { field: 'eaApp', icon: Box } }),
+                    f('config.cloudSync.ubisoftConnect', { key: 'config.cloudSync', label: 'Ubisoft Connect', component: 'CompoundRatingField', componentProps: { field: 'ubisoftConnect', icon: Box } }),
+                    f('config.cloudSync.xboxCloud', { key: 'config.cloudSync', label: 'Xbox Cloud', component: 'CompoundRatingField', componentProps: { field: 'xboxCloud', icon: AppWindow } }),
                 ]
             }
         ]
@@ -544,57 +411,53 @@ export const fieldsConfig: SectionDefinition[] = [
                     // DynamicField handles 'video.wsgfLink' by passing the string value.
                     // But InputText expects v-model of string. So 'video.wsgfLink' works perfectly for InputText.
                     // Only RatingRow needs CompoundRatingField because of the 'Notes' sibling field.
-                    { key: 'video.wsgfLink', label: 'WSGF Link', component: 'InputText', wikitextParam: 'wsgf_link', description: 'Link to WSGF report' },
-                    { key: 'video.widescreenWsgfAward', label: 'Widescreen Award', component: 'InputText', wikitextParam: 'widescreen_award', description: 'Gold, Silver, etc.' },
-                    { key: 'video.multiMonitorWsgfAward', label: 'Multi-monitor Award', component: 'InputText', wikitextParam: 'multimonitor_award', description: 'Gold, Silver, etc.' },
-                    { key: 'video.ultraWidescreenWsgfAward', label: 'Ultra-widescreen Award', component: 'InputText', wikitextParam: 'ultrawidescreen_award', description: 'Gold, Silver, etc.' },
-                    { key: 'video.fourKUltraHdWsgfAward', label: '4K Ultra HD Award', component: 'InputText', wikitextParam: '4k_award', description: 'Gold, Silver, etc.' }
+                    f('video.wsgfLink', { label: 'WSGF Link', component: 'InputText', description: 'Link to WSGF report' }),
+                    f('video.widescreenWsgfAward', { label: 'Widescreen Award', component: 'InputText', description: 'Gold, Silver, etc.' }),
+                    f('video.multiMonitorWsgfAward', { label: 'Multi-monitor Award', component: 'InputText', description: 'Gold, Silver, etc.' }),
+                    f('video.ultraWidescreenWsgfAward', { label: 'Ultra-widescreen Award', component: 'InputText', description: 'Gold, Silver, etc.' }),
+                    f('video.fourKUltraHdWsgfAward', { label: '4K Ultra HD Award', component: 'InputText', description: 'Gold, Silver, etc.' })
                 ]
             },
             {
                 title: 'Resolution & Display',
                 fields: [
-                    { key: 'video', label: 'Widescreen Resolution', component: 'CompoundRatingField', wikitextParam: 'widescreen_resolution', componentProps: { field: 'widescreenResolution', icon: Monitor } },
-                    { key: 'video', label: 'Multi-monitor', component: 'CompoundRatingField', wikitextParam: 'multimonitor', componentProps: { field: 'multiMonitor', icon: Grid2X2 } },
-                    { key: 'video', label: 'Ultra-widescreen', component: 'CompoundRatingField', wikitextParam: 'ultrawidescreen', componentProps: { field: 'ultraWidescreen', icon: Maximize } },
-                    { key: 'video', label: '4K Ultra HD', component: 'CompoundRatingField', wikitextParam: '4k_ultra_hd', componentProps: { field: 'fourKUltraHd', icon: Star } },
-                    { key: 'video', label: 'Field of View (FOV)', component: 'CompoundRatingField', wikitextParam: 'fov', componentProps: { field: 'fov', icon: Eye } },
-                    { key: 'video', label: 'Windowed', component: 'CompoundRatingField', wikitextParam: 'windowed', componentProps: { field: 'windowed', icon: Minimize } },
-                    { key: 'video', label: 'Borderless Windowed', component: 'CompoundRatingField', wikitextParam: 'borderless_windowed', componentProps: { field: 'borderlessWindowed', icon: Image } },
+                    f('video.widescreenResolution', { key: 'video', label: 'Widescreen Resolution', component: 'CompoundRatingField', componentProps: { field: 'widescreenResolution', icon: Monitor } }),
+                    f('video.multiMonitor', { key: 'video', label: 'Multi-monitor', component: 'CompoundRatingField', componentProps: { field: 'multiMonitor', icon: Grid2X2 } }),
+                    f('video.ultraWidescreen', { key: 'video', label: 'Ultra-widescreen', component: 'CompoundRatingField', componentProps: { field: 'ultraWidescreen', icon: Maximize } }),
+                    f('video.fourKUltraHd', { key: 'video', label: '4K Ultra HD', component: 'CompoundRatingField', componentProps: { field: 'fourKUltraHd', icon: Star } }),
+                    f('video.fov', { key: 'video', label: 'Field of View (FOV)', component: 'CompoundRatingField', componentProps: { field: 'fov', icon: Eye } }),
+                    f('video.windowed', { key: 'video', label: 'Windowed', component: 'CompoundRatingField', componentProps: { field: 'windowed', icon: Minimize } }),
+                    f('video.borderlessWindowed', { key: 'video', label: 'Borderless Windowed', component: 'CompoundRatingField', componentProps: { field: 'borderlessWindowed', icon: Image } }),
                 ]
             },
             {
                 title: 'Graphics Settings',
                 fields: [
-                    { key: 'video', label: 'Anisotropic Filtering (AF)', component: 'CompoundRatingField', wikitextParam: 'anisotropic', componentProps: { field: 'anisotropic', icon: ScanLine } },
-                    { key: 'video', label: 'Anti-aliasing (AA)', component: 'CompoundRatingField', wikitextParam: 'antialiasing', componentProps: { field: 'antiAliasing', icon: LineChart } },
+                    f('video.anisotropic', { key: 'video', label: 'Anisotropic Filtering (AF)', component: 'CompoundRatingField', componentProps: { field: 'anisotropic', icon: ScanLine } }),
+                    f('video.antiAliasing', { key: 'video', label: 'Anti-aliasing (AA)', component: 'CompoundRatingField', componentProps: { field: 'antiAliasing', icon: LineChart } }),
 
-                    { key: 'video', label: 'Upscaling', component: 'CompoundRatingField', wikitextParam: 'upscaling', componentProps: { field: 'upscaling', icon: ArrowUpRight } },
-                    {
-                        key: 'video.upscalingTech',
+                    f('video.upscaling', { key: 'video', label: 'Upscaling', component: 'CompoundRatingField', componentProps: { field: 'upscaling', icon: ArrowUpRight } }),
+                    f('video.upscalingTech', {
                         label: 'Upscaling Tech',
                         component: 'InputText',
-                        wikitextParam: 'upscaling_tech',
                         showIf: (m: any) => m.video?.upscaling && m.video.upscaling.value !== 'false' && m.video.upscaling.value !== 'unknown' && m.video.upscaling.value !== 'n/a',
                         componentProps: { placeholder: 'Tech (e.g. DLSS 2, FSR 2)' }
-                    },
+                    }),
 
-                    { key: 'video', label: 'Frame Generation', component: 'CompoundRatingField', wikitextParam: 'frame_gen', componentProps: { field: 'frameGen', icon: FastForward } },
-                    {
-                        key: 'video.frameGenTech',
+                    f('video.frameGen', { key: 'video', label: 'Frame Generation', component: 'CompoundRatingField', componentProps: { field: 'frameGen', icon: FastForward } }),
+                    f('video.frameGenTech', {
                         label: 'Frame Gen Tech',
                         component: 'InputText',
-                        wikitextParam: 'frame_gen_tech',
                         showIf: (m: any) => m.video?.frameGen && m.video.frameGen.value !== 'false' && m.video.frameGen.value !== 'unknown' && m.video.frameGen.value !== 'n/a',
                         componentProps: { placeholder: 'Tech (e.g. DLSS 3, FSR 3)' }
-                    },
+                    }),
 
-                    { key: 'video', label: 'VSync', component: 'CompoundRatingField', wikitextParam: 'vsync', componentProps: { field: 'vsync', icon: RefreshCcw } },
-                    { key: 'video', label: '60 FPS', component: 'CompoundRatingField', wikitextParam: '60_fps', componentProps: { field: 'fps60', icon: Clock } },
-                    { key: 'video', label: '120+ FPS', component: 'CompoundRatingField', wikitextParam: '120_fps', componentProps: { field: 'fps120', icon: Zap } },
-                    { key: 'video', label: 'HDR', component: 'CompoundRatingField', wikitextParam: 'hdr', componentProps: { field: 'hdr', icon: Sun } },
-                    { key: 'video', label: 'Ray Tracing', component: 'CompoundRatingField', wikitextParam: 'ray_tracing', componentProps: { field: 'rayTracing', icon: Sparkles } },
-                    { key: 'video', label: 'Color Blind Mode', component: 'CompoundRatingField', wikitextParam: 'color_blind', componentProps: { field: 'colorBlind', icon: Palette } },
+                    f('video.vsync', { key: 'video', label: 'VSync', component: 'CompoundRatingField', componentProps: { field: 'vsync', icon: RefreshCcw } }),
+                    f('video.fps60', { key: 'video', label: '60 FPS', component: 'CompoundRatingField', componentProps: { field: 'fps60', icon: Clock } }),
+                    f('video.fps120', { key: 'video', label: '120+ FPS', component: 'CompoundRatingField', componentProps: { field: 'fps120', icon: Zap } }),
+                    f('video.hdr', { key: 'video', label: 'HDR', component: 'CompoundRatingField', componentProps: { field: 'hdr', icon: Sun } }),
+                    f('video.rayTracing', { key: 'video', label: 'Ray Tracing', component: 'CompoundRatingField', componentProps: { field: 'rayTracing', icon: Sparkles } }),
+                    f('video.colorBlind', { key: 'video', label: 'Color Blind Mode', component: 'CompoundRatingField', componentProps: { field: 'colorBlind', icon: Palette } }),
                 ]
             }
         ]
@@ -609,31 +472,29 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Mouse / Keyboard',
                 fields: [
-                    { key: 'input', label: 'Key Remapping', component: 'CompoundRatingField', componentProps: { field: 'keyRemap', icon: Keyboard }, wikitextParam: 'key_remap' },
-                    { key: 'input', label: 'Keyboard/Mouse Prompts', component: 'CompoundRatingField', componentProps: { field: 'keyboardMousePrompts', icon: Keyboard }, wikitextParam: 'prompts_keyboard_mouse' },
-                    { key: 'input', label: 'Mouse Sensitivity', component: 'CompoundRatingField', componentProps: { field: 'mouseSensitivity', icon: Move }, wikitextParam: 'mouse_sensitivity' },
-                    { key: 'input', label: 'Mouse Menu', component: 'CompoundRatingField', componentProps: { field: 'mouseMenu', icon: MousePointerClick }, wikitextParam: 'mouse_menu' },
-                    { key: 'input', label: 'Invert Mouse Y-Axis', component: 'CompoundRatingField', componentProps: { field: 'invertMouseY', icon: ArrowUpDown }, wikitextParam: 'invert_mouse_y' },
-                    { key: 'input', label: 'Touchscreen', component: 'CompoundRatingField', componentProps: { field: 'touchscreen', icon: Tablet }, wikitextParam: 'touchscreen' },
+                    f('input.keyRemap', { key: 'input', label: 'Key Remapping', component: 'CompoundRatingField', componentProps: { field: 'keyRemap', icon: Keyboard } }),
+                    f('input.keyboardMousePrompts', { key: 'input', label: 'Keyboard/Mouse Prompts', component: 'CompoundRatingField', componentProps: { field: 'keyboardMousePrompts', icon: Keyboard } }),
+                    f('input.mouseSensitivity', { key: 'input', label: 'Mouse Sensitivity', component: 'CompoundRatingField', componentProps: { field: 'mouseSensitivity', icon: Move } }),
+                    f('input.mouseMenu', { key: 'input', label: 'Mouse Menu', component: 'CompoundRatingField', componentProps: { field: 'mouseMenu', icon: MousePointerClick } }),
+                    f('input.invertMouseY', { key: 'input', label: 'Invert Mouse Y-Axis', component: 'CompoundRatingField', componentProps: { field: 'invertMouseY', icon: ArrowUpDown } }),
+                    f('input.touchscreen', { key: 'input', label: 'Touchscreen', component: 'CompoundRatingField', componentProps: { field: 'touchscreen', icon: Tablet } }),
                 ]
             },
             {
                 title: 'General Controller',
                 fields: [
-                    { key: 'input', label: 'Controller Support', component: 'CompoundRatingField', componentProps: { field: 'controllerSupport', icon: Gamepad2 }, wikitextParam: 'controller_support' },
-                    { key: 'input', label: 'Full Controller Support', component: 'CompoundRatingField', componentProps: { field: 'fullController', icon: CheckCircle }, wikitextParam: 'controller_support_full' },
-                    { key: 'input', label: 'Controller Remapping', component: 'CompoundRatingField', componentProps: { field: 'controllerRemap', icon: Settings }, wikitextParam: 'controller_remap' },
-                    { key: 'input', label: 'Controller Sensitivity', component: 'CompoundRatingField', componentProps: { field: 'controllerSensitivity', icon: SlidersHorizontal }, wikitextParam: 'controller_sensitivity' },
-                    { key: 'input', label: 'Invert Controller Y-Axis', component: 'CompoundRatingField', componentProps: { field: 'invertControllerY', icon: ArrowUpDown }, wikitextParam: 'invert_controller_y' },
-                    { key: 'input', label: 'Controller Hotplugging', component: 'CompoundRatingField', componentProps: { field: 'controllerHotplug', icon: Plug }, wikitextParam: 'controller_hotplug' },
-                    { key: 'input', label: 'Haptic Feedback', component: 'CompoundRatingField', componentProps: { field: 'hapticFeedback', icon: Smartphone }, wikitextParam: 'haptic_feedback' },
+                    f('input.controllerSupport', { key: 'input', label: 'Controller Support', component: 'CompoundRatingField', componentProps: { field: 'controllerSupport', icon: Gamepad2 } }),
+                    f('input.fullController', { key: 'input', label: 'Full Controller Support', component: 'CompoundRatingField', componentProps: { field: 'fullController', icon: CheckCircle } }),
+                    f('input.controllerRemap', { key: 'input', label: 'Controller Remapping', component: 'CompoundRatingField', componentProps: { field: 'controllerRemap', icon: Settings } }),
+                    f('input.controllerSensitivity', { key: 'input', label: 'Controller Sensitivity', component: 'CompoundRatingField', componentProps: { field: 'controllerSensitivity', icon: SlidersHorizontal } }),
+                    f('input.invertControllerY', { key: 'input', label: 'Invert Controller Y-Axis', component: 'CompoundRatingField', componentProps: { field: 'invertControllerY', icon: ArrowUpDown } }),
+                    f('input.controllerHotplug', { key: 'input', label: 'Controller Hotplugging', component: 'CompoundRatingField', componentProps: { field: 'controllerHotplug', icon: Plug } }),
+                    f('input.hapticFeedback', { key: 'input', label: 'Haptic Feedback', component: 'CompoundRatingField', componentProps: { field: 'hapticFeedback', icon: Smartphone } }),
 
-                    { key: 'input', label: 'Haptic Feedback HD', component: 'CompoundRatingField', componentProps: { field: 'hapticFeedbackHd', icon: Smartphone }, wikitextParam: 'haptic_feedback_hd' },
-                    {
-                        key: 'input.hapticFeedbackHdControllerModels',
+                    f('input.hapticFeedbackHd', { key: 'input', label: 'Haptic Feedback HD', component: 'CompoundRatingField', componentProps: { field: 'hapticFeedbackHd', icon: Smartphone } }),
+                    f('input.hapticFeedbackHdControllerModels', {
                         label: 'HD Haptics Models',
                         component: 'MultiSelect',
-                        wikitextParam: 'haptic_feedback_hd_models',
                         description: 'Select supported models',
                         componentProps: {
                             placeholder: 'Select models...',
@@ -653,31 +514,29 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'Steam Deck'
                             ]
                         }
-                    },
+                    }),
 
-                    { key: 'input', label: 'Simultaneous Input', component: 'CompoundRatingField', componentProps: { field: 'simultaneousInput', icon: Users }, wikitextParam: 'simultaneous input' },
-                    { key: 'input', label: 'Acceleration Option', component: 'CompoundRatingField', componentProps: { field: 'accelerationOption', icon: Zap }, wikitextParam: 'acceleration_option' },
+                    f('input.simultaneousInput', { key: 'input', label: 'Simultaneous Input', component: 'CompoundRatingField', componentProps: { field: 'simultaneousInput', icon: Users } }),
+                    f('input.accelerationOption', { key: 'input', label: 'Acceleration Option', component: 'CompoundRatingField', componentProps: { field: 'accelerationOption', icon: Zap } }),
                 ]
             },
             {
                 title: 'XInput / DirectInput',
                 fields: [
-                    { key: 'input', label: 'XInput Controllers', component: 'CompoundRatingField', componentProps: { field: 'xinputControllers', icon: Gamepad2 }, wikitextParam: 'xinput_controllers' },
-                    { key: 'input', label: 'Xbox Prompts', component: 'CompoundRatingField', componentProps: { field: 'xboxPrompts', icon: Box }, wikitextParam: 'prompts_xbox' },
-                    { key: 'input', label: 'Impulse Triggers', component: 'CompoundRatingField', componentProps: { field: 'impulseTriggers', icon: Zap }, wikitextParam: 'impulse_triggers' },
-                    { key: 'input', label: 'DirectInput Controllers', component: 'CompoundRatingField', componentProps: { field: 'directInputControllers', icon: Gamepad2 }, wikitextParam: 'directinput_controllers' },
-                    { key: 'input', label: 'DirectInput Prompts', component: 'CompoundRatingField', componentProps: { field: 'directInputPrompts', icon: Box }, wikitextParam: 'prompts_directinput' },
+                    f('input.xinputControllers', { key: 'input', label: 'XInput Controllers', component: 'CompoundRatingField', componentProps: { field: 'xinputControllers', icon: Gamepad2 } }),
+                    f('input.xboxPrompts', { key: 'input', label: 'Xbox Prompts', component: 'CompoundRatingField', componentProps: { field: 'xboxPrompts', icon: Box } }),
+                    f('input.impulseTriggers', { key: 'input', label: 'Impulse Triggers', component: 'CompoundRatingField', componentProps: { field: 'impulseTriggers', icon: Zap } }),
+                    f('input.directInputControllers', { key: 'input', label: 'DirectInput Controllers', component: 'CompoundRatingField', componentProps: { field: 'directInputControllers', icon: Gamepad2 } }),
+                    f('input.directInputPrompts', { key: 'input', label: 'DirectInput Prompts', component: 'CompoundRatingField', componentProps: { field: 'directInputPrompts', icon: Box } }),
                 ]
             },
             {
                 title: 'PlayStation',
                 fields: [
-                    { key: 'input', label: 'PlayStation Controllers', component: 'CompoundRatingField', componentProps: { field: 'playstationControllers', icon: Gamepad2 }, wikitextParam: 'playstation_controllers' },
-                    {
-                        key: 'input.playstationControllerModels',
+                    f('input.playstationControllers', { key: 'input', label: 'PlayStation Controllers', component: 'CompoundRatingField', componentProps: { field: 'playstationControllers', icon: Gamepad2 } }),
+                    f('input.playstationControllerModels', {
                         label: 'Controller Models',
                         component: 'MultiSelect',
-                        wikitextParam: 'playstation_controllers_models',
                         componentProps: {
                             placeholder: 'Select models...',
                             options: [
@@ -689,25 +548,23 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'DualSense Edge'
                             ]
                         }
-                    },
-                    { key: 'input', label: 'PlayStation Prompts', component: 'CompoundRatingField', componentProps: { field: 'playstationPrompts', icon: Box }, wikitextParam: 'prompts_playstation' },
-                    { key: 'input', label: 'Motion Sensors', component: 'CompoundRatingField', componentProps: { field: 'playstationMotionSensors', icon: Move }, wikitextParam: 'playstation_motion_sensors' },
-                    {
-                        key: 'input.playstationMotionSensorsModes',
+                    }),
+                    f('input.playstationPrompts', { key: 'input', label: 'PlayStation Prompts', component: 'CompoundRatingField', componentProps: { field: 'playstationPrompts', icon: Box } }),
+                    f('input.playstationMotionSensors', { key: 'input', label: 'Motion Sensors', component: 'CompoundRatingField', componentProps: { field: 'playstationMotionSensors', icon: Move } }),
+                    f('input.playstationMotionSensorsModes', {
                         label: 'Motion Sensor Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'playstation_motion_sensors_modes',
                         componentProps: {
                             placeholder: 'Select modes...',
                             options: ['Camera', 'Cursor', 'Gesture']
                         }
-                    },
+                    }),
 
-                    { key: 'input', label: 'Light Bar Support', component: 'CompoundRatingField', componentProps: { field: 'glightBar', icon: Zap }, wikitextParam: 'playstation_light_bar' },
-                    { key: 'input', label: 'Adaptive Triggers', component: 'CompoundRatingField', componentProps: { field: 'dualSenseAdaptiveTrigger', icon: Zap }, wikitextParam: 'playstation_adaptive_triggers' },
-                    { key: 'input', label: 'DualSense Haptics', component: 'CompoundRatingField', componentProps: { field: 'dualSenseHaptics', icon: Smartphone }, wikitextParam: 'playstation_haptics' },
+                    f('input.playstationLightBar', { key: 'input', label: 'Light Bar Support', component: 'CompoundRatingField', componentProps: { field: 'glightBar', icon: Zap } }),
+                    f('input.playstationAdaptiveTriggers', { key: 'input', label: 'Adaptive Triggers', component: 'CompoundRatingField', componentProps: { field: 'dualSenseAdaptiveTrigger', icon: Zap } }),
+                    f('input.playstationHaptics', { key: 'input', label: 'DualSense Haptics', component: 'CompoundRatingField', componentProps: { field: 'dualSenseHaptics', icon: Smartphone } }),
 
-                    {
+                    f('input.playstationConnectionModes', {
                         key: 'input',
                         label: 'Connection Modes',
                         component: 'CompoundRatingField',
@@ -720,20 +577,17 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'Wireless (Bluetooth)',
                                 'Wireless (DualShock 4 USB Wireless Adapter)'
                             ]
-                        },
-                        wikitextParam: 'playstation_connection_modes'
-                    },
+                        }
+                    }),
                 ]
             },
             {
                 title: 'Nintendo',
                 fields: [
-                    { key: 'input', label: 'Nintendo Controllers', component: 'CompoundRatingField', componentProps: { field: 'nintendoControllers', icon: Gamepad2 }, wikitextParam: 'nintendo_controllers' },
-                    {
-                        key: 'input.nintendoControllerModels',
+                    f('input.nintendoControllers', { key: 'input', label: 'Nintendo Controllers', component: 'CompoundRatingField', componentProps: { field: 'nintendoControllers', icon: Gamepad2 } }),
+                    f('input.nintendoControllerModels', {
                         label: 'Controller Models',
                         component: 'MultiSelect',
-                        wikitextParam: 'nintendo_controllers_models',
                         componentProps: {
                             placeholder: 'Select models...',
                             options: [
@@ -754,22 +608,20 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'GameCube Controller'
                             ]
                         }
-                    },
-                    { key: 'input', label: 'Nintendo Prompts', component: 'CompoundRatingField', componentProps: { field: 'nintendoPrompts', icon: Box }, wikitextParam: 'prompts_nintendo' },
-                    { key: 'input', label: 'Button Layout', component: 'CompoundRatingField', componentProps: { field: 'nintendoButtonLayout', icon: Settings }, wikitextParam: 'nintendo_button_layout' },
-                    { key: 'input', label: 'Motion Sensors', component: 'CompoundRatingField', componentProps: { field: 'nintendoMotionSensors', icon: Move }, wikitextParam: 'nintendo_motion_sensors' },
-                    {
-                        key: 'input.nintendoMotionSensorsModes',
+                    }),
+                    f('input.nintendoPrompts', { key: 'input', label: 'Nintendo Prompts', component: 'CompoundRatingField', componentProps: { field: 'nintendoPrompts', icon: Box } }),
+                    f('input.nintendoButtonLayout', { key: 'input', label: 'Button Layout', component: 'CompoundRatingField', componentProps: { field: 'nintendoButtonLayout', icon: Settings } }),
+                    f('input.nintendoMotionSensors', { key: 'input', label: 'Motion Sensors', component: 'CompoundRatingField', componentProps: { field: 'nintendoMotionSensors', icon: Move } }),
+                    f('input.nintendoMotionSensorsModes', {
                         label: 'Motion Sensor Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'nintendo_motion_sensors_modes',
                         componentProps: {
                             placeholder: 'Select modes...',
                             options: ['Camera', 'Cursor', 'Gesture']
                         }
-                    },
+                    }),
 
-                    {
+                    f('input.nintendoConnectionModes', {
                         key: 'input',
                         label: 'Connection Modes',
                         component: 'CompoundRatingField',
@@ -782,89 +634,79 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'Wireless (Bluetooth)',
                                 'Wired (GameCube Controller USB Adapter)'
                             ]
-                        },
-                        wikitextParam: 'nintendo_connection_modes'
-                    },
+                        }
+                    }),
                 ]
             },
             {
                 title: 'Steam Input',
                 fields: [
-                    { key: 'input', label: 'Steam Input API', component: 'CompoundRatingField', componentProps: { field: 'steamInputApi', icon: Box }, wikitextParam: 'steam_input_api' },
-                    { key: 'input', label: 'Steam Hook Input', component: 'CompoundRatingField', componentProps: { field: 'steamHookInput', icon: Box }, wikitextParam: 'steam_hook_input' },
-                    { key: 'input', label: 'Steam Input Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamInputPrompts', icon: Box }, wikitextParam: 'prompts_steam_input' },
-                    {
-                        key: 'input.steamInputPromptsIcons',
+                    f('input.steamInputApi', { key: 'input', label: 'Steam Input API', component: 'CompoundRatingField', componentProps: { field: 'steamInputApi', icon: Box } }),
+                    f('input.steamHookInput', { key: 'input', label: 'Steam Hook Input', component: 'CompoundRatingField', componentProps: { field: 'steamHookInput', icon: Box } }),
+                    f('input.steamInputPrompts', { key: 'input', label: 'Steam Input Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamInputPrompts', icon: Box } }),
+                    f('input.steamInputPromptsIcons', {
                         label: 'Prompts Icons',
                         component: 'MultiSelect',
-                        wikitextParam: 'prompts_steam_input_icons',
                         componentProps: {
                             placeholder: 'Select icons...',
                             showIcons: true,
                             options: ['Xbox', 'PlayStation', 'Nintendo', 'Steam', 'Generic', 'Universal', 'False', 'Unknown']
                         }
-                    },
-                    {
-                        key: 'input.steamInputPromptsStyles',
+                    }),
+                    f('input.steamInputPromptsStyles', {
                         label: 'Prompts Styles',
                         component: 'MultiSelect',
-                        wikitextParam: 'prompts_steam_input_styles',
                         componentProps: {
                             placeholder: 'Select styles...',
                             options: ['SIAPI Button Icons', 'In-Game Button Icons']
                         }
-                    },
+                    }),
 
-                    { key: 'input', label: 'Steam Deck Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamDeckPrompts', icon: Tablet }, wikitextParam: 'prompts_steam_deck' },
-                    { key: 'input', label: 'Steam Controller Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamControllerPrompts', icon: Gamepad2 }, wikitextParam: 'prompts_steam_controller' },
-                    {
+                    f('input.steamDeckPrompts', { key: 'input', label: 'Steam Deck Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamDeckPrompts', icon: Tablet } }),
+                    f('input.steamControllerPrompts', { key: 'input', label: 'Steam Controller Prompts', component: 'CompoundRatingField', componentProps: { field: 'steamControllerPrompts', icon: Gamepad2 } }),
+                    f('input.steamInputMotionSensors', {
                         key: 'input',
                         label: 'Motion Sensors',
                         component: 'CompoundRatingField',
-                        wikitextParam: 'steam_input_motion_sensors',
                         componentProps: {
                             field: 'steamInputMotionSensors',
                             icon: Move
                         }
-                    },
-                    {
-                        key: 'input.steamInputMotionSensorsModes',
+                    }),
+                    f('input.steamInputMotionSensorsModes', {
                         label: 'Motion Sensor Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'steam_input_motion_sensors_modes',
                         componentProps: {
                             placeholder: 'Select modes...',
                             options: ['Camera (SIAPI Game Action)', 'Cursor (SIAPI Game Action)']
                         }
-                    },
-                    { key: 'input', label: 'Steam Input Presets', component: 'CompoundRatingField', componentProps: { field: 'steamInputPresets', icon: Settings }, wikitextParam: 'steam_input_presets' },
-                    { key: 'input', label: 'Cursor Detection', component: 'CompoundRatingField', componentProps: { field: 'steamCursorDetection', icon: Search }, wikitextParam: 'steam_cursor_detection' },
+                    }),
+                    f('input.steamInputPresets', { key: 'input', label: 'Steam Input Presets', component: 'CompoundRatingField', componentProps: { field: 'steamInputPresets', icon: Settings } }),
+                    f('input.steamCursorDetection', { key: 'input', label: 'Cursor Detection', component: 'CompoundRatingField', componentProps: { field: 'steamCursorDetection', icon: Search } }),
                 ]
             },
             {
                 title: 'Other / Misc',
                 fields: [
-                    { key: 'input', label: 'Tracked Motion', component: 'CompoundRatingField', componentProps: { field: 'trackedMotionControllers', icon: Hand }, wikitextParam: 'tracked_motion_controllers' },
-                    { key: 'input', label: 'Tracked Motion Prompts', component: 'CompoundRatingField', componentProps: { field: 'trackedMotionPrompts', icon: Box }, wikitextParam: 'prompts_tracked_motion' },
-                    { key: 'input', label: 'Other Controllers', component: 'CompoundRatingField', componentProps: { field: 'otherControllers', icon: Gamepad2 }, wikitextParam: 'other_controllers' },
-                    { key: 'input', label: 'Other Button Prompts', component: 'CompoundRatingField', componentProps: { field: 'otherButtonPrompts', icon: Box, multiple: true, options: ['Xbox', 'PlayStation', 'Nintendo', 'Steam', 'Generic', 'Universal', 'False', 'Unknown'] }, wikitextParam: 'other_button_prompts' },
-                    { key: 'input', label: 'Digital Movement', component: 'CompoundRatingField', componentProps: { field: 'digitalMovementSupported', icon: Monitor }, wikitextParam: 'digital_movement_supported' },
+                    f('input.trackedMotionControllers', { key: 'input', label: 'Tracked Motion', component: 'CompoundRatingField', componentProps: { field: 'trackedMotionControllers', icon: Hand } }),
+                    f('input.trackedMotionPrompts', { key: 'input', label: 'Tracked Motion Prompts', component: 'CompoundRatingField', componentProps: { field: 'trackedMotionPrompts', icon: Box } }),
+                    f('input.otherControllers', { key: 'input', label: 'Other Controllers', component: 'CompoundRatingField', componentProps: { field: 'otherControllers', icon: Gamepad2 } }),
+                    f('input.otherButtonPrompts', { key: 'input', label: 'Other Button Prompts', component: 'CompoundRatingField', componentProps: { field: 'otherButtonPrompts', icon: Box, multiple: true, options: ['Xbox', 'PlayStation', 'Nintendo', 'Steam', 'Generic', 'Universal', 'False', 'Unknown'] } }),
+                    f('input.digitalMovementSupported', { key: 'input', label: 'Digital Movement', component: 'CompoundRatingField', componentProps: { field: 'digitalMovementSupported', icon: Monitor } }),
 
-                    { key: 'input', label: 'Peripheral Devices', component: 'CompoundRatingField', componentProps: { field: 'peripheralDevices', icon: Settings }, wikitextParam: 'peripheral_devices' },
-                    {
-                        key: 'input.peripheralDeviceTypes',
+                    f('input.peripheralDevices', { key: 'input', label: 'Peripheral Devices', component: 'CompoundRatingField', componentProps: { field: 'peripheralDevices', icon: Settings } }),
+                    f('input.peripheralDeviceTypes', {
                         label: 'Peripheral Types',
                         component: 'MultiSelect',
-                        wikitextParam: 'peripheral_devices_types',
                         icon: Settings,
                         componentProps: {
                             placeholder: 'Select types...',
                             options: ['Arcade Controller', 'Flight Stick', 'Instruments Controller', 'Racing Wheels'],
                             showIcons: true
                         }
-                    },
+                    }),
 
-                    { key: 'input', label: 'Input Prompt Override', component: 'CompoundRatingField', componentProps: { field: 'inputPromptOverride', icon: Zap }, wikitextParam: 'input_prompt_override' },
+                    f('input.inputPromptOverride', { key: 'input', label: 'Input Prompt Override', component: 'CompoundRatingField', componentProps: { field: 'inputPromptOverride', icon: Zap } }),
                 ]
             }
         ]
@@ -879,58 +721,50 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Local Play',
                 fields: [
-                    { key: 'network', label: 'Local Play', component: 'CompoundRatingField', wikitextParam: 'local_play', componentProps: { field: 'localPlay', icon: Users } },
-                    { key: 'network.localPlayPlayers', label: 'Players', component: 'InputText', wikitextParam: 'local_play_players', description: 'Number of players' },
-                    {
-                        key: 'network.localPlayModes',
+                    f('network.localPlay', { key: 'network', label: 'Local Play', component: 'CompoundRatingField', componentProps: { field: 'localPlay', icon: Users } }),
+                    f('network.localPlayPlayers', { label: 'Players', component: 'InputText', description: 'Number of players' }),
+                    f('network.localPlayModes', {
                         label: 'Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'local_play_modes',
                         description: 'e.g. Co-op, Versus',
                         componentProps: { options: ['Co-op', 'Hot-seat', 'Versus'] }
-                    },
+                    }),
                 ]
             },
             {
                 title: 'LAN Play',
                 fields: [
-                    { key: 'network', label: 'LAN Play', component: 'CompoundRatingField', wikitextParam: 'lan_play', componentProps: { field: 'lanPlay', icon: Users } },
-                    { key: 'network.lanPlayPlayers', label: 'Players', component: 'InputText', wikitextParam: 'lan_play_players', description: 'Number of players' },
-                    {
-                        key: 'network.lanPlayModes',
+                    f('network.lanPlay', { key: 'network', label: 'LAN Play', component: 'CompoundRatingField', componentProps: { field: 'lanPlay', icon: Users } }),
+                    f('network.lanPlayPlayers', { label: 'Players', component: 'InputText', description: 'Number of players' }),
+                    f('network.lanPlayModes', {
                         label: 'Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'lan_play_modes',
                         description: 'e.g. Co-op, Versus',
                         componentProps: { options: ['Co-op', 'Hot-seat', 'Versus'] }
-                    },
+                    }),
                 ]
             },
             {
                 title: 'Online Play',
                 fields: [
-                    { key: 'network', label: 'Online Play', component: 'CompoundRatingField', wikitextParam: 'online_play', componentProps: { field: 'onlinePlay', icon: Globe } },
-                    { key: 'network.onlinePlayPlayers', label: 'Players', component: 'InputText', wikitextParam: 'online_play_players', description: 'Number of players' },
-                    {
-                        key: 'network.onlinePlayModes',
+                    f('network.onlinePlay', { key: 'network', label: 'Online Play', component: 'CompoundRatingField', componentProps: { field: 'onlinePlay', icon: Globe } }),
+                    f('network.onlinePlayPlayers', { label: 'Players', component: 'InputText', description: 'Number of players' }),
+                    f('network.onlinePlayModes', {
                         label: 'Modes',
                         component: 'MultiSelect',
-                        wikitextParam: 'online_play_modes',
                         description: 'e.g. Co-op, Versus',
                         componentProps: { options: ['Co-op', 'Hot-seat', 'Versus'] }
-                    },
+                    }),
                 ]
             },
             {
                 title: 'Misc & Crossplay',
                 fields: [
-                    { key: 'network', label: 'Asynchronous', component: 'CompoundRatingField', wikitextParam: 'asynchronous', componentProps: { field: 'asynchronous', icon: Clock } },
-                    { key: 'network', label: 'Crossplay', component: 'CompoundRatingField', wikitextParam: 'crossplay', componentProps: { field: 'crossplay', icon: GitFork } },
-                    {
-                        key: 'network.crossplayPlatforms',
+                    f('network.asynchronous', { key: 'network', label: 'Asynchronous', component: 'CompoundRatingField', componentProps: { field: 'asynchronous', icon: Clock } }),
+                    f('network.crossplay', { key: 'network', label: 'Crossplay', component: 'CompoundRatingField', componentProps: { field: 'crossplay', icon: GitFork } }),
+                    f('network.crossplayPlatforms', {
                         label: 'Crossplay Platforms',
                         component: 'MultiSelect',
-                        wikitextParam: 'crossplay_platforms',
                         description: 'e.g. Windows, PS5, Xbox Series X',
                         componentProps: {
                             options: [
@@ -966,25 +800,25 @@ export const fieldsConfig: SectionDefinition[] = [
                                 'ZX Spectrum'
                             ]
                         }
-                    },
+                    }),
                 ]
             },
             {
                 title: 'Connection Types',
                 fields: [
-                    { key: 'network', label: 'Matchmaking', component: 'CompoundRatingField', wikitextParam: 'matchmaking', componentProps: { field: 'matchmaking', icon: Users } },
-                    { key: 'network', label: 'Peer-to-Peer', component: 'CompoundRatingField', wikitextParam: 'p2p', componentProps: { field: 'p2p', icon: RefreshCcw } },
-                    { key: 'network', label: 'Dedicated', component: 'CompoundRatingField', wikitextParam: 'dedicated', componentProps: { field: 'dedicated', icon: Monitor } },
-                    { key: 'network', label: 'Self-hosting', component: 'CompoundRatingField', wikitextParam: 'self_hosting', componentProps: { field: 'selfHosting', icon: Monitor } },
-                    { key: 'network', label: 'Direct IP', component: 'CompoundRatingField', wikitextParam: 'direct_ip', componentProps: { field: 'directIp', icon: Globe } },
+                    f('network.matchmaking', { key: 'network', label: 'Matchmaking', component: 'CompoundRatingField', componentProps: { field: 'matchmaking', icon: Users } }),
+                    f('network.p2p', { key: 'network', label: 'Peer-to-Peer', component: 'CompoundRatingField', componentProps: { field: 'p2p', icon: RefreshCcw } }),
+                    f('network.dedicated', { key: 'network', label: 'Dedicated', component: 'CompoundRatingField', componentProps: { field: 'dedicated', icon: Monitor } }),
+                    f('network.selfHosting', { key: 'network', label: 'Self-hosting', component: 'CompoundRatingField', componentProps: { field: 'selfHosting', icon: Monitor } }),
+                    f('network.directIp', { key: 'network', label: 'Direct IP', component: 'CompoundRatingField', componentProps: { field: 'directIp', icon: Globe } }),
                 ]
             },
             {
                 title: 'Ports',
                 fields: [
-                    { key: 'network.tcpPorts', label: 'TCP Ports', component: 'InputText', wikitextParam: 'tcp_ports', description: 'Comma separated ports' },
-                    { key: 'network.udpPorts', label: 'UDP Ports', component: 'InputText', wikitextParam: 'udp_ports', description: 'Comma separated ports' },
-                    { key: 'network', label: 'UPnP', component: 'CompoundRatingField', wikitextParam: 'upnp', componentProps: { field: 'upnp', icon: Plug } },
+                    f('network.tcpPorts', { label: 'TCP Ports', component: 'InputText', description: 'Comma separated ports' }),
+                    f('network.udpPorts', { label: 'UDP Ports', component: 'InputText', description: 'Comma separated ports' }),
+                    f('network.upnp', { key: 'network', label: 'UPnP', component: 'CompoundRatingField', componentProps: { field: 'upnp', icon: Plug } }),
                 ]
             }
         ]
@@ -999,52 +833,50 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: '3D Modes',
                 fields: [
-                    { key: 'vr', label: 'Native 3D', component: 'CompoundRatingField', wikitextParam: 'native 3d', componentProps: { field: 'native3d', icon: Box } },
-                    { key: 'vr', label: 'Nvidia 3D Vision', component: 'CompoundRatingField', wikitextParam: 'nvidia 3d vision', componentProps: { field: 'nvidia3dVision', icon: Monitor } },
-                    { key: 'vr', label: 'vorpX', component: 'CompoundRatingField', wikitextParam: 'vorpx', componentProps: { field: 'vorpx', icon: Monitor } },
-                    {
-                        key: 'vr.vorpxModes',
+                    f('vr.native3d', { key: 'vr', label: 'Native 3D', component: 'CompoundRatingField', componentProps: { field: 'native3d', icon: Box } }),
+                    f('vr.nvidia3dVision', { key: 'vr', label: 'Nvidia 3D Vision', component: 'CompoundRatingField', componentProps: { field: 'nvidia3dVision', icon: Monitor } }),
+                    f('vr.vorpx', { key: 'vr', label: 'vorpX', component: 'CompoundRatingField', componentProps: { field: 'vorpx', icon: Monitor } }),
+                    f('vr.vorpxModes', {
                         label: 'vorpX Modes',
                         component: 'InputText',
-                        wikitextParam: 'vorpx modes',
                         description: 'Supported modes',
                         showIf: (m: any) => m.vr?.vorpx && m.vr.vorpx.value === 'true',
                         componentProps: { placeholder: 'e.g. Z3D, G3D' }
-                    },
-                    { key: 'vr', label: 'VR Only', component: 'CompoundRatingField', wikitextParam: 'vr only', componentProps: { field: 'vrOnly', icon: Headset } },
+                    }),
+                    f('vr.vrOnly', { key: 'vr', label: 'VR Only', component: 'CompoundRatingField', componentProps: { field: 'vrOnly', icon: Headset } }),
                 ]
             },
             {
                 title: 'Headsets',
                 fields: [
-                    { key: 'vr', label: 'OpenXR', component: 'CompoundRatingField', wikitextParam: 'openxr', componentProps: { field: 'openXr', icon: Headset } },
-                    { key: 'vr', label: 'SteamVR', component: 'CompoundRatingField', wikitextParam: 'steamvr', componentProps: { field: 'steamVr', icon: Headset } },
-                    { key: 'vr', label: 'Oculus', component: 'CompoundRatingField', wikitextParam: 'oculusvr', componentProps: { field: 'oculusVr', icon: Headset } },
-                    { key: 'vr', label: 'Windows Mixed Reality', component: 'CompoundRatingField', wikitextParam: 'windows mixed reality', componentProps: { field: 'windowsMixedReality', icon: Headset } },
-                    { key: 'vr', label: 'OSVR', component: 'CompoundRatingField', wikitextParam: 'osvr', componentProps: { field: 'osvr', icon: Headset } },
-                    { key: 'vr', label: 'Forte VFX1', component: 'CompoundRatingField', wikitextParam: 'forte vfx1', componentProps: { field: 'forteNsx1', icon: Headset } },
+                    f('vr.openXr', { key: 'vr', label: 'OpenXR', component: 'CompoundRatingField', componentProps: { field: 'openXr', icon: Headset } }),
+                    f('vr.steamVr', { key: 'vr', label: 'SteamVR', component: 'CompoundRatingField', componentProps: { field: 'steamVr', icon: Headset } }),
+                    f('vr.oculusVr', { key: 'vr', label: 'Oculus', component: 'CompoundRatingField', componentProps: { field: 'oculusVr', icon: Headset } }),
+                    f('vr.windowsMixedReality', { key: 'vr', label: 'Windows Mixed Reality', component: 'CompoundRatingField', componentProps: { field: 'windowsMixedReality', icon: Headset } }),
+                    f('vr.osvr', { key: 'vr', label: 'OSVR', component: 'CompoundRatingField', componentProps: { field: 'osvr', icon: Headset } }),
+                    f('vr.forteNsx1', { key: 'vr', label: 'Forte VFX1', component: 'CompoundRatingField', componentProps: { field: 'forteNsx1', icon: Headset } }),
                 ]
             },
             {
                 title: 'Input',
                 fields: [
-                    { key: 'vr', label: 'Keyboard & Mouse', component: 'CompoundRatingField', wikitextParam: 'keyboard-mouse', componentProps: { field: 'keyboardMouse', icon: Keyboard } },
-                    { key: 'vr', label: 'Body Tracking', component: 'CompoundRatingField', wikitextParam: 'body tracking', componentProps: { field: 'bodyTracking', icon: Users } },
-                    { key: 'vr', label: 'Hand Tracking', component: 'CompoundRatingField', wikitextParam: 'hand tracking', componentProps: { field: 'handTracking', icon: Move } },
-                    { key: 'vr', label: 'Face Tracking', component: 'CompoundRatingField', wikitextParam: 'face tracking', componentProps: { field: 'faceTracking', icon: Eye } },
-                    { key: 'vr', label: 'Eye Tracking', component: 'CompoundRatingField', wikitextParam: 'eye tracking', componentProps: { field: 'eyeTracking', icon: Eye } },
-                    { key: 'vr', label: 'Tobii Eye Tracking', component: 'CompoundRatingField', wikitextParam: 'tobii eye tracking', componentProps: { field: 'tobiiEyeTracking', icon: Eye } },
-                    { key: 'vr', label: 'TrackIR', component: 'CompoundRatingField', wikitextParam: 'trackir', componentProps: { field: 'trackIr', icon: Eye } },
-                    { key: 'vr', label: '3rd Space Gaming Vest', component: 'CompoundRatingField', wikitextParam: '3rd space gaming vest', componentProps: { field: 'thirdSpaceGamingVest', icon: Zap } },
-                    { key: 'vr', label: 'Novint Falcon', component: 'CompoundRatingField', wikitextParam: 'novint falcon', componentProps: { field: 'novintFalcon', icon: Gamepad2 } },
+                    f('vr.keyboardMouse', { key: 'vr', label: 'Keyboard & Mouse', component: 'CompoundRatingField', componentProps: { field: 'keyboardMouse', icon: Keyboard } }),
+                    f('vr.bodyTracking', { key: 'vr', label: 'Body Tracking', component: 'CompoundRatingField', componentProps: { field: 'bodyTracking', icon: Users } }),
+                    f('vr.handTracking', { key: 'vr', label: 'Hand Tracking', component: 'CompoundRatingField', componentProps: { field: 'handTracking', icon: Move } }),
+                    f('vr.faceTracking', { key: 'vr', label: 'Face Tracking', component: 'CompoundRatingField', componentProps: { field: 'faceTracking', icon: Eye } }),
+                    f('vr.eyeTracking', { key: 'vr', label: 'Eye Tracking', component: 'CompoundRatingField', componentProps: { field: 'eyeTracking', icon: Eye } }),
+                    f('vr.tobiiEyeTracking', { key: 'vr', label: 'Tobii Eye Tracking', component: 'CompoundRatingField', componentProps: { field: 'tobiiEyeTracking', icon: Eye } }),
+                    f('vr.trackIr', { key: 'vr', label: 'TrackIR', component: 'CompoundRatingField', componentProps: { field: 'trackIr', icon: Eye } }),
+                    f('vr.thirdSpaceGamingVest', { key: 'vr', label: '3rd Space Gaming Vest', component: 'CompoundRatingField', componentProps: { field: 'thirdSpaceGamingVest', icon: Zap } }),
+                    f('vr.novintFalcon', { key: 'vr', label: 'Novint Falcon', component: 'CompoundRatingField', componentProps: { field: 'novintFalcon', icon: Gamepad2 } }),
                 ]
             },
             {
                 title: 'Play Area',
                 fields: [
-                    { key: 'vr', label: 'Seated', component: 'CompoundRatingField', wikitextParam: 'play area seated', componentProps: { field: 'playAreaSeated', icon: CheckCircle } },
-                    { key: 'vr', label: 'Standing', component: 'CompoundRatingField', wikitextParam: 'play area standing', componentProps: { field: 'playAreaStanding', icon: CheckCircle } },
-                    { key: 'vr', label: 'Room-scale', component: 'CompoundRatingField', wikitextParam: 'play area room-scale', componentProps: { field: 'playAreaRoomScale', icon: Box } },
+                    f('vr.playAreaSeated', { key: 'vr', label: 'Seated', component: 'CompoundRatingField', componentProps: { field: 'playAreaSeated', icon: CheckCircle } }),
+                    f('vr.playAreaStanding', { key: 'vr', label: 'Standing', component: 'CompoundRatingField', componentProps: { field: 'playAreaStanding', icon: CheckCircle } }),
+                    f('vr.playAreaRoomScale', { key: 'vr', label: 'Room-scale', component: 'CompoundRatingField', componentProps: { field: 'playAreaRoomScale', icon: Box } }),
                 ]
             }
         ]
@@ -1060,17 +892,17 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Graphics Support',
                 fields: [
-                    { key: 'api', label: 'Direct3D', component: 'CompoundRatingField', wikitextParam: 'dx', componentProps: { field: 'dxVersion', notesField: 'dxNotes', refField: 'dxRef', icon: Monitor, freeText: true } },
-                    { key: 'api', label: 'DirectDraw', component: 'CompoundRatingField', wikitextParam: 'directdraw versions', componentProps: { field: 'directDrawVersion', notesField: 'directDrawNotes', refField: 'directDrawRef', icon: Pencil, freeText: true } },
-                    { key: 'api', label: 'WinG', component: 'CompoundRatingField', wikitextParam: 'wing', componentProps: { field: 'wing', icon: AppWindow } },
-                    { key: 'api', label: 'OpenGL', component: 'CompoundRatingField', wikitextParam: 'opengl', componentProps: { field: 'openGlVersion', notesField: 'openGlNotes', refField: 'openGlRef', icon: Globe, freeText: true } },
-                    { key: 'api', label: 'Glide', component: 'CompoundRatingField', wikitextParam: 'glide versions', componentProps: { field: 'glideVersion', notesField: 'glideNotes', refField: 'glideRef', icon: Send, freeText: true } },
-                    { key: 'api', label: 'Software Mode', component: 'CompoundRatingField', wikitextParam: 'software mode', componentProps: { field: 'softwareMode', icon: Cpu } },
-                    { key: 'api', label: 'Mantle', component: 'CompoundRatingField', wikitextParam: 'mantle support', componentProps: { field: 'mantle', icon: Box } },
-                    { key: 'api', label: 'Vulkan', component: 'CompoundRatingField', wikitextParam: 'vulkan', componentProps: { field: 'vulkanVersion', notesField: 'vulkanNotes', refField: 'vulkanRef', icon: Zap, freeText: true } },
-                    { key: 'api', label: 'Metal', component: 'CompoundRatingField', wikitextParam: 'metal support', componentProps: { field: 'metal', icon: AppWindow } },
+                    f('api.dxVersion', { key: 'api', label: 'Direct3D', component: 'CompoundRatingField', componentProps: { field: 'dxVersion', notesField: 'dxNotes', refField: 'dxRef', icon: Monitor, freeText: true } }),
+                    f('api.directDrawVersion', { key: 'api', label: 'DirectDraw', component: 'CompoundRatingField', componentProps: { field: 'directDrawVersion', notesField: 'directDrawNotes', refField: 'directDrawRef', icon: Pencil, freeText: true } }),
+                    f('api.wing', { key: 'api', label: 'WinG', component: 'CompoundRatingField', componentProps: { field: 'wing', icon: AppWindow } }),
+                    f('api.openGlVersion', { key: 'api', label: 'OpenGL', component: 'CompoundRatingField', componentProps: { field: 'openGlVersion', notesField: 'openGlNotes', refField: 'openGlRef', icon: Globe, freeText: true } }),
+                    f('api.glideVersion', { key: 'api', label: 'Glide', component: 'CompoundRatingField', componentProps: { field: 'glideVersion', notesField: 'glideNotes', refField: 'glideRef', icon: Send, freeText: true } }),
+                    f('api.softwareMode', { key: 'api', label: 'Software Mode', component: 'CompoundRatingField', componentProps: { field: 'softwareMode', icon: Cpu } }),
+                    f('api.mantle', { key: 'api', label: 'Mantle', component: 'CompoundRatingField', componentProps: { field: 'mantle', icon: Box } }),
+                    f('api.vulkanVersion', { key: 'api', label: 'Vulkan', component: 'CompoundRatingField', componentProps: { field: 'vulkanVersion', notesField: 'vulkanNotes', refField: 'vulkanRef', icon: Zap, freeText: true } }),
+                    f('api.metal', { key: 'api', label: 'Metal', component: 'CompoundRatingField', componentProps: { field: 'metal', icon: AppWindow } }),
 
-                    { key: 'api', label: 'DOS Modes', component: 'CompoundRatingField', wikitextParam: 'dos modes', componentProps: { field: 'dosModes', icon: Terminal, freeText: true } },
+                    f('api.dosModes', { key: 'api', label: 'DOS Modes', component: 'CompoundRatingField', componentProps: { field: 'dosModes', icon: Terminal, freeText: true } }),
                 ]
             },
             {
@@ -1096,13 +928,13 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Middleware',
                 fields: [
-                    { key: 'middleware', label: 'Physics', component: 'CompoundRatingField', wikitextParam: 'physics', componentProps: { field: 'physics', icon: Zap, freeText: true } },
-                    { key: 'middleware', label: 'Audio', component: 'CompoundRatingField', wikitextParam: 'audio', componentProps: { field: 'audio', icon: Volume2, freeText: true } },
-                    { key: 'middleware', label: 'Interface', component: 'CompoundRatingField', wikitextParam: 'interface', componentProps: { field: 'interface', icon: Layout, freeText: true } },
-                    { key: 'middleware', label: 'Input', component: 'CompoundRatingField', wikitextParam: 'input', componentProps: { field: 'input', icon: Gamepad2, freeText: true } },
-                    { key: 'middleware', label: 'Cutscenes', component: 'CompoundRatingField', wikitextParam: 'cutscenes', componentProps: { field: 'cutscenes', icon: Film, freeText: true } },
-                    { key: 'middleware', label: 'Multiplayer', component: 'CompoundRatingField', wikitextParam: 'multiplayer', componentProps: { field: 'multiplayer', icon: Users, freeText: true } },
-                    { key: 'middleware', label: 'Anticheat', component: 'CompoundRatingField', wikitextParam: 'anticheat', componentProps: { field: 'anticheat', icon: Shield, freeText: true } },
+                    f('middleware.physics', { key: 'middleware', label: 'Physics', component: 'CompoundRatingField', componentProps: { field: 'physics', icon: Zap, freeText: true } }),
+                    f('middleware.audio', { key: 'middleware', label: 'Audio', component: 'CompoundRatingField', componentProps: { field: 'audio', icon: Volume2, freeText: true } }),
+                    f('middleware.interface', { key: 'middleware', label: 'Interface', component: 'CompoundRatingField', componentProps: { field: 'interface', icon: Layout, freeText: true } }),
+                    f('middleware.input', { key: 'middleware', label: 'Input', component: 'CompoundRatingField', componentProps: { field: 'input', icon: Gamepad2, freeText: true } }),
+                    f('middleware.cutscenes', { key: 'middleware', label: 'Cutscenes', component: 'CompoundRatingField', componentProps: { field: 'cutscenes', icon: Film, freeText: true } }),
+                    f('middleware.multiplayer', { key: 'middleware', label: 'Multiplayer', component: 'CompoundRatingField', componentProps: { field: 'multiplayer', icon: Users, freeText: true } }),
+                    f('middleware.anticheat', { key: 'middleware', label: 'Anticheat', component: 'CompoundRatingField', componentProps: { field: 'anticheat', icon: Shield, freeText: true } }),
                 ]
             }
         ]
@@ -1116,13 +948,10 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'SystemRequirements',
         fields: [
-            {
-                key: 'requirements',
+            f('requirements', {
                 label: 'System Requirements',
                 component: 'SystemRequirementsForm',
-                wikitextParam: 'system_requirements',
-                defaultValue: {}
-            }
+            })
         ]
     },
     {
@@ -1134,13 +963,10 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'Localizations',
         fields: [
-            {
-                key: 'localizations',
+            f('localizations', {
                 label: 'Localizations',
                 component: 'LocalizationsForm',
-                wikitextParam: 'localizations',
-                defaultValue: []
-            }
+            })
         ]
     }
 ];
