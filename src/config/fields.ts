@@ -145,7 +145,7 @@ export const fieldsConfig: SectionDefinition[] = [
                     f('links.lutris', h.text('Lutris Slug', { placeholder: 'e.g. game-title' }, { icon: Terminal, iconClass: 'text-orange-500', description: 'Slug from Lutris' })),
 
                     f('links.wineHq', h.text('WineHQ Slug', { placeholder: 'e.g. 1234' }, { icon: Box, iconClass: 'text-red-500', description: 'ID from WineHQ AppDB' })),
-                    f('links.wineHqSide', h.text('WineHQ Side Param', { placeholder: '' }, { description: 'Optional side parameter' }))
+
                 ]
             },
 
@@ -218,6 +218,14 @@ export const fieldsConfig: SectionDefinition[] = [
                 placeholder: "'''''Title''''' is a..."
             }, {
                 description: "The first instance of the game title in introduction should be written as '''''Title'''''",
+                colSpan: 2
+            })),
+            f('introduction.generalInfo', h.textarea('General information', {
+                rows: 4,
+                autoResize: true,
+                placeholder: "Links and other general details."
+            }, {
+                description: "General informational links like official forums, etc.",
                 colSpan: 2
             })),
             f('introduction.releaseHistory', h.textarea('Release History', {
@@ -583,7 +591,6 @@ export const fieldsConfig: SectionDefinition[] = [
                     f('input.steamInputPrompts', h.rating('Steam Input Prompts', { field: 'steamInputPrompts', icon: Box }, { key: 'input' })),
                     f('input.steamInputPromptsIcons', h.multiselect('Prompts Icons', {
                         placeholder: 'Select icons...',
-                        showIcons: true,
                         options: ['Xbox', 'PlayStation', 'Nintendo', 'Steam', 'Generic', 'Universal', 'False', 'Unknown']
                     })),
                     f('input.steamInputPromptsStyles', h.multiselect('Prompts Styles', {
@@ -614,8 +621,7 @@ export const fieldsConfig: SectionDefinition[] = [
                     f('input.peripheralDevices', h.rating('Peripheral Devices', { field: 'peripheralDevices', icon: Settings }, { key: 'input' })),
                     f('input.peripheralDeviceTypes', h.multiselect('Peripheral Types', {
                         placeholder: 'Select types...',
-                        options: ['Arcade Controller', 'Flight Stick', 'Instruments Controller', 'Racing Wheels'],
-                        showIcons: true
+                        options: ['Arcade Controller', 'Flight Stick', 'Instruments Controller', 'Racing Wheels']
                     }, { icon: Settings })),
 
                     f('input.inputPromptOverride', h.rating('Input Prompt Override', { field: 'inputPromptOverride', icon: Zap }, { key: 'input' })),

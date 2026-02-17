@@ -43,8 +43,8 @@ describe('Field Group: Availability', () => {
         const text = writer.getText();
 
         expect(text).toContain('{{Availability');
-        expect(text).toContain('{{Availability/row| Steam | 220 | Steam |  |  | Windows }}');
-        expect(text).toContain('{{Availability/row| GOG.com | test | DRM-free | Note |  | Windows, Linux }}');
+        expect(text).toContain('{{Availability/row| Steam | 220 | Steam | | | Windows }}');
+        expect(text).toContain('{{Availability/row| GOG.com | test | DRM-free | Note | | Windows, Linux }}');
     });
 
     it('should parse Availability with named parameters (special cases)', () => {

@@ -77,10 +77,18 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
-    function syncFromWikitext() {
+    function syncFromWikitext(newWikitext?: string) {
         if (activePage.value) {
+            if (newWikitext !== undefined) {
+                activePage.value.wikitext = newWikitext;
+            }
             try {
+                // Update baseWikitext to the current wikitext before parsing.
+                // This ensures that the next generation (from watch) starts with this version,
+                // preserving manual edits made in Code mode.
+                activePage.value.baseWikitext = activePage.value.wikitext;
                 _activeGameData.value = parseWikitext(activePage.value.wikitext);
+                activePage.value.lastModified = Date.now();
             } catch (e) {
                 console.error('Failed to sync from wikitext:', e);
             }

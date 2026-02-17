@@ -146,6 +146,7 @@ export class WikitextParser {
         let depth = 0;
         let paramStart = -1;
         let i = 0;
+        let positionalCount = 0;
 
         // Skip the template name first ({{TemplateName)
         const templateNameMatch = content.match(/^\{\{\s*[\w\s/]+/);
@@ -190,6 +191,7 @@ export class WikitextParser {
                         let valueEnd = valueStart;
                         let j = valueStart;
                         let valueDepth = 0;
+                        let linkDepth = 0;
 
                         while (j < content.length - 2) {
                             const c = content[j];
@@ -202,17 +204,29 @@ export class WikitextParser {
                             }
 
                             if (c === '}' && nc === '}') {
-                                if (valueDepth === 0) {
+                                if (valueDepth === 0 && linkDepth === 0) {
                                     // End of template
                                     valueEnd = j;
                                     break;
                                 }
-                                valueDepth--;
+                                if (valueDepth > 0) valueDepth--;
                                 j += 2;
                                 continue;
                             }
 
-                            if (c === '|' && valueDepth === 0) {
+                            if (c === '[' && nc === '[') {
+                                linkDepth++;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === ']' && nc === ']') {
+                                if (linkDepth > 0) linkDepth--;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === '|' && valueDepth === 0 && linkDepth === 0) {
                                 // Next parameter
                                 valueEnd = j;
                                 break;
@@ -231,6 +245,67 @@ export class WikitextParser {
                             valueStart: template.start + valueStart,
                             valueEnd: template.start + valueEnd,
                             paramName: paramMatch[1].trim()
+                        };
+                    }
+                } else {
+                    // Positional parameter
+                    positionalCount++;
+                    if (positionalCount.toString() === normalizedParam) {
+                        const valueStart = i + 1;
+                        let valueEnd = valueStart;
+                        let j = valueStart;
+                        let valueDepth = 0;
+                        let linkDepth = 0;
+
+                        while (j < content.length - 2) {
+                            const c = content[j];
+                            const nc = j + 1 < content.length ? content[j + 1] : '';
+
+                            if (c === '{' && nc === '{') {
+                                valueDepth++;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === '}' && nc === '}') {
+                                if (valueDepth === 0 && linkDepth === 0) {
+                                    valueEnd = j;
+                                    break;
+                                }
+                                if (valueDepth > 0) valueDepth--;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === '[' && nc === '[') {
+                                linkDepth++;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === ']' && nc === ']') {
+                                if (linkDepth > 0) linkDepth--;
+                                j += 2;
+                                continue;
+                            }
+
+                            if (c === '|' && valueDepth === 0 && linkDepth === 0) {
+                                valueEnd = j;
+                                break;
+                            }
+                            j++;
+                        }
+
+                        if (valueEnd === valueStart) {
+                            valueEnd = content.length - 2;
+                        }
+
+                        return {
+                            start: template.start + paramStart,
+                            end: template.start + valueEnd,
+                            valueStart: template.start + valueStart,
+                            valueEnd: template.start + valueEnd,
+                            paramName: positionalCount.toString()
                         };
                     }
                 }
@@ -270,11 +345,15 @@ export class WikitextParser {
                 return;
             }
 
-            // For non-empty values:
             // 1. Preserve only horizontal whitespace (spaces/tabs) after = for leading space
             // 2. Preserve any trailing newlines to keep parameters on separate lines
             const leadingMatch = currentValue.match(/^([ \t]*)/);
-            const leadingWhitespace = leadingMatch ? leadingMatch[1] : ' ';
+            let leadingWhitespace = leadingMatch ? leadingMatch[1] : ' ';
+
+            // If the value starts with a newline, we don't want a leading space after the equals
+            if (valueStr.startsWith('\n')) {
+                leadingWhitespace = '';
+            }
 
             // Preserve trailing newlines (but not other trailing whitespace)
             const trailingNewlines = currentValue.match(/(\n+)$/);
@@ -291,6 +370,41 @@ export class WikitextParser {
             // Parameter doesn't exist - insert it
             this.insertParameter(templateName, paramName, valueStr);
         }
+    }
+
+    /**
+     * Remove a parameter from a template.
+     */
+    removeParameter(templateName: string, paramName: string): void {
+        const param = this.findParameter(templateName, paramName);
+        if (!param) return;
+
+        // Determine the full range to remove, including the preceding pipe
+        this.wikitext = this.wikitext.substring(0, param.start) + this.wikitext.substring(param.end);
+    }
+
+    /**
+     * Remove a template entirely.
+     * Also attempts to remove one trailing newline to prevent gaps.
+     */
+    removeTemplate(templateName: string): void {
+        const template = this.findTemplate(templateName);
+        if (!template) return;
+
+        let end = template.end;
+        if (this.wikitext[end] === '\n') {
+            end++;
+        }
+
+        this.wikitext = this.wikitext.substring(0, template.start) + this.wikitext.substring(end);
+        this.cleanNewlines();
+    }
+
+    /**
+     * Clean up excessive vertical whitespace (3+ newlines).
+     */
+    cleanNewlines(): void {
+        this.wikitext = this.wikitext.replace(/\n{3,}/g, '\n\n');
     }
 
     /**
@@ -311,7 +425,9 @@ export class WikitextParser {
         const needsNewlineBefore = charBefore !== '\n';
 
         // Format the new parameter
-        const formattedParam = `${needsNewlineBefore ? '\n' : ''}|${paramName} = ${value}\n`;
+        // If the value starts with a newline, don't add spaces around =
+        const spacing = value.startsWith('\n') ? '' : ' ';
+        const formattedParam = `${needsNewlineBefore ? '\n' : ''}|${paramName}${spacing}=${spacing}${value}\n`;
 
         // Insert it
         this.wikitext = this.wikitext.substring(0, insertPos) + formattedParam + this.wikitext.substring(insertPos);

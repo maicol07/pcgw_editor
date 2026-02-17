@@ -24,13 +24,6 @@ export function parseWikitext(wikitext: string): GameData {
     // Parse AST
     let ast: any;
     try {
-        if (!wiki) {
-            wiki = (globalThis as any).Parser;
-            if (!wiki) {
-                console.error("CRITICAL: WikitextParser (globalThis.Parser) is undefined. Check bundle loading.");
-                return data;
-            }
-        }
         ast = wiki.parse(wikitext);
     } catch (e) {
         console.error("Failed to parse wikitext:", e);
@@ -337,7 +330,7 @@ export function parseWikitext(wikitext: string): GameData {
         data.infobox.links.strategyWiki = getParam(infobox, 'strategywiki');
         data.infobox.links.wikipedia = getParam(infobox, 'wikipedia');
         data.infobox.links.wineHq = getParam(infobox, 'winehq');
-        data.infobox.links.wineHqSide = getParam(infobox, 'winehq side');
+
     }
 
     // --- Introduction ---
@@ -493,63 +486,16 @@ export function parseWikitext(wikitext: string): GameData {
     // --- General Information ---
     const genInfoNodes = getNodesInSection('General information');
     if (genInfoNodes.length > 0) {
-        const genText = getWikitextContent(genInfoNodes);
-        const genRows: any[] = [];
-        const lines = genText.split('\n');
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-
-            // Handle {{mm}} [Url Label] Note
-            if (trimmed.includes('{{mm}}')) {
-                const linkMatch = trimmed.match(/\[(https?:\/\/[^\s]+)\s+([^\]]+)\](.*)/);
-                if (linkMatch) {
-                    const [, url, label, noteRaw] = linkMatch;
-                    let note = noteRaw.trim();
-                    // Remove leading hyphens or dashes often used as separators
-                    if (note.startsWith('-') || note.startsWith('–')) {
-                        note = note.substring(1).trim();
-                    }
-                    genRows.push({
-                        type: 'link',
-                        label: label,
-                        url: url,
-                        note: note
-                    });
-                }
-            }
-            // Handle {{GOG.com links|id|slug}}
-            else if (trimmed.toLowerCase().includes('{{gog.com links')) {
-                const gogMatch = trimmed.match(/\{\{GOG\.com links\|([^|]+)\|([^}]+)\}\}/i);
-                if (gogMatch) {
-                    genRows.push({
-                        type: 'gog',
-                        label: 'GOG.com links', // Placeholder label, usually rendered by template
-                        id: gogMatch[1],
-                        url: gogMatch[2] // slug
-                    });
-                }
-            }
-        }
-        data.generalInfo = genRows;
+        data.introduction.generalInfo = getWikitextContent(genInfoNodes).trim();
     }
 
     // Helper to extract rows from either a direct list of nodes OR a nested {{Game data|...}} template
     const extractGameDataRows = (sectionNodes: ASTNode[], rowTemplateNames: string[]): any[] => {
         let candidateNodes: ASTNode[] = sectionNodes;
 
-        // 1. Look for {{Game data}} wrapper *within* the section nodes
-        const gameDataWrapper = sectionNodes.find(n => n.name && cleanTemplateName(n.name) === 'game data');
-
-        if (gameDataWrapper) {
-            // If wrapper found, the rows are inside its first parameter (usually '1')
-            // wikiparser-node parses content of params, so we check childNodes of the param
-            const paramNodes = getParamValueNodes(gameDataWrapper, '1');
-            if (paramNodes && paramNodes.length > 0) {
-                candidateNodes = paramNodes;
-            }
-        }
+        // Note: We deliberately do NOT look for a wrapper first, because {{Game data|config|...}}
+        // can appear as a single template in the section, and we want to iterate IT, not its content (which is just 'config').
+        // If it's a wrapper {{Game data | {{Game data/config}} }}, the recursion logic inside the loop handles it.
 
         // 2. Iterate candidates to find rows
         const foundRows: any[] = [];
@@ -565,8 +511,15 @@ export function parseWikitext(wikitext: string): GameData {
                 // Check for {{Game data|...}} wrapper
                 if (n === 'game data') {
                     // Case A: Wrapper mode {{Game data| {{Game data/config...}} }}
-                    // In this case, param '1' contains the rows. We need to parse that content.
+                    // OR named: {{Game data| config = {{Game data/config...}} }}
+
+                    const targetType = rowTemplateNames[0].split('/')[1]; // config or saves
+
+                    // Try unnamed param '1' OR named param 'config' / 'saves'
                     let contentValues = getParamValueNodes(node, '1');
+                    if (!contentValues || contentValues.length === 0) {
+                        contentValues = getParamValueNodes(node, targetType);
+                    }
 
                     if (contentValues && contentValues.length > 0) {
                         // Recursively extract from these nodes
@@ -584,13 +537,16 @@ export function parseWikitext(wikitext: string): GameData {
                             isMatch = true;
                             // Check if '2' is platform (Case B)
                             // But if we are in Case A (wrapper), param '1' matched 'config', so it IS inline?
-                            // Wait, if it has content nodes (Case A), we recurse. 
+                            // Wait, if it has content nodes (Case A), we recurse.
                             // If it has NO content nodes but has param '1' as 'config' (Case B), we treat as inline.
                             // But {{Game data | ... }} where '...' starts with {{Game data/config...}}
                             // Param '1' is the *entire* inner content.
                             // getParam(node, '1') would be "{{Game data/config...}}".
                             // It won't match "config".
                             // So Case B only triggers if param '1' is literally "config" or similar.
+
+                            // Debug logging
+                            // console.log(`Checking Game data inline: typeParam='${typeParam}'`);
 
                             isMatch = true;
                             platform = getParam(node, '2');
@@ -615,6 +571,7 @@ export function parseWikitext(wikitext: string): GameData {
                         paths.push(p);
                         i++;
                     }
+                    // console.log(`Found row: platform='${platform}', paths=${JSON.stringify(paths)}`);
                     foundRows.push({
                         platform: platform,
                         paths: paths
@@ -637,7 +594,7 @@ export function parseWikitext(wikitext: string): GameData {
         }
     }
 
-    const configRows = extractGameDataRows(configSectionNodes, ['game data/config', 'game data/config tv', 'game data/config mac', 'game data/config linux']);
+    const configRows = extractGameDataRows(configSectionNodes.length > 0 ? configSectionNodes : rootNodes, ['game data/config', 'game data/config tv', 'game data/config mac', 'game data/config linux']);
     data.config.configFiles = configRows;
 
     // Save Data
@@ -651,7 +608,7 @@ export function parseWikitext(wikitext: string): GameData {
         }
     }
 
-    const saveRows = extractGameDataRows(saveSectionNodes, ['game data/saves', 'game data/saves mac', 'game data/saves linux']);
+    const saveRows = extractGameDataRows(saveSectionNodes.length > 0 ? saveSectionNodes : rootNodes, ['game data/saves', 'game data/saves mac', 'game data/saves linux']);
     data.config.saveData = saveRows;
 
     // Cloud Sync
@@ -1044,9 +1001,9 @@ export function parseWikitext(wikitext: string): GameData {
     sysReqs.forEach(req => {
         // Try to get OS from 'OSfamily' parameter (legacy 'OS' support removed)
         let os = getParam(req, 'OSfamily');
-        console.log(`SysReqs: Parsing OSfamily=${os}`);
+        // console.log(`SysReqs: Parsing OSfamily=${os}`);
         if (req.childNodes) {
-            console.log('SysReqs children:', req.childNodes.map(c => c.name).join(', '));
+            // console.log('SysReqs children:', req.childNodes.map(c => c.name).join(', '));
         }
 
         let target: SystemRequirementsOS;
@@ -1208,7 +1165,7 @@ export function parseWikitext(wikitext: string): GameData {
         // Regex to find the section and its content
         // Matches ==Title== ... (until next ==Header== (Level 2) or end)
         // ensure we don't stop at === (Level 3)
-        const sectionRegex = new RegExp(`==\\s*${sectionName}\\s*==([\\s\\S]*?)(?=\\n==(?!=)|$)`, 'i');
+        const sectionRegex = new RegExp(`==\\s*${sectionName}\\s*==([\\s\\S]*?)(?=\\n+==(?!=)|$)\\n*`, 'i');
         const match = wikitext.match(sectionRegex);
         if (!match) return [];
 

@@ -1,4 +1,4 @@
-import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, SystemRequirements, GameDataConfig, GeneralInfoRow, AvailabilityRow, DLCRow, CloudSync, Issue } from '../models/GameData';
+import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, SystemRequirements, GameDataConfig, AvailabilityRow, DLCRow, CloudSync, Issue } from '../models/GameData';
 import { WikitextParser } from './WikitextParser';
 
 export class PCGWEditor {
@@ -9,11 +9,13 @@ export class PCGWEditor {
     }
 
     get originalWikitext(): string {
-        return this.parser.getText();
+        return this.parser.getText().trimStart();
     }
 
     getText(): string {
-        return this.parser.getText();
+        // Ensure no leading newline if the file is empty or starts with one inappropriately
+        // But parser might produce one.
+        return this.parser.getText().trimStart();
     }
 
     /**
@@ -23,7 +25,18 @@ export class PCGWEditor {
      */
     setTemplateParam(templateName: string, paramName: string, newValue: string | boolean | number | undefined | null) {
         if (newValue === undefined || newValue === null) return;
-        this.parser.setParameter(templateName, paramName, String(newValue));
+
+        let strValue = String(newValue);
+
+        if (paramName === 'igdb' && strValue.trim() === '') {
+            this.parser.removeParameter(templateName, paramName);
+            return;
+        }
+
+        // Always trim values to prevent extra newlines in generated wikitext.
+        // Note: List-type parameters (developers, publishers, etc.) use replaceParameterContent 
+        // and bypass this method, so this is safe for scalar values.
+        this.parser.setParameter(templateName, paramName, strValue.trim());
     }
 
     /**
@@ -209,9 +222,19 @@ export class PCGWEditor {
             vndb: 'vndb',
             strategyWiki: 'strategywiki',
             wikipedia: 'wikipedia',
-            wineHq: 'winehq',
-            wineHqSide: 'winehq side'
+            wineHq: 'winehq'
         };
+
+        // Handle IGDB exclusion from External Links
+        // Logic: igdb should not be inserted if empty or if it exists in reception (aggregator IGDB)
+        const hasIgdbInReception = infobox.reception?.some(r => r.aggregator?.toLowerCase() === 'igdb');
+        if (hasIgdbInReception || !infobox.links?.igdb) {
+            this.parser.removeParameter('Infobox game', 'igdb');
+            if (hasIgdbInReception) {
+                delete linkMap.igdb;
+            }
+        }
+
         this.updateSection('Infobox game', infobox.links, linkMap);
 
         this.updateInfoboxList('developers', infobox.developers);
@@ -242,15 +265,33 @@ export class PCGWEditor {
 
         const listContent = Object.entries(mapping).map(([key, templateSuffix]) => {
             const item = (taxonomy as any)[key];
-            if (!item || !item.value) return '';
+            // Fix: Include all rows even if empty
+            // if (!item || !item.value) return '';
 
-            // {{Infobox game/row/taxonomy/modes|Value|note=...|ref=...}}
-            let row = `{{Infobox game/row/taxonomy/${templateSuffix}|${item.value}`;
-            if (item.ref) row += `|ref=${item.ref}`;
-            if (item.note) row += `|note=${item.note}`;
-            row += `}}`;
+            const value = item?.value || '';
+            const ref = item?.ref ? `|ref=${item.ref}` : '';
+            const note = item?.note ? `|note=${item.note}` : '';
+
+            // Align with pipes: {{Infobox game/row/taxonomy/modes             | Singleplayer }}
+            // Calculate padding for alignment? Or just fixed width spacing?
+            // "modes" length varies.
+            // Let's iterate and align.
+            // Max length of templateSuffix is 'microtransactions' (17 chars)
+            // But let's just make it look decent with spaces.
+
+            const rowTemplate = `Infobox game/row/taxonomy/${templateSuffix}`;
+            const padding = ' '.repeat(Math.max(0, 44 - rowTemplate.length));
+
+            let row = `{{${rowTemplate}${padding}| ${value} ${ref}${note}}}`;
+
+            // Clean up extra spaces if value is empty?
+            // "If value is empty, it should be | }}"
+            if (!value && !ref && !note) {
+                row = `{{${rowTemplate}${padding}| }}`;
+            }
+
             return row;
-        }).filter(Boolean).join('\n');
+        }).join('\n');
 
         this.parser.replaceParameterContent('Infobox game', 'taxonomy', listContent);
     }
@@ -268,7 +309,7 @@ export class PCGWEditor {
             // Only skip if absolutely nothing is there, though addRow creates fully empty objects
             // Use positional arguments: 1=Aggregator, 2=ID, 3=Score
             return `{{Infobox game/row/reception|${agg}|${id}|${score}}}`;
-        }).join('');
+        }).join('\n'); // Fix: Join with newline
 
         this.parser.replaceParameterContent('Infobox game', 'reception', listContent);
     }
@@ -290,7 +331,7 @@ export class PCGWEditor {
     // ... private updateInfoboxList ... (kept as is, but needing to be preserved)
     private updateInfoboxList(paramName: string, items: any[]) {
         if (!items || items.length === 0) {
-            this.parser.replaceParameterContent('Infobox game', paramName, '');
+            this.parser.replaceParameterContent('Infobox game', paramName, '\n');
             return;
         }
         const formattedItems = items.map(item => {
@@ -324,6 +365,16 @@ export class PCGWEditor {
         });
 
         const listContent = this.parser.formatNestedRows(formattedItems);
+        // Fix: Ensure newline before list content if it's not empty? 
+        // formatNestedRows usually returns valid string.
+        // We want ensure proper placement.
+        // The parser.replaceParameterContent usually handles standard formatting.
+        // But the issue was "publishers and engines on same line".
+        // This likely means replaceParameterContent is not adding a newline before the content if the param is inline?
+        // Let's modify replaceParameterContent call or check formatNestedRows output.
+        // If formatNestedRows returns "Row1Row2", we want "Row1\nRow2" or similar.
+        // In WikitextParser, formatNestedRows typically joins with newlines if configured.
+
         this.parser.replaceParameterContent('Infobox game', paramName, listContent);
     }
 
@@ -343,47 +394,79 @@ export class PCGWEditor {
         this.ensureTemplate('Availability');
 
         const content = rows.map(row => {
-            let line = `{{Availability/row| ${row.distribution} | ${row.id} | ${row.drm} | ${row.notes} | ${row.keys} | ${row.os}`;
+            // User wants | | for empty values, which implies single space between pipes if empty.
+            // Current code: | ${row.notes} | -> |  | (if empty string).
+            // Change to: | ${row.notes || ''} | -> |  | (still two spaces?).
+            // If user wants | |, maybe they want ONE space?
+            // "Invece devono essere: ... | | | Windows"
+            // Let's try to remove spaces around values if they are empty?
+            // Or change template to | ${val} | for valid, | | for empty?
+
+            const formatVal = (val: string | undefined) => {
+                if (!val) return ' '; // Single space
+                return ` ${val} `;
+            };
+
+            let line = `{{Availability/row|${formatVal(row.distribution)}|${formatVal(row.id)}|${formatVal(row.drm)}|${formatVal(row.notes)}|${formatVal(row.keys)}|${formatVal(row.os)}`;
             if (row.state && row.state !== 'normal') {
-                line += ` | ${row.state}`;
+                line += `| ${row.state} `; // Keep space prefix for state?
             }
-            line += ` }}`;
+            line += `}}`;
             return line;
         }).join('\n');
 
-        this.parser.replaceParameterContent('Availability', '1', '\n' + content + '\n');
+        this.parser.replaceParameterContent('Availability', '1', content + '\n');
     }
 
     updateDLC(rows: DLCRow[]) {
-        if (!rows || rows.length === 0) return;
+        const validRows = rows?.filter(r => r.name && r.name.trim() !== '') || [];
+
+        if (validRows.length === 0) {
+            this.parser.removeTemplate('DLC');
+            return;
+        }
 
         this.ensureTemplate('DLC');
 
-        const content = rows.map(row => {
+        const content = validRows.map(row => {
             return `{{DLC/row| ${row.name} | ${row.notes} | ${row.os} }}`;
         }).join('\n');
 
         this.parser.replaceParameterContent('DLC', '1', '\n' + content + '\n');
     }
 
-    updateGeneralInfo(data: GeneralInfoRow[]) {
-        if (!data || data.length === 0) return;
+    updateGeneralInfo(content: string) {
+        if (!content) return;
 
-        const lines = data.map(row => {
-            if (row.type === 'gog') {
-                return `{{GOG.com links|${row.id}|${row.url}}}`;
-            } else {
-                // Default to link/mm style
-                let line = `* {{mm}} [${row.url} ${row.label}]`;
-                if (row.note) {
-                    line += ` - ${row.note}`;
-                }
-                return line;
+        const header = "'''General information'''";
+        const sectionRegex = /'''\s*General information\s*'''/i;
+
+        // Check if section exists replacement
+        if (sectionRegex.test(this.parser.getText())) {
+            this.parser.replaceCustomSection(sectionRegex, content, header);
+        } else {
+            // Insert before Availability
+            const availHeaderRegex = /^={2,}\s*Availability\s*={2,}/im;
+            const availHeaderMatch = this.parser.getText().match(availHeaderRegex);
+            const availTpl = this.parser.findTemplate('Availability');
+
+            let insertPos = -1;
+            if (availHeaderMatch && availHeaderMatch.index !== undefined) {
+                insertPos = availHeaderMatch.index;
+            } else if (availTpl) {
+                insertPos = availTpl.start;
             }
-        });
 
-        // Use custom section replacement for '''General information'''
-        this.parser.replaceCustomSection(/'''\s*General information\s*'''/i, lines.join('\n'), "'''General information'''");
+            if (insertPos !== -1) {
+                const text = this.parser.getText();
+                this.parser = new WikitextParser(
+                    text.substring(0, insertPos) + `${header}\n${content}\n\n` + text.substring(insertPos)
+                );
+            } else {
+                // Last resort: append to end
+                this.parser.replaceCustomSection(sectionRegex, content, header);
+            }
+        }
     }
 
     updateMonetization(data: GameData['monetization']) {
@@ -438,28 +521,6 @@ export class PCGWEditor {
             }).join('\n');
         }
 
-        // We need to insert these into the Game data section
-        // Strategy: Ensure 'Game data' section exists. 
-        // Then look for subsections. If not found, append.
-
-        // Simpler approach for now: Replace the entire 'Game data' section content or specific subsections?
-        // The issue is preserving other content in Game data if exists.
-        // But usually Game data is strictly structured.
-
-        // Let's try to update subsections specifically if they exist, or create them.
-        // But since we don't have granular subsection targeting easily without regex,
-        // let's assume we are building the section.
-
-        // Actually, let's use replaceCustomSection for the headers if we can.
-        // Or just appending to the Game data section.
-
-        // Correct approach:
-        // 1. Ensure 'Game data' section.
-        // 2. configContent goes under '===Configuration file(s) location==='
-        // 3. saveContent goes under '===Save game data location==='
-
-        // For simplicity and to pass tests (which check for existence), let's implement a basic replace/append.
-
         if (configContent) {
             this.replaceCustomSection(/===Configuration file\(s\) location===[\s\S]*?(?===|$)/,
                 `===Configuration file(s) location===\n${configContent}\n`,
@@ -478,15 +539,6 @@ export class PCGWEditor {
         // But let's rely on the previous logic to be sufficient for now or explicit addition.
         if (configContent && !this.originalWikitext.includes('===Configuration file(s) location===')) {
             this.addSection('Game data', `===Configuration file(s) location===\n${configContent}\n`);
-        }
-        if (saveContent && !this.originalWikitext.includes('===Save game data location===')) {
-            // If Game data exists but not this subsection
-            // This is tricky. simpler to just append if Game data exists.
-            // For now, let's assume the template has structure or we append.
-            if (this.originalWikitext.includes('==Game data==')) {
-                // Append to end of Game data? Difficult to determine end.
-                // Let's just create it if missing headers.
-            }
         }
     }
 
@@ -629,7 +681,6 @@ export class PCGWEditor {
             steamControllerPromptsNotes: 'steam controller prompts notes',
             steamInputMotionSensors: 'steam input motion sensors',
             steamInputMotionSensorsNotes: 'steam input motion sensors notes',
-            steamInputMotionSensorsRef: 'steam input motion sensors ref',
             steamInputMotionSensorsModes: 'steam input motion sensors modes',
             steamCursorDetection: 'steam cursor detection',
             steamCursorDetectionNotes: 'steam cursor detection notes',
@@ -696,16 +747,17 @@ export class PCGWEditor {
             impulseTriggersNotes: 'impulse triggers notes',
         };
 
-        const hasData = Object.keys(map).some(key => {
-            const val = (data as any)[key];
-            return val && val !== 'unknown' && val !== '';
+        // Fill defaults for all input fields so they appear empty if not set
+        const fullData: any = { ...data };
+        Object.keys(map).forEach(key => {
+            if (fullData[key] === undefined) fullData[key] = '';
         });
 
-        if (!hasData && !this.parser.findTemplate('Input')) return;
-
         this.ensureTemplate('Input');
-        this.updateSection('Input', data, map);
+        this.updateSection('Input', fullData, map);
     }
+
+
 
     updateAudio(data: SettingsAudio) {
         const map: Record<string, string> = {
@@ -781,10 +833,16 @@ export class PCGWEditor {
             upnp: 'upnp'
         };
 
-        // 2. Check Data Presence
+        // Clean data: Remove 'unknown' values so they are not written
+        const cleanData: any = { ...data };
+        Object.keys(cleanData).forEach(key => {
+            if (cleanData[key] === 'unknown') cleanData[key] = undefined;
+        });
+
+        // 2. Check Data Presence (using cleanData)
         const hasData = (map: Record<string, string>) => Object.keys(map).some(key => {
-            const val = (data as any)[key];
-            return val && val !== 'unknown' && val !== '';
+            const val = cleanData[key];
+            return val && val !== '';
         });
 
         const hasMulti = hasData(mapMulti);
@@ -806,9 +864,9 @@ export class PCGWEditor {
             if (!headerRegex.test(this.parser.getText())) {
                 // Insert Header + Templates
                 let block = `== Network ==\n`;
-                if (hasMulti) block += `{ { Network / Multiplayer\n } } \n`;
-                if (hasConn) block += `{ { Network / Connections\n } } \n`;
-                if (hasPorts) block += `{ { Network / Ports\n } } \n`;
+                if (hasMulti) block += `{{Network/Multiplayer}}\n`;
+                if (hasConn) block += `{{Network/Connections}}\n`;
+                if (hasPorts) block += `{{Network/Ports}}\n`;
 
                 // Logic to insert before VR support or fallback
                 let insertPos = -1;
@@ -911,14 +969,15 @@ export class PCGWEditor {
                     const prefix = text.substring(0, insertIdx);
                     const suffix = text.substring(insertIdx);
                     // Add newline if needed
-                    const newTp = `\n{ {${tplName} \n } } `;
+                    const newTp = `\n{{${tplName}}}\n`;
                     this.parser = new WikitextParser(prefix + newTp + suffix);
                 } else {
                     // Fallback: Use standard ensureTemplate which appends to file end
                     this.ensureTemplate(tplName);
                 }
             }
-            this.updateSection(tplName, data, map);
+            // Pass cleanData to exclude 'unknown'
+            this.updateSection(tplName, cleanData, map);
         };
 
         ensureAndSet('Network/Multiplayer', mapMulti, hasMulti);
@@ -1183,7 +1242,7 @@ export class PCGWEditor {
         }).join('\n');
 
         this.ensureTemplate('L10n');
-        this.setTemplateParam('L10n', 'content', '\n' + content + '\n');
+        this.parser.replaceParameterContent('L10n', 'content', content);
     }
     updateIssues(issues: Issue[], type: 'unresolved' | 'fixed') {
         const title = type === 'unresolved' ? 'Issues unresolved' : 'Issues fixed';
@@ -1195,10 +1254,10 @@ export class PCGWEditor {
             issues.forEach(issue => {
                 content += `===${issue.title}===\n${issue.body}\n\n`;
             });
-            content = content.trim();
+            content = content.trim() + '\n\n';
         }
 
-        const regex = new RegExp(`==\\s*${title}\\s*==([\\s\\S]*?)(?=\\n==|$)`, 'i');
+        const regex = new RegExp(`==\\s*${title}\\s*==([\\s\\S]*?)(?=\\n+==(?!=)|$)\\n*`, 'i');
         const text = this.parser.getText();
 
         if (regex.test(text)) {
@@ -1210,7 +1269,7 @@ export class PCGWEditor {
                 this.parser = new WikitextParser(newText);
             }
         } else if (content) {
-            this.parser = new WikitextParser(text + '\n\n' + content);
+            this.parser = new WikitextParser(text.trim() + '\n\n' + content);
         }
     }
 
@@ -1467,12 +1526,9 @@ export class PCGWEditor {
         }
     }
 
-
 }
+
 // Keep DEFAULT_TEMPLATE and generateWikitext at the end
-
-
-// Default template if file is empty
 const DEFAULT_TEMPLATE = `{{Infobox game
 |cover        = 
 |developers   = 
@@ -1611,13 +1667,15 @@ const DEFAULT_TEMPLATE = `{{Infobox game
 |OS=Linux
 }}`;
 
-
 export function generateWikitext(data: GameData, originalWikitext: string): string {
     const editor = new PCGWEditor(originalWikitext || DEFAULT_TEMPLATE);
 
     editor.updateArticleState(data.articleState);
     editor.updateInfobox(data.infobox);
     editor.updateIntroduction(data.introduction);
+
+    editor.updateGeneralInfo(data.introduction.generalInfo);
+
     editor.updateAvailability(data.availability);
     editor.updateDLC(data.dlc);
     editor.updateMonetization(data.monetization);
@@ -1630,8 +1688,6 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateAPI(data.api);
     editor.updateMiddleware(data.middleware);
     editor.updateLocalizations(data.localizations);
-
-    editor.updateGeneralInfo(data.generalInfo);
 
     editor.updateIssues(data.issuesUnresolved, 'unresolved');
     editor.updateIssues(data.issuesFixed, 'fixed');

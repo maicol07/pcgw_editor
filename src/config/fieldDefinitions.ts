@@ -64,7 +64,6 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
     'links.vndb': { wikitextParam: 'vndb' },
     'links.lutris': { wikitextParam: 'lutris' },
     'links.wineHq': { wikitextParam: 'winehq' },
-    'links.wineHqSide': { wikitextParam: 'winehq_side' },
 
     // Article State
     'articleState.disambig': { wikitextParam: 'disambig' },

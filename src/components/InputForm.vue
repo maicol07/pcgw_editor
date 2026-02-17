@@ -141,7 +141,7 @@ const { getField } = useFields();
         <RatingRow :icon="Gamepad2" label="Steam Controller Prompts" v-model:value="input.steamControllerPrompts"
           v-model:notes="input.steamControllerPromptsNotes" v-model:reference="input.steamControllerPromptsRef" />
         <RatingRow :icon="Move" label="Motion Sensors" v-model:value="input.steamInputMotionSensors"
-          v-model:notes="input.steamInputMotionSensorsNotes" v-model:reference="input.steamInputMotionSensorsRef" />
+          v-model:notes="input.steamInputMotionSensorsNotes" />
         <DynamicField v-if="getField('input.steamInputMotionSensorsModes')"
           :field="getField('input.steamInputMotionSensorsModes')!" v-model="input.steamInputMotionSensorsModes" />
         <RatingRow :icon="Settings" label="Steam Input Presets" v-model:value="input.steamInputPresets"

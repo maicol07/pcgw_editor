@@ -2,7 +2,7 @@ import { ref, computed, type Ref, type ComputedRef } from 'vue';
 import { parseWikitext } from '../../utils/parser';
 import { GameData } from '../../models/GameData';
 
-export function useEditor(gameData: Ref<GameData>, wikitext: ComputedRef<string>) {
+export function useEditor(gameData: Ref<GameData>, wikitext: ComputedRef<string>, onSync?: (wikitext: string) => void) {
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
     const manualWikitext = ref('');
@@ -23,8 +23,12 @@ export function useEditor(gameData: Ref<GameData>, wikitext: ComputedRef<string>
             isModeSwitching.value = true;
             try {
                 await new Promise(r => setTimeout(r, 50));
-                const parsed = parseWikitext(manualWikitext.value);
-                gameData.value = parsed;
+                if (onSync) {
+                    onSync(manualWikitext.value);
+                } else {
+                    const parsed = parseWikitext(manualWikitext.value);
+                    gameData.value = parsed;
+                }
             } catch (e) {
                 console.error("Parse error", e);
             } finally {

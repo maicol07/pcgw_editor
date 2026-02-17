@@ -61,7 +61,6 @@ export interface GameInfobox {
         strategyWiki: string;
         wikipedia: string;
         wineHq: string;
-        wineHqSide: string;
     };
     license: string;
 }
@@ -70,15 +69,7 @@ export interface GameIntroduction {
     introduction: string;
     releaseHistory: string;
     currentState: string;
-}
-
-export interface GeneralInfoRow {
-    type: 'link' | 'gog' | 'steam' | 'pcgw';
-    label: string;
-    url?: string;
-    id?: string;
-    forumsId?: string;
-    note?: string;
+    generalInfo: string;
 }
 
 export interface AvailabilityRow {
@@ -290,7 +281,6 @@ export interface SettingsInput {
     steamControllerPromptsRef?: string;
     steamInputMotionSensors?: string; // comma separated
     steamInputMotionSensorsNotes?: string;
-    steamInputMotionSensorsRef?: string;
     steamInputMotionSensorsModes?: string; // comma separated
     steamCursorDetection?: RatingValue;
     steamCursorDetectionNotes?: string;
@@ -690,7 +680,6 @@ export interface GameData {
     infobox: GameInfobox;
     introduction: GameIntroduction;
     essentialImprovements: string;
-    generalInformation: GeneralInfoRow[];
     availability: AvailabilityRow[];
     monetization: GameMonetization;
     microtransactions: GameMicrotransactions;
@@ -702,9 +691,6 @@ export interface GameData {
     localizations: LocalizationRow[];
     api: SettingsAPI;
     middleware: GameMiddleware;
-
-    // General Info
-    generalInfo: GeneralInfoRow[];
 
     // Configuration & Save Data
     config: GameDataConfig;
@@ -752,7 +738,6 @@ export const initialGameData: GameData = {
             strategyWiki: '',
             wikipedia: '',
             wineHq: '',
-            wineHqSide: '',
         },
         license: 'commercial',
     },
@@ -760,9 +745,9 @@ export const initialGameData: GameData = {
         introduction: '',
         releaseHistory: '',
         currentState: '',
+        generalInfo: '',
     },
     essentialImprovements: '',
-    generalInformation: [],
     availability: [
         { distribution: 'Steam', id: '', drm: 'Steam', notes: '', keys: '', os: 'Windows', state: 'normal' }
     ],
@@ -938,7 +923,6 @@ export const initialGameData: GameData = {
         multiplayer: 'unknown',
         anticheat: 'unknown',
     },
-    generalInfo: [],
     config: {
         configFiles: [
             { platform: 'Windows', paths: [''] }

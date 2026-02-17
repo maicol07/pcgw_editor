@@ -69,7 +69,7 @@ const wikitext = computed(() => workspaceStore.activePage?.wikitext || '');
 const {
     editorMode, isModeSwitching, manualWikitext,
     currentWikitext, handleModeChange
-} = useEditor(gameData, wikitext);
+} = useEditor(gameData, wikitext, workspaceStore.syncFromWikitext);
 
 const {
     previewMode, renderedHtml, isLoading: isPreviewLoading, error: previewError
