@@ -1240,66 +1240,109 @@ export function parseWikitext(wikitext: string): GameData {
         return results;
     };
 
-    // 1. Parse <gallery> tags
-    const tagMatches = wikitext.matchAll(/<gallery[^>]*>([\s\S]*?)<\/gallery>/gi);
-    for (const m of tagMatches) {
-        if (!data.galleries.video) data.galleries.video = [];
-        data.galleries.video.push(...extractGalleryImages(m[1]));
-    }
+    const getSectionContent = (name: string): string => {
+        // More robust regex to match section content
+        const regex = new RegExp(`==\\s*${name}\\s*==([\\s\\S]*?)(?=\\n+==(?!=)|$)`, 'i');
+        const match = wikitext.match(regex);
+        return match ? match[1] : '';
+    };
 
-    // 2. Parse {{Gallery}} templates (out-of-AST fallback)
-    const tplMatches = wikitext.matchAll(/\{\{Gallery\s*\|([\s\S]*?)\}\}/gi);
-    for (const m of tplMatches) {
-        if (!data.galleries.video) data.galleries.video = [];
-        data.galleries.video.push(...extractGalleryImages(m[1]));
-    }
+    const gallerySections: Record<string, string> = {
+        'Video': 'video',
+        'Input': 'input',
+        'Audio': 'audio',
+        'Network': 'network',
+        'VR support': 'vr',
+        'API': 'api',
+        'Middleware': 'middleware',
+        'System requirements': 'system_requirements'
+    };
 
-    // 3. Parse {{Image}} templates (single images)
-    const singleImgMatches = wikitext.matchAll(/\{\{Image\s*\|([^|}]*)\|?([^}]*)\}\}/gi);
-    for (const m of singleImgMatches) {
-        const name = m[1].trim().replace(/^File:/i, '');
-        const caption = (m[2] || '').trim();
-        if (name) {
-            if (!data.galleries.video) data.galleries.video = [];
-            if (!data.galleries.video.some(img => img.name.toLowerCase() === name.toLowerCase())) {
-                data.galleries.video.push({ name, caption });
+    for (const [section, key] of Object.entries(gallerySections)) {
+        const content = getSectionContent(section);
+        if (content) {
+            // We need to parse:
+            // 1. {{Image...}} templates
+            // 2. <gallery> tags
+            // 3. {{Gallery}} templates
+            // 4. [[File:...]] links
+
+            const images: GalleryImage[] = [];
+            const allMatches: { index: number, type: 'gallery' | 'template_gallery' | 'template_image' | 'link', match: RegExpMatchArray }[] = [];
+
+            // 1. <gallery> tags
+            for (const m of content.matchAll(/<gallery[^>]*>([\s\S]*?)<\/gallery>/gi)) {
+                if (m.index !== undefined) allMatches.push({ index: m.index, type: 'gallery', match: m });
+            }
+
+            // 2. {{Gallery}} templates
+            for (const m of content.matchAll(/\{\{Gallery\s*\|([\s\S]*?)\}\}/gi)) {
+                if (m.index !== undefined) allMatches.push({ index: m.index, type: 'template_gallery', match: m });
+            }
+
+            // 3. {{Image}} templates
+            for (const m of content.matchAll(/\{\{Image\s*\|([^|}]*)\|?([^}]*)\}\}/gi)) {
+                if (m.index !== undefined) allMatches.push({ index: m.index, type: 'template_image', match: m });
+            }
+
+            // 4. [[File:...]] links
+            for (const m of content.matchAll(/\[\[File:\s*([^|\]\n]+)(?:\|([^\]\n]*))?\]\]/gi)) {
+                if (m.index !== undefined) allMatches.push({ index: m.index, type: 'link', match: m });
+            }
+
+            // Sort by occurrence in text
+            allMatches.sort((a, b) => a.index - b.index);
+
+            const knownFileExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
+
+            for (const item of allMatches) {
+                if (item.type === 'gallery' || item.type === 'template_gallery') {
+                    // extractGalleryImages returns array, we need to check dupes for each
+                    const extracted = extractGalleryImages(item.match[1]);
+                    for (const img of extracted) {
+                        if (img.name && !images.some(existing => existing.name.toLowerCase() === img.name.toLowerCase())) {
+                            img.position = 'gallery';
+                            images.push(img);
+                        }
+                    }
+                } else if (item.type === 'template_image') {
+                    const m = item.match;
+                    const name = m[1].trim().replace(/^File:/i, '');
+                    const caption = (m[2] || '').trim();
+                    if (name && !images.some(img => img.name.toLowerCase() === name.toLowerCase())) {
+                        images.push({ name, caption, position: 'lateral' });
+                    }
+                } else if (item.type === 'link') {
+                    const m = item.match;
+                    const name = m[1].trim();
+                    const params = m[2] || '';
+                    const hasExtension = knownFileExtensions.some(ext => name.toLowerCase().endsWith(ext));
+                    if (!hasExtension) continue;
+                    if (name.toLowerCase().includes('icon')) continue;
+
+                    const parts = params.split('|').map(p => p.trim());
+                    const knownAttributes = ['thumb', 'thumbnail', 'left', 'right', 'center', 'none', 'frame', 'framed', 'frameless', 'border'];
+                    let caption = '';
+
+                    if (parts.length > 0) {
+                        const lastPart = parts[parts.length - 1];
+                        if (!knownAttributes.includes(lastPart.toLowerCase()) && !/^\d+px$/.test(lastPart)) {
+                            caption = lastPart;
+                        }
+                    }
+
+                    if (!images.some(img => img.name.toLowerCase() === name.toLowerCase())) {
+                        images.push({ name, caption, position: 'lateral' });
+                    }
+                }
+            }
+
+            if (images.length > 0) {
+                data.galleries[key] = images;
             }
         }
     }
 
-    // 4. Parse single images [[File:Name|...]] (fallback)
-    const imgMatches = wikitext.matchAll(/\[\[File:\s*([^|\]\n]+)(?:\|([^\]\n]*))?\]\]/gi);
-    const knownFileExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
-
-    for (const m of imgMatches) {
-        const name = m[1].trim();
-        const params = m[2] || '';
-
-        // Basic heuristic: must have a known extension to be a screenshot
-        const hasExtension = knownFileExtensions.some(ext => name.toLowerCase().endsWith(ext));
-        if (!hasExtension) continue;
-
-        // Exclude common icons
-        if (name.toLowerCase().includes('icon')) continue;
-
-        // Extract caption: usually the last pipe-separated part that isn't a known attribute
-        const parts = params.split('|').map(p => p.trim());
-        const knownAttributes = ['thumb', 'thumbnail', 'left', 'right', 'center', 'none', 'frame', 'framed', 'frameless', 'border'];
-        let caption = '';
-
-        if (parts.length > 0) {
-            const lastPart = parts[parts.length - 1];
-            if (!knownAttributes.includes(lastPart.toLowerCase()) && !/^\d+px$/.test(lastPart)) {
-                caption = lastPart;
-            }
-        }
-
-        if (!data.galleries.video) data.galleries.video = [];
-        // Avoid duplicates
-        if (!data.galleries.video.some(img => img.name.toLowerCase() === name.toLowerCase())) {
-            data.galleries.video.push({ name, caption });
-        }
-    }
 
     return data;
 }

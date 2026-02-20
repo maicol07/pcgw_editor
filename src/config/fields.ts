@@ -321,6 +321,9 @@ export const fieldsConfig: SectionDefinition[] = [
         title: 'Audio',
         icon: Volume2,
         order: 10,
+        fields: [
+            h.gallery('Gallery', { section: 'Audio' }, { key: 'galleries.audio', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Audio Settings',
@@ -444,6 +447,9 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Keyboard, // Use Keyboard as generic input icon
         iconClass: 'text-purple-500',
         order: 9,
+        fields: [
+            h.gallery('Gallery', { section: 'Input' }, { key: 'galleries.input', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Mouse / Keyboard',
@@ -635,6 +641,9 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Wifi,
         iconClass: 'text-purple-500', // Adjust color if needed
         order: 10, // Adjust order
+        fields: [
+            h.gallery('Gallery', { section: 'Network' }, { key: 'galleries.network', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Local Play',
@@ -733,6 +742,9 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Eye,
         iconClass: 'text-indigo-500',
         order: 11,
+        fields: [
+            h.gallery('Gallery', { section: 'VR support' }, { key: 'galleries.vr', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: '3D Modes',
@@ -789,6 +801,9 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Settings,
         iconClass: 'text-gray-500',
         order: 13,
+        fields: [
+            h.gallery('Gallery', { section: 'API' }, { key: 'galleries.api', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Graphics Support',
@@ -825,6 +840,9 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Settings, // Or something else
         iconClass: 'text-orange-500',
         order: 14,
+        fields: [
+            h.gallery('Gallery', { section: 'Middleware' }, { key: 'galleries.middleware', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Middleware',
@@ -849,6 +867,7 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'SystemRequirements',
         fields: [
+            h.gallery('Gallery', { section: 'System requirements' }, { key: 'galleries.system_requirements', wikitextParam: '' }) as FieldDefinition,
             f('requirements', {
                 label: 'System Requirements',
                 component: 'SystemRequirementsForm',

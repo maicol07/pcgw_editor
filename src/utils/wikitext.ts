@@ -1,4 +1,4 @@
-import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, SystemRequirements, GameDataConfig, AvailabilityRow, DLCRow, CloudSync, Issue } from '../models/GameData';
+import { GameData, GameInfobox, SettingsVideo, SettingsInput, SettingsAudio, SettingsNetwork, SettingsVR, SettingsAPI, SystemRequirements, GameDataConfig, AvailabilityRow, DLCRow, CloudSync, Issue, GalleryImage } from '../models/GameData';
 import { WikitextParser } from './WikitextParser';
 
 export class PCGWEditor {
@@ -579,6 +579,44 @@ export class PCGWEditor {
         }
     }
 
+
+    updateSectionImages(sectionName: string, images: GalleryImage[] | undefined) {
+        if (!images) return; // Don't wipe if undefined, only if empty array? 
+        // Actually, if we want to sync removals, we should handle empty array.
+        // If images is [], we should remove existing images.
+
+        const section = this.parser.findSection(sectionName);
+        if (!section) return; // Section must exist
+
+        let content = section.content;
+
+        // Strip existing images
+        content = content.replace(/<gallery[^>]*>[\s\S]*?<\/gallery>/gi, '');
+        content = content.replace(/\{\{Gallery\s*\|[\s\S]*?\}\}/gi, '');
+        content = content.replace(/\{\{Image\s*\|[^|}]*\|?[^}]*\}\}/gi, '');
+
+        // Clean up double newlines
+        content = content.replace(/\n{3,}/g, '\n\n').trim();
+
+        // Construct new images
+        const topImages = images.filter(img => img.position === 'lateral').slice(0, 2);
+        const bottomImages = images.filter(img => !topImages.includes(img));
+
+        let topWikitext = '';
+        if (topImages.length > 0) {
+            topWikitext = topImages.map(img => `{{Image|${img.name}|${img.caption}}}`).join('\n') + '\n\n';
+        }
+
+        let bottomWikitext = '';
+        if (bottomImages.length > 0) {
+            bottomWikitext = '\n<gallery>\n' + bottomImages.map(img => `${img.name}|${img.caption}`).join('\n') + '\n</gallery>';
+        }
+
+        // Reassemble: Top Images + Content + Bottom Gallery
+        const newContent = topWikitext + content + bottomWikitext;
+
+        this.parser.replaceSection(sectionName, '\n' + newContent + '\n');
+    }
 
     updateVideo(data: SettingsVideo) {
         // Map GameData fields to PCGW Template fields
@@ -1690,11 +1728,16 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateLocalizations(data.localizations);
 
     editor.updateIssues(data.issuesUnresolved, 'unresolved');
-    editor.updateIssues(data.issuesFixed, 'fixed');
-
     editor.updateSystemRequirements(data.requirements);
 
-    editor.updateGalleries(data.galleries);
+    editor.updateSectionImages('Video', data.galleries['video']);
+    editor.updateSectionImages('Input', data.galleries['input']);
+    editor.updateSectionImages('Audio', data.galleries['audio']);
+    editor.updateSectionImages('Network', data.galleries['network']);
+    editor.updateSectionImages('VR support', data.galleries['vr']);
+    editor.updateSectionImages('API', data.galleries['api']);
+    editor.updateSectionImages('Middleware', data.galleries['middleware']);
+    editor.updateSectionImages('System requirements', data.galleries['system_requirements']);
 
     return editor.getText();
 }

@@ -666,6 +666,7 @@ export interface GameMiddleware {
 export interface GalleryImage {
     name: string;
     caption?: string;
+    position?: 'lateral' | 'gallery';
 }
 
 export interface Issue {

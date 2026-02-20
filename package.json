@@ -30,7 +30,9 @@
     "mwn": "^3.0.1",
     "ofetch": "^1.5.1",
     "pinia": "^3.0.4",
+    "sortablejs": "^1.15.7",
     "vue": "^3.5.27",
+    "vue-draggable-plus": "^0.6.1",
     "wikiparser-node": "^1.35.0"
   },
   "devDependencies": {
