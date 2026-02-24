@@ -77,6 +77,7 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
 
     // Introduction
     'introduction.introduction': { wikitextParam: 'introduction' },
+    'introduction.generalInfo': { wikitextParam: '' }, // No wikitext representation, used for general links
     'introduction.releaseHistory': { wikitextParam: 'release_history' },
     'introduction.currentState': { wikitextParam: 'current_state' },
 
@@ -214,6 +215,9 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
     'input.playstationPrompts': { wikitextParam: 'prompts_playstation' },
     'input.playstationMotionSensors': { wikitextParam: 'playstation_motion_sensors' },
     'input.playstationMotionSensorsModes': { wikitextParam: 'playstation_motion_sensors_modes' },
+    'input.playstationLightBar': { wikitextParam: 'playstation_light_bar' },
+    'input.playstationAdaptiveTriggers': { wikitextParam: 'playstation_adaptive_triggers' },
+    'input.playstationHaptics': { wikitextParam: 'playstation_haptics' },
     'input.glightBar': { wikitextParam: 'playstation_light_bar' },
     'input.dualSenseAdaptiveTrigger': { wikitextParam: 'playstation_adaptive_triggers' },
     'input.dualSenseHaptics': { wikitextParam: 'playstation_haptics' },
