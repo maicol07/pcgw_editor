@@ -1,20 +1,12 @@
 import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue, GalleryImage, Issue } from '../models/GameData';
 import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
+import type { AstNodes as ASTNode } from 'wikiparser-node';
 
 let wiki = (globalThis as any).Parser as Parser;
 
 export function parseRaw(text: string) {
     return wiki.parse(text);
-}
-
-// Define AST Node interfaces based on wikiparser-node output
-interface ASTNode {
-    name?: string;
-    data?: string;
-    childNodes?: ASTNode[];
-    type?: string;
-    // Add other properties as needed based on inspection
 }
 
 export function parseWikitext(wikitext: string): GameData {
@@ -34,7 +26,7 @@ export function parseWikitext(wikitext: string): GameData {
 
     const cleanTemplateName = (name: string) => name.replace(/^Template:/i, '').replace(/_/g, ' ').trim().toLowerCase();
 
-    const findTemplate = (nodes: ASTNode[], name: string): ASTNode | null => {
+    const findTemplate = (nodes: ASTNode [], name: string): ASTNode | null => {
         if (!nodes) return null;
         for (const node of nodes) {
             if (node.name) {
@@ -46,7 +38,7 @@ export function parseWikitext(wikitext: string): GameData {
         return null;
     };
 
-    const findAllTemplates = (nodes: ASTNode[], name: string): ASTNode[] => {
+    const findAllTemplates = (nodes: readonly ASTNode[], name: string): readonly ASTNode[] => {
         if (!nodes) return [];
         const found: ASTNode[] = [];
         for (const node of nodes) {
@@ -59,7 +51,7 @@ export function parseWikitext(wikitext: string): GameData {
         return found;
     };
 
-    const getTextContent = (nodes: ASTNode[]): string => {
+    const getTextContent = (nodes: readonly ASTNode[]): string => {
         if (!nodes) return '';
         let text = '';
         for (const node of nodes) {
@@ -74,7 +66,7 @@ export function parseWikitext(wikitext: string): GameData {
      * This is critical for preserving templates like {{cn|date=...}} within parameter values.
      * Uses the native node.text property if available, otherwise reconstructs manually.
      */
-    const getWikitextContent = (nodes: ASTNode[]): string => {
+    const getWikitextContent = (nodes: readonly ASTNode[]): string => {
         if (!nodes) return '';
         let wikitext = '';
 
@@ -120,7 +112,7 @@ export function parseWikitext(wikitext: string): GameData {
         return wikitext;
     };
 
-    const getParamValueNodes = (templateNode: ASTNode, paramName: string): ASTNode[] => {
+    const getParamValueNodes = (templateNode: ASTNode, paramName: string): readonly ASTNode[] => {
         if (!templateNode || !templateNode.childNodes) return [];
 
         const paramNode = templateNode.childNodes.find(child => {
@@ -490,8 +482,8 @@ export function parseWikitext(wikitext: string): GameData {
     }
 
     // Helper to extract rows from either a direct list of nodes OR a nested {{Game data|...}} template
-    const extractGameDataRows = (sectionNodes: ASTNode[], rowTemplateNames: string[]): any[] => {
-        let candidateNodes: ASTNode[] = sectionNodes;
+    const extractGameDataRows = (sectionNodes: readonly ASTNode[], rowTemplateNames: string[]): any[] => {
+        let candidateNodes: readonly ASTNode[] = sectionNodes;
 
         // Note: We deliberately do NOT look for a wrapper first, because {{Game data|config|...}}
         // can appear as a single template in the section, and we want to iterate IT, not its content (which is just 'config').
