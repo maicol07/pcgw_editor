@@ -239,6 +239,35 @@ class PCGWApiService {
         }
     }
 
+    async fetchTemplateWikitext(templateType: 'singleplayer' | 'multiplayer' | 'unknown'): Promise<string | null> {
+        const cacheKey = `template:${templateType}`;
+        const cached = this.getFromCache(cacheKey);
+        if (cached && cached.length > 0) return cached[0];
+
+        try {
+            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { slots?: { main?: { '*'?: string } } }[] }> } }>({
+                action: 'query',
+                prop: 'revisions',
+                titles: `PCGamingWiki:Sample_article/Game_(${templateType})`,
+                rvprop: 'content',
+                rvslots: 'main',
+            });
+
+            if (!result?.query?.pages) return null;
+            const pages = Object.values(result.query.pages);
+            const page = pages[0];
+
+            const content = page?.revisions?.[0]?.slots?.main?.['*'];
+            if (!content) return null;
+
+            this.setCache(cacheKey, [content]);
+            return content;
+        } catch (error) {
+            console.error(`Failed to fetch template ${templateType}:`, error);
+            return null;
+        }
+    }
+
     async prewarmCache(): Promise<void> {
         // Implementation simplified or removed if less critical, but kept for parity
         const commonSearches = [

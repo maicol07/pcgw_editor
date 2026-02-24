@@ -11,6 +11,7 @@ export interface Page {
     wikitext: string;
     baseWikitext: string;
     lastModified: number;
+    template?: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown';
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
@@ -96,16 +97,23 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
 
     // Actions
-    function createPage(title: string = 'Untitled Page') {
+    function createPage(title: string = 'Untitled Page', initialWikitext?: string, template: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown' = 'blank') {
+        let wikitext = initialWikitext;
+        if (wikitext === undefined) {
+            wikitext = generateWikitext(initialGameData, '');
+        }
+
         const id = crypto.randomUUID();
         const newPage: Page = {
             id,
             title,
-            wikitext: generateWikitext(initialGameData, ''),
-            baseWikitext: '',
-            lastModified: Date.now()
+            wikitext,
+            baseWikitext: initialWikitext || '',
+            lastModified: Date.now(),
+            template
         };
-        pages.value.push(newPage);
+        // Re-assign the array to ensure VirtualScroller reactivity triggers properly
+        pages.value = [...pages.value, newPage];
         activePageId.value = id;
     }
 

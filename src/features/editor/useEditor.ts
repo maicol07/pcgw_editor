@@ -1,4 +1,4 @@
-import { ref, computed, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { parseWikitext } from '../../utils/parser';
 import { GameData } from '../../models/GameData';
 
@@ -11,6 +11,12 @@ export function useEditor(gameData: Ref<GameData>, wikitext: ComputedRef<string>
     const currentWikitext = computed(() =>
         editorMode.value === 'Visual' ? wikitext.value : manualWikitext.value
     );
+
+    watch(wikitext, (newVal: string) => {
+        if (editorMode.value === 'Code') {
+            manualWikitext.value = newVal;
+        }
+    });
 
     const handleModeChange = async (newMode: 'Visual' | 'Code') => {
         const oldMode = editorMode.value;
