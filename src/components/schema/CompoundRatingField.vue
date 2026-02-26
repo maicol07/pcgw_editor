@@ -10,7 +10,6 @@ const props = defineProps<{
     iconClass?: string;
     tooltip?: string;
     notesField?: string;
-    refField?: string;
     freeText?: boolean;
     compact?: boolean;
 }>();
@@ -27,32 +26,18 @@ const updateProperty = (key: string, value: any) => {
     emit('update:modelValue', newState);
 };
 
-const value = computed({
-    get: () => props.modelValue?.[props.field],
+const value = computed<string>({
+    get: () => props.modelValue?.[props.field] ?? '',
     set: (val) => updateProperty(props.field, val)
 });
 
 const notes = computed({
-    get: () => props.modelValue?.[props.notesField || (props.field + 'Notes')] ?? '',
-    set: (val) => updateProperty(props.notesField || (props.field + 'Notes'), val)
-});
-
-const reference = computed({
-    get: () => props.modelValue?.[props.refField || (props.field + 'Ref')] ?? '',
-    set: (val) => updateProperty(props.refField || (props.field + 'Ref'), val)
+    get: () => (props.modelValue?.[props.notesField || (props.field + 'Notes')] as string) ?? '',
+    set: (val: string) => updateProperty(props.notesField || (props.field + 'Notes'), val)
 });
 </script>
 
 <template>
-    <RatingRow 
-        v-bind="$attrs"
-        :label="label"
-        :tooltip="tooltip"
-        :icon="icon"
-        v-model:value="value"
-        v-model:notes="notes"
-        v-model:reference="reference"
-        :free-text="freeText"
-        :compact="compact"
-    />
+    <RatingRow v-bind="$attrs" :label="label" :tooltip="tooltip" :icon="icon" v-model:value="value"
+        v-model:notes="notes" :free-text="freeText" :compact="compact" />
 </template>

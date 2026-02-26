@@ -14,7 +14,6 @@ const props = defineProps<{
   label: string;
   value?: string;
   notes?: string;
-  reference?: string;
   options?: string[];
   icon?: any;
   title?: string;
@@ -27,7 +26,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:value', value: string): void;
   (e: 'update:notes', value: string): void;
-  (e: 'update:reference', value: string): void;
 }>();
 
 const defaultOptions = ['true', 'false', 'unknown', 'hackable', 'limited', 'always on', 'n/a'];
@@ -56,12 +54,17 @@ const statusColor = computed(() => {
     default: return 'text-surface-600 dark:text-surface-400';
   }
 });
+
+const localNotes = computed({
+  get: () => props.notes || '',
+  set: (val) => emit('update:notes', val)
+});
 </script>
 
 <template>
   <div>
     <InputGroup class="h-8">
-      <InputGroupAddon class="!justify-start font-medium text-sm bg-surface-50 dark:bg-surface-800 transition-all gap-2"
+      <InputGroupAddon class="justify-start! font-medium text-sm bg-surface-50 dark:bg-surface-800 transition-all gap-2"
         :class="[statusColor, compact ? 'w-28 text-xs' : 'w-48']" :title="label">
         <component v-if="icon" :is="icon" class="w-4 h-4 text-surface-400 group-hover:text-primary-500" />
         <span class="truncate">{{ label }}</span>
@@ -114,8 +117,7 @@ const statusColor = computed(() => {
         </template>
       </Select>
       <InputGroupAddon class="p-0 min-w-12">
-        <NotesButton :notes="notes" :reference="reference" @update:notes="emit('update:notes', $event)"
-          @update:reference="emit('update:reference', $event)" class="w-full h-full rounded-none! border-none!" />
+        <NotesButton v-model="localNotes" title="Notes" class="w-full h-full rounded-none! border-none!" />
       </InputGroupAddon>
     </InputGroup>
   </div>

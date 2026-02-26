@@ -14,7 +14,7 @@ describe('Workspace Store', () => {
         store.createPage('Test Page');
         expect(store.pages.length).toBe(1);
         expect(store.pages[0].title).toBe('Test Page');
-        expect(store.pages[0].template).toBeUndefined();
+        expect(store.pages[0].template).toBe('blank');
     });
 
     it('creates a new page with a specific template', () => {

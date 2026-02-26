@@ -42,7 +42,6 @@ export interface CompoundRatingFieldProps {
     icon?: any;
     label?: string;
     notesField?: string;
-    refField?: string;
     freeText?: boolean;
     multiple?: boolean;
     options?: (string | SelectOption)[];

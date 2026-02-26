@@ -808,14 +808,14 @@ export const fieldsConfig: SectionDefinition[] = [
             {
                 title: 'Graphics Support',
                 fields: [
-                    f('api.dxVersion', { key: 'api', label: 'Direct3D', component: 'CompoundRatingField', componentProps: { field: 'dxVersion', notesField: 'dxNotes', refField: 'dxRef', icon: Monitor, freeText: true } }),
-                    f('api.directDrawVersion', { key: 'api', label: 'DirectDraw', component: 'CompoundRatingField', componentProps: { field: 'directDrawVersion', notesField: 'directDrawNotes', refField: 'directDrawRef', icon: Pencil, freeText: true } }),
+                    f('api.dxVersion', { key: 'api', label: 'Direct3D', component: 'CompoundRatingField', componentProps: { field: 'dxVersion', notesField: 'dxNotes', icon: Monitor, freeText: true } }),
+                    f('api.directDrawVersion', { key: 'api', label: 'DirectDraw', component: 'CompoundRatingField', componentProps: { field: 'directDrawVersion', notesField: 'directDrawNotes', icon: Pencil, freeText: true } }),
                     f('api.wing', { key: 'api', label: 'WinG', component: 'CompoundRatingField', componentProps: { field: 'wing', icon: AppWindow } }),
-                    f('api.openGlVersion', { key: 'api', label: 'OpenGL', component: 'CompoundRatingField', componentProps: { field: 'openGlVersion', notesField: 'openGlNotes', refField: 'openGlRef', icon: Globe, freeText: true } }),
-                    f('api.glideVersion', { key: 'api', label: 'Glide', component: 'CompoundRatingField', componentProps: { field: 'glideVersion', notesField: 'glideNotes', refField: 'glideRef', icon: Send, freeText: true } }),
+                    f('api.openGlVersion', { key: 'api', label: 'OpenGL', component: 'CompoundRatingField', componentProps: { field: 'openGlVersion', notesField: 'openGlNotes', icon: Globe, freeText: true } }),
+                    f('api.glideVersion', { key: 'api', label: 'Glide', component: 'CompoundRatingField', componentProps: { field: 'glideVersion', notesField: 'glideNotes', icon: Send, freeText: true } }),
                     f('api.softwareMode', { key: 'api', label: 'Software Mode', component: 'CompoundRatingField', componentProps: { field: 'softwareMode', icon: Cpu } }),
                     f('api.mantle', { key: 'api', label: 'Mantle', component: 'CompoundRatingField', componentProps: { field: 'mantle', icon: Box } }),
-                    f('api.vulkanVersion', { key: 'api', label: 'Vulkan', component: 'CompoundRatingField', componentProps: { field: 'vulkanVersion', notesField: 'vulkanNotes', refField: 'vulkanRef', icon: Zap, freeText: true } }),
+                    f('api.vulkanVersion', { key: 'api', label: 'Vulkan', component: 'CompoundRatingField', componentProps: { field: 'vulkanVersion', notesField: 'vulkanNotes', icon: Zap, freeText: true } }),
                     f('api.metal', { key: 'api', label: 'Metal', component: 'CompoundRatingField', componentProps: { field: 'metal', icon: AppWindow } }),
 
                     f('api.dosModes', { key: 'api', label: 'DOS Modes', component: 'CompoundRatingField', componentProps: { field: 'dosModes', icon: Terminal, freeText: true } }),
