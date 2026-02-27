@@ -326,4 +326,7 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
 
     // Localizations
     'localizations': { wikitextParam: 'localizations', defaultValue: [] },
+
+    // Issues
+    'issues': { wikitextParam: 'issues', defaultValue: [] },
 };

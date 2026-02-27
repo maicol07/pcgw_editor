@@ -657,12 +657,12 @@ export class PCGWEditor {
 
         let unresolvedWikitext = '';
         if (issuesUnresolved.length > 0) {
-            unresolvedWikitext = '\n' + issuesUnresolved.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n\n';
+            unresolvedWikitext = '\n' + issuesUnresolved.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n';
         }
 
         let fixedWikitext = '';
         if (issuesFixed.length > 0) {
-            fixedWikitext = '\n' + issuesFixed.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n\n';
+            fixedWikitext = '\n' + issuesFixed.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n';
         }
 
         // Apply Unresolved Issues

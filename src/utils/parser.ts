@@ -26,7 +26,7 @@ export function parseWikitext(wikitext: string): GameData {
 
     const cleanTemplateName = (name: string) => name.replace(/^Template:/i, '').replace(/_/g, ' ').trim().toLowerCase();
 
-    const findTemplate = (nodes: ASTNode [], name: string): ASTNode | null => {
+    const findTemplate = (nodes: ASTNode[], name: string): ASTNode | null => {
         if (!nodes) return null;
         for (const node of nodes) {
             if (node.name) {
@@ -1153,7 +1153,7 @@ export function parseWikitext(wikitext: string): GameData {
 
 
     // --- Issues ---
-    const parseIssues = (sectionName: string): Issue[] => {
+    const parseIssues = (sectionName: string): Omit<Issue, 'fixed'>[] => {
         // Regex to find the section and its content
         // Matches ==Title== ... (until next ==Header== (Level 2) or end)
         // ensure we don't stop at === (Level 3)
@@ -1164,7 +1164,7 @@ export function parseWikitext(wikitext: string): GameData {
 
 
         const content = match[1];
-        const issues: Issue[] = [];
+        const issues: Omit<Issue, 'fixed'>[] = [];
 
         // Split by ===Title===
         // Matches ===Title=== content
@@ -1178,8 +1178,9 @@ export function parseWikitext(wikitext: string): GameData {
         return issues;
     };
 
-    data.issuesUnresolved = parseIssues('Issues unresolved');
-    data.issuesFixed = parseIssues('Issues fixed');
+    const unresolved = parseIssues('Issues unresolved').map((i: Omit<Issue, 'fixed'>) => ({ ...i, fixed: false }));
+    const fixed = parseIssues('Issues fixed').map((i: Omit<Issue, 'fixed'>) => ({ ...i, fixed: true }));
+    data.issues = [...unresolved, ...fixed];
 
     // --- Galleries ---
     const extractGalleryImages = (content: string): GalleryImage[] => {

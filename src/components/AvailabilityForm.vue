@@ -7,8 +7,10 @@ import SelectButton from 'primevue/selectbutton';
 import {
     Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play,
     Gift, Heart, Command, AppWindow, Globe, Box, Code,
-    Building2, Plus, Trash2
+    Building2, Plus, Trash2, GripVertical
 } from 'lucide-vue-next';
+import { VueDraggable } from 'vue-draggable-plus';
+import { computed } from 'vue';
 
 const props = defineProps<{
     modelValue: AvailabilityRow[];
@@ -17,6 +19,18 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: 'update:modelValue', value: AvailabilityRow[]): void;
 }>();
+
+const dragList = computed({
+    get: () => props.modelValue || [],
+    set: (val) => emit('update:modelValue', val)
+});
+
+const idMap = new WeakMap<AvailabilityRow, number>();
+let nextId = 0;
+function getRowId(row: AvailabilityRow) {
+    if (!idMap.has(row)) idMap.set(row, nextId++);
+    return idMap.get(row)!;
+}
 
 const storefrontOptions = [
     { label: 'Steam', value: 'Steam', icon: Monitor },
@@ -85,9 +99,19 @@ const getProductIdHelp = (source: string) => {
             </Button>
         </div>
 
-        <TransitionGroup name="list" tag="div" class="flex flex-col gap-3">
-            <div v-for="(row, index) in modelValue" :key="index"
-                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex flex-col gap-3 transition-all group">
+        <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-3">
+            <div v-for="(row, index) in dragList" :key="getRowId(row)"
+                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex flex-col gap-3 transition-all group relative mt-2 ml-1">
+
+                <div class="absolute -left-3 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded
+                        aria-label="Drag" size="small">
+                        <template #icon>
+                            <GripVertical class="w-3 h-3 text-surface-500" />
+                        </template>
+                    </Button>
+                </div>
+
                 <div class="flex flex-wrap items-center gap-2">
                     <Select :modelValue="row.distribution" @update:modelValue="v => updateRow(index, 'distribution', v)"
                         :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
@@ -163,19 +187,6 @@ const getProductIdHelp = (source: string) => {
                     </div>
                 </div>
             </div>
-        </TransitionGroup>
+        </VueDraggable>
     </div>
 </template>
-
-<style scoped>
-.list-enter-active,
-.list-leave-active {
-    transition: all 0.3s ease;
-}
-
-.list-enter-from,
-.list-leave-to {
-    opacity: 0;
-    transform: translateX(-20px);
-}
-</style>

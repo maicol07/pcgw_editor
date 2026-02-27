@@ -354,8 +354,8 @@ Body 1
 `;
             const editor = new PCGWEditor(wikitext);
             editor.updateIssues([
-                { title: 'Issue 1', body: 'Body 1' }
-            ], 'unresolved');
+                { title: 'Issue 1', body: 'Body 1', fixed: false }
+            ]);
 
             const text = editor.getText();
             const occurrences = text.split('===Issue 1===').length - 1;
@@ -370,8 +370,8 @@ Body 1
 ==Next Section==`;
             const editor = new PCGWEditor(wikitext);
             editor.updateIssues([
-                { title: 'Issue 1', body: 'New Body' }
-            ], 'unresolved');
+                { title: 'Issue 1', body: 'New Body', fixed: false }
+            ]);
 
             const text = editor.getText();
             expect(text).toContain('New Body\n\n==Next Section==');
@@ -384,20 +384,18 @@ Body 1
 Body 1`;
             const editor = new PCGWEditor(wikitext);
             editor.updateIssues([
-                { title: 'Issue 1', body: 'New Body' }
-            ], 'unresolved');
+                { title: 'Issue 1', body: 'New Body', fixed: false }
+            ]);
 
             const text = editor.getText();
             const occurrences = text.split('===Issue 1===').length - 1;
             expect(occurrences).toBe(1);
             expect(text).toContain('New Body');
-            expect(text).not.toContain('Body 1');
-            expect(text).toBe(`==Issues unresolved==\n===Issue 1===\nNew Body\n\n`);
-
+            expect(text).toBe(`==Issues unresolved==\n===Issue 1===\nNew Body\n`);
             // Second pass (simulating another mode switch)
             editor.updateIssues([
-                { title: 'Issue 1', body: 'New Body' }
-            ], 'unresolved');
+                { title: 'Issue 1', body: 'New Body', fixed: false }
+            ]);
             const text2 = editor.getText();
             expect(text2.split('===Issue 1===').length - 1).toBe(1);
         });
@@ -413,9 +411,8 @@ Body 1
 Body 2`;
             const editor = new PCGWEditor(wikitext);
             editor.updateIssues([
-                { title: 'Issue 1', body: 'New Body' }
-            ], 'unresolved');
-            editor.updateIssues([], 'fixed');
+                { title: 'Issue 1', body: 'New Body', fixed: false }
+            ]);
 
             const text = editor.getText();
             expect(text).not.toContain('==Issues fixed==');
@@ -437,8 +434,8 @@ Old Body
 `;
             const editor = new PCGWEditor(wikitext);
             editor.updateIssues([
-                { title: 'New Issue', body: 'New Body' }
-            ], 'unresolved');
+                { title: 'New Issue', body: 'New Body', fixed: false }
+            ]);
 
             const text = editor.getText();
             expect(text).toContain('==Issues unresolved==\n===New Issue===\nNew Body\n\n==System requirements==');

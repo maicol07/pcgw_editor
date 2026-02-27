@@ -37,7 +37,8 @@ const ButtonStub = {
 // Mock Lucide and Flag icons
 vi.mock('lucide-vue-next', () => ({
     Trash2: { template: '<span class="icon-trash"></span>' },
-    Plus: { template: '<span class="icon-plus"></span>' }
+    Plus: { template: '<span class="icon-plus"></span>' },
+    GripVertical: { template: '<span class="icon-grip"></span>' }
 }));
 
 vi.mock('@placetopay/flagicons-vue', () => ({
@@ -92,11 +93,11 @@ describe('LocalizationsForm.vue', () => {
         const { wrapper } = setupWrapper(createLocalizations());
 
         const buttons = wrapper.findAllComponents(ButtonStub);
-        // Buttons: Row 1 remove, Row 2 remove, Add.
-        // wait, v-for loop order.
-        // buttons[0] is remove for row 0.
+        // Buttons: Row 1 drag, Row 1 remove, Row 2 drag, Row 2 remove, Add.
+        // buttons[1] is remove for row 0.
+        expect(buttons.length).toBe(5);
 
-        await buttons[0].trigger('click');
+        await buttons[1].trigger('click');
 
         const emitted = wrapper.emitted('update:localizations');
         expect(emitted).toBeTruthy();

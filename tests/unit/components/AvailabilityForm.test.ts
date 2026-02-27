@@ -46,7 +46,8 @@ vi.mock('lucide-vue-next', () => ({
     Code: { template: '<span class="icon-code"></span>' },
     Building2: { template: '<span class="icon-building-2"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
-    Trash2: { template: '<span class="icon-trash-2"></span>' }
+    Trash2: { template: '<span class="icon-trash-2"></span>' },
+    GripVertical: { template: '<span class="icon-grip"></span>' }
 }));
 
 describe('AvailabilityForm.vue', () => {
@@ -98,11 +99,12 @@ describe('AvailabilityForm.vue', () => {
         const { wrapper } = setupWrapper(createAvailabilityRows());
 
         // Remove buttons are the Danger buttons. 
-        // 1 Add + 2 Remove
+        // 1 Add + 2 Drag + 2 Remove = 5 Buttons
         const buttons = wrapper.findAllComponents(ButtonStub);
-        expect(buttons.length).toBe(3);
+        expect(buttons.length).toBe(5);
 
-        await buttons[1].trigger('click');
+        // Remove button for first row is at index 2 (0: Add, 1: Drag 0, 2: Remove 0, 3: Drag 1, 4: Remove 1)
+        await buttons[2].trigger('click');
 
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();

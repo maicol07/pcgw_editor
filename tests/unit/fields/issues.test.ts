@@ -6,13 +6,13 @@ import { GameData, Issue } from '../../../src/models/GameData';
 
 describe('Section: Issues', () => {
     const issuesUnresolved: Issue[] = [
-        { title: 'Issue', body: 'This is an unresolved issue.' },
-        { title: 'Broken specific interaction', body: 'Details about the broken interaction.' }
+        { title: 'Issue', body: 'This is an unresolved issue.', fixed: false },
+        { title: 'Broken specific interaction', body: 'Details about the broken interaction.', fixed: false }
     ];
 
     const issuesFixed: Issue[] = [
-        { title: 'Issue', body: 'This is a fixed issue.' },
-        { title: 'Fixed crash', body: 'Details about the fixed crash.' }
+        { title: 'Issue', body: 'This is a fixed issue.', fixed: true },
+        { title: 'Fixed crash', body: 'Details about the fixed crash.', fixed: true }
     ];
 
     const getCleanData = (): GameData => ({
@@ -26,8 +26,7 @@ describe('Section: Issues', () => {
         systemRequirements: { windows: {}, mac: {}, linux: {} } as any,
         monetization: {}, microtransactions: {},
         config: { configFiles: [], saveData: [], xdg: null, cloudSync: {} as any },
-        issuesFixed: [],
-        issuesUnresolved: [],
+        issues: [],
         dlc: [],
         galleries: { video: [], input: [], audio: [], vr: [], network: [], other: [], systemReq: [], game_data: [] }
     } as any);
@@ -43,9 +42,10 @@ This is an unresolved issue.
 Details about the broken interaction.
 `;
             const data = parseWikitext(wikitext);
-            expect(data.issuesUnresolved).toHaveLength(2);
-            expect(data.issuesUnresolved[0]).toEqual(issuesUnresolved[0]);
-            expect(data.issuesUnresolved[1]).toEqual(issuesUnresolved[1]);
+            const unresolved = data.issues.filter(i => !i.fixed);
+            expect(unresolved).toHaveLength(2);
+            expect(unresolved[0]).toEqual(issuesUnresolved[0]);
+            expect(unresolved[1]).toEqual(issuesUnresolved[1]);
         });
 
         it('should parse fixed issues', () => {
@@ -58,9 +58,10 @@ This is a fixed issue.
 Details about the fixed crash.
 `;
             const data = parseWikitext(wikitext);
-            expect(data.issuesFixed).toHaveLength(2);
-            expect(data.issuesFixed[0]).toEqual(issuesFixed[0]);
-            expect(data.issuesFixed[1]).toEqual(issuesFixed[1]);
+            const fixed = data.issues.filter(i => i.fixed);
+            expect(fixed).toHaveLength(2);
+            expect(fixed[0]).toEqual(issuesFixed[0]);
+            expect(fixed[1]).toEqual(issuesFixed[1]);
         });
 
         it('should parse both sections', () => {
@@ -74,20 +75,23 @@ Unresolved.
 Fixed.
 `;
             const data = parseWikitext(wikitext);
-            expect(data.issuesUnresolved).toHaveLength(1);
-            expect(data.issuesUnresolved[0].body.trim()).toBe('Unresolved.');
-            expect(data.issuesFixed).toHaveLength(1);
-            expect(data.issuesFixed[0].body.trim()).toBe('Fixed.');
+            const unresolved = data.issues.filter(i => !i.fixed);
+            const fixed = data.issues.filter(i => i.fixed);
+
+            expect(unresolved).toHaveLength(1);
+            expect(unresolved[0].body.trim()).toBe('Unresolved.');
+            expect(fixed).toHaveLength(1);
+            expect(fixed[0].body.trim()).toBe('Fixed.');
         });
     });
 
     describe('Writing', () => {
         it('should write unresolved issues', () => {
             const data = getCleanData();
-            data.issuesUnresolved = issuesUnresolved;
+            data.issues = issuesUnresolved;
 
             const editor = new PCGWEditor('');
-            editor.updateIssues(data.issuesUnresolved, 'unresolved');
+            editor.updateIssues(data.issues);
 
             const output = editor.getText();
             expect(output).toContain('==Issues unresolved==');
@@ -98,10 +102,10 @@ Fixed.
 
         it('should write fixed issues', () => {
             const data = getCleanData();
-            data.issuesFixed = issuesFixed;
+            data.issues = issuesFixed;
 
             const editor = new PCGWEditor('');
-            editor.updateIssues(data.issuesFixed, 'fixed');
+            editor.updateIssues(data.issues);
 
             const output = editor.getText();
             expect(output).toContain('==Issues fixed==');

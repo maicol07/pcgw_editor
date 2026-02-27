@@ -518,8 +518,8 @@ export class WikitextParser {
 
         const start = match.index + match[0].length;
 
-        // Find the next section or end of text
-        const nextSectionRegex = /\n==/;
+        // Find the next section or end of text (Level 2 header, so == but not ===)
+        const nextSectionRegex = /\n==(?!=)/;
         const remaining = this.wikitext.substring(start);
         const nextMatch = remaining.match(nextSectionRegex);
 
@@ -588,8 +588,8 @@ export class WikitextParser {
             const start = match.index + match[0].length;
 
             // Find the next section or end of text
-            // We assume standard sections follow
-            const nextSectionRegex = /\n==/;
+            // We assume standard sections follow (Level 2 header)
+            const nextSectionRegex = /\n==(?!=)/;
             const remaining = this.wikitext.substring(start);
             const nextMatch = remaining.match(nextSectionRegex);
 

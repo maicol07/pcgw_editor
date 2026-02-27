@@ -36,7 +36,8 @@ const MultiSelectStub = {
 vi.mock('lucide-vue-next', () => ({
     X: { template: '<span class="icon-x"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
-    Info: { template: '<span class="icon-info"></span>' }
+    Info: { template: '<span class="icon-info"></span>' },
+    GripVertical: { template: '<span class="icon-grip"></span>' }
 }));
 
 describe('DLCForm.vue', () => {
@@ -93,14 +94,13 @@ describe('DLCForm.vue', () => {
     it('removes a row', async () => {
         const { wrapper } = setupWrapper(createRows());
 
-        // Rows have delete buttons (danger).
-        // Wrapper has 2 rows -> 2 delete buttons + 1 add button = 3 buttons.
-        // Delete buttons are first in the DOM order for each row? 
-        // Template: absolute positioned button inside v-for. Then Add button after v-for.
-        // So buttons[0] is delete row 0.
+        // Rows have drag handle and delete buttons.
+        // Wrapper has 2 rows -> 2 drag + 2 delete + 1 add = 5 buttons.
+        // row 0 delete button is at index 1.
 
         const buttons = wrapper.findAllComponents(ButtonStub);
-        await buttons[0].trigger('click');
+        expect(buttons.length).toBe(5);
+        await buttons[1].trigger('click');
 
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();
