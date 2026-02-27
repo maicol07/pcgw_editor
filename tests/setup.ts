@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { config } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
+import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
 
 // Mock localStorage if it's broken in the environment

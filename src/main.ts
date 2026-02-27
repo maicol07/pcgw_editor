@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
+import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
 import './style.css';
 import './styles/preview/index.scss';
@@ -13,7 +13,7 @@ import { createPinia } from 'pinia';
 const app = createApp(App);
 const pinia = createPinia();
 
-import { definePreset } from '@primevue/themes';
+import { definePreset } from '@primeuix/themes';
 
 const MyPreset = definePreset(Aura, {
     semantic: {
