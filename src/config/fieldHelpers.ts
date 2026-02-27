@@ -14,6 +14,7 @@ import {
     TaxonomyFieldProps,
     SectionGalleryProps,
     WikitextEditorProps,
+    WysiwygEditorProps,
     FieldComponent
 } from '../types/components';
 
@@ -43,6 +44,13 @@ export const textarea = (label: string, props?: TextareaProps, options?: OmitCom
 export const checkbox = (label: string, props?: CheckboxProps, options?: OmitComponent<Partial<FieldDefinition>>): FieldComponent & OmitComponent<Partial<FieldDefinition>> => ({
     label,
     component: 'Checkbox',
+    componentProps: props,
+    ...options
+});
+
+export const wysiwyg = (label: string, props?: WysiwygEditorProps, options?: OmitComponent<Partial<FieldDefinition>>): FieldComponent & OmitComponent<Partial<FieldDefinition>> => ({
+    label,
+    component: 'WysiwygEditor',
     componentProps: props,
     ...options
 });

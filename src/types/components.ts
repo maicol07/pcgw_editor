@@ -20,6 +20,12 @@ export interface CheckboxProps {
     label?: string;
 }
 
+export interface WysiwygEditorProps {
+    placeholder?: string;
+    editorStyle?: string;
+    readonly?: boolean;
+}
+
 export interface SelectOption {
     label: string;
     value: string;
@@ -105,4 +111,5 @@ export type FieldComponent =
     | { component: 'GameDataForm'; componentProps?: NoProps }
     | { component: 'SystemRequirementsForm'; componentProps?: NoProps }
     | { component: 'LocalizationsForm'; componentProps?: NoProps }
-    | { component: 'OperatingSystemSupportForm'; componentProps?: NoProps };
+    | { component: 'OperatingSystemSupportForm'; componentProps?: NoProps }
+    | { component: 'WysiwygEditor'; componentProps?: WysiwygEditorProps };

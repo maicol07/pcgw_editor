@@ -36,6 +36,7 @@ import VideoAnalysis from '../video/VideoAnalysis.vue';
 import SectionGallery from '../SectionGallery.vue';
 import InputWithNotes from './InputWithNotes.vue';
 import WikitextEditor from '../common/WikitextEditor.vue';
+import WysiwygEditor from '../common/WysiwygEditor.vue';
 
 // (Async components moved to top)
 
@@ -80,6 +81,7 @@ const componentMap: Record<string, any> = {
     'Textarea': Textarea,
     'StubValidator': StubValidator,
     'WikitextEditor': WikitextEditor,
+    'WysiwygEditor': WysiwygEditor,
 };
 
 const resolvedComponent = computed(() => {
@@ -188,6 +190,16 @@ const boundProps = computed(() => {
         return {
             label: props.field.label,
             rows: props.field.componentProps?.rows,
+            ...defaultProps
+        };
+    }
+
+    if (props.field.component === 'WysiwygEditor') {
+        return {
+            label: props.field.label,
+            placeholder: props.field.componentProps?.placeholder,
+            editorStyle: props.field.componentProps?.editorStyle,
+            readonly: props.field.componentProps?.readonly,
             ...defaultProps
         };
     }

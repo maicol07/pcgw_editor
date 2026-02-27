@@ -212,25 +212,19 @@ export const fieldsConfig: SectionDefinition[] = [
         order: 2,
         gridCols: 2,
         fields: [
-            f('introduction.introduction', h.textarea('Introduction', {
-                rows: 4,
-                autoResize: true,
+            f('introduction.introduction', h.wysiwyg('Introduction', {
                 placeholder: "'''''Title''''' is a..."
             }, {
                 description: "The first instance of the game title in introduction should be written as '''''Title'''''",
                 colSpan: 2
             })),
-            f('introduction.generalInfo', h.textarea('General information', {
-                rows: 4,
-                autoResize: true,
+            f('introduction.generalInfo', h.wysiwyg('General information', {
                 placeholder: "Links and other general details."
             }, {
                 description: "General informational links like official forums, etc.",
                 colSpan: 2
             })),
-            f('introduction.releaseHistory', h.textarea('Release History', {
-                rows: 4,
-                autoResize: true,
+            f('introduction.releaseHistory', h.wysiwyg('Release History', {
                 placeholder: "'''Title''' was released on..."
             }, {
                 description: "Notes about the original release, re-releases, and ports.",
@@ -311,7 +305,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-yellow-500',
         order: 7,
         fields: [
-            f('essentialImprovements', h.wikitext('Essential Improvements', { rows: 10 }, {
+            f('essentialImprovements', h.wysiwyg('Essential Improvements', { editorStyle: 'height: 250px' }, {
                 description: 'Patches, intro skip methods, major community mods, game-specific utilities.'
             }))
         ]

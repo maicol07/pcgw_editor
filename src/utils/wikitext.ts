@@ -112,9 +112,42 @@ export class PCGWEditor {
 
     // --- Utils for Lists ---
 
-    replaceSectionContent(header: string | RegExp, newContent: string, defaultTitle: string = '') {
-        // Use the new parser's section handling
-        this.parser.replaceSection(header, newContent, defaultTitle);
+    replaceSectionContent(header: string | RegExp, newContent: string, defaultTitle: string = '', insertBeforeTemplate: string = '') {
+        // Use the new parser's section handling with our custom logic for insertion if not found and insertBefore is specified
+        const section = this.parser.findSection(header);
+
+        if (section) {
+            this.parser.replaceSection(header, newContent, defaultTitle);
+        } else if (insertBeforeTemplate) {
+            const wikitext = this.parser.getText();
+
+            // Try to find a section header matching this name to insert BEFORE it
+            const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const headerRegex = new RegExp(`^={2,}\\s*${escapeRegex(insertBeforeTemplate)}\\s*={2,}`, 'im');
+            const match = wikitext.match(headerRegex);
+
+            if (match && match.index !== undefined) {
+                const title = defaultTitle || (typeof header === 'string' ? `== ${header} ==` : '');
+                const formattedNew = `\n${title}\n${newContent}\n\n`;
+                this.parser = new WikitextParser(
+                    wikitext.substring(0, match.index) + formattedNew + wikitext.substring(match.index)
+                );
+            } else {
+                // Fallback to finding a template
+                const target = this.parser.findTemplate(insertBeforeTemplate);
+                if (target) {
+                    const title = defaultTitle || (typeof header === 'string' ? `== ${header} ==` : '');
+                    const formattedNew = `\n${title}\n${newContent}\n\n`;
+                    this.parser = new WikitextParser(
+                        wikitext.substring(0, target.start) + formattedNew + wikitext.substring(target.start)
+                    );
+                } else {
+                    this.parser.replaceSection(header, newContent, defaultTitle);
+                }
+            }
+        } else {
+            this.parser.replaceSection(header, newContent, defaultTitle);
+        }
     }
 
     addSection(header: string, content: string) {
@@ -1560,7 +1593,7 @@ export class PCGWEditor {
 
     updateEssentialImprovements(improvements: string) {
         if (improvements) {
-            this.replaceSectionContent('Essential improvements', `\n${improvements}\n`, '=== Essential improvements ===');
+            this.replaceSectionContent('Essential improvements', `\n${improvements}\n`, '=== Essential improvements ===', 'Game data');
         }
     }
 
@@ -1713,6 +1746,7 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateIntroduction(data.introduction);
 
     editor.updateGeneralInfo(data.introduction.generalInfo);
+    editor.updateEssentialImprovements(data.essentialImprovements);
 
     editor.updateAvailability(data.availability);
     editor.updateDLC(data.dlc);
