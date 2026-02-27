@@ -9,8 +9,9 @@ interface TaxonomyValue {
     ref?: string;
 }
 
+const model = defineModel<TaxonomyValue>({ required: true });
+
 const props = defineProps<{
-    modelValue: TaxonomyValue;
     label: string;
     dataSource?: string;
     placeholder?: string;
@@ -20,23 +21,19 @@ const props = defineProps<{
     iconClass?: string;
 }>();
 
-const emit = defineEmits<{
-    (e: 'update:modelValue', value: TaxonomyValue): void;
-}>();
-
 const arrayValue = computed(() => {
-    const val = props.modelValue?.value || '';
+    const val = model.value?.value || '';
     if (!val) return [];
     return val.split(',').map(s => s.trim()).filter(Boolean);
 });
 
 const updateArray = (newValue: string[]) => {
     const joined = newValue.join(', ');
-    emit('update:modelValue', { ...props.modelValue, value: joined });
+    model.value = { ...model.value, value: joined };
 };
 
 const updateNote = (note: string) => {
-    emit('update:modelValue', { ...props.modelValue, note });
+    model.value = { ...model.value, note };
 };
 </script>
 
@@ -45,7 +42,7 @@ const updateNote = (note: string) => {
         <div class="flex items-center w-full">
             <AutocompleteField :modelValue="arrayValue" @update:modelValue="updateArray"
                 :data-source="(dataSource as any)" :placeholder="placeholder" class="flex-1 min-w-0 taxonomy-input" />
-            <NotesButton :modelValue="modelValue?.note" @update:modelValue="updateNote" type="note"
+            <NotesButton :modelValue="model?.note" @update:modelValue="updateNote" type="note"
                 class="border border-surface-300 dark:border-surface-600 rounded-r-md bg-surface-50 dark:bg-surface-800 flex items-center justify-center w-10 h-10 shrink-0 shadow-sm hover:border-surface-400 dark:hover:border-surface-500 transition-colors -ml-px z-0" />
         </div>
     </div>

@@ -5,37 +5,31 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { Trash2, Plus } from 'lucide-vue-next';
 
-const props = defineProps<{
-  modelValue: GameInfobox['reception'];
-}>();
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: GameInfobox['reception']): void;
-}>();
+const model = defineModel<GameInfobox['reception']>({ default: () => [] });
 
 const addRow = () => {
-  emit('update:modelValue', [
-    ...props.modelValue,
+  model.value = [
+    ...model.value,
     { aggregator: '' as any, score: '', id: '' }
-  ]);
+  ];
 };
 
 const removeRow = (index: number) => {
-  const newVal = [...props.modelValue];
+  const newVal = [...model.value];
   newVal.splice(index, 1);
-  emit('update:modelValue', newVal);
+  model.value = newVal;
 };
 
 const updateRow = (index: number, field: keyof GameInfobox['reception'][0], value: string) => {
-  const newVal = [...props.modelValue];
+  const newVal = [...model.value];
   newVal[index] = { ...newVal[index], [field]: value };
-  emit('update:modelValue', newVal);
+  model.value = newVal;
 };
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="modelValue.length === 0"
+    <div v-if="model.length === 0"
       class="text-surface-500 italic text-sm p-8 border border-dashed border-surface-300 dark:border-surface-700 rounded-lg text-center bg-surface-50 dark:bg-surface-800/20">
       No reception scores added.
     </div>
@@ -50,7 +44,7 @@ const updateRow = (index: number, field: keyof GameInfobox['reception'][0], valu
       </div>
 
       <!-- Rows -->
-      <div v-for="(row, index) in modelValue" :key="index"
+      <div v-for="(row, index) in model" :key="index"
         class="grid grid-cols-12 gap-4 p-3 items-start border-b last:border-0 border-surface-100 dark:border-surface-700/50 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition-colors group relative">
         <div class="col-span-4">
           <Select :modelValue="row.aggregator" @update:modelValue="v => updateRow(index, 'aggregator', v)"

@@ -61,6 +61,11 @@ export interface GameInfobox {
         strategyWiki: string;
         wikipedia: string;
         wineHq: string;
+        wineHqSide?: string;
+        epic?: string;
+        microsoft?: string;
+        itch?: string;
+        zoom?: string;
     };
     license: string;
 }
