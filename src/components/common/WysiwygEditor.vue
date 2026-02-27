@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+
+defineOptions({
+    inheritAttrs: false
+});
 import Editor from 'primevue/editor';
 import Dialog from 'primevue/dialog';
 import InputGroup from 'primevue/inputgroup';
@@ -150,7 +154,7 @@ defineExpose({
 </script>
 
 <template>
-    <div class="wysiwyg-editor-container flex flex-col gap-2 relative">
+    <div class="wysiwyg-editor-container flex flex-col gap-2 relative" v-bind="$attrs">
         <Transition name="fade" mode="out-in">
             <div v-if="!showSource" class="w-full">
                 <Editor ref="editorRef" v-model="htmlValue" :editorStyle="editorStyle || 'height: 250px'"
