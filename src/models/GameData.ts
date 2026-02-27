@@ -671,12 +671,12 @@ export interface GalleryImage {
 
 export interface Issue {
     title: string;
+    fixed: boolean;
     body: string;
 }
 
 export interface GameData {
-    issuesFixed: Issue[];
-    issuesUnresolved: Issue[];
+    issues: Issue[];
     articleState: ArticleState;
     infobox: GameInfobox;
     introduction: GameIntroduction;
@@ -977,6 +977,5 @@ export const initialGameData: GameData = {
         systemReq: [],
         game_data: [],
     },
-    issuesFixed: [],
-    issuesUnresolved: [],
+    issues: [],
 };

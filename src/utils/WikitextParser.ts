@@ -562,9 +562,9 @@ export class WikitextParser {
                 const needsNewline = this.wikitext.length > 0 && !this.wikitext.endsWith('\n');
                 // Check if title already includes ==
                 if (title.trim().startsWith('=')) {
-                    this.wikitext += `${needsNewline ? '\n' : ''}\n${title}\n${newContent}\n`;
+                    this.wikitext += `${needsNewline ? '\n' : ''}\n${title}${newContent.startsWith('\n') ? '' : '\n'}${newContent}\n`;
                 } else {
-                    this.wikitext += `${needsNewline ? '\n' : ''}\n== ${title} ==\n${newContent}\n`;
+                    this.wikitext += `${needsNewline ? '\n' : ''}\n== ${title} ==${newContent.startsWith('\n') ? '' : '\n'}${newContent}\n`;
                 }
             }
         }

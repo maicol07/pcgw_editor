@@ -882,5 +882,17 @@ export const fieldsConfig: SectionDefinition[] = [
                 component: 'LocalizationsForm',
             })
         ]
+    },
+    {
+        id: 'issues',
+        title: 'Issues',
+        icon: AlertCircle,
+        iconClass: 'text-red-500',
+        order: 17,
+        isCustomSection: true,
+        templateName: 'Issues', // Faux template to hook into our logic easily
+        fields: [
+            f('issues', h.custom('Issues', 'IssuesForm'))
+        ]
     }
 ];

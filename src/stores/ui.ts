@@ -30,6 +30,7 @@ export const useUiStore = defineStore('ui', () => {
         other: true,
         systemReq: true,
         l10n: true,
+        issues: true,
         general: true,
     });
 

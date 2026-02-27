@@ -15,6 +15,7 @@ export const searchKeywords: Record<string, string[]> = {
     other: ['api', 'middleware', 'directx', 'vulkan'],
     systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os'],
     l10n: ['lang', 'dub', 'sub', 'ui'],
+    issues: ['issue', 'unresolved', 'fixed', 'bug'],
     general: ['info']
 };
 

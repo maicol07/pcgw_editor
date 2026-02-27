@@ -27,7 +27,7 @@ import DynamicSection from './components/schema/DynamicSection.vue';
 // Icons
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle
 } from 'lucide-vue-next';
 
 // Async Components
@@ -108,6 +108,7 @@ const schemas = {
     middleware: getSchema('middleware'),
     systemReq: getSchema('system_requirements'),
     l10n: getSchema('localizations'),
+    issues: getSchema('issues'),
 };
 
 const updateGameData = (path: string, value: any) => {
@@ -353,13 +354,22 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.vr"
-                                        :modelValue="gameData.galleries.vr"
-                                        @update:modelValue="val => updateGameData('galleries.vr', val)"
-                                        section="vr" />
+                                    <SectionGallery v-if="!uiStore.panelState.vr" :modelValue="gameData.galleries.vr"
+                                        @update:modelValue="val => updateGameData('galleries.vr', val)" section="vr" />
                                     <DynamicSection v-if="!uiStore.panelState.vr && schemas.vr.value"
                                         :section="schemas.vr.value" v-model="gameData" />
                                 </div>
+                            </ModernPanel>
+
+                            <ModernPanel v-model:collapsed="uiStore.panelState.issues" v-show="panelVisibility.issues">
+                                <template #header>
+                                    <div class="flex items-center gap-2">
+                                        <AlertCircle class="text-red-500 w-4 h-4" /><span
+                                            class="font-semibold text-sm">Issues</span>
+                                    </div>
+                                </template>
+                                <DynamicSection v-if="!uiStore.panelState.issues && schemas.issues.value"
+                                    :section="schemas.issues.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.other" v-show="panelVisibility.other">
@@ -398,6 +408,8 @@ onMounted(() => {
                                         :section="schemas.systemReq.value" v-model="gameData" />
                                 </div>
                             </ModernPanel>
+
+
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.l10n" v-show="panelVisibility.l10n">
                                 <template #header>

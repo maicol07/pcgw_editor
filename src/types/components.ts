@@ -112,4 +112,5 @@ export type FieldComponent =
     | { component: 'SystemRequirementsForm'; componentProps?: NoProps }
     | { component: 'LocalizationsForm'; componentProps?: NoProps }
     | { component: 'OperatingSystemSupportForm'; componentProps?: NoProps }
-    | { component: 'WysiwygEditor'; componentProps?: WysiwygEditorProps };
+    | { component: 'WysiwygEditor'; componentProps?: WysiwygEditorProps }
+    | { component: 'IssuesForm'; componentProps?: NoProps };

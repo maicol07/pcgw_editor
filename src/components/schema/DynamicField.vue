@@ -17,6 +17,7 @@ const GameDataForm = defineAsyncComponent(() => import('../GameDataForm.vue'));
 const SystemRequirementsForm = defineAsyncComponent(() => import('../../components/SystemRequirementsForm.vue'));
 const LocalizationsForm = defineAsyncComponent(() => import('../../components/LocalizationsForm.vue'));
 const OperatingSystemSupportForm = defineAsyncComponent(() => import('./OperatingSystemSupportForm.vue'));
+const IssuesForm = defineAsyncComponent(() => import('./IssuesForm.vue'));
 
 import { getIconSrc } from '../../utils/icons';
 
@@ -68,6 +69,7 @@ const componentMap: Record<string, any> = {
     'SectionGallery': SectionGallery,
     'CompoundRatingField': CompoundRatingField,
     'OperatingSystemSupportForm': OperatingSystemSupportForm,
+    'IssuesForm': IssuesForm,
     'InputWithNotes': InputWithNotes,
 
     'SystemRequirementsForm': SystemRequirementsForm,
@@ -92,7 +94,7 @@ const computedModelValue = computed(() => {
     if (props.field.component === 'MultiSelect' && typeof props.modelValue === 'string') {
         return props.modelValue ? props.modelValue.split(', ').map((s: string) => s.trim()) : [];
     }
-    if (props.field.component === 'RatingRow') return undefined;
+
     return props.modelValue !== undefined ? props.modelValue : props.field.defaultValue;
 });
 
@@ -105,15 +107,7 @@ const boundProps = computed(() => {
     };
 
     // Special adaptations for specific components
-    if (props.field.component === 'RatingRow') {
-        const obj = props.modelValue || {};
-        return {
-            label: props.field.label,
-            value: obj.value,
-            notes: obj.notes,
-            ...defaultProps
-        };
-    }
+
 
     if (props.field.component === 'GameDataForm') {
         return {
@@ -127,7 +121,7 @@ const boundProps = computed(() => {
         }
     }
 
-    if (props.field.component === 'InfoboxListEditor' || props.field.component === 'InfoboxDevelopersEditor' || props.field.component === 'InfoboxPublishersEditor') {
+    if (props.field.component === 'InfoboxDevelopersEditor' || props.field.component === 'InfoboxPublishersEditor') {
         return {
             label: props.field.label,
             ...defaultProps
@@ -162,13 +156,7 @@ const boundProps = computed(() => {
         }
     }
 
-    if (props.field.component === 'Autocomplete') {
-        return {
-            placeholder: `Select ${props.field.label}`,
-            class: 'w-full',
-            ...defaultProps,
-        }
-    }
+
 
     if (props.field.component === 'StubValidator') {
         return {
@@ -224,6 +212,12 @@ const boundProps = computed(() => {
         }
     }
 
+    if (props.field.component === 'IssuesForm') {
+        return {
+            modelValue: props.modelValue || props.field.defaultValue || []
+        }
+    }
+
     if (props.field.component === 'VideoAnalysis') {
         return {
             modelValue: props.modelValue
@@ -237,16 +231,7 @@ const boundProps = computed(() => {
         }
     }
 
-    if (props.field.component === 'InputWithNotes') {
-        // Expects parent object as modelValue (like 'input' or 'gameData.input')
-        // And 'field' prop in componentProps
-        return {
-            modelValue: props.modelValue,
-            label: props.field.label,
-            icon: props.field.icon,
-            ...props.field.componentProps
-        }
-    }
+
 
     if (props.field.component === 'CompoundRatingField') {
         return {
@@ -298,7 +283,7 @@ const isVisible = computed(() => {
         :class="field.component === 'Checkbox' ? 'flex-row items-center gap-3' : 'flex-col gap-1'" v-if="isVisible">
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
-            v-if="!['RatingRow', 'InfoboxListEditor', 'GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InputWithNotes', 'InfoboxReception'].includes(field.component)"
+            v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception'].includes(field.component)"
             class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
@@ -313,7 +298,7 @@ const isVisible = computed(() => {
             @update:modelValue="handleModelValueUpdate" @update:value="handleUpdateValue"
             @update:notes="handleUpdateNotes" class="w-full" :class="{ '!w-auto': field.component === 'Checkbox' }">
 
-            <template v-if="['MultiSelect'].includes(field.component) && field.componentProps?.showIcons"
+            <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
                 #value="slotProps">
                 <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
                     v-if="slotProps.value && slotProps.value.length">
@@ -326,7 +311,7 @@ const isVisible = computed(() => {
                 <!-- Default placeholder handling if needed, though PrimeVue usually handles it -->
                 <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
             </template>
-            <template v-if="['MultiSelect'].includes(field.component) && field.componentProps?.showIcons"
+            <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
                 #option="slotProps">
                 <div class="flex items-center">
                     <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"

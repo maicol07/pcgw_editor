@@ -127,8 +127,8 @@ export class PCGWEditor {
             const match = wikitext.match(headerRegex);
 
             if (match && match.index !== undefined) {
-                const title = defaultTitle || (typeof header === 'string' ? `== ${header} ==` : '');
-                const formattedNew = `\n${title}\n${newContent}\n\n`;
+                const title = defaultTitle || (typeof header === 'string' ? `==${header}==` : '');
+                const formattedNew = `${title}${newContent.startsWith('\n') ? '' : '\n'}${newContent}`;
                 this.parser = new WikitextParser(
                     wikitext.substring(0, match.index) + formattedNew + wikitext.substring(match.index)
                 );
@@ -136,17 +136,17 @@ export class PCGWEditor {
                 // Fallback to finding a template
                 const target = this.parser.findTemplate(insertBeforeTemplate);
                 if (target) {
-                    const title = defaultTitle || (typeof header === 'string' ? `== ${header} ==` : '');
-                    const formattedNew = `\n${title}\n${newContent}\n\n`;
+                    const title = defaultTitle || (typeof header === 'string' ? `==${header}==` : '');
+                    const formattedNew = `${title}${newContent.startsWith('\n') ? '' : '\n'}${newContent}`;
                     this.parser = new WikitextParser(
                         wikitext.substring(0, target.start) + formattedNew + wikitext.substring(target.start)
                     );
                 } else {
-                    this.parser.replaceSection(header, newContent, defaultTitle);
+                    this.parser.replaceSection(header, newContent, defaultTitle || (typeof header === 'string' ? `==${header}==` : ''));
                 }
             }
         } else {
-            this.parser.replaceSection(header, newContent, defaultTitle);
+            this.parser.replaceSection(header, newContent, defaultTitle || (typeof header === 'string' ? `==${header}==` : ''));
         }
     }
 
@@ -649,6 +649,51 @@ export class PCGWEditor {
         const newContent = topWikitext + content + bottomWikitext;
 
         this.parser.replaceSection(sectionName, '\n' + newContent + '\n');
+    }
+
+    updateIssues(issues: Issue[]) {
+        const issuesUnresolved = issues.filter(i => !i.fixed);
+        const issuesFixed = issues.filter(i => i.fixed);
+
+        let unresolvedWikitext = '';
+        if (issuesUnresolved.length > 0) {
+            unresolvedWikitext = '\n' + issuesUnresolved.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n\n';
+        }
+
+        let fixedWikitext = '';
+        if (issuesFixed.length > 0) {
+            fixedWikitext = '\n' + issuesFixed.map(issue => `===${issue.title}===\n${issue.body}`).join('\n\n') + '\n\n';
+        }
+
+        // Apply Unresolved Issues
+        if (unresolvedWikitext) {
+            this.replaceSectionContent('Issues unresolved', unresolvedWikitext, '==Issues unresolved==', 'Other information');
+        } else {
+            // Remove section if it exists
+            const text = this.parser.getText();
+            const match = text.match(/^={2,}\s*Issues unresolved\s*={2,}/im);
+            if (match && match.index !== undefined) {
+                const section = this.parser.findSection('Issues unresolved');
+                if (section) {
+                    this.parser = new WikitextParser(text.substring(0, match.index) + text.substring(section.end));
+                }
+            }
+        }
+
+        // Apply Fixed Issues
+        if (fixedWikitext) {
+            this.replaceSectionContent('Issues fixed', fixedWikitext, '==Issues fixed==', 'Other information');
+        } else {
+            // Remove section if it exists
+            const text = this.parser.getText();
+            const match = text.match(/^={2,}\s*Issues fixed\s*={2,}/im);
+            if (match && match.index !== undefined) {
+                const section = this.parser.findSection('Issues fixed');
+                if (section) {
+                    this.parser = new WikitextParser(text.substring(0, match.index) + text.substring(section.end));
+                }
+            }
+        }
     }
 
     updateVideo(data: SettingsVideo) {
@@ -1315,34 +1360,7 @@ export class PCGWEditor {
         this.ensureTemplate('L10n');
         this.parser.replaceParameterContent('L10n', 'content', content);
     }
-    updateIssues(issues: Issue[], type: 'unresolved' | 'fixed') {
-        const title = type === 'unresolved' ? 'Issues unresolved' : 'Issues fixed';
-        const sectionHeader = `==${title}==`;
 
-        let content = '';
-        if (issues && issues.length > 0) {
-            content = `${sectionHeader}\n`;
-            issues.forEach(issue => {
-                content += `===${issue.title}===\n${issue.body}\n\n`;
-            });
-            content = content.trim() + '\n\n';
-        }
-
-        const regex = new RegExp(`==\\s*${title}\\s*==([\\s\\S]*?)(?=\\n+==(?!=)|$)\\n*`, 'i');
-        const text = this.parser.getText();
-
-        if (regex.test(text)) {
-            if (content) {
-                const newText = text.replace(regex, content);
-                this.parser = new WikitextParser(newText);
-            } else {
-                const newText = text.replace(regex, '');
-                this.parser = new WikitextParser(newText);
-            }
-        } else if (content) {
-            this.parser = new WikitextParser(text.trim() + '\n\n' + content);
-        }
-    }
 
 
 
@@ -1761,7 +1779,7 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateMiddleware(data.middleware);
     editor.updateLocalizations(data.localizations);
 
-    editor.updateIssues(data.issuesUnresolved, 'unresolved');
+    editor.updateIssues(data.issues);
     editor.updateSystemRequirements(data.requirements);
 
     editor.updateSectionImages('Video', data.galleries['video']);
