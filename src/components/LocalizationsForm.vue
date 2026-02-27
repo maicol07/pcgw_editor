@@ -10,14 +10,8 @@ import InputText from 'primevue/inputtext';
 import { Trash2, Plus, GripVertical } from 'lucide-vue-next';
 import { FlagIcon } from '@placetopay/flagicons-vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import { computed } from 'vue';
 
 const localizations = defineModel<LocalizationRow[]>('localizations', { required: true });
-
-const dragList = computed({
-    get: () => localizations.value || [],
-    set: (val) => localizations.value = val
-});
 
 const idMap = new WeakMap<LocalizationRow, number>();
 let nextId = 0;
@@ -76,8 +70,8 @@ const getFlagCode = (lang: string) => {
 
 <template>
     <div class="flex flex-col gap-2">
-        <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-2">
-            <div v-for="(row, index) in dragList" :key="getRowId(row)"
+        <VueDraggable v-model="localizations" :animation="150" handle=".drag-handle" class="flex flex-col gap-2">
+            <div v-for="(row, index) in localizations" :key="getRowId(row)"
                 class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group mt-1 ml-1">
 
                 <div class="absolute -left-3 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">

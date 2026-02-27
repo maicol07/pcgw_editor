@@ -10,20 +10,8 @@ import {
     Building2, Plus, Trash2, GripVertical
 } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
-import { computed } from 'vue';
 
-const props = defineProps<{
-    modelValue: AvailabilityRow[];
-}>();
-
-const emit = defineEmits<{
-    (e: 'update:modelValue', value: AvailabilityRow[]): void;
-}>();
-
-const dragList = computed({
-    get: () => props.modelValue || [],
-    set: (val) => emit('update:modelValue', val)
-});
+const dragList = defineModel<AvailabilityRow[]>({ default: () => [] });
 
 const idMap = new WeakMap<AvailabilityRow, number>();
 let nextId = 0;
@@ -58,19 +46,19 @@ const stateOptions = [
 
 function addRow() {
     const newRow: AvailabilityRow = { distribution: 'Steam', id: '', drm: 'Steam', notes: '', keys: '', os: 'Windows', state: 'normal' };
-    emit('update:modelValue', [...props.modelValue, newRow]);
+    dragList.value = [...dragList.value, newRow];
 }
 
 function removeRow(index: number) {
-    const newVal = [...props.modelValue];
+    const newVal = [...dragList.value];
     newVal.splice(index, 1);
-    emit('update:modelValue', newVal);
+    dragList.value = newVal;
 }
 
 function updateRow(index: number, field: keyof AvailabilityRow, val: string) {
-    const newVal = [...props.modelValue];
+    const newVal = [...dragList.value];
     newVal[index] = { ...newVal[index], [field]: val };
-    emit('update:modelValue', newVal);
+    dragList.value = newVal;
 }
 
 const getProductIdHelp = (source: string) => {

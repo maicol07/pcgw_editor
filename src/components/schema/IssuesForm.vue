@@ -6,18 +6,8 @@ import Checkbox from 'primevue/checkbox';
 import { X, Plus, Info, GripVertical } from 'lucide-vue-next';
 import WysiwygEditor from '../common/WysiwygEditor.vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import { computed } from 'vue';
 
-const props = defineProps<{
-  modelValue: Issue[];
-}>();
-
-const emit = defineEmits(['update:modelValue']);
-
-const dragList = computed({
-  get: () => props.modelValue || [],
-  set: (val) => emit('update:modelValue', val)
-});
+const dragList = defineModel<Issue[]>({ default: () => [] });
 
 const idMap = new WeakMap<Issue, number>();
 let nextId = 0;
@@ -27,13 +17,11 @@ function getRowId(row: Issue) {
 }
 
 function addRow() {
-  const newRows = [...(props.modelValue || []), { title: '', fixed: false, body: '' }];
-  emit('update:modelValue', newRows);
+  dragList.value = [...dragList.value, { title: '', fixed: false, body: '' }];
 }
 
 function removeRow(index: number) {
-  const newRows = props.modelValue.filter((_, i) => i !== index);
-  emit('update:modelValue', newRows);
+  dragList.value = dragList.value.filter((_, i) => i !== index);
 }
 </script>
 

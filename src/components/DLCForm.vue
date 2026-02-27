@@ -5,18 +5,8 @@ import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import { X, Plus, Info, GripVertical } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
-import { computed } from 'vue';
 
-const props = defineProps<{
-  modelValue: DLCRow[];
-}>();
-
-const emit = defineEmits(['update:modelValue']);
-
-const dragList = computed({
-  get: () => props.modelValue || [],
-  set: (val) => emit('update:modelValue', val)
-});
+const dragList = defineModel<DLCRow[]>({ default: () => [] });
 
 const idMap = new WeakMap<DLCRow, number>();
 let nextId = 0;
@@ -36,19 +26,17 @@ const osOptions = [
 ];
 
 function addRow() {
-  const newRows = [...(props.modelValue || []), { name: '', notes: '', os: '' }];
-  emit('update:modelValue', newRows);
+  dragList.value = [...dragList.value, { name: '', notes: '', os: '' }];
 }
 
 function removeRow(index: number) {
-  const newRows = props.modelValue.filter((_, i) => i !== index);
-  emit('update:modelValue', newRows);
+  dragList.value = dragList.value.filter((_, i) => i !== index);
 }
 
 function handleOsChange(index: number, selectedValues: string[]) {
-  const newRows = [...props.modelValue];
+  const newRows = [...dragList.value];
   newRows[index].os = selectedValues.join(', ');
-  emit('update:modelValue', newRows);
+  dragList.value = newRows;
 }
 
 function getOsArray(osString: string): string[] {
