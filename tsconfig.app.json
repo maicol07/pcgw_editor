@@ -9,6 +9,10 @@
             "DOM.Iterable"
         ],
         "skipLibCheck": true,
+        "types": [
+            "node",
+            "vite-plugin-pwa/client"
+        ],
         /* Bundler mode */
         "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
