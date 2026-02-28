@@ -43,7 +43,7 @@ export class PCGWEditor {
      * Ensures a template exists in the wikitext.
      * If not found, appends it to the end (or specific logic if we want to be smarter later).
      */
-    ensureTemplate(templateName: string, options: { after?: string; before?: string } = {}) {
+    ensureTemplate(templateName: string, options: { after?: string; before?: string; header?: string } = {}) {
         if (!this.parser.findTemplate(templateName)) {
             const wikitext = this.parser.getText();
             let insertPos = -1;
@@ -62,19 +62,27 @@ export class PCGWEditor {
                 }
             }
 
+            let contentToInsert = `{{${templateName}}}`;
+            if (options.header) {
+                // Check if high-level header already exists
+                const headerPattern = new RegExp(`^={2,}\\s*${options.header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*={2,}`, 'im');
+                if (!wikitext.match(headerPattern)) {
+                    const level = templateName === 'Microtransactions' ? 3 : 2;
+                    const eq = '='.repeat(level);
+                    contentToInsert = `${eq} ${options.header} ${eq}\n${contentToInsert}`;
+                }
+            }
+
             if (insertPos !== -1) {
-                // Determine if we need newlines. Usually these templates are on their own line.
                 const prefix = !wikitext.substring(0, insertPos).endsWith('\n') ? '\n' : '';
                 const suffix = !wikitext.substring(insertPos).startsWith('\n') ? '\n' : '';
 
-                // If inserting after a template that doesn't end with a newline, adding one is good.
                 this.parser = new WikitextParser(
-                    wikitext.substring(0, insertPos) + `${prefix}{{${templateName}}}\n${suffix}` + wikitext.substring(insertPos)
+                    wikitext.substring(0, insertPos) + `${prefix}${contentToInsert}\n${suffix}` + wikitext.substring(insertPos)
                 );
             } else {
-                // Fallback: Check if we can start a new line
                 const prefix = wikitext.length > 0 && !wikitext.endsWith('\n') ? '\n' : '';
-                this.parser = new WikitextParser(wikitext + `${prefix}{{${templateName}}}\n`);
+                this.parser = new WikitextParser(wikitext + `${prefix}${contentToInsert}\n`);
             }
         }
     }
@@ -530,7 +538,7 @@ export class PCGWEditor {
     }
 
     updateMonetization(data: GameData['monetization']) {
-        this.ensureTemplate('Monetization', { after: 'Availability', before: 'Microtransactions' });
+        this.ensureTemplate('Monetization', { after: 'Availability', before: 'Microtransactions', header: 'Monetization' });
         this.updateSection('Monetization', data, {
             adSupported: 'ad-supported',
             dlc: 'dlc',
@@ -545,7 +553,7 @@ export class PCGWEditor {
     }
 
     updateMicrotransactions(data: GameData['microtransactions']) {
-        this.ensureTemplate('Microtransactions', { after: 'Monetization', before: 'DLC' });
+        this.ensureTemplate('Microtransactions', { after: 'Monetization', before: 'DLC', header: 'Microtransactions' });
         this.updateSection('Microtransactions', data, {
             boost: 'boost',
             cosmetic: 'cosmetic',
