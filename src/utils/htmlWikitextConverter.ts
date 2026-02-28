@@ -35,6 +35,42 @@ export const wikitextToHtml = (wikitext: string): string => {
         return `<a href="${page}">${title || page}</a>`;
     });
 
+    // Fixboxes
+    html = html.replace(/\{\{Fixbox\s*\|([^}]+)\}\}/gi, (match, content) => {
+        let description = '';
+        let ref = '';
+        let fix = '';
+        let collapsed = false;
+
+        const parts = content.split(/\|(?=\w+=)/);
+        for (const part of parts) {
+            const eqIndex = part.indexOf('=');
+            if (eqIndex > -1) {
+                const key = part.substring(0, eqIndex).trim();
+                const val = part.substring(eqIndex + 1).trim();
+                if (key === 'description') description = val;
+                else if (key === 'ref') ref = val;
+                else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
+                else if (key === 'fix') fix = val;
+            } else if (part.trim() && !description) {
+                // simple unnamed parameter might be description if omitted key
+                description = part.trim();
+            }
+        }
+
+        let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(`{{Fixbox|${content}}}`)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
+        if (collapsed) {
+            htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
+        }
+        htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${description}${ref ? `<sup class="reference">${ref.replace(/^<ref>([\s\S]*)<\/ref>$/, '$1')}</sup>` : ''}</th></tr>`;
+
+        if (fix && fix.trim() !== '') {
+            htmlOut += `<tr${collapsed ? ' style="display: none;"' : ''}><td class="fixbox-body"><p>${fix.trim()}</p></td></tr>`;
+        }
+        htmlOut += `</tbody></table></div>`;
+        return htmlOut;
+    });
+
     // Paragraphs and lists
     const paragraphs = html.split(/(?:\r?\n){2,}/);
     html = paragraphs.map(p => {
@@ -65,10 +101,10 @@ export const wikitextToHtml = (wikitext: string): string => {
             return listHtml;
         } else {
             // Newlines to <br> to keep within same paragraph
-            const inner = p.replace(/\r?\n/g, '<br>');
-            if (/^(<h[1-6]>|<blockquote>|<pre>)/.test(inner)) {
-                return inner;
+            if (/^(<h[1-6]>|<blockquote>|<pre>|<table|<div)/.test(p.trim())) {
+                return p;
             }
+            const inner = p.replace(/\r?\n/g, '<br>');
             return `<p>${inner}</p>`;
         }
     }).join('');
@@ -121,6 +157,58 @@ export const htmlToWikitext = (html: string): string => {
     wikitext = wikitext.replace(/<pre[^>]*>(.*?)<\/pre>/gi, "<code>$1</code>\n");
     wikitext = wikitext.replace(/<code[^>]*>(.*?)<\/code>/gi, "<code>$1</code>");
 
+    // Fixboxes
+    const fixboxRegex = /<table[^>]*class=["'][^"']*fixbox([^"']*)["'][^>]*>([\s\S]*?)<\/table>/gi;
+    wikitext = wikitext.replace(fixboxRegex, (match, classes, innerHtml) => {
+        const isCollapsed = classes && classes.includes('mw-collapsed');
+        let desc = '';
+        let refRaw = '';
+        let fixContent = '';
+
+        // Extract Title and Reference
+        const thMatch = innerHtml.match(/<th[^>]*class=["'][^"']*fixbox-title["'][^>]*>([\s\S]*?)<\/th>/i);
+        if (thMatch) {
+            let thContent = thMatch[1];
+            // Remove toggle span if present
+            thContent = thContent.replace(/<span[^>]*class=["'][^"']*mw-collapsible-toggle[^"']*["'][^>]*>[\s\S]*?<\/span>\s*/i, '');
+            // Remove icon div
+            thContent = thContent.replace(/<div[^>]*class=["'][^"']*fixbox-icon["'][^>]*><\/div>\s*/i, '');
+
+            // Extract Reference sup
+            const refMatch = thContent.match(/<sup[^>]*class=["'][^"']*reference["'][^>]*>([\s\S]*?)<\/sup>/i);
+            if (refMatch) {
+                refRaw = refMatch[1].replace(/<a[^>]*>/i, '').replace(/<\/a>/i, '');
+                thContent = thContent.replace(refMatch[0], ''); // Remove ref from description
+            }
+            desc = thContent.trim();
+        }
+
+        // Extract Body
+        const tdMatch = innerHtml.match(/<td[^>]*class=["'][^"']*fixbox-body["'][^>]*>([\s\S]*?)<\/td>/i);
+        if (tdMatch) {
+            let tdContent = tdMatch[1];
+            // Remove wrapping <p> tags
+            tdContent = tdContent.replace(/^[\s\S]*?<p>/i, '').replace(/<\/p>[\s\S]*?$/i, '');
+            fixContent = tdContent.trim();
+        }
+
+        let refStr = refRaw ? refRaw.trim() : '';
+        if (refStr && !refStr.startsWith('[')) {
+            refStr = `<ref>${refStr}</ref>`;
+        }
+
+        let wt = `{{Fixbox|description=${desc ? desc.trim() : ''}`;
+        if (refStr) wt += `|ref=${refStr}`;
+        if (isCollapsed) wt += `|collapsed=yes`;
+
+        if (fixContent) {
+            fixContent = fixContent.replace(/<br\s*\/?>/gi, '\n');
+            wt += `|fix=\n${fixContent}\n`;
+        }
+        wt += `}}`;
+        return wt;
+    });
+
     // Replace <br> with single newline
     wikitext = wikitext.replace(/<br\s*\/?>/gi, "\n");
 
@@ -128,7 +216,7 @@ export const htmlToWikitext = (html: string): string => {
     wikitext = wikitext.replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n\n");
 
     // Remove all remaining HTML tags except valid wikitext allowed styles
-    wikitext = wikitext.replace(/<\/?(?!(?:u|s|strike|del|pre|blockquote|code|ins)\b)[a-z0-9-]+[^>]*>/gi, "");
+    wikitext = wikitext.replace(/<\/?(?!(?:u|s|strike|del|pre|blockquote|code|ins|ref)\b)[a-z0-9-]+[^>]*>/gi, "");
 
     // Decode HTML entities
     wikitext = wikitext.replace(/&lt;/g, "<")

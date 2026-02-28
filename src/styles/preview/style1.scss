@@ -927,17 +927,23 @@ td.fixbox-body>p:first-child {
     padding-top: 0
 }
 
-th.fixbox-title,
-td.fixbox-body {
-    width: 820px
-}
-
 th.fixbox-title {
     text-align: left
 }
 
+.fixbox p {
+    padding-top: 4px;
+    padding-left: 21px;
+    margin: 0
+}
+
 .fixbox .fixbox-title {
-    padding: 12px
+    padding: 6px 12px 2px;
+    font-weight: 600
+}
+
+.fixbox td {
+    padding: 0 0 4px
 }
 
 @media only screen and (min-width :801px) {
