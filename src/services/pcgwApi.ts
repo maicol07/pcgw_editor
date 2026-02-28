@@ -186,16 +186,16 @@ class PCGWApiService {
         if (!query || query.length < 2) return [];
 
         try {
-            const result = await this.fetchApi<{ query?: { search?: { title: string }[] } }>({
-                action: 'query',
-                list: 'search',
-                srsearch: query,
-                srnamespace: '0',
-                srlimit: '10',
+            // opensearch returns [query, [titles], [descriptions], [urls]]
+            const result = await this.fetchApi<[string, string[], string[], string[]]>({
+                action: 'opensearch',
+                search: query,
+                namespace: '0',
+                limit: '10',
             });
 
-            if (!result?.query?.search) return [];
-            return result.query.search.map((item) => item.title);
+            if (!result || !Array.isArray(result[1])) return [];
+            return result[1];
         } catch (error) {
             console.error('Failed to search pages:', error);
             return [];
