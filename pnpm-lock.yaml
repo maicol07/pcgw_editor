@@ -26,6 +26,9 @@ importers:
       '@google/genai':
         specifier: ^1.43.0
         version: 1.43.0
+      '@lezer/common':
+        specifier: ^1.5.1
+        version: 1.5.1
       '@placetopay/flagicons-vue':
         specifier: ^0.1.0
         version: 0.1.0(typescript@5.9.3)

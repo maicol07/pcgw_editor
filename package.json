@@ -21,6 +21,7 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.39.15",
     "@google/genai": "^1.43.0",
+    "@lezer/common": "^1.5.1",
     "@placetopay/flagicons-vue": "^0.1.0",
     "@tailwindcss/vite": "^4.2.1",
     "@vueuse/core": "^14.2.1",
