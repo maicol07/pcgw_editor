@@ -182,6 +182,26 @@ class PCGWApiService {
         }
     }
 
+    async searchPages(query: string): Promise<string[]> {
+        if (!query || query.length < 2) return [];
+
+        try {
+            const result = await this.fetchApi<{ query?: { search?: { title: string }[] } }>({
+                action: 'query',
+                list: 'search',
+                srsearch: query,
+                srnamespace: '0',
+                srlimit: '10',
+            });
+
+            if (!result?.query?.search) return [];
+            return result.query.search.map((item) => item.title);
+        } catch (error) {
+            console.error('Failed to search pages:', error);
+            return [];
+        }
+    }
+
     // New: User search for NotesEditorDialog
     async searchUsers(query: string): Promise<string[]> {
         if (!query || query.length < 2) return [];
@@ -240,7 +260,11 @@ class PCGWApiService {
     }
 
     async fetchTemplateWikitext(templateType: 'singleplayer' | 'multiplayer' | 'unknown'): Promise<string | null> {
-        const cacheKey = `template:${templateType}`;
+        return this.fetchWikitext(`PCGamingWiki:Sample_article/Game_(${templateType})`, `template:${templateType}`);
+    }
+
+    async fetchWikitext(title: string, cacheKeyBase?: string): Promise<string | null> {
+        const cacheKey = cacheKeyBase || `wikitext:${title}`;
         const cached = this.getFromCache(cacheKey);
         if (cached && cached.length > 0) return cached[0];
 
@@ -248,7 +272,7 @@ class PCGWApiService {
             const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { slots?: { main?: { '*'?: string } } }[] }> } }>({
                 action: 'query',
                 prop: 'revisions',
-                titles: `PCGamingWiki:Sample_article/Game_(${templateType})`,
+                titles: title,
                 rvprop: 'content',
                 rvslots: 'main',
             });
@@ -263,7 +287,29 @@ class PCGWApiService {
             this.setCache(cacheKey, [content]);
             return content;
         } catch (error) {
-            console.error(`Failed to fetch template ${templateType}:`, error);
+            console.error(`Failed to fetch wikitext for ${title}:`, error);
+            return null;
+        }
+    }
+
+    extractTitleFromUrl(url: string): string | null {
+        try {
+            const parsedUrl = new URL(url);
+            if (parsedUrl.hostname !== 'www.pcgamingwiki.com') return null;
+
+            // Handle both /wiki/Title and /w/index.php?title=Title
+            const pathParts = parsedUrl.pathname.split('/');
+            if (pathParts[1] === 'wiki' && pathParts[2]) {
+                return decodeURIComponent(pathParts[2]).replace(/_/g, ' ');
+            }
+
+            const titleParam = parsedUrl.searchParams.get('title');
+            if (titleParam) {
+                return decodeURIComponent(titleParam).replace(/_/g, ' ');
+            }
+
+            return null;
+        } catch {
             return null;
         }
     }

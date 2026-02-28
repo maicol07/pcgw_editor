@@ -9,6 +9,9 @@ import { Plus, Pencil, Download, Trash2, Loader2 } from 'lucide-vue-next';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import SelectButton from 'primevue/selectbutton';
+import Message from 'primevue/message';
+import AutocompleteField from './AutocompleteField.vue';
 import { pcgwApi } from '../services/pcgwApi';
 
 const store = useWorkspaceStore();
@@ -30,37 +33,80 @@ const isNewPageDialogVisible = ref(false);
 const isCreatingPage = ref(false);
 const newPageTitle = ref('Untitled Page');
 const newPageTemplate = ref('blank');
+const importSource = ref('url'); // 'url' or 'search'
+const importUrl = ref('');
+const importSearch = ref('');
+const importError = ref('');
+
+const importSourceOptions = [
+    { label: 'URL', value: 'url' },
+    { label: 'Search', value: 'search' }
+];
 
 const templateOptions = [
     { label: 'Blank', value: 'blank' },
-    { label: 'Singleplayer', value: 'singleplayer' },
-    { label: 'Multiplayer', value: 'multiplayer' },
-    { label: 'Unknown', value: 'unknown' }
+    { label: 'Existing PCGW Page', value: 'existing' },
+    { label: 'Singleplayer Template', value: 'singleplayer' },
+    { label: 'Multiplayer Template', value: 'multiplayer' },
+    { label: 'Unknown Template', value: 'unknown' }
 ];
 
 const openNewPageDialog = () => {
     newPageTitle.value = 'Untitled Page';
     newPageTemplate.value = 'blank';
+    importUrl.value = '';
+    importSearch.value = '';
+    importError.value = '';
     isNewPageDialogVisible.value = true;
 };
 
 const createNewPage = async () => {
     isCreatingPage.value = true;
+    importError.value = '';
     try {
-        if (newPageTemplate.value === 'blank') {
-            store.createPage(newPageTitle.value, undefined, 'blank');
-        } else {
+        let title = newPageTitle.value;
+        let wikitext: string | undefined = undefined;
+
+        if (newPageTemplate.value === 'existing') {
+            let pageTitleToFetch = '';
+            if (importSource.value === 'url') {
+                const extracted = pcgwApi.extractTitleFromUrl(importUrl.value);
+                if (!extracted) {
+                    importError.value = 'Invalid PCGW URL';
+                    return;
+                }
+                pageTitleToFetch = extracted;
+            } else {
+                if (!importSearch.value) {
+                    importError.value = 'Please select a page';
+                    return;
+                }
+                pageTitleToFetch = importSearch.value;
+            }
+
+            const fetchedWikitext = await pcgwApi.fetchWikitext(pageTitleToFetch);
+            if (!fetchedWikitext) {
+                importError.value = 'Failed to fetch page content. Please check the title/URL.';
+                return;
+            }
+            wikitext = fetchedWikitext;
+            title = pageTitleToFetch;
+        } else if (newPageTemplate.value !== 'blank') {
             const templateType = newPageTemplate.value as 'singleplayer' | 'multiplayer' | 'unknown';
             const templateWikitext = await pcgwApi.fetchTemplateWikitext(templateType);
             if (templateWikitext) {
-                store.createPage(newPageTitle.value, templateWikitext, templateType);
+                wikitext = templateWikitext;
             } else {
                 alert('Failed to load template. Falling back to blank page.');
-                store.createPage(newPageTitle.value, undefined, 'blank');
             }
         }
+
+        store.createPage(title, wikitext, newPageTemplate.value as any);
         isNewPageDialogVisible.value = false;
         visibleState.value = false;
+    } catch (error) {
+        console.error('Error creating page:', error);
+        importError.value = 'An unexpected error occurred.';
     } finally {
         isCreatingPage.value = false;
     }
@@ -161,15 +207,40 @@ const customRename = (page: any) => {
     <Dialog v-model:visible="isNewPageDialogVisible" header="Create New Page" :style="{ width: '400px' }" modal>
         <div class="flex flex-col gap-4 py-4">
             <div class="flex flex-col gap-2">
-                <label for="pageTitle" class="font-bold">Page Title</label>
-                <InputText id="pageTitle" v-model="newPageTitle" placeholder="Enter page title" autofocus />
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label for="pageTemplate" class="font-bold">Template</label>
+                <label for="pageTemplate" class="font-bold">Source / Template</label>
                 <Select id="pageTemplate" v-model="newPageTemplate" :options="templateOptions" optionLabel="label"
                     optionValue="value" class="w-full" />
             </div>
+
+            <Transition name="fade-fast" mode="out-in">
+                <div v-if="newPageTemplate === 'existing'"
+                    class="flex flex-col gap-4 p-3 bg-surface-100 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-bold uppercase text-surface-500">Import Method</label>
+                        <SelectButton v-model="importSource" :options="importSourceOptions" optionLabel="label"
+                            optionValue="value" aria-labelledby="basic" />
+                    </div>
+
+                    <div v-if="importSource === 'url'" class="flex flex-col gap-2">
+                        <label for="importUrl" class="text-xs font-bold">PCGW URL</label>
+                        <InputText id="importUrl" v-model="importUrl"
+                            placeholder="https://www.pcgamingwiki.com/wiki/..." class="w-full" />
+                    </div>
+
+                    <div v-else class="flex flex-col gap-2">
+                        <label for="importSearch" class="text-xs font-bold">Search Page</label>
+                        <AutocompleteField v-model="importSearch" dataSource="pages" :multiple="false"
+                            placeholder="Type game title..." />
+                    </div>
+
+                    <Message v-if="importError" severity="error" variant="simple" size="small">{{ importError }}
+                    </Message>
+                </div>
+                <div v-else class="flex flex-col gap-2">
+                    <label for="pageTitle" class="font-bold">Page Title</label>
+                    <InputText id="pageTitle" v-model="newPageTitle" placeholder="Enter page title" autofocus />
+                </div>
+            </Transition>
         </div>
         <template #footer>
             <Button label="Cancel" text severity="secondary" @click="isNewPageDialogVisible = false"

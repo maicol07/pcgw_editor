@@ -4,7 +4,7 @@ import MultiSelect from 'primevue/multiselect';
 import AutoComplete from 'primevue/autocomplete';
 import { pcgwApi } from '../services/pcgwApi';
 
-export type DataSource = 'companies' | 'engines' | 'series' | 'genres' | 'themes' | 'perspectives' | 'files' | 'pacing' | 'controls' | 'sports' | 'vehicles' | 'artStyles' | 'monetization' | 'microtransactions' | 'modes';
+export type DataSource = 'companies' | 'engines' | 'series' | 'genres' | 'themes' | 'perspectives' | 'files' | 'pacing' | 'controls' | 'sports' | 'vehicles' | 'artStyles' | 'monetization' | 'microtransactions' | 'modes' | 'pages';
 
 interface Props {
     modelValue: string | string[];
@@ -118,6 +118,9 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                     break;
                 case 'modes':
                     results = await pcgwApi.searchModes(query);
+                    break;
+                case 'pages':
+                    results = await pcgwApi.searchPages(query);
                     break;
             }
 
