@@ -43,12 +43,39 @@ export class PCGWEditor {
      * Ensures a template exists in the wikitext.
      * If not found, appends it to the end (or specific logic if we want to be smarter later).
      */
-    ensureTemplate(templateName: string) {
+    ensureTemplate(templateName: string, options: { after?: string; before?: string } = {}) {
         if (!this.parser.findTemplate(templateName)) {
-            // Check if we can start a new line
-            const text = this.parser.getText();
-            const prefix = text.length > 0 && !text.endsWith('\n') ? '\n' : '';
-            this.parser = new WikitextParser(text + `${prefix}{{${templateName}}}\n`);
+            const wikitext = this.parser.getText();
+            let insertPos = -1;
+
+            if (options.after) {
+                const afterTpl = this.parser.findTemplate(options.after);
+                if (afterTpl) {
+                    insertPos = afterTpl.end;
+                }
+            }
+
+            if (insertPos === -1 && options.before) {
+                const beforeTpl = this.parser.findTemplate(options.before);
+                if (beforeTpl) {
+                    insertPos = beforeTpl.start;
+                }
+            }
+
+            if (insertPos !== -1) {
+                // Determine if we need newlines. Usually these templates are on their own line.
+                const prefix = !wikitext.substring(0, insertPos).endsWith('\n') ? '\n' : '';
+                const suffix = !wikitext.substring(insertPos).startsWith('\n') ? '\n' : '';
+
+                // If inserting after a template that doesn't end with a newline, adding one is good.
+                this.parser = new WikitextParser(
+                    wikitext.substring(0, insertPos) + `${prefix}{{${templateName}}}\n${suffix}` + wikitext.substring(insertPos)
+                );
+            } else {
+                // Fallback: Check if we can start a new line
+                const prefix = wikitext.length > 0 && !wikitext.endsWith('\n') ? '\n' : '';
+                this.parser = new WikitextParser(wikitext + `${prefix}{{${templateName}}}\n`);
+            }
         }
     }
 
@@ -459,7 +486,7 @@ export class PCGWEditor {
             return;
         }
 
-        this.ensureTemplate('DLC');
+        this.ensureTemplate('DLC', { after: 'Microtransactions' });
 
         const content = validRows.map(row => {
             return `{{DLC/row| ${row.name} | ${row.notes} | ${row.os} }}`;
@@ -503,7 +530,7 @@ export class PCGWEditor {
     }
 
     updateMonetization(data: GameData['monetization']) {
-        this.ensureTemplate('Monetization');
+        this.ensureTemplate('Monetization', { after: 'Availability', before: 'Microtransactions' });
         this.updateSection('Monetization', data, {
             adSupported: 'ad-supported',
             dlc: 'dlc',
@@ -518,7 +545,7 @@ export class PCGWEditor {
     }
 
     updateMicrotransactions(data: GameData['microtransactions']) {
-        this.ensureTemplate('Microtransactions');
+        this.ensureTemplate('Microtransactions', { after: 'Monetization', before: 'DLC' });
         this.updateSection('Microtransactions', data, {
             boost: 'boost',
             cosmetic: 'cosmetic',
@@ -1767,9 +1794,9 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateEssentialImprovements(data.essentialImprovements);
 
     editor.updateAvailability(data.availability);
-    editor.updateDLC(data.dlc);
     editor.updateMonetization(data.monetization);
     editor.updateMicrotransactions(data.microtransactions);
+    editor.updateDLC(data.dlc);
     editor.updateVideo(data.video);
     editor.updateInput(data.input);
     editor.updateAudio(data.audio);
