@@ -7,7 +7,7 @@ import { computed, ref } from 'vue';
 import {
     Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle,
     Search, Filter, ArrowUpDown, Clock, Calendar, Hash,
-    File, FilePenLine, User, Users,
+    File, FilePenLine, User, Users, Link,
     Layout, SortAsc, SortDesc
 } from 'lucide-vue-next';
 import Dialog from 'primevue/dialog';
@@ -98,10 +98,10 @@ const filteredPages = computed(() => {
 });
 
 const templateOptions = [
-    { label: 'Blank', value: 'blank' },
-    { label: 'Existing PCGW Page', value: 'existing' },
-    { label: 'Singleplayer Template', value: 'singleplayer' },
-    { label: 'Multiplayer Template', value: 'multiplayer' },
+    { label: 'Blank', value: 'blank', icon: File },
+    { label: 'Existing PCGW Page', value: 'pcgw', icon: FilePenLine },
+    { label: 'Singleplayer', value: 'singleplayer', icon: User },
+    { label: 'Multiplayer', value: 'multiplayer', icon: Users },
     { label: 'Unknown Template', value: 'unknown' }
 ];
 
@@ -121,7 +121,7 @@ const createNewPage = async () => {
         let title = newPageTitle.value;
         let wikitext: string | undefined = undefined;
 
-        if (newPageTemplate.value === 'existing') {
+        if (newPageTemplate.value === 'pcgw') {
             let pageTitleToFetch = '';
             if (importSource.value === 'url') {
                 const extracted = pcgwApi.extractTitleFromUrl(importUrl.value);
@@ -309,7 +309,7 @@ const commitHash = __COMMIT_HASH__;
                                 class="absolute top-2 right-2 flex gap-1 transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 ease-out">
                                 <Button icon="pi pi-download" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Export JSON'"
-                                    class="!p-1.5 !w-8 !h-8 hover:bg-white dark:hover:bg-surface-800"
+                                    class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                     @click.stop="store.exportPage(page.id)">
                                     <template #icon>
                                         <Download class="w-4! h-4!" />
@@ -317,7 +317,7 @@ const commitHash = __COMMIT_HASH__;
                                 </Button>
                                 <Button icon="pi pi-pencil" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Rename'"
-                                    class="!p-1.5 !w-8 !h-8 hover:bg-white dark:hover:bg-surface-800"
+                                    class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                     @click.stop="customRename(page)">
                                     <template #icon>
                                         <Pencil class="w-4! h-4!" />
@@ -325,7 +325,7 @@ const commitHash = __COMMIT_HASH__;
                                 </Button>
                                 <Button icon="pi pi-trash" severity="danger" variant="text" size="small"
                                     v-tooltip.top="'Delete'"
-                                    class="!p-1.5 !w-8 !h-8 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    class="p-1.5! w-8! h-8! hover:bg-red-50 dark:hover:bg-red-900/20"
                                     @click.stop="store.deletePage(page.id)">
                                     <template #icon>
                                         <Trash2 class="w-4! h-4!" />
@@ -380,28 +380,60 @@ const commitHash = __COMMIT_HASH__;
             <div class="flex flex-col gap-2">
                 <label for="pageTemplate" class="font-bold">Source / Template</label>
                 <Select id="pageTemplate" v-model="newPageTemplate" :options="templateOptions" optionLabel="label"
-                    optionValue="value" class="w-full" />
+                    optionValue="value" class="w-full" size="small">
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center">
+                            <component :is="templateOptions.find(o => o.value === slotProps.value)?.icon"
+                                class="w-4 h-4 mr-2 text-surface-400" />
+                            <span>{{templateOptions.find(o => o.value === slotProps.value)?.label}}</span>
+                        </div>
+                        <span v-else>{{ slotProps.placeholder }}</span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex items-center">
+                            <component :is="slotProps.option.icon" class="w-4 h-4 mr-2 text-surface-400" />
+                            <span>{{ slotProps.option.label }}</span>
+                        </div>
+                    </template>
+                </Select>
             </div>
 
             <Transition name="fade-fast" mode="out-in">
-                <div v-if="newPageTemplate === 'existing'"
+                <div v-if="newPageTemplate === 'pcgw'"
                     class="flex flex-col gap-4 p-3 bg-surface-100 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
                     <div class="flex flex-col gap-2">
                         <label class="text-xs font-bold uppercase text-surface-500">Import Method</label>
                         <SelectButton v-model="importSource" :options="importSourceOptions" optionLabel="label"
-                            optionValue="value" aria-labelledby="basic" />
+                            optionValue="value" aria-labelledby="basic" class="w-full">
+                            <template #option="slotProps">
+                                <div class="flex items-center gap-2">
+                                    <component :is="slotProps.option.icon" class="w-4 h-4" />
+                                    <span>{{ slotProps.option.label }}</span>
+                                </div>
+                            </template>
+                        </SelectButton>
                     </div>
 
                     <div v-if="importSource === 'url'" class="flex flex-col gap-2">
-                        <label for="importUrl" class="text-xs font-bold">PCGW URL</label>
-                        <InputText id="importUrl" v-model="importUrl"
-                            placeholder="https://www.pcgamingwiki.com/wiki/..." class="w-full" />
+                        <label class="text-xs font-semibold text-surface-600 dark:text-surface-400">PCGW URL</label>
+                        <IconField>
+                            <InputIcon>
+                                <Link class="w-4 h-4" />
+                            </InputIcon>
+                            <InputText v-model="importUrl" placeholder="https://www.pcgamingwiki.com/wiki/..."
+                                class="w-full" size="small" />
+                        </IconField>
                     </div>
 
                     <div v-else class="flex flex-col gap-2">
-                        <label for="importSearch" class="text-xs font-bold">Search Page</label>
-                        <AutocompleteField v-model="importSearch" dataSource="pages" :multiple="false"
-                            placeholder="Type game title..." />
+                        <label class="text-xs font-semibold text-surface-600 dark:text-surface-400">Search Page</label>
+                        <IconField>
+                            <InputIcon>
+                                <Search class="w-4 h-4" />
+                            </InputIcon>
+                            <AutocompleteField v-model="importSearch" dataSource="pages" :multiple="false"
+                                placeholder="Type game title..." class="w-full" />
+                        </IconField>
                     </div>
 
                     <Message v-if="importError" severity="error" variant="simple" size="small">{{ importError }}
