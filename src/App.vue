@@ -124,6 +124,21 @@ const updateGameData = (path: string, value: any) => {
 
 onMounted(() => {
     setTimeout(() => { uiStore.isInitialLoad = false; }, 100);
+
+    const handleGlobalKeydown = (e: KeyboardEvent) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
+            navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+        const isK = e.key.toLowerCase() === 'k';
+        const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+        if (modifier && isK) {
+            e.preventDefault();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.focus();
+        }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeydown);
 });
 </script>
 
@@ -135,7 +150,7 @@ onMounted(() => {
         }">
         <WorkspaceSidebar v-model:visible="uiStore.sidebarVisible" />
 
-        <Splitter style="height: 100vh" class="border-none !mb-0 !rounded-none bg-transparent splitter-modern">
+        <Splitter style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern">
             <!-- Left Panel: Editor -->
             <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
                 <EditorToolbar :title="pageTitle" @update:title="pageTitle = $event" :editorMode="editorMode"
@@ -143,7 +158,7 @@ onMounted(() => {
                     @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary" />
 
                 <div
-                    class="flex-1 overflow-y-auto custom-scrollbar bg-gradient-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
+                    class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
                     <!-- Loading Overlay for Mode Switching -->
                     <Transition name="fade-fast">
                         <div v-if="isModeSwitching"
