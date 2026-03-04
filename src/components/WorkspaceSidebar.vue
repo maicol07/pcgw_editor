@@ -3,9 +3,13 @@ import { useWorkspaceStore } from '../stores/workspace';
 import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
-import VirtualScroller from 'primevue/virtualscroller';
 import { computed, ref } from 'vue';
-import { Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle } from 'lucide-vue-next';
+import {
+    Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle,
+    Search, Filter, ArrowUpDown, Clock, Calendar, Hash,
+    File, FilePenLine, User, Users,
+    Layout, SortAsc, SortDesc
+} from 'lucide-vue-next';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -13,6 +17,9 @@ import SelectButton from 'primevue/selectbutton';
 import Message from 'primevue/message';
 import AutocompleteField from './AutocompleteField.vue';
 import { pcgwApi } from '../services/pcgwApi';
+import { formatDistanceToNow } from 'date-fns';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 
 const store = useWorkspaceStore();
 
@@ -42,6 +49,53 @@ const importSourceOptions = [
     { label: 'URL', value: 'url' },
     { label: 'Search', value: 'search' }
 ];
+
+// Filtering & Sorting
+const searchQuery = ref('');
+const filterTemplate = ref('all');
+const sortBy = ref('recent');
+
+const filterOptions = [
+    { label: 'All Templates', value: 'all', icon: Layout },
+    { label: 'Blank', value: 'blank', icon: File },
+    { label: 'Existing PCGW Page', value: 'pcgw', icon: FilePenLine },
+    { label: 'Singleplayer', value: 'singleplayer', icon: User },
+    { label: 'Multiplayer', value: 'multiplayer', icon: Users },
+];
+
+const sortOptions = [
+    { label: 'Most Recent', value: 'recent', icon: Clock },
+    { label: 'Oldest First', value: 'oldest', icon: Calendar },
+    { label: 'Title (A-Z)', value: 'title-asc', icon: SortAsc },
+    { label: 'Title (Z-A)', value: 'title-desc', icon: SortDesc },
+];
+
+
+const filteredPages = computed(() => {
+    let result = [...store.pages];
+
+    // Search
+    if (searchQuery.value) {
+        const q = searchQuery.value.toLowerCase();
+        result = result.filter(p => p.title.toLowerCase().includes(q));
+    }
+
+    // Template Filter
+    if (filterTemplate.value !== 'all') {
+        result = result.filter(p => (p.template || 'blank') === filterTemplate.value);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+        if (sortBy.value === 'recent') return b.lastModified - a.lastModified;
+        if (sortBy.value === 'oldest') return a.lastModified - b.lastModified;
+        if (sortBy.value === 'title-asc') return a.title.localeCompare(b.title);
+        if (sortBy.value === 'title-desc') return b.title.localeCompare(a.title);
+        return 0;
+    });
+
+    return result;
+});
 
 const templateOptions = [
     { label: 'Blank', value: 'blank' },
@@ -134,8 +188,26 @@ const appVersion = __APP_VERSION__;
 const commitHash = __COMMIT_HASH__;
 </script>
 
+<style scoped>
+.list-move,
+.list-enter-active,
+.list-leave-active {
+    transition: all 0.5s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.list-leave-active {
+    position: absolute;
+}
+</style>
+
 <template>
-    <Drawer v-model:visible="visibleState" header="Workspace" position="left" class="w-full! md:w-80!">
+    <Drawer v-model:visible="visibleState" header="Workspace" position="left" class="w-full! md:w-96! lg:w-[450px]!">
         <div class="flex flex-col h-full gap-4">
 
             <!-- Actions -->
@@ -147,54 +219,122 @@ const commitHash = __COMMIT_HASH__;
                 </Button>
             </div>
 
-            <!-- Page List -->
-            <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
-                <VirtualScroller :items="store.pages" :itemSize="90" class="h-full w-full" :autoSize="false">
-                    <template v-slot:item="{ item: page }">
-                        <div class="mx-2 mt-2 p-3 rounded-lg cursor-pointer transition-colors border group relative box-border"
-                            style="height: 82px" :class="[
-                                page.id === store.activePageId
-                                    ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500'
-                                    : 'bg-surface-50 dark:bg-surface-800 border-transparent hover:border-surface-300 dark:hover:border-surface-600'
-                            ]" @click="store.setActivePage(page.id)">
-                            <div class="flex justify-between items-start">
-                                <div class="font-medium truncate pr-20" :title="page.title">{{ page.title }}</div>
+            <!-- Search & Filters -->
+            <div class="flex flex-col gap-2">
+                <IconField iconPosition="left">
+                    <InputIcon>
+                        <Search class="w-4 h-4 text-surface-400" />
+                    </InputIcon>
+                    <InputText v-model="searchQuery" placeholder="Filter pages..." class="w-full text-sm!" />
+                </IconField>
 
-                                <!-- Actions -->
-                                <div
-                                    class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-surface-0 dark:bg-surface-900 shadow-sm rounded transition-opacity duration-200">
-                                    <Button text rounded size="small" class="h-[34px]! w-[34px]!"
-                                        @click.stop="customRename(page)" v-tooltip.top="'Rename'">
-                                        <template #icon>
-                                            <Pencil class="w-6! h-6!" />
-                                        </template>
-                                    </Button>
-                                    <Button text rounded size="small" class="h-[34px]! w-[34px]!"
-                                        @click.stop="store.exportPage(page.id)" v-tooltip.top="'Export JSON'">
-                                        <template #icon>
-                                            <Download class="w-6! h-6!" />
-                                        </template>
-                                    </Button>
-                                    <Button text rounded severity="danger" size="small" class="h-[34px]! w-[34px]!"
-                                        @click.stop="store.deletePage(page.id)" v-tooltip.top="'Delete'">
-                                        <template #icon>
-                                            <Trash2 class="w-6! h-6!" />
-                                        </template>
-                                    </Button>
+                <div class="flex gap-2 w-full">
+                    <Select v-model="filterTemplate" :options="filterOptions" optionLabel="label" optionValue="value"
+                        class="flex-1 w-0 text-2xs!" size="small">
+                        <template #value="slotProps">
+                            <div class="flex items-center overflow-hidden">
+                                <component :is="filterOptions.find(o => o.value === slotProps.value)?.icon || Filter"
+                                    class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
+                                <span class="truncate">{{filterOptions.find(o => o.value === slotProps.value)?.label
+                                }}</span>
+                            </div>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center">
+                                <component :is="slotProps.option.icon"
+                                    class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
+                                <span>{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                    <Select v-model="sortBy" :options="sortOptions" optionLabel="label" optionValue="value"
+                        class="flex-1 w-0 text-2xs!" size="small">
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex items-center overflow-hidden">
+                                <component :is="sortOptions.find(o => o.value === slotProps.value)?.icon || ArrowUpDown"
+                                    class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
+                                <span class="truncate">{{sortOptions.find(o => o.value === slotProps.value)?.label
+                                }}</span>
+                            </div>
+                            <span v-else>{{ slotProps.placeholder }}</span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center">
+                                <component :is="slotProps.option.icon"
+                                    class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
+                                <span>{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                </div>
+            </div>
+
+            <!-- Page List -->
+            <div
+                class="flex-1 border border-surface-200 dark:border-surface-700 rounded-lg overflow-y-auto overflow-x-hidden bg-surface-0 dark:bg-surface-950">
+                <TransitionGroup name="list" tag="div" class="w-full">
+                    <div v-for="page in filteredPages" :key="page.id"
+                        class="mx-2 mt-2 p-2 rounded-xl cursor-pointer transition-all duration-300 border group relative overflow-hidden"
+                        :class="[
+                            page.id === store.activePageId
+                                ? 'bg-primary-50/70 dark:bg-primary-950/30 border-primary-500/50 ring-1 ring-primary-500/20 shadow-[0_0_15px_-3px_rgba(168,85,247,0.2)] dark:shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)] pl-4!'
+                                : 'bg-surface-0 dark:bg-surface-900 border-surface-200 dark:border-surface-800 hover:border-primary-400/50 dark:hover:border-primary-500/50 hover:bg-surface-50/50 dark:hover:bg-surface-800/50'
+                        ]" @click="store.setActivePage(page.id)">
+                        <!-- Active Indicator -->
+                        <div v-if="page.id === store.activePageId"
+                            class="absolute top-1/2 -translate-y-1/2 left-0 w-1.5 h-8 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                        </div>
+
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1 min-w-0 pr-10">
+                                <div class="font-bold text-sm truncate text-surface-900 dark:text-surface-0 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                                    :title="page.title">
+                                    {{ page.title }}
+                                </div>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <div
+                                        class="flex items-center text-[10px] text-surface-500 bg-surface-200/50 dark:bg-surface-800 px-1.5 py-0.5 rounded capitalize">
+                                        <Hash class="w-2.5 h-2.5 mr-1" />
+                                        {{ page.template || 'blank' }}
+                                    </div>
+                                    <div class="flex items-center text-[10px] text-surface-500 font-medium">
+                                        <Clock class="w-2.5 h-2.5 mr-1" />
+                                        {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center mt-2">
-                                <div class="text-xs text-surface-500">
-                                    {{ formatDate(page.lastModified) }}
-                                </div>
-                                <div
-                                    class="text-[10px] font-medium bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300 px-1.5 py-0.5 rounded capitalize">
-                                    {{ page.template || 'blank' }}
-                                </div>
+
+                            <!-- Floating Actions -->
+                            <div
+                                class="absolute top-2 right-2 flex gap-1 transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+                                <Button icon="pi pi-download" severity="secondary" variant="text" size="small"
+                                    v-tooltip.top="'Export JSON'"
+                                    class="!p-1.5 !w-8 !h-8 hover:bg-white dark:hover:bg-surface-800"
+                                    @click.stop="store.exportPage(page.id)">
+                                    <template #icon>
+                                        <Download class="w-4! h-4!" />
+                                    </template>
+                                </Button>
+                                <Button icon="pi pi-pencil" severity="secondary" variant="text" size="small"
+                                    v-tooltip.top="'Rename'"
+                                    class="!p-1.5 !w-8 !h-8 hover:bg-white dark:hover:bg-surface-800"
+                                    @click.stop="customRename(page)">
+                                    <template #icon>
+                                        <Pencil class="w-4! h-4!" />
+                                    </template>
+                                </Button>
+                                <Button icon="pi pi-trash" severity="danger" variant="text" size="small"
+                                    v-tooltip.top="'Delete'"
+                                    class="!p-1.5 !w-8 !h-8 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    @click.stop="store.deletePage(page.id)">
+                                    <template #icon>
+                                        <Trash2 class="w-4! h-4!" />
+                                    </template>
+                                </Button>
                             </div>
                         </div>
-                    </template>
-                </VirtualScroller>
+                    </div>
+                </TransitionGroup>
             </div>
 
             <!-- Import -->
