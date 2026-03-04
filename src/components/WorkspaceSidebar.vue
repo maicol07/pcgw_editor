@@ -129,6 +129,9 @@ const customRename = (page: any) => {
         store.renamePage(page.id, newName);
     }
 }
+
+const appVersion = __APP_VERSION__;
+const commitHash = __COMMIT_HASH__;
 </script>
 
 <template>
@@ -147,7 +150,7 @@ const customRename = (page: any) => {
             <!-- Page List -->
             <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
                 <VirtualScroller :items="store.pages" :itemSize="90" class="h-full w-full" :autoSize="false">
-                    <template v-slot:item="{ item: page, options }">
+                    <template v-slot:item="{ item: page }">
                         <div class="mx-2 mt-2 p-3 rounded-lg cursor-pointer transition-colors border group relative box-border"
                             style="height: 82px" :class="[
                                 page.id === store.activePageId
@@ -212,6 +215,20 @@ const customRename = (page: any) => {
                     class="flex items-center w-full px-3 py-2 rounded-md text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors whitespace-nowrap no-underline">
                     <AlertCircle class="w-4 h-4 mr-3 shrink-0" />
                     <span class="text-xs font-medium">Report an Issue</span>
+                </a>
+            </div>
+
+            <!-- Version Info -->
+            <div
+                class="flex items-center justify-between px-3 pb-2 text-[10px] text-surface-500 dark:text-surface-500 font-mono">
+                <a :href="appVersion === 'main' ? 'https://github.com/maicol07/pcgw_editor' : `https://github.com/maicol07/pcgw_editor/releases/tag/${appVersion}`"
+                    target="_blank" rel="noopener noreferrer"
+                    class="hover:text-primary-500 transition-colors no-underline">
+                    {{ appVersion === 'main' ? 'main' : (appVersion.startsWith('v') ? appVersion : `v${appVersion}`) }}
+                </a>
+                <a :href="`https://github.com/maicol07/pcgw_editor/commit/${commitHash}`" target="_blank"
+                    rel="noopener noreferrer" class="hover:text-primary-500 transition-colors no-underline">
+                    {{ commitHash }}
                 </a>
             </div>
         </div>

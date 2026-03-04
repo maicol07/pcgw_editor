@@ -3,8 +3,23 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { execSync } from 'child_process'
+
+let version = 'main'
+try {
+    version = execSync('git describe --tags --exact-match').toString().trim()
+} catch (e) {
+    // No exact tag found, default to main
+}
+
+const commitHash = execSync('git rev-parse --short HEAD').toString().trim()
+
 // https://vitejs.dev/config/
 export default defineConfig({
+    define: {
+        __APP_VERSION__: JSON.stringify(version),
+        __COMMIT_HASH__: JSON.stringify(commitHash),
+    },
     plugins: [
         vue(),
         tailwindcss(),
