@@ -14,7 +14,8 @@ vi.mock('lucide-vue-next', () => ({
     Menu: { template: '<span class="menu-icon"></span>' },
     Wand2: { template: '<span class="wand-icon"></span>' },
     Loader2: { template: '<span class="loader-icon"></span>' },
-    LayoutList: { template: '<span class="layout-icon"></span>' }
+    LayoutList: { template: '<span class="layout-icon"></span>' },
+    ExternalLink: { template: '<span class="external-link-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {

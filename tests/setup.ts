@@ -1,5 +1,9 @@
 import { vi } from 'vitest';
 import { config } from '@vue/test-utils';
+
+// Define global constants that are injected by Vite
+(globalThis as any).__APP_VERSION__ = 'test-version';
+(globalThis as any).__COMMIT_HASH__ = 'test-hash';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
