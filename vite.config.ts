@@ -14,6 +14,9 @@ export default defineConfig({
             devOptions: {
                 enabled: true
             },
+            workbox: {
+                maximumFileSizeToCacheInBytes: 4194304 // 4 MB
+            },
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
             manifest: {
                 name: 'PCGW Editor',
