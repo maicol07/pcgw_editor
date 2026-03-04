@@ -2,12 +2,16 @@ import { defineStore } from 'pinia';
 import { ref, reactive, watch } from 'vue';
 
 export const useUiStore = defineStore('ui', () => {
+    const isSettingsOpen = ref(false);
     const sidebarVisible = ref(false);
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
     const isInitialLoad = ref(true);
     type DensityMode = 'normal' | 'comfortable' | 'compact';
     const densityMode = ref<DensityMode>((localStorage.getItem('densityMode') as DensityMode) || 'normal');
+
+    type ThemeMode = 'system' | 'light' | 'dark';
+    const theme = ref<ThemeMode>((localStorage.getItem('theme') as ThemeMode) || 'system');
 
     const fontFamily = ref<string>(localStorage.getItem('fontFamily') || '"Google Sans"');
 
@@ -18,6 +22,11 @@ export const useUiStore = defineStore('ui', () => {
 
     watch(densityMode, (val: DensityMode) => {
         localStorage.setItem('densityMode', val);
+    });
+
+    watch(theme, (val: ThemeMode) => {
+        localStorage.setItem('theme', val);
+        window.dispatchEvent(new Event('theme-changed'));
     });
 
     watch(fontFamily, (val: string) => {
@@ -75,7 +84,9 @@ export const useUiStore = defineStore('ui', () => {
         isInitialLoad,
         densityMode,
         fontFamily,
+        theme,
         panelState,
+        isSettingsOpen,
         panelsRendered,
         toggleSidebar,
         setEditorMode,

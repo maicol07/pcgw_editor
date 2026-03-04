@@ -21,6 +21,7 @@ import EditorToolbar from './components/editor/EditorToolbar.vue';
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
 import GeminiDialogs from './features/ai/GeminiDialogs.vue';
+import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import DynamicSection from './components/schema/DynamicSection.vue';
 
@@ -422,6 +423,9 @@ onMounted(() => {
             :shareSummaryText="shareSummaryText" @saveApiKey="saveApiKey" @clearApiKey="clearApiKey"
             @copyShareSummary="copyShareSummary" @openApiKeyDialog="showApiKeyDialog = true" />
     </div>
+
+    <!-- Global Modals -->
+    <AppSettings />
 </template>
 
 <style>

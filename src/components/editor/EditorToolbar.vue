@@ -2,11 +2,8 @@
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import Select from 'primevue/select';
-import Slider from 'primevue/slider';
 import Toolbar from 'primevue/toolbar';
-import { Menu, Wand2, Loader2, LayoutList, ExternalLink, Type } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Menu, Wand2, Loader2, ExternalLink, Settings } from 'lucide-vue-next';
 import { useUiStore } from '../../stores/ui';
 
 export type EditorMode = 'Visual' | 'Code';
@@ -26,31 +23,6 @@ const emit = defineEmits<{
 
 const uiStore = useUiStore();
 const editorModeOptions = ['Visual', 'Code'];
-
-// Density mode mapping
-const densityModes: Array<'normal' | 'comfortable' | 'compact'> = ['normal', 'comfortable', 'compact'];
-const densityLabels = ['Normal', 'Comfortable', 'Compact'];
-
-const densityValue = ref(densityModes.indexOf(uiStore.densityMode));
-const densityLabel = ref(densityLabels[densityValue.value]);
-
-const updateDensity = (value: number | number[]) => {
-    const index = Array.isArray(value) ? value[0] : value;
-    uiStore.densityMode = densityModes[index];
-    densityLabel.value = densityLabels[index];
-};
-
-const fontOptions = [
-    { label: 'Google Sans (Default)', value: '"Google Sans"' },
-    { label: 'Inter', value: 'Inter' },
-    { label: 'Segoe UI Variable', value: '"Segoe UI Variable", "Segoe UI", sans-serif' },
-    { label: 'Outfit', value: 'Outfit' },
-    { label: 'Sora', value: 'Sora' },
-    { label: 'Plus Jakarta Sans', value: '"Plus Jakarta Sans"' },
-    { label: 'Lexend', value: 'Lexend' },
-    { label: 'Manrope', value: 'Manrope' },
-    { label: 'Pixelify Sans', value: '"Pixelify Sans"' }
-];
 
 </script>
 
@@ -100,23 +72,12 @@ const fontOptions = [
 
         <template #end>
             <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2 hidden lg:flex" v-tooltip.bottom="'Global Font'">
-                    <Type class="w-4 h-4 text-surface-500 dark:text-surface-400" />
-                    <Select v-model="uiStore.fontFamily" :options="fontOptions" optionLabel="label" optionValue="value"
-                        size="small" class="w-32 xl:w-40 text-xs! h-8!" />
-                </div>
-
-                <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1 hidden lg:block"></div>
-
-                <div class="flex items-center gap-2 hidden md:flex"
-                    v-tooltip.bottom="'UI Density: Normal ⟷ Comfortable ⟷ Compact'">
-                    <LayoutList class="w-4 h-4 text-surface-500 dark:text-surface-400" />
-                    <Slider v-model="densityValue" :min="0" :max="2" :step="1" class="w-20"
-                        @update:modelValue="updateDensity" />
-                    <span class="text-xs text-surface-600 dark:text-surface-400 min-w-20 select-none">
-                        {{ densityLabel }}
-                    </span>
-                </div>
+                <Button text size="small" @click="uiStore.isSettingsOpen = true" severity="secondary"
+                    class="h-8! w-8! p-0! hover-scale" v-tooltip.bottom="'App Settings'">
+                    <template #icon>
+                        <Settings class="w-4 h-4 text-surface-500 dark:text-surface-400" />
+                    </template>
+                </Button>
 
                 <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
 

@@ -7,17 +7,15 @@ import { useUiStore } from '../../../src/stores/ui';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import Select from 'primevue/select';
-import Slider from 'primevue/slider';
+import Toolbar from 'primevue/toolbar';
 
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({
     Menu: { template: '<span class="menu-icon"></span>' },
     Wand2: { template: '<span class="wand-icon"></span>' },
     Loader2: { template: '<span class="loader-icon"></span>' },
-    LayoutList: { template: '<span class="layout-icon"></span>' },
     ExternalLink: { template: '<span class="external-link-icon"></span>' },
-    Type: { template: '<span class="type-icon"></span>' }
+    Settings: { template: '<span class="settings-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {
@@ -37,7 +35,7 @@ describe('EditorToolbar.vue', () => {
                 props: { ...defaultProps, ...props },
                 global: {
                     plugins: [pinia],
-                    components: { Button, InputText, SelectButton, Select, Slider },
+                    components: { Button, InputText, SelectButton, Toolbar },
                     stubs: {
                         Toolbar: { template: '<div><slot name="start" /><slot name="end" /></div>' }
                     }
@@ -75,16 +73,19 @@ describe('EditorToolbar.vue', () => {
         expect(wrapper.emitted('toggleSidebar')).toBeTruthy();
     });
 
-    it('updates density store when slider changes', async () => {
+    it('opens settings dialog when settings button is clicked', async () => {
         const { wrapper, store } = setupWrapper();
-        store.densityMode = 'normal';
+        store.isSettingsOpen = false;
 
-        const slider = wrapper.findComponent(Slider);
+        const settingsIcon = wrapper.find('.settings-icon');
+        await settingsIcon.trigger('click');
 
-        // Simulate slider update (1=comfortable)
-        await slider.vm.$emit('update:modelValue', 1);
+        // Since it's inside a button, we can just trigger click on it or the button
+        // Actually the click is on the button wrapper, let's find the button containing it
+        const btn = settingsIcon.element.closest('button');
+        if (btn) btn.click();
 
-        expect(store.densityMode).toBe('comfortable');
+        expect(store.isSettingsOpen).toBe(true);
     });
 
     it('emits update:editorMode when select button changes', async () => {

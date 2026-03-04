@@ -1,7 +1,10 @@
 import { onMounted, onUnmounted } from 'vue';
 
 export function useAutoTheme() {
-    const applyTheme = (isDark: boolean) => {
+    const applyTheme = () => {
+        const theme = localStorage.getItem('theme') || 'system';
+        const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
         if (isDark) {
             document.documentElement.classList.add('dark');
         } else {
@@ -11,19 +14,20 @@ export function useAutoTheme() {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-    const handleThemeChange = (e: MediaQueryListEvent | MediaQueryList) => {
-        applyTheme(e.matches);
+    const handleSystemThemeChange = () => {
+        if ((localStorage.getItem('theme') || 'system') === 'system') {
+            applyTheme();
+        }
     };
 
     onMounted(() => {
-        // Apply initial theme
-        applyTheme(mediaQuery.matches);
-
-        // Listen for changes
-        mediaQuery.addEventListener('change', handleThemeChange);
+        applyTheme();
+        mediaQuery.addEventListener('change', handleSystemThemeChange);
+        window.addEventListener('theme-changed', applyTheme);
     });
 
     onUnmounted(() => {
-        mediaQuery.removeEventListener('change', handleThemeChange);
+        mediaQuery.removeEventListener('change', handleSystemThemeChange);
+        window.removeEventListener('theme-changed', applyTheme);
     });
 }
