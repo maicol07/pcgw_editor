@@ -43,3 +43,5 @@ test_*.js
 
 # OS files
 Thumbs.db
+
+dev-dist
