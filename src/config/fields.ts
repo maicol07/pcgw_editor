@@ -350,6 +350,9 @@ export const fieldsConfig: SectionDefinition[] = [
         // We use a custom section component for now, but we could partially define schema if we wanted.
         isCustomSection: true,
         templateName: 'GameData', // Primary template
+        fields: [
+            h.gallery('Gallery', { section: 'game_data' }, { key: 'galleries.game_data', wikitextParam: '' }) as FieldDefinition
+        ],
         groups: [
             {
                 title: 'Configuration & Save Data',
@@ -796,7 +799,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-gray-500',
         order: 13,
         fields: [
-            h.gallery('Gallery', { section: 'API' }, { key: 'galleries.api', wikitextParam: '' }) as FieldDefinition
+            h.gallery('Gallery', { section: 'API' }, { key: 'galleries.other', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [
             {
@@ -835,7 +838,6 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-orange-500',
         order: 14,
         fields: [
-            h.gallery('Gallery', { section: 'Middleware' }, { key: 'galleries.middleware', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [
             {
@@ -861,7 +863,7 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'SystemRequirements',
         fields: [
-            h.gallery('Gallery', { section: 'System requirements' }, { key: 'galleries.system_requirements', wikitextParam: '' }) as FieldDefinition,
+            h.gallery('Gallery', { section: 'System requirements' }, { key: 'galleries.systemReq', wikitextParam: '' }) as FieldDefinition,
             f('requirements', {
                 label: 'System Requirements',
                 component: 'SystemRequirementsForm',

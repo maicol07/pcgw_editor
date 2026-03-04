@@ -31,7 +31,6 @@ import {
 } from 'lucide-vue-next';
 
 // Async Components
-const SectionGallery = defineAsyncComponent(() => import('./components/SectionGallery.vue'));
 const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
 
 // --- Initialization ---
@@ -273,14 +272,8 @@ onMounted(() => {
                                             Data (Config, Saves, Cloud)</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.gameData"
-                                        :modelValue="gameData.galleries.game_data"
-                                        @update:modelValue="val => updateGameData('galleries.game_data', val)"
-                                        section="game_data" />
-                                    <DynamicSection v-if="!uiStore.panelState.gameData && schemas.gameData.value"
-                                        :section="schemas.gameData.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.gameData && schemas.gameData.value"
+                                    :section="schemas.gameData.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.video" v-show="panelVisibility.video">
@@ -301,14 +294,8 @@ onMounted(() => {
                                             class="font-semibold text-sm">Input</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.input"
-                                        :modelValue="gameData.galleries.input"
-                                        @update:modelValue="val => updateGameData('galleries.input', val)"
-                                        section="input" />
-                                    <DynamicSection v-if="!uiStore.panelState.input && schemas.input.value"
-                                        :section="schemas.input.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.input && schemas.input.value"
+                                    :section="schemas.input.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.audio" v-show="panelVisibility.audio">
@@ -318,14 +305,8 @@ onMounted(() => {
                                             class="font-semibold text-sm">Audio</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.audio"
-                                        :modelValue="gameData.galleries.audio"
-                                        @update:modelValue="val => updateGameData('galleries.audio', val)"
-                                        section="audio" />
-                                    <DynamicSection v-if="!uiStore.panelState.audio && schemas.audio.value"
-                                        :section="schemas.audio.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.audio && schemas.audio.value"
+                                    :section="schemas.audio.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.network"
@@ -336,14 +317,8 @@ onMounted(() => {
                                             class="font-semibold text-sm">Network</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.network"
-                                        :modelValue="gameData.galleries.network"
-                                        @update:modelValue="val => updateGameData('galleries.network', val)"
-                                        section="network" />
-                                    <DynamicSection v-if="!uiStore.panelState.network && schemas.network.value"
-                                        :section="schemas.network.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.network && schemas.network.value"
+                                    :section="schemas.network.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.vr" v-show="panelVisibility.vr">
@@ -353,12 +328,8 @@ onMounted(() => {
                                             Support</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.vr" :modelValue="gameData.galleries.vr"
-                                        @update:modelValue="val => updateGameData('galleries.vr', val)" section="vr" />
-                                    <DynamicSection v-if="!uiStore.panelState.vr && schemas.vr.value"
-                                        :section="schemas.vr.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.vr && schemas.vr.value"
+                                    :section="schemas.vr.value" v-model="gameData" />
                             </ModernPanel>
 
                             <ModernPanel v-model:collapsed="uiStore.panelState.issues" v-show="panelVisibility.issues">
@@ -380,10 +351,6 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.other"
-                                        :modelValue="gameData.galleries.other"
-                                        @update:modelValue="val => updateGameData('galleries.other', val)"
-                                        section="other" />
                                     <DynamicSection v-if="!uiStore.panelState.other && schemas.api.value"
                                         :section="schemas.api.value" v-model="gameData" />
                                     <DynamicSection v-if="!uiStore.panelState.other && schemas.middleware.value"
@@ -399,14 +366,8 @@ onMounted(() => {
                                             Requirements</span>
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-6">
-                                    <SectionGallery v-if="!uiStore.panelState.systemReq"
-                                        :modelValue="gameData.galleries.systemReq"
-                                        @update:modelValue="val => updateGameData('galleries.systemReq', val)"
-                                        section="systemReq" />
-                                    <DynamicSection v-if="!uiStore.panelState.systemReq && schemas.systemReq.value"
-                                        :section="schemas.systemReq.value" v-model="gameData" />
-                                </div>
+                                <DynamicSection v-if="!uiStore.panelState.systemReq && schemas.systemReq.value"
+                                    :section="schemas.systemReq.value" v-model="gameData" />
                             </ModernPanel>
 
 
