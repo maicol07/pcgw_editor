@@ -32,7 +32,7 @@ export function useEditor(gameData: Ref<GameData>, wikitext: ComputedRef<string>
                 if (onSync) {
                     onSync(manualWikitext.value);
                 } else {
-                    const parsed = parseWikitext(manualWikitext.value);
+                    const parsed = await parseWikitext(manualWikitext.value);
                     gameData.value = parsed;
                 }
             } catch (e) {

@@ -30,10 +30,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const _activeGameData = ref<GameData>(JSON.parse(JSON.stringify(initialGameData)));
 
     // Watch for page changes to reset/parse data
-    watch(activePageId, () => {
+    watch(activePageId, async () => {
         if (activePage.value && activePage.value.wikitext) {
             try {
-                _activeGameData.value = parseWikitext(activePage.value.wikitext);
+                _activeGameData.value = await parseWikitext(activePage.value.wikitext);
             } catch (e) {
                 console.error('Failed to parse wikitext on page switch:', e);
                 _activeGameData.value = JSON.parse(JSON.stringify(initialGameData));
@@ -78,7 +78,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
-    function syncFromWikitext(newWikitext?: string) {
+    async function syncFromWikitext(newWikitext?: string) {
         if (activePage.value) {
             if (newWikitext !== undefined) {
                 activePage.value.wikitext = newWikitext;
@@ -88,7 +88,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
                 // This ensures that the next generation (from watch) starts with this version,
                 // preserving manual edits made in Code mode.
                 activePage.value.baseWikitext = activePage.value.wikitext;
-                _activeGameData.value = parseWikitext(activePage.value.wikitext);
+                _activeGameData.value = await parseWikitext(activePage.value.wikitext);
                 activePage.value.lastModified = Date.now();
             } catch (e) {
                 console.error('Failed to sync from wikitext:', e);

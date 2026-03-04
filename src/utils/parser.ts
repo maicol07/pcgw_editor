@@ -3,13 +3,22 @@ import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 import type { AstNodes as ASTNode } from 'wikiparser-node';
 
-let wiki = (globalThis as any).Parser as Parser;
+// Dynamic import to ensure it is evaluated before access
+const ensureParserLoaded = async () => {
+    if (!(globalThis as any).Parser) {
+        await import('wikiparser-node/bundle/bundle-lsp.min.js');
+    }
+    return (globalThis as any).Parser as Parser;
+};
 
-export function parseRaw(text: string) {
+export async function parseRaw(text: string) {
+    const wiki = await ensureParserLoaded();
     return wiki.parse(text);
 }
 
-export function parseWikitext(wikitext: string): GameData {
+export async function parseWikitext(wikitext: string): Promise<GameData> {
+    const wiki = await ensureParserLoaded();
+
     // Clone initial data
     const data: GameData = JSON.parse(JSON.stringify(initialGameData));
 
