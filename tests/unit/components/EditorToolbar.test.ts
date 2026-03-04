@@ -7,6 +7,7 @@ import { useUiStore } from '../../../src/stores/ui';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
+import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 
 // Mock Lucide icons
@@ -15,7 +16,8 @@ vi.mock('lucide-vue-next', () => ({
     Wand2: { template: '<span class="wand-icon"></span>' },
     Loader2: { template: '<span class="loader-icon"></span>' },
     LayoutList: { template: '<span class="layout-icon"></span>' },
-    ExternalLink: { template: '<span class="external-link-icon"></span>' }
+    ExternalLink: { template: '<span class="external-link-icon"></span>' },
+    Type: { template: '<span class="type-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {
@@ -35,7 +37,7 @@ describe('EditorToolbar.vue', () => {
                 props: { ...defaultProps, ...props },
                 global: {
                     plugins: [pinia],
-                    components: { Button, InputText, SelectButton, Slider },
+                    components: { Button, InputText, SelectButton, Select, Slider },
                     stubs: {
                         Toolbar: { template: '<div><slot name="start" /><slot name="end" /></div>' }
                     }

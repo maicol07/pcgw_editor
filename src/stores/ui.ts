@@ -9,8 +9,20 @@ export const useUiStore = defineStore('ui', () => {
     type DensityMode = 'normal' | 'comfortable' | 'compact';
     const densityMode = ref<DensityMode>((localStorage.getItem('densityMode') as DensityMode) || 'normal');
 
+    const fontFamily = ref<string>(localStorage.getItem('fontFamily') || '"Google Sans"');
+
+    // Initialize the property on load
+    if (typeof document !== 'undefined') {
+        document.documentElement.style.setProperty('--app-font-family', fontFamily.value);
+    }
+
     watch(densityMode, (val: DensityMode) => {
         localStorage.setItem('densityMode', val);
+    });
+
+    watch(fontFamily, (val: string) => {
+        localStorage.setItem('fontFamily', val);
+        document.documentElement.style.setProperty('--app-font-family', val);
     });
 
     const panelState = reactive({
@@ -62,6 +74,7 @@ export const useUiStore = defineStore('ui', () => {
         isModeSwitching,
         isInitialLoad,
         densityMode,
+        fontFamily,
         panelState,
         panelsRendered,
         toggleSidebar,

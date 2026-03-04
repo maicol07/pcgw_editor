@@ -2,9 +2,10 @@
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
+import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import Toolbar from 'primevue/toolbar';
-import { Menu, Wand2, Loader2, LayoutList, ExternalLink } from 'lucide-vue-next';
+import { Menu, Wand2, Loader2, LayoutList, ExternalLink, Type } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useUiStore } from '../../stores/ui';
 
@@ -39,6 +40,17 @@ const updateDensity = (value: number | number[]) => {
     densityLabel.value = densityLabels[index];
 };
 
+const fontOptions = [
+    { label: 'Google Sans (Default)', value: '"Google Sans"' },
+    { label: 'Inter', value: 'Inter' },
+    { label: 'Segoe UI Variable', value: '"Segoe UI Variable", "Segoe UI", sans-serif' },
+    { label: 'Outfit', value: 'Outfit' },
+    { label: 'Sora', value: 'Sora' },
+    { label: 'Plus Jakarta Sans', value: '"Plus Jakarta Sans"' },
+    { label: 'Lexend', value: 'Lexend' },
+    { label: 'Manrope', value: 'Manrope' },
+    { label: 'Pixelify Sans', value: '"Pixelify Sans"' }
+];
 
 </script>
 
@@ -88,7 +100,16 @@ const updateDensity = (value: number | number[]) => {
 
         <template #end>
             <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2" v-tooltip.bottom="'UI Density: Normal ⟷ Comfortable ⟷ Compact'">
+                <div class="flex items-center gap-2 hidden lg:flex" v-tooltip.bottom="'Global Font'">
+                    <Type class="w-4 h-4 text-surface-500 dark:text-surface-400" />
+                    <Select v-model="uiStore.fontFamily" :options="fontOptions" optionLabel="label" optionValue="value"
+                        size="small" class="w-32 xl:w-40 text-xs! h-8!" />
+                </div>
+
+                <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1 hidden lg:block"></div>
+
+                <div class="flex items-center gap-2 hidden md:flex"
+                    v-tooltip.bottom="'UI Density: Normal ⟷ Comfortable ⟷ Compact'">
                     <LayoutList class="w-4 h-4 text-surface-500 dark:text-surface-400" />
                     <Slider v-model="densityValue" :min="0" :max="2" :step="1" class="w-20"
                         @update:modelValue="updateDensity" />
