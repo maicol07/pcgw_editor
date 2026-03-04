@@ -4,7 +4,7 @@ import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
 import Slider from 'primevue/slider';
 import Toolbar from 'primevue/toolbar';
-import { Menu, Wand2, Loader2, LayoutList } from 'lucide-vue-next';
+import { Menu, Wand2, Loader2, LayoutList, ExternalLink } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useUiStore } from '../../stores/ui';
 
@@ -61,9 +61,19 @@ const updateDensity = (value: number | number[]) => {
 
                 <span class="text-surface-300 dark:text-surface-600 hidden lg:block text-xs">•</span>
 
-                <InputText :modelValue="title" @update:modelValue="emit('update:title', $event || '')"
-                    placeholder="Page Title..."
-                    class="w-48 lg:w-64 py-1.5! px-2.5! text-sm hidden md:block transition-all focus:w-72" />
+                <div class="flex items-center gap-1 group/title relative">
+                    <InputText :modelValue="title" @update:modelValue="emit('update:title', $event || '')"
+                        placeholder="Page Title..."
+                        class="w-48 lg:w-64 py-1.5! px-2.5! text-sm hidden md:block transition-all focus:w-72" />
+                    <Button v-if="title" as="a" :href="`https://www.pcgamingwiki.com/wiki/${encodeURIComponent(title)}`"
+                        target="_blank" rel="noopener noreferrer" text severity="secondary"
+                        class="h-7! w-7! p-0! opacity-50 hover:opacity-100 transition-opacity absolute right-1.5"
+                        v-tooltip.bottom="'Open on PCGamingWiki'">
+                        <template #icon>
+                            <ExternalLink class="w-3.5 h-3.5" />
+                        </template>
+                    </Button>
+                </div>
 
                 <Button text size="small" @click="emit('generateSummary')" severity="secondary"
                     class="text-xs! px-2! py-1! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
