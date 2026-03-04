@@ -5,7 +5,7 @@ import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
 import VirtualScroller from 'primevue/virtualscroller';
 import { computed, ref } from 'vue';
-import { Plus, Pencil, Download, Trash2, Loader2 } from 'lucide-vue-next';
+import { Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle } from 'lucide-vue-next';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -199,6 +199,20 @@ const customRename = (page: any) => {
                 <div class="text-sm font-bold mb-2">Import Page</div>
                 <FileUpload mode="basic" name="demo[]" accept=".json" :maxFileSize="1000000" @select="onImportSelect"
                     customUpload auto chooseLabel="Import JSON" class="w-full" />
+            </div>
+
+            <!-- Footer Links -->
+            <div class="mt-auto border-t pt-4 border-surface-200 dark:border-surface-700 flex flex-col gap-1">
+                <a href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center w-full px-3 py-2 rounded-md text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors whitespace-nowrap no-underline">
+                    <Github class="w-4 h-4 mr-3 shrink-0" />
+                    <span class="text-xs font-medium">GitHub Repository</span>
+                </a>
+                <a href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center w-full px-3 py-2 rounded-md text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors whitespace-nowrap no-underline">
+                    <AlertCircle class="w-4 h-4 mr-3 shrink-0" />
+                    <span class="text-xs font-medium">Report an Issue</span>
+                </a>
             </div>
         </div>
     </Drawer>
