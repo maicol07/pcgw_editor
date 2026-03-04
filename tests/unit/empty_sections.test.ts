@@ -104,7 +104,7 @@ describe('Empty Sections Generation', () => {
     ];
 
     testCases.forEach(({ name, update, notContain }) => {
-        it(`should not create ${notContain} section for ${name} if data is empty`, () => {
+        it(`should not create ${notContain} section for ${name} if data is empty`, async () => {
             const editor = createEditor();
             update(editor);
             const text = editor.getText();

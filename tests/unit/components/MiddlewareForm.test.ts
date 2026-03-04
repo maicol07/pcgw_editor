@@ -53,7 +53,7 @@ describe('MiddlewareForm.vue', () => {
         };
     };
 
-    it('renders all middleware rows', () => {
+    it('renders all middleware rows', async () => {
         const { wrapper } = setupWrapper();
         const rows = wrapper.findAllComponents(RatingRowStub);
 

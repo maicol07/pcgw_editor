@@ -53,13 +53,13 @@ describe('Field Group: Video', () => {
     } as any);
 
     describe('Parsing', () => {
-        it.each(videoFields)('should parse %s field', ({ field, template, value, expected, hasNotes, hasTech }) => {
+        it.each(videoFields)('should parse %s field', async ({ field, template, value, expected, hasNotes, hasTech }) => {
             let wikitext = `{{Video\n|${template} = ${value}\n`;
             if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
             if (hasTech) wikitext += `|${template} tech = Tech for ${template}\n`;
             wikitext += '}}';
 
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.video[field]).toBe(expected);
 
             if (hasNotes) {
@@ -74,7 +74,7 @@ describe('Field Group: Video', () => {
     });
 
     describe('Writing', () => {
-        it.each(videoFields)('should write %s field', ({ field, template, value, hasNotes, hasTech }) => {
+        it.each(videoFields)('should write %s field', async ({ field, template, value, hasNotes, hasTech }) => {
             const data = getCleanData();
             // @ts-ignore - dynamic assignment
             data.video[field] = value;

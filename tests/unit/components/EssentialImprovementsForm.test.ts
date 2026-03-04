@@ -31,7 +31,7 @@ describe('EssentialImprovementsForm.vue', () => {
         };
     };
 
-    it('renders initial value', () => {
+    it('renders initial value', async () => {
         const { wrapper } = setupWrapper();
         const textarea = wrapper.findComponent(TextareaStub);
         expect(textarea.props('modelValue')).toBe('Initial improvements');
@@ -48,7 +48,7 @@ describe('EssentialImprovementsForm.vue', () => {
         expect(emitted![0][0]).toBe('New content');
     });
 
-    it('renders helper text', () => {
+    it('renders helper text', async () => {
         const { wrapper } = setupWrapper();
         expect(wrapper.text()).toContain('Required or highly recommended downloads');
         expect(wrapper.text()).toContain('Use basic wikitext formatting');

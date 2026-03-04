@@ -165,7 +165,7 @@ describe('InputForm.vue', () => {
         'input.peripheralDeviceTypes'
     ];
 
-    it('renders all rating rows', () => {
+    it('renders all rating rows', async () => {
         const { wrapper } = setupWrapper();
         const rows = wrapper.findAllComponents(RatingRowStub);
 
@@ -180,7 +180,7 @@ describe('InputForm.vue', () => {
         });
     });
 
-    it('passes correct props to RatingRows', () => {
+    it('passes correct props to RatingRows', async () => {
         const { wrapper } = setupWrapper({ keyRemap: 'true' as any });
         const row = wrapper.findComponent('[data-label="Key Remapping"]');
         expect((row as any).props('value')).toBe('true');
@@ -201,7 +201,7 @@ describe('InputForm.vue', () => {
         // But for "test all fields", verifying their existence and general wiring is good.
     });
 
-    it('renders all dynamic fields', () => {
+    it('renders all dynamic fields', async () => {
         const { wrapper } = setupWrapper();
         const fields = wrapper.findAllComponents(DynamicFieldStub);
 

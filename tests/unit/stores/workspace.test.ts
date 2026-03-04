@@ -8,7 +8,7 @@ describe('Workspace Store', () => {
         localStorage.clear();
     });
 
-    it('creates a new page with default blank template', () => {
+    it('creates a new page with default blank template', async () => {
         const store = useWorkspaceStore();
         store.pages = []; // clear initial
         store.createPage('Test Page');
@@ -17,7 +17,7 @@ describe('Workspace Store', () => {
         expect(store.pages[0].template).toBe('blank');
     });
 
-    it('creates a new page with a specific template', () => {
+    it('creates a new page with a specific template', async () => {
         const store = useWorkspaceStore();
         store.pages = [];
         store.createPage('Test Page 2', '== Initial Wikitext ==', 'singleplayer');
@@ -27,7 +27,7 @@ describe('Workspace Store', () => {
         expect(store.pages[0].wikitext).toBe('== Initial Wikitext ==');
     });
 
-    it('deletes a page', () => {
+    it('deletes a page', async () => {
         const store = useWorkspaceStore();
         store.pages = [];
         store.createPage('Test Page');

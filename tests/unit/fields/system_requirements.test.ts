@@ -68,21 +68,21 @@ describe('Field Group: System Requirements', () => {
             current[parts[parts.length - 1]] = val;
         };
 
-        describe('Parsing', () => {
-            it.each(testCases)('should parse $desc', ({ templateArgs, expectedPath, expectedValue }) => {
+        describe('Parsing', async () => {
+            it.each(testCases)('should parse $desc', async ({ templateArgs, expectedPath, expectedValue }) => {
                 let wikitext = '{{System requirements\n';
                 for (const [key, val] of Object.entries(templateArgs)) {
                     wikitext += `|${key} = ${val}\n`;
                 }
                 wikitext += '}}';
 
-                const data = parseWikitext(wikitext);
+                const data = await parseWikitext(wikitext);
                 expect(accessData(`requirements.${expectedPath}`, data)).toBe(expectedValue);
             });
         });
 
         describe('Writing', () => {
-            it.each(testCases)('should write $desc', ({ templateArgs, expectedPath, expectedValue, extraData }) => {
+            it.each(testCases)('should write $desc', async ({ templateArgs, expectedPath, expectedValue, extraData }) => {
                 const data = { requirements: createEmptyReqs() };
                 setData(`requirements.${expectedPath}`, data, expectedValue);
 

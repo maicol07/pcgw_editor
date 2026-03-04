@@ -18,7 +18,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
 
     describe('Generation (Visual -> Code)', () => {
         // 1. Empty first line
-        it('should not have an empty first line', () => {
+        it('should not have an empty first line', async () => {
             const editor = createEditor();
             editor.updateInfobox({ developers: [{ name: 'Dev' }] } as any);
             const text = editor.getText();
@@ -27,7 +27,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 2. Publishers and Engines on same line
-        it('should put publishers and engines on separate lines', () => {
+        it('should put publishers and engines on separate lines', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 publishers: [{ name: 'Pub' }],
@@ -39,7 +39,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
             expect(text).not.toMatch(/\|publishers\s*=\s*\|engines/);
         });
 
-        it('should separate publishers and engines even if they were on the same line', () => {
+        it('should separate publishers and engines even if they were on the same line', async () => {
             const initialWikitext = '{{Infobox game|publishers=|engines=}}';
             const editor = new PCGWEditor(initialWikitext);
 
@@ -54,7 +54,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 3. Reception rows
-        it('should put reception rows on separate lines', () => {
+        it('should put reception rows on separate lines', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 reception: [
@@ -68,7 +68,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 4. Taxonomy alignment
-        it('should align taxonomy rows with pipes', () => {
+        it('should align taxonomy rows with pipes', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 taxonomy: {
@@ -83,7 +83,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 5. Taxonomy always include fields
-        it('should include all taxonomy fields even if empty', () => {
+        it('should include all taxonomy fields even if empty', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 taxonomy: {
@@ -96,7 +96,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 6. External links should include empty fields (except igdb)
-        it('should output empty fields for external links (except igdb)', () => {
+        it('should output empty fields for external links (except igdb)', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 links: {
@@ -110,7 +110,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 7. IGDB exclusion
-        it('should exclude igdb from external links if empty', () => {
+        it('should exclude igdb from external links if empty', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 links: { igdb: '' }
@@ -119,7 +119,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
             expect(text).not.toContain('|igdb');
         });
 
-        it('should exclude igdb from external links if present in reception', () => {
+        it('should exclude igdb from external links if present in reception', async () => {
             const editor = createEditor();
             editor.updateInfobox({
                 links: { igdb: 'some-id' },
@@ -131,7 +131,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 7. General information position
-        it('should place General information before Availability section header', () => {
+        it('should place General information before Availability section header', async () => {
             const editor = createEditor('== Availability ==\n{{Availability}}\n');
             editor.updateGeneralInfo("* {{mm}} [http://g.com G]");
             const text = editor.getText();
@@ -140,7 +140,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 8. Availability row format
-        it('should format Availability rows correctly and handle empty fields', () => {
+        it('should format Availability rows correctly and handle empty fields', async () => {
             const editor = createEditor();
             editor.updateAvailability([
                 { distribution: 'Steam', id: '123', drm: 'Steam', notes: '', keys: '', os: 'Windows' }
@@ -153,14 +153,14 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 9. DLC skip empty
-        it('should not write DLC section if no rows', () => {
+        it('should not write DLC section if no rows', async () => {
             const editor = createEditor();
             editor.updateDLC([]);
             const text = editor.getText();
             expect(text).not.toContain('{{DLC');
         });
 
-        it('should remove existing DLC section if rows become empty and not leave extra newlines', () => {
+        it('should remove existing DLC section if rows become empty and not leave extra newlines', async () => {
             const initialWikitext = '== Availability ==\n{{Availability}}\n\n{{DLC|{{DLC/row| Existing DLC | | Windows }}}}\n\n== Monetization ==';
             const editor = new PCGWEditor(initialWikitext);
             editor.updateDLC([]);
@@ -173,7 +173,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 10. Input fields always appear
-        it('should write all input fields even if empty', () => {
+        it('should write all input fields even if empty', async () => {
             const editor = createEditor();
             editor.updateInput({} as any);
             const text = editor.getText();
@@ -185,7 +185,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         // Skipping specific issues position test as it requires more complex setup, will verify manually or add later.
 
         // 12. Audio empty lines
-        it('should not have extra empty lines in Audio section', () => {
+        it('should not have extra empty lines in Audio section', async () => {
             const editor = createEditor();
             editor.updateAudio({
                 separateVolume: 'true',
@@ -196,7 +196,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 13. Network check nulls
-        it('should not add Network section if all values are null/unknown', () => {
+        it('should not add Network section if all values are null/unknown', async () => {
             const editor = createEditor();
             editor.updateNetwork({
                 multiplayer: { local: 'unknown' }
@@ -206,7 +206,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 14. Availability duplication bug (|1= issue)
-        it('should replace existing anonymous parameter in Availability instead of appending', () => {
+        it('should replace existing anonymous parameter in Availability instead of appending', async () => {
             const initialWikitext = '{{Availability| EXISTING_CONTENT }}';
             const editor = new PCGWEditor(initialWikitext);
             editor.updateAvailability([
@@ -224,47 +224,47 @@ describe('Wikitext Generation & Parsing Issues', () => {
 
     describe('Parsing (Code -> Visual)', () => {
         // 1. Config location
-        it('should parse Config location correctly', () => {
+        it('should parse Config location correctly', async () => {
             const wikitext = `
 == Game data ==
 === Configuration file(s) location ===
 {{Game data|config|Windows|%USERPROFILE%\\Documents\\My Game\\}}
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toHaveLength(1);
             expect(data.config.configFiles[0].paths[0]).toBe('%USERPROFILE%\\Documents\\My Game\\');
         });
 
         // 2. Xbox cloud
-        it('should parse Xbox cloud field', () => {
+        it('should parse Xbox cloud field', async () => {
             const wikitext = `{{Save game cloud syncing
 |xbox cloud = true
 }}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.cloudSync.xboxCloud).toBe('true');
         });
 
         // 3. Input fields
-        it('should parse Input fields correctly', () => {
+        it('should parse Input fields correctly', async () => {
             const wikitext = `{{Input
 |mouse sensitivity = true
 }}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.input.mouseSensitivity).toBe('true');
         });
 
         // 4. General information
-        it('should parse General information', () => {
+        it('should parse General information', async () => {
             const wikitext = `'''General information'''
 * {{mm}}[https://example.com Link]
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.introduction.generalInfo).toBeDefined();
             expect(data.introduction.generalInfo).toContain('https://example.com');
         });
 
         // 5. Wrapped Game data
-        it('should parse wrapped Game data templates', () => {
+        it('should parse wrapped Game data templates', async () => {
             const wikitext = `
 == Game data ==
 === Configuration file(s) location ===
@@ -273,13 +273,13 @@ describe('Wikitext Generation & Parsing Issues', () => {
 {{Game data/config|Windows|%USERPROFILE%\\Documents\\My Game\\}}
 }}
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toHaveLength(1);
             expect(data.config.configFiles[0].paths[0]).toBe('%USERPROFILE%\\Documents\\My Game\\');
         });
 
         // 6. Complex Game data with multiple rows and sections
-        it('should parse complex Game data with mixed formats', () => {
+        it('should parse complex Game data with mixed formats', async () => {
             const wikitext = `
 == Game data ==
 {{Game data
@@ -290,7 +290,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
 {{Game data/saves|Windows|%USERPROFILE%\\Documents\\My Game\\Saves\\}}
 }}
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toHaveLength(2);
             expect(data.config.configFiles[0].platform).toBe('Windows');
             expect(data.config.configFiles[1].platform).toBe('Linux');
@@ -299,29 +299,29 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 7. Config location with subheadings but no Game data wrapper
-        it('should parse Config location with subheadings and direct templates', () => {
+        it('should parse Config location with subheadings and direct templates', async () => {
             const wikitext = `{{Game data/config|Windows|%USERPROFILE%\\Documents\\My Game\\}}
 {{Game data/saves|Windows|%USERPROFILE%\\Documents\\My Game\\Saves\\}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toHaveLength(1);
             expect(data.config.saveData).toHaveLength(1);
         });
 
         // 8. Direct root-level templates without section or wrapper
-        it('should parse direct Game data templates at root level', () => {
+        it('should parse direct Game data templates at root level', async () => {
             const wikitext = `{{Game data/config|Windows|%USERPROFILE%\\Documents\\My Game\\}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toHaveLength(1);
         });
 
         // 9. Complex Wikilinks in parameters (verify no corruption)
-        it('should parse complex Wikilinks in parameters without corruption', () => {
+        it('should parse complex Wikilinks in parameters without corruption', async () => {
             const wikitext = `
 {{Input
 |steam input presets notes     = [[DualShock 4]], [[DualSense]], and [[Switch Pro Controller|Nintendo Switch Pro Controller]] configs are available.
 }}
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             const expected = '[[DualShock 4]], [[DualSense]], and [[Switch Pro Controller|Nintendo Switch Pro Controller]] configs are available.';
             expect(data.input.steamInputPresetsNotes).toBe(expected);
 
@@ -336,7 +336,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 10. L10n formatting (newline after content=)
-        it('should format L10n template with newline after content=', () => {
+        it('should format L10n template with newline after content=', async () => {
             const editor = new PCGWEditor('{{L10n}}');
             editor.updateLocalizations([
                 { language: 'English', interface: 'true', audio: 'true', subtitles: 'true' }
@@ -347,7 +347,7 @@ describe('Wikitext Generation & Parsing Issues', () => {
         });
 
         // 11. Issues duplication
-        it('should not duplicate Issues when updating', () => {
+        it('should not duplicate Issues when updating', async () => {
             const wikitext = `==Issues unresolved==
 ===Issue 1===
 Body 1
@@ -363,7 +363,7 @@ Body 1
         });
 
         // 12. Issues section spacing
-        it('should add an empty line after Issues section', () => {
+        it('should add an empty line after Issues section', async () => {
             const wikitext = `==Issues unresolved==
 ===Issue 1===
 Body 1
@@ -378,7 +378,7 @@ Body 1
         });
 
         // 13. Solitary Issues unresolved
-        it('should handle solitary Issues unresolved section correctly', () => {
+        it('should handle solitary Issues unresolved section correctly', async () => {
             const wikitext = `==Issues unresolved==
 ===Issue 1===
 Body 1`;
@@ -401,7 +401,7 @@ Body 1`;
         });
 
         // 14. Removing Issues fixed
-        it('should remove Issues fixed when only unresolved is in data', () => {
+        it('should remove Issues fixed when only unresolved is in data', async () => {
             const wikitext = `==Issues unresolved==
 ===Issue 1===
 Body 1
@@ -421,7 +421,7 @@ Body 2`;
         });
 
         // 15. Realistic Issues unresolved
-        it('should correctly update unresolved issues in full template', () => {
+        it('should correctly update unresolved issues in full template', async () => {
             const wikitext = `==Introduction==
 {{Introduction}}
 

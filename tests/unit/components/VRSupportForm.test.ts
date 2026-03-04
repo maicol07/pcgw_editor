@@ -57,7 +57,7 @@ describe('VRSupportForm.vue', () => {
         };
     };
 
-    it('renders all rating rows', () => {
+    it('renders all rating rows', async () => {
         const { wrapper } = setupWrapper();
         const startLen = wrapper.findAllComponents(RatingRowStub).length;
         // Just checking basic count or specific labels

@@ -17,7 +17,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
         microtransactions: { none: '', cosmetic: '', currency: '', lootBox: '', unlock: '', boost: '', freeToGrind: '', finiteSpend: '', infiniteSpend: '', playerTrading: '', timeLimited: '' }
     } as any);
 
-    it('should parse Monetization with all fields', () => {
+    it('should parse Monetization with all fields', async () => {
         const wikitext = `
 ==Monetization==
 {{Monetization
@@ -32,7 +32,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
 |subscription gaming service = true
 }}
 `;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
 
         expect(data.monetization.adSupported).toBe('true');
         expect(data.monetization.crossGameBonus).toBe('true');
@@ -45,7 +45,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
         expect(data.monetization.subscriptionGamingService).toBe('true');
     });
 
-    it('should parse Microtransactions with all fields', () => {
+    it('should parse Microtransactions with all fields', async () => {
         const wikitext = `
 ===Microtransactions===
 {{Microtransactions
@@ -62,7 +62,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
 |unlock              = true
 }}
 `;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
 
         expect(data.microtransactions.boost).toBe('true');
         expect(data.microtransactions.cosmetic).toBe('true');
@@ -77,7 +77,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
         expect(data.microtransactions.unlock).toBe('true');
     });
 
-    it('should write Monetization template', () => {
+    it('should write Monetization template', async () => {
         const data = getCleanData();
         data.monetization.oneTimePurchase = 'True';
         data.monetization.dlc = 'Some';
@@ -91,7 +91,7 @@ describe('Field Group: Monetization & Microtransactions', () => {
         expect(text).toContain('|dlc = Some');
     });
 
-    it('should write Microtransactions template', () => {
+    it('should write Microtransactions template', async () => {
         const data = getCleanData();
         data.microtransactions.none = 'False';
         data.microtransactions.cosmetic = 'Yes';

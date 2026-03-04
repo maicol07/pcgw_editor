@@ -3,7 +3,7 @@ import { Issue } from '../../../src/models/GameData';
 import { PCGWEditor } from '../../../src/utils/wikitext';
 
 describe('Issues wikitext generation', () => {
-    it('generates Issues unresolved and Issues fixed sections correctly', () => {
+    it('generates Issues unresolved and Issues fixed sections correctly', async () => {
         const issues: Issue[] = [
             {
                 title: 'Game crashes on startup',
@@ -31,7 +31,7 @@ describe('Issues wikitext generation', () => {
         expect(unresolvedIndex).toBeLessThan(otherInfoIndex);
     });
 
-    it('removes the section if there are no more issues of that type', () => {
+    it('removes the section if there are no more issues of that type', async () => {
         const initialWikitext = `==Issues unresolved==
 ===Old issue===
 Old desc.
@@ -59,7 +59,7 @@ Info`;
         expect(result).not.includes('==Issues fixed==');
     });
 
-    it('appends at the end if Other information is missing', () => {
+    it('appends at the end if Other information is missing', async () => {
         const initialWikitext = `==Some other section==\nContent.`;
         const issues: Issue[] = [
             {

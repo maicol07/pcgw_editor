@@ -49,14 +49,14 @@ describe('Field Group: API', () => {
     ];
 
     describe('Parsing', () => {
-        it.each(testCases)('should parse %s', ({ wikitextField, dataField, value, notesField, notesDataField, notesValue }) => {
+        it.each(testCases)('should parse %s', async ({ wikitextField, dataField, value, notesField, notesDataField, notesValue }) => {
             let wikitext = `{{API\n|${wikitextField} = ${value}\n`;
             if (notesField && notesValue) {
                 wikitext += `|${notesField} = ${notesValue}\n`;
             }
             wikitext += `}}`;
 
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
 
             const accessData = (path: string, obj: any) => {
                 return path.split('.').reduce((acc, part) => acc && acc[part], obj);
@@ -70,7 +70,7 @@ describe('Field Group: API', () => {
     });
 
     describe('Writing', () => {
-        it.each(testCases)('should write %s', ({ wikitextField, dataField, value, notesField, notesDataField, notesValue }) => {
+        it.each(testCases)('should write %s', async ({ wikitextField, dataField, value, notesField, notesDataField, notesValue }) => {
             const data: any = { api: {} };
 
             const setData = (path: string, obj: any, val: any) => {

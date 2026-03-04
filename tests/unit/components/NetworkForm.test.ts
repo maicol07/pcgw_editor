@@ -62,7 +62,7 @@ describe('NetworkForm.vue', () => {
         };
     };
 
-    it('renders all main rating rows', () => {
+    it('renders all main rating rows', async () => {
         const { wrapper } = setupWrapper();
 
         const ratingLabels = [

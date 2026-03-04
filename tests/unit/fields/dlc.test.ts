@@ -18,12 +18,12 @@ describe('Field Group: DLC', () => {
         systemRequirements: { windows: {}, mac: {}, linux: {} } as any
     } as any);
 
-    it('should parse DLC table', () => {
+    it('should parse DLC table', async () => {
         const wikitext = `{{DLC|
 {{DLC/row| DLC Name | DLC Notes | Windows }}
 {{DLC/row| Expansion | | Windows, Linux }}
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.dlc).toHaveLength(2);
         expect(data.dlc[0].name).toBe('DLC Name');
         expect(data.dlc[0].notes).toBe('DLC Notes');
@@ -33,7 +33,7 @@ describe('Field Group: DLC', () => {
         expect(data.dlc[1].os).toBe('Windows, Linux');
     });
 
-    it('should write DLC table', () => {
+    it('should write DLC table', async () => {
         const data = getCleanData();
         data.dlc = [
             { name: 'DLC 1', notes: 'Notes 1', os: 'Windows' },

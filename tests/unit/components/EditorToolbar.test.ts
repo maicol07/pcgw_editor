@@ -44,7 +44,7 @@ describe('EditorToolbar.vue', () => {
         };
     };
 
-    it('renders correctly with given props', () => {
+    it('renders correctly with given props', async () => {
         const { wrapper } = setupWrapper();
         const input = wrapper.findComponent(InputText);
         expect(input.exists()).toBe(true);

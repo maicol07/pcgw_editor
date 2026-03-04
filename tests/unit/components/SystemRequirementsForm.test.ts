@@ -95,7 +95,7 @@ describe('SystemRequirementsForm.vue', () => {
         };
     };
 
-    it('renders tabs for all OS', () => {
+    it('renders tabs for all OS', async () => {
         const { wrapper } = setupWrapper();
         const tabs = wrapper.findAllComponents(TabStub);
         expect(tabs.length).toBe(3); // Windows, Mac, Linux

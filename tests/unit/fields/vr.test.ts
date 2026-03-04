@@ -59,7 +59,7 @@ describe('Field Group: VR', () => {
     } as any);
 
     describe('Parsing', () => {
-        it.each(vrFields)('should parse %s field', ({ field, template, value, expected, hasNotes, extraParams }) => {
+        it.each(vrFields)('should parse %s field', async ({ field, template, value, expected, hasNotes, extraParams }) => {
             let wikitext = `{{VR support\n|${template} = ${value}\n`;
             if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
             if (extraParams) {
@@ -70,7 +70,7 @@ describe('Field Group: VR', () => {
             }
             wikitext += '}}';
 
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             // @ts-ignore
             expect(data.vr[field]).toBe(expected);
 
@@ -91,7 +91,7 @@ describe('Field Group: VR', () => {
     });
 
     describe('Writing', () => {
-        it.each(vrFields)('should write %s field', ({ field, template, value, hasNotes, extraParams }) => {
+        it.each(vrFields)('should write %s field', async ({ field, template, value, hasNotes, extraParams }) => {
             const data = getCleanData();
             // @ts-ignore
             data.vr[field] = value;

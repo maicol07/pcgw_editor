@@ -42,7 +42,7 @@ describe('Field Group: Network', () => {
         } as any);
 
         describe('Parsing', () => {
-            it.each(multiplayerFields)('should parse %s field', ({ field, template, value, expected, hasNotes, extraParams }) => {
+            it.each(multiplayerFields)('should parse %s field', async ({ field, template, value, expected, hasNotes, extraParams }) => {
                 let wikitext = `{{Network/Multiplayer\n|${template} = ${value}\n`;
                 if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
                 if (extraParams) {
@@ -53,7 +53,7 @@ describe('Field Group: Network', () => {
                 }
                 wikitext += '}}';
 
-                const data = parseWikitext(wikitext);
+                const data = await parseWikitext(wikitext);
                 // @ts-ignore
                 expect(data.network[field]).toBe(expected);
 
@@ -74,7 +74,7 @@ describe('Field Group: Network', () => {
         });
 
         describe('Writing', () => {
-            it.each(multiplayerFields)('should write %s field', ({ field, template, value, hasNotes, extraParams }) => {
+            it.each(multiplayerFields)('should write %s field', async ({ field, template, value, hasNotes, extraParams }) => {
                 const data = getCleanData();
                 // @ts-ignore
                 data.network[field] = value;

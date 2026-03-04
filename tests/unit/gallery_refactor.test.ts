@@ -4,7 +4,7 @@ import { parseWikitext } from '../../src/utils/parser';
 
 describe('Gallery Refactor', () => {
     describe('Parsing', () => {
-        it('should extract images from specific sections', () => {
+        it('should extract images from specific sections', async () => {
             const wikitext = `
 ==Video==
 {{Image|Video1.jpg|Caption1}}
@@ -17,7 +17,7 @@ Video2.jpg|Caption2
 {{Image|Input1.jpg}}
 {{Input|}}
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
 
             expect(data.galleries).toBeDefined();
             expect(data.galleries['video']).toBeDefined();
@@ -33,15 +33,15 @@ Video2.jpg|Caption2
             expect(data.galleries['input'][0].position).toBe('lateral');
         });
 
-        it('should assign lateral position to [[File]] links', () => {
+        it('should assign lateral position to [[File]] links', async () => {
             const wikitext = `==Video==\n[[File:Test.jpg|thumb|right|Caption]]`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.galleries['video'][0].position).toBe('lateral');
         });
     });
 
     describe('Generation', () => {
-        it('should format lateral images as {{Image}} and rest as <gallery>', () => {
+        it('should format lateral images as {{Image}} and rest as <gallery>', async () => {
             const wikitext = `==Video==\n{{Video|}}`;
             const editor = new PCGWEditor(wikitext);
 
@@ -61,7 +61,7 @@ Video2.jpg|Caption2
             expect(text.indexOf('{{Video|}}')).toBeLessThan(text.indexOf('<gallery>'));
         });
 
-        it('should handle only gallery images', () => {
+        it('should handle only gallery images', async () => {
             const wikitext = `==Video==\n{{Video|}}`;
             const editor = new PCGWEditor(wikitext);
 
@@ -74,7 +74,7 @@ Video2.jpg|Caption2
             expect(text).toContain('<gallery>\n1.jpg|C1\n</gallery>');
         });
 
-        it('should handle manual lateral choice (even if not first in array)', () => {
+        it('should handle manual lateral choice (even if not first in array)', async () => {
             const wikitext = `==Video==\n{{Video|}}`;
             const editor = new PCGWEditor(wikitext);
 
@@ -88,7 +88,7 @@ Video2.jpg|Caption2
             expect(text).toContain('<gallery>\n1.jpg|C1\n</gallery>');
         });
 
-        it('should handle only 1 image', () => {
+        it('should handle only 1 image', async () => {
             const wikitext = `==Video==\n{{Video|}}`;
             const editor = new PCGWEditor(wikitext);
 
@@ -101,7 +101,7 @@ Video2.jpg|Caption2
             expect(text).not.toContain('<gallery>');
         });
 
-        it('should replace existing images', () => {
+        it('should replace existing images', async () => {
             const wikitext = `==Video==
 {{Image|Old1.jpg}}
 {{Video|}}

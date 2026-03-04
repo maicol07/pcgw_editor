@@ -60,7 +60,7 @@ describe('Field Group: Localization', () => {
     } as any);
 
     describe('Parsing', () => {
-        it('should parse localization rows correctly', () => {
+        it('should parse localization rows correctly', async () => {
             const rowTemplates = localizationRows.map(row => {
                 let tpl = `{{L10n/switch\n`;
                 tpl += ` |language  = ${row.language}\n`;
@@ -75,7 +75,7 @@ describe('Field Group: Localization', () => {
             }).join('\n');
 
             const wikitext = `{{L10n|content=\n${rowTemplates}\n}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
 
             expect(data.localizations).toHaveLength(localizationRows.length);
             data.localizations.forEach((parsedRow, index) => {
@@ -90,15 +90,15 @@ describe('Field Group: Localization', () => {
             });
         });
 
-        it('should parse empty localization section', () => {
+        it('should parse empty localization section', async () => {
             const wikitext = `{{L10n|content=}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.localizations).toEqual([]);
         });
     });
 
     describe('Writing', () => {
-        it('should write localization rows correctly', () => {
+        it('should write localization rows correctly', async () => {
             const data = getCleanData();
             data.localizations = localizationRows;
 

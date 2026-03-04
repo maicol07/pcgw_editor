@@ -31,7 +31,7 @@ describe('WorkspaceSidebar.vue', () => {
         setActivePinia(createPinia());
     });
 
-    it('renders sidebar correctly with template labels', () => {
+    it('renders sidebar correctly with template labels', async () => {
         const wrapper = mount(WorkspaceSidebar, {
             props: { visible: true },
             global: {

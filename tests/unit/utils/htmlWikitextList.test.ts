@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { wikitextToHtml, htmlToWikitext } from '../../../src/utils/htmlWikitextConverter';
 
 describe('htmlWikitextConverter Lists', () => {
-    it('converts bullet list to HTML correctly', () => {
+    it('converts bullet list to HTML correctly', async () => {
         const wikitext = "* Item 1\n* Item 2";
         const html = wikitextToHtml(wikitext);
         console.log("Bullet HTML:", html);
@@ -10,7 +10,7 @@ describe('htmlWikitextConverter Lists', () => {
         expect(html).not.toContain('<ol>');
     });
 
-    it('converts numbered list to HTML correctly', () => {
+    it('converts numbered list to HTML correctly', async () => {
         const wikitext = "# Item 1\n# Item 2";
         const html = wikitextToHtml(wikitext);
         console.log("Numbered HTML:", html);

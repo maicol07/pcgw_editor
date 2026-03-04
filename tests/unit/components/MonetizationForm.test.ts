@@ -64,7 +64,7 @@ describe('MonetizationForm.vue', () => {
         };
     };
 
-    it('renders all monetization fields', () => {
+    it('renders all monetization fields', async () => {
         const { wrapper } = setupWrapper();
         const inputs = wrapper.findAllComponents(InputTextStub);
         // Monetization: 9 fields

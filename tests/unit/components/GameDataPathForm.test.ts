@@ -77,7 +77,7 @@ describe('GameDataPathForm.vue', () => {
         };
     };
 
-    it('renders initial rows and paths', () => {
+    it('renders initial rows and paths', async () => {
         const { wrapper, rows } = setupWrapper();
         const selects = wrapper.findAllComponents(SelectStub);
         expect(selects.length).toBe(rows.length);

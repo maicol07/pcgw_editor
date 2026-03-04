@@ -39,12 +39,12 @@ describe('Field Group: Audio', () => {
     } as any);
 
     describe('Parsing', () => {
-        it.each(audioFields)('should parse %s field', ({ field, template, value, expected, hasNotes }) => {
+        it.each(audioFields)('should parse %s field', async ({ field, template, value, expected, hasNotes }) => {
             let wikitext = `{{Audio\n|${template} = ${value}\n`;
             if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
             wikitext += '}}';
 
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             // @ts-ignore - dynamic assignment
             expect(data.audio[field]).toBe(expected);
 
@@ -56,7 +56,7 @@ describe('Field Group: Audio', () => {
     });
 
     describe('Writing', () => {
-        it.each(audioFields)('should write %s field', ({ field, template, value, hasNotes }) => {
+        it.each(audioFields)('should write %s field', async ({ field, template, value, hasNotes }) => {
             const data = getCleanData();
             // @ts-ignore - dynamic assignment
             data.audio[field] = value;

@@ -41,9 +41,9 @@ describe('Field Group: Game Data', () => {
             { platform: 'Linux', path: '{{p|linuxhome}}/.config/Vessel/' }
         ];
 
-        it.each(configTestCases)('should parse $platform config location', ({ platform, path }) => {
+        it.each(configTestCases)('should parse $platform config location', async ({ platform, path }) => {
             const wikitext = `{{Game data|{{Game data/config|${platform}|${path}}}}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.config.configFiles).toContainEqual(expect.objectContaining({ platform, paths: [path] }));
         });
 
@@ -64,9 +64,9 @@ describe('Field Group: Game Data', () => {
                 { platform: 'Linux', path: '{{p|linuxhome}}/.config/Vessel/' }
             ];
 
-            it.each(saveTestCases)('should parse $platform save location', ({ platform, path }) => {
+            it.each(saveTestCases)('should parse $platform save location', async ({ platform, path }) => {
                 const wikitext = `{{Game data|{{Game data/saves|${platform}|${path}}}}}`;
-                const data = parseWikitext(wikitext);
+                const data = await parseWikitext(wikitext);
                 expect(data.config.saveData).toContainEqual(expect.objectContaining({ platform, paths: [path] }));
             });
         });
@@ -90,9 +90,9 @@ describe('Field Group: Game Data', () => {
 
             const template = (props: string) => `{{Save game cloud syncing\n${props}\n}}`;
 
-            it.each(providers)('should parse $name cloud sync', ({ key, field }) => {
+            it.each(providers)('should parse $name cloud sync', async ({ key, field }) => {
                 const prop = (field || key) as keyof GameData['config']['cloudSync'];
-                const data = parseWikitext(template(`|${key} = true |${key} notes = note`));
+                const data = await parseWikitext(template(`|${key} = true |${key} notes = note`));
                 expect(data.config.cloudSync[prop]).toBe('true');
                 // @ts-ignore
                 expect(data.config.cloudSync[`${prop}Notes`]).toBe('note');
@@ -103,7 +103,7 @@ describe('Field Group: Game Data', () => {
     });
 
     describe('Writing', () => {
-        it('should write Game Configuration', () => {
+        it('should write Game Configuration', async () => {
             const data = getCleanData();
             data.config.configFiles = [
                 { platform: 'Windows', paths: ['%USERPROFILE%\\Config'] }
@@ -117,7 +117,7 @@ describe('Field Group: Game Data', () => {
             expect(text).toContain('|Windows|%USERPROFILE%\\Config');
         });
 
-        it('should write Cloud Sync', () => {
+        it('should write Cloud Sync', async () => {
             const data = getCleanData();
             data.config.cloudSync = {
                 discord: 'true',

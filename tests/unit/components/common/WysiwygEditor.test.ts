@@ -4,7 +4,7 @@ import WysiwygEditor from '../../../../src/components/common/WysiwygEditor.vue';
 import Editor from 'primevue/editor';
 
 describe('WysiwygEditor.vue', () => {
-    it('initializes with correct html from wikitext', () => {
+    it('initializes with correct html from wikitext', async () => {
         const wrapper = mount(WysiwygEditor, {
             props: {
                 modelValue: "'''Bold''' text"

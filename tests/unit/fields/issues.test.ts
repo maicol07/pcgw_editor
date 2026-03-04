@@ -32,7 +32,7 @@ describe('Section: Issues', () => {
     } as any);
 
     describe('Parsing', () => {
-        it('should parse unresolved issues', () => {
+        it('should parse unresolved issues', async () => {
             const wikitext = `
 ==Issues unresolved==
 ===Issue===
@@ -41,14 +41,14 @@ This is an unresolved issue.
 ===Broken specific interaction===
 Details about the broken interaction.
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             const unresolved = data.issues.filter(i => !i.fixed);
             expect(unresolved).toHaveLength(2);
             expect(unresolved[0]).toEqual(issuesUnresolved[0]);
             expect(unresolved[1]).toEqual(issuesUnresolved[1]);
         });
 
-        it('should parse fixed issues', () => {
+        it('should parse fixed issues', async () => {
             const wikitext = `
 ==Issues fixed==
 ===Issue===
@@ -57,14 +57,14 @@ This is a fixed issue.
 ===Fixed crash===
 Details about the fixed crash.
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             const fixed = data.issues.filter(i => i.fixed);
             expect(fixed).toHaveLength(2);
             expect(fixed[0]).toEqual(issuesFixed[0]);
             expect(fixed[1]).toEqual(issuesFixed[1]);
         });
 
-        it('should parse both sections', () => {
+        it('should parse both sections', async () => {
             const wikitext = `
 ==Issues unresolved==
 ===Issue===
@@ -74,7 +74,7 @@ Unresolved.
 ===Issue===
 Fixed.
 `;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             const unresolved = data.issues.filter(i => !i.fixed);
             const fixed = data.issues.filter(i => i.fixed);
 
@@ -86,7 +86,7 @@ Fixed.
     });
 
     describe('Writing', () => {
-        it('should write unresolved issues', () => {
+        it('should write unresolved issues', async () => {
             const data = getCleanData();
             data.issues = issuesUnresolved;
 
@@ -100,7 +100,7 @@ Fixed.
             expect(output).toContain('===Broken specific interaction===');
         });
 
-        it('should write fixed issues', () => {
+        it('should write fixed issues', async () => {
             const data = getCleanData();
             data.issues = issuesFixed;
 

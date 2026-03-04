@@ -3,6 +3,7 @@ import { config } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
+import 'wikiparser-node/bundle/bundle-lsp.min.js';
 
 // Mock localStorage if it's broken in the environment
 if (typeof window !== 'undefined') {

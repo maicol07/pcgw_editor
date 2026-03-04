@@ -69,7 +69,7 @@ describe('LocalizationsForm.vue', () => {
         };
     };
 
-    it('renders initial rows', () => {
+    it('renders initial rows', async () => {
         const { wrapper, localizations } = setupWrapper();
         const selects = wrapper.findAllComponents(SelectStub);
         expect(selects.length).toBe(localizations.length);

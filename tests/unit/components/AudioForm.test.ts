@@ -66,7 +66,7 @@ describe('AudioForm.vue', () => {
         { label: 'General MIDI Audio', prop: 'generalMidiAudio' }
     ];
 
-    it('renders all rating rows', () => {
+    it('renders all rating rows', async () => {
         const { wrapper } = setupWrapper();
         const rows = wrapper.findAllComponents(RatingRowStub);
 
@@ -78,7 +78,7 @@ describe('AudioForm.vue', () => {
         });
     });
 
-    it('passes correct props to RatingRows', () => {
+    it('passes correct props to RatingRows', async () => {
         const { wrapper } = setupWrapper({ separateVolume: 'true' as any });
         const row = wrapper.findComponent('[data-label="Separate Volume Controls"]');
         expect((row as any).props('value')).toBe('true');

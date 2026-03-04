@@ -74,29 +74,29 @@ describe('Field Group: Introduction', () => {
         systemRequirements: { windows: {}, mac: {}, linux: {} } as any
     } as any);
 
-    it('should parse Introduction template', () => {
+    it('should parse Introduction template', async () => {
         const wikitext = `{{Introduction
 |introduction      = This is an intro.
 |release history   = Released in 2020.
 |current state     = Active development.
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.introduction.introduction).toBe('This is an intro.');
         expect(data.introduction.releaseHistory).toBe('Released in 2020.');
         expect(data.introduction.currentState).toBe('Active development.');
     });
 
-    it('should parse Introduction with some missing fields', () => {
+    it('should parse Introduction with some missing fields', async () => {
         const wikitext = `{{Introduction
 |introduction      = Only intro.
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.introduction.introduction).toBe('Only intro.');
         expect(data.introduction.releaseHistory).toBe('');
         expect(data.introduction.currentState).toBe('');
     });
 
-    it('should write Introduction template', () => {
+    it('should write Introduction template', async () => {
         const data = getCleanData();
         data.introduction.introduction = "Written intro.";
         data.introduction.releaseHistory = "Written release.";
@@ -112,7 +112,7 @@ describe('Field Group: Introduction', () => {
         expect(text).toContain('|current state = Written state.');
     });
 
-    it('should handle updates to existing Introduction', () => {
+    it('should handle updates to existing Introduction', async () => {
         const original = `{{Introduction
 |introduction      = Old intro.
 |release history   = Old release.

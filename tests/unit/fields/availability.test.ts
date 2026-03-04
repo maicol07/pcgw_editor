@@ -15,12 +15,12 @@ describe('Field Group: Availability', () => {
         systemRequirements: { windows: {}, mac: {}, linux: {} } as any
     } as any);
 
-    it('should parse Availability table', () => {
+    it('should parse Availability table', async () => {
         const wikitext = `{{Availability|
 {{Availability/row| Steam | 220 | Steam | | | Windows, Linux }}
 {{Availability/row| GOG.com | game_title | DRM-free | Notes | | Windows }}
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.availability).toHaveLength(2);
         expect(data.availability[0].distribution).toBe('Steam');
         expect(data.availability[0].id).toBe('220');
@@ -31,7 +31,7 @@ describe('Field Group: Availability', () => {
         expect(data.availability[1].os).toBe('Windows');
     });
 
-    it('should write Availability table', () => {
+    it('should write Availability table', async () => {
         const data = getCleanData();
         data.availability = [
             { distribution: 'Steam', id: '220', drm: 'Steam', notes: '', keys: '', os: 'Windows' },
@@ -47,11 +47,11 @@ describe('Field Group: Availability', () => {
         expect(text).toContain('{{Availability/row| GOG.com | test | DRM-free | Note | | Windows, Linux }}');
     });
 
-    it('should parse Availability with named parameters (special cases)', () => {
+    it('should parse Availability with named parameters (special cases)', async () => {
         const wikitext = `{{Availability|
 {{Availability/row|1=source |2=store URL |3=DRM used |4=notes |5=keys |6=Windows }}
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.availability[0].distribution).toBe('source');
         expect(data.availability[0].id).toBe('store URL'); // In this format, param 2 is URL/ID
         expect(data.availability[0].drm).toBe('DRM used');
@@ -60,15 +60,15 @@ describe('Field Group: Availability', () => {
         expect(data.availability[0].os).toBe('Windows');
     });
 
-    it('should parse Availability with unavailable/upcoming state', () => {
+    it('should parse Availability with unavailable/upcoming state', async () => {
         const wikitext = `{{Availability|
 {{Availability/row| Store | ID | DRM | Note | Key | Win | unavailable }}
 }}`;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.availability[0].state).toBe('unavailable');
     });
 
-    it('should write Availability with unavailable state', () => {
+    it('should write Availability with unavailable state', async () => {
         const data = getCleanData();
         data.availability = [
             { distribution: 'Store', id: 'ID', drm: 'DRM', notes: 'Note', keys: 'Key', os: 'Win', state: 'unavailable' }

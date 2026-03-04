@@ -138,7 +138,7 @@ describe('VideoForm.vue', () => {
         { label: '4K Ultra HD Award', prop: 'fourKUltraHdWsgfAward' }
     ];
 
-    it('renders all rating rows', () => {
+    it('renders all rating rows', async () => {
         const { wrapper } = setupWrapper();
         const rows = wrapper.findAllComponents(RatingRowStub);
 
@@ -150,7 +150,7 @@ describe('VideoForm.vue', () => {
         });
     });
 
-    it('passes correct props to all RatingRows', () => {
+    it('passes correct props to all RatingRows', async () => {
         const testData: any = {};
         ratingFields.forEach(f => testData[f.prop] = 'true');
 

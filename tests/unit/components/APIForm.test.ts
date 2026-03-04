@@ -113,7 +113,7 @@ describe('APIForm.vue', () => {
         };
     };
 
-    it('renders graphics API inputs', () => {
+    it('renders graphics API inputs', async () => {
         const { wrapper } = setupWrapper();
         const inputs = wrapper.findAllComponents(InputTextStub);
         // There are many inputs. 
@@ -134,7 +134,7 @@ describe('APIForm.vue', () => {
         expect(api.dxVersion).toBe('11, 12');
     });
 
-    it('renders all rating rows', () => {
+    it('renders all rating rows', async () => {
         const { wrapper } = setupWrapper();
         // RatingRows: WinG, Software Mode, Mantle, Metal
         // Windows: 3 (32, 64, Arm)

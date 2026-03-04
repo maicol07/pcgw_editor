@@ -62,7 +62,7 @@ describe('DLCForm.vue', () => {
         };
     };
 
-    it('renders initial rows', () => {
+    it('renders initial rows', async () => {
         const { wrapper, rows } = setupWrapper();
         // Each row layout verification
         // Count Text inputs? 2 per row (Name, Notes) * 2 rows = 4 inputs

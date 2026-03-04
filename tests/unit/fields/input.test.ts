@@ -87,12 +87,12 @@ describe('Field Group: Input', () => {
     } as any);
 
     describe('Parsing', () => {
-        it.each(inputFields)('should parse %s field', ({ field, template, value, expected, hasNotes }) => {
+        it.each(inputFields)('should parse %s field', async ({ field, template, value, expected, hasNotes }) => {
             let wikitext = `{{Input\n|${template} = ${value}\n`;
             if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
             wikitext += '}}';
 
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             // @ts-ignore - dynamic assignment
             expect(data.input[field]).toBe(expected);
 
@@ -104,7 +104,7 @@ describe('Field Group: Input', () => {
     });
 
     describe('Writing', () => {
-        it.each(inputFields)('should write %s field', ({ field, template, value, hasNotes }) => {
+        it.each(inputFields)('should write %s field', async ({ field, template, value, hasNotes }) => {
             const data = getCleanData();
             // @ts-ignore - dynamic assignment
             data.input[field] = value;

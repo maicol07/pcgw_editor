@@ -74,7 +74,7 @@ describe('AvailabilityForm.vue', () => {
         };
     };
 
-    it('renders initial rows', () => {
+    it('renders initial rows', async () => {
         const { wrapper, rows } = setupWrapper();
         const selects = wrapper.findAllComponents(SelectStub);
         expect(selects.length).toBe(rows.length);

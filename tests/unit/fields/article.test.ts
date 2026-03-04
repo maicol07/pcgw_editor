@@ -12,13 +12,13 @@ describe('Field Group: Article State', () => {
     };
 
     describe('Disambig', () => {
-        it('should parse {{Disambig}} template with multiple values', () => {
+        it('should parse {{Disambig}} template with multiple values', async () => {
             const wikitext = `{{Disambig|Game A|Game B}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.disambig).toEqual(['Game A', 'Game B']);
         });
 
-        it('should write disambiguation field with multiple values', () => {
+        it('should write disambiguation field with multiple values', async () => {
             const data = getCleanData();
             data.articleState.disambig = ['Game A', 'Game B'];
             const writer = new PCGWEditor('');
@@ -28,13 +28,13 @@ describe('Field Group: Article State', () => {
     });
 
     describe('Distinguish', () => {
-        it('should parse {{Distinguish}} template with multiple values', () => {
+        it('should parse {{Distinguish}} template with multiple values', async () => {
             const wikitext = `{{Distinguish|Game A|Game B}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.distinguish).toEqual(['Game A', 'Game B']);
         });
 
-        it('should write distinguish field with multiple values', () => {
+        it('should write distinguish field with multiple values', async () => {
             const data = getCleanData();
             data.articleState.distinguish = ['Game A', 'Game B'];
             const writer = new PCGWEditor('');
@@ -44,13 +44,13 @@ describe('Field Group: Article State', () => {
     });
 
     describe('Stub Flag', () => {
-        it('should parse {{Stub}} template', () => {
+        it('should parse {{Stub}} template', async () => {
             const wikitext = `{{Stub}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.stub).toBe(true);
         });
 
-        it('should write stub flag (lowercase)', () => {
+        it('should write stub flag (lowercase)', async () => {
             const data = getCleanData();
             data.articleState.stub = true;
             const writer = new PCGWEditor('');
@@ -58,7 +58,7 @@ describe('Field Group: Article State', () => {
             expect(writer.getText()).toContain('{{stub}}');
         });
 
-        it('should remove stub flag when false', () => {
+        it('should remove stub flag when false', async () => {
             const wikitext = `{{Stub}}\nSome content`;
             const data = getCleanData();
             data.articleState.stub = false;
@@ -69,28 +69,28 @@ describe('Field Group: Article State', () => {
     });
 
     describe('Cleanup Flag', () => {
-        it('should parse {{Cleanup}} template with reason', () => {
+        it('should parse {{Cleanup}} template with reason', async () => {
             const wikitext = `{{Cleanup|Need more info}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.cleanup).toBe(true);
             expect(data.articleState.cleanupDescription).toBe('Need more info');
         });
 
-        it('should parse {{Cleanup}} template with numbered param', () => {
+        it('should parse {{Cleanup}} template with numbered param', async () => {
             const wikitext = `{{Cleanup|1=Need more info}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.cleanup).toBe(true);
             expect(data.articleState.cleanupDescription).toBe('Need more info');
         });
 
-        it('should parse {{Cleanup}} template with section and reason', () => {
+        it('should parse {{Cleanup}} template with section and reason', async () => {
             const wikitext = `{{cleanup|section|Description of specific issues}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.cleanup).toBe(true);
             expect(data.articleState.cleanupDescription).toBe('section|Description of specific issues');
         });
 
-        it('should write cleanup flag with reason (lowercase)', () => {
+        it('should write cleanup flag with reason (lowercase)', async () => {
             const data = getCleanData();
             data.articleState.cleanup = true;
             data.articleState.cleanupDescription = 'Formatting needed';
@@ -99,7 +99,7 @@ describe('Field Group: Article State', () => {
             expect(writer.getText()).toContain('{{cleanup|Formatting needed}}');
         });
 
-        it('should write cleanup flag with section and reason', () => {
+        it('should write cleanup flag with section and reason', async () => {
             const data = getCleanData();
             data.articleState.cleanup = true;
             data.articleState.cleanupDescription = 'section|Description of specific issues';
@@ -110,14 +110,14 @@ describe('Field Group: Article State', () => {
     });
 
     describe('Delete Flag', () => {
-        it('should parse {{Delete}} template with reason', () => {
+        it('should parse {{Delete}} template with reason', async () => {
             const wikitext = `{{Delete|Duplicate page}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.delete).toBe(true);
             expect(data.articleState.deleteReason).toBe('Duplicate page');
         });
 
-        it('should write delete flag with reason (lowercase)', () => {
+        it('should write delete flag with reason (lowercase)', async () => {
             const data = getCleanData();
             data.articleState.delete = true;
             data.articleState.deleteReason = 'Spam';
@@ -128,13 +128,13 @@ describe('Field Group: Article State', () => {
     });
 
     describe('Game State', () => {
-        it('should parse {{State}} template', () => {
+        it('should parse {{State}} template', async () => {
             const wikitext = `{{State|state=dev}}`;
-            const data = parseWikitext(wikitext);
+            const data = await parseWikitext(wikitext);
             expect(data.articleState.state).toBe('dev');
         });
 
-        it('should write state field', () => {
+        it('should write state field', async () => {
             const data = getCleanData();
             data.articleState.state = 'abandoned';
             const writer = new PCGWEditor('');

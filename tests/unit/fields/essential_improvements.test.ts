@@ -4,19 +4,19 @@ import { PCGWEditor } from '../../../src/utils/wikitext';
 import { GameData } from '../../../src/models/GameData';
 
 describe('Field Group: Essential Improvements', () => {
-    it('should parse Essential Improvements section', () => {
+    it('should parse Essential Improvements section', async () => {
         const wikitext = `
 ==Essential improvements==
 This is a test improvement.
 * Bullet point 1
 * Bullet point 2
 `;
-        const data = parseWikitext(wikitext);
+        const data = await parseWikitext(wikitext);
         expect(data.essentialImprovements).toContain('This is a test improvement.');
         expect(data.essentialImprovements).toContain('* Bullet point 1');
     });
 
-    it('should write Essential Improvements section', () => {
+    it('should write Essential Improvements section', async () => {
         const data = {
             essentialImprovements: 'Tests are important.\n* Yes they are.'
         } as GameData;
