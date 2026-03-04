@@ -1098,10 +1098,15 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
     }
     // Helper for RatingValues
     const getRatingParam = (node: ASTNode, paramName: string): RatingValue => {
-        const val = getParam(node, paramName);
+        let val = getParam(node, paramName);
         if (!val || val.trim() === '') return 'unknown';
         // Basic normalization if needed
-        return val.toLowerCase() as RatingValue;
+        val = val.toLowerCase();
+        // Fallback for buggy Checkbox saves containing 't,r,u,e,,'
+        if (val.replace(/,/g, '') === 'true') return 'true';
+        if (val.replace(/,/g, '') === 'false') return 'false';
+        if (val.replace(/,/g, '') === 'hackable') return 'hackable';
+        return val as RatingValue;
     };
 
 

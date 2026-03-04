@@ -114,7 +114,7 @@ const getFlagCode = (lang: string) => {
                         <label class="text-xs font-bold text-surface-500">UI</label>
                         <div
                             class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
-                            <Checkbox v-model="row.interface" true-value="true" false-value="false" />
+                            <Checkbox v-model="row.interface" true-value="true" false-value="false" binary />
                         </div>
                     </div>
 
