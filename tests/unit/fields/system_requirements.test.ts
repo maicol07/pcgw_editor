@@ -106,6 +106,38 @@ describe('Field Group: System Requirements', () => {
                     }
                 }
             });
+
+            it('should strictly order all parameters as defined (minOS, minCPU, minRAM, etc.)', () => {
+                const data = { requirements: createEmptyReqs() };
+                // Populate them in random order
+                setData(`requirements.windows.minimum.ram`, data, '8 GB');
+                setData(`requirements.windows.minimum.gpu`, data, 'RTX 3060');
+                setData(`requirements.windows.minimum.os`, data, 'Windows 10');
+                setData(`requirements.windows.minimum.cpu`, data, 'Intel Core i5');
+                setData(`requirements.windows.minimum.other`, data, 'Notes');
+
+                const editor = new PCGWEditor(`{{System requirements\n|OSfamily = Windows\n}}`);
+                editor.updateSystemRequirements(data.requirements);
+                const output = editor.getText();
+
+                const osIndex = output.indexOf('|minOS');
+                // Added space buffer to exactly match the parameter strings and avoid minGPU2 colliding with minGPU
+                const cpuIndex = output.indexOf('|minCPU   =');
+                const ramIndex = output.indexOf('|minRAM');
+                const gpuIndex = output.indexOf('|minGPU   =');
+                const otherIndex = output.indexOf('|minother');
+
+                expect(osIndex).not.toBe(-1);
+                expect(cpuIndex).not.toBe(-1);
+                expect(ramIndex).not.toBe(-1);
+                expect(gpuIndex).not.toBe(-1);
+                expect(otherIndex).not.toBe(-1);
+
+                expect(osIndex).toBeLessThan(cpuIndex);
+                expect(cpuIndex).toBeLessThan(ramIndex);
+                expect(ramIndex).toBeLessThan(gpuIndex);
+                expect(gpuIndex).toBeLessThan(otherIndex);
+            });
         });
     });
 });

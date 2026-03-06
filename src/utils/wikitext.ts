@@ -303,6 +303,12 @@ export class PCGWEditor {
             }
         }
 
+        // Handle VNDB exclusion from External Links
+        if (!infobox.links?.vndb) {
+            this.parser.removeParameter('Infobox game', 'vndb');
+            delete linkMap.vndb; // Ensure it doesn't get re-added by updateSection
+        }
+
         this.updateSection('Infobox game', infobox.links, linkMap);
 
         this.updateInfoboxList('developers', infobox.developers);
@@ -410,13 +416,13 @@ export class PCGWEditor {
 
             if (paramName === 'engines') {
                 type = 'engine';
+                if (item.displayName) {
+                    params.name = item.displayName;
+                }
                 if (item.build) params.build = item.build;
                 if (item.note) params.note = item.note;
                 if (item.ref) params.ref = item.ref;
                 if (item.extra) extra = item.extra; // Used For
-                if (item.displayName) {
-                    params.name = item.displayName;
-                }
             } else if (paramName === 'publishers') {
                 type = 'publisher';
                 if (item.extra) params.extra = item.extra;
@@ -900,6 +906,26 @@ export class PCGWEditor {
 
         // Fill defaults for all input fields so they appear empty if not set
         const fullData: any = { ...data };
+
+        // Helper to ensure 'Wired' appears first
+        const prioritizeWired = (str: string | undefined) => {
+            if (!str) return undefined;
+            const modes = str.split(',').map(m => m.trim()).filter(Boolean);
+            const wiredIndex = modes.findIndex(m => m.toLowerCase().includes('wired'));
+            if (wiredIndex > 0) {
+                const wired = modes.splice(wiredIndex, 1)[0];
+                modes.unshift(wired);
+            }
+            return modes.join(', ');
+        };
+
+        if (fullData.playstationConnectionModes) {
+            fullData.playstationConnectionModes = prioritizeWired(fullData.playstationConnectionModes);
+        }
+        if (fullData.nintendoConnectionModes) {
+            fullData.nintendoConnectionModes = prioritizeWired(fullData.nintendoConnectionModes);
+        }
+
         Object.keys(map).forEach(key => {
             if (fullData[key] === undefined) fullData[key] = '';
         });
@@ -1411,6 +1437,8 @@ export class PCGWEditor {
             const hasData = () => {
                 if (reqs.minimum && Object.values(reqs.minimum).some(v => v && String(v).trim() !== '')) return true;
                 if (reqs.recommended && Object.values(reqs.recommended).some(v => v && String(v).trim() !== '')) return true;
+                if (reqs.alt1 && Object.values(reqs.alt1).some(v => v && String(v).trim() !== '')) return true;
+                if (reqs.alt2 && Object.values(reqs.alt2).some(v => v && String(v).trim() !== '')) return true;
                 if (reqs.notes && reqs.notes.trim() !== '') return true;
                 return false;
             };
@@ -1443,70 +1471,70 @@ export class PCGWEditor {
             const buildParams = () => {
                 let p = `\n|OSfamily = ${os}`;
 
+                const s = (val: any) => (val !== undefined && val !== null) ? val : '';
+
                 // Minimum
-                if (reqs.minimum) {
-                    if (reqs.minimum.target) p += `\n\n|minTGT   = ${reqs.minimum.target}`;
-                    if (reqs.minimum.os) p += `\n|minOS    = ${reqs.minimum.os}`;
-                    if (reqs.minimum.cpu) p += `\n|minCPU   = ${reqs.minimum.cpu}`;
-                    if (reqs.minimum.cpu2) p += `\n|minCPU2  = ${reqs.minimum.cpu2}`;
-                    if (reqs.minimum.ram) p += `\n|minRAM   = ${reqs.minimum.ram}`;
-                    if (reqs.minimum.hdd) p += `\n|minHD    = ${reqs.minimum.hdd}`;
-                    if (reqs.minimum.gpu) p += `\n|minGPU   = ${reqs.minimum.gpu}`;
-                    if (reqs.minimum.gpu2) p += `\n|minGPU2  = ${reqs.minimum.gpu2}`;
-                    if (reqs.minimum.gpu3) p += `\n|minGPU3  = ${reqs.minimum.gpu3}`;
-                    if (reqs.minimum.vram) p += `\n|minVRAM  = ${reqs.minimum.vram}`;
-                    if (reqs.minimum.dx) p += `\n|minDX    = ${reqs.minimum.dx}`;
-                    if (reqs.minimum.other) p += `\n|minother = ${reqs.minimum.other}`;
-                }
+                p += `\n\n|minTGT   = ${s(reqs.minimum?.target)}`;
+                p += `\n|minOS    = ${s(reqs.minimum?.os)}`;
+                p += `\n|minCPU   = ${s(reqs.minimum?.cpu)}`;
+                p += `\n|minCPU2  = ${s(reqs.minimum?.cpu2)}`;
+                p += `\n|minRAM   = ${s(reqs.minimum?.ram)}`;
+                p += `\n|minHD    = ${s(reqs.minimum?.hdd)}`;
+                p += `\n|minGPU   = ${s(reqs.minimum?.gpu)}`;
+                p += `\n|minGPU2  = ${s(reqs.minimum?.gpu2)}`;
+                p += `\n|minGPU3  = ${s(reqs.minimum?.gpu3)}`;
+                p += `\n|minVRAM  = ${s(reqs.minimum?.vram)}`;
+                p += `\n|minDX    = ${s(reqs.minimum?.dx)}`;
+                p += `\n|minOGL   = ${s(reqs.minimum?.ogl)}`;
+                p += `\n|minSM    = ${s(reqs.minimum?.sm)}`;
+                p += `\n|minaudio = ${s(reqs.minimum?.audio)}`;
+                p += `\n|mincont  = ${s(reqs.minimum?.cont)}`;
+                p += `\n|minother = ${s(reqs.minimum?.other)}`;
 
                 // Recommended
-                if (reqs.recommended) {
-                    if (reqs.recommended.target) p += `\n\n|recTGT   = ${reqs.recommended.target}`;
-                    if (reqs.recommended.os) p += `\n|recOS    = ${reqs.recommended.os}`;
-                    if (reqs.recommended.cpu) p += `\n|recCPU   = ${reqs.recommended.cpu}`;
-                    if (reqs.recommended.cpu2) p += `\n|recCPU2  = ${reqs.recommended.cpu2}`;
-                    if (reqs.recommended.ram) p += `\n|recRAM   = ${reqs.recommended.ram}`;
-                    if (reqs.recommended.hdd) p += `\n|recHD    = ${reqs.recommended.hdd}`;
-                    if (reqs.recommended.gpu) p += `\n|recGPU   = ${reqs.recommended.gpu}`;
-                    if (reqs.recommended.gpu2) p += `\n|recGPU2  = ${reqs.recommended.gpu2}`;
-                    if (reqs.recommended.gpu3) p += `\n|recGPU3  = ${reqs.recommended.gpu3}`;
-                    if (reqs.recommended.vram) p += `\n|recVRAM  = ${reqs.recommended.vram}`;
-                    if (reqs.recommended.ogl) p += `\n|recOGL   = ${reqs.recommended.ogl}`;
-                    if (reqs.recommended.dx) p += `\n|recDX    = ${reqs.recommended.dx}`;
-                    if (reqs.recommended.sm) p += `\n|recSM    = ${reqs.recommended.sm}`;
-                    if (reqs.recommended.audio) p += `\n|recaudio = ${reqs.recommended.audio}`;
-                    if (reqs.recommended.cont) p += `\n|reccont  = ${reqs.recommended.cont}`;
-                    if (reqs.recommended.other) p += `\n|recother = ${reqs.recommended.other}`;
-                }
+                p += `\n\n|recTGT   = ${s(reqs.recommended?.target)}`;
+                p += `\n|recOS    = ${s(reqs.recommended?.os)}`;
+                p += `\n|recCPU   = ${s(reqs.recommended?.cpu)}`;
+                p += `\n|recCPU2  = ${s(reqs.recommended?.cpu2)}`;
+                p += `\n|recRAM   = ${s(reqs.recommended?.ram)}`;
+                p += `\n|recHD    = ${s(reqs.recommended?.hdd)}`;
+                p += `\n|recGPU   = ${s(reqs.recommended?.gpu)}`;
+                p += `\n|recGPU2  = ${s(reqs.recommended?.gpu2)}`;
+                p += `\n|recGPU3  = ${s(reqs.recommended?.gpu3)}`;
+                p += `\n|recVRAM  = ${s(reqs.recommended?.vram)}`;
+                p += `\n|recOGL   = ${s(reqs.recommended?.ogl)}`;
+                p += `\n|recDX    = ${s(reqs.recommended?.dx)}`;
+                p += `\n|recSM    = ${s(reqs.recommended?.sm)}`;
+                p += `\n|recaudio = ${s(reqs.recommended?.audio)}`;
+                p += `\n|reccont  = ${s(reqs.recommended?.cont)}`;
+                p += `\n|recother = ${s(reqs.recommended?.other)}`;
 
                 // Alternatives
                 const buildAlt = (prefix: string, spec: any) => {
-                    let s = '';
-                    if (spec.title) s += `\n\n|${prefix}Title = ${spec.title}`;
-                    if (spec.target) s += `\n|${prefix}TGT   = ${spec.target}`;
-                    if (spec.os) s += `\n|${prefix}OS    = ${spec.os}`;
-                    if (spec.cpu) s += `\n|${prefix}CPU   = ${spec.cpu}`;
-                    if (spec.cpu2) s += `\n|${prefix}CPU2  = ${spec.cpu2}`;
-                    if (spec.ram) s += `\n|${prefix}RAM   = ${spec.ram}`;
-                    if (spec.hdd) s += `\n|${prefix}HD    = ${spec.hdd}`;
-                    if (spec.gpu) s += `\n|${prefix}GPU   = ${spec.gpu}`;
-                    if (spec.gpu2) s += `\n|${prefix}GPU2  = ${spec.gpu2}`;
-                    if (spec.gpu3) s += `\n|${prefix}GPU3  = ${spec.gpu3}`;
-                    if (spec.vram) s += `\n|${prefix}VRAM  = ${spec.vram}`;
-                    if (spec.ogl) s += `\n|${prefix}OGL   = ${spec.ogl}`;
-                    if (spec.dx) s += `\n|${prefix}DX    = ${spec.dx}`;
-                    if (spec.sm) s += `\n|${prefix}SM    = ${spec.sm}`;
-                    if (spec.audio) s += `\n|${prefix}audio = ${spec.audio}`;
-                    if (spec.cont) s += `\n|${prefix}cont  = ${spec.cont}`;
-                    if (spec.other) s += `\n|${prefix}other = ${spec.other}`;
-                    return s;
+                    let text = '';
+                    if (prefix === 'alt1') {
+                        text += `\n\n<!-- Please see the Editing Guide before filling in the following -->`;
+                    } else {
+                        text += `\n`;
+                    }
+                    text += `\n|${prefix}Title = ${s(spec?.title)}`;
+                    text += `\n|${prefix}TGT   = ${s(spec?.target)}`;
+                    text += `\n|${prefix}OS    = ${s(spec?.os)}`;
+                    text += `\n|${prefix}CPU   = ${s(spec?.cpu)}`;
+                    text += `\n|${prefix}CPU2  = ${s(spec?.cpu2)}`;
+                    text += `\n|${prefix}RAM   = ${s(spec?.ram)}`;
+                    text += `\n|${prefix}HD    = ${s(spec?.hdd)}`;
+                    text += `\n|${prefix}GPU   = ${s(spec?.gpu)}`;
+                    text += `\n|${prefix}GPU2  = ${s(spec?.gpu2)}`;
+                    text += `\n|${prefix}GPU3  = ${s(spec?.gpu3)}`;
+                    text += `\n|${prefix}VRAM  = ${s(spec?.vram)}`;
+                    return text;
                 };
 
-                if (reqs.alt1) p += buildAlt('alt1', reqs.alt1);
-                if (reqs.alt2) p += buildAlt('alt2', reqs.alt2);
+                p += buildAlt('alt1', reqs.alt1);
+                p += buildAlt('alt2', reqs.alt2);
 
-
-                if (reqs.notes) p += `\n\n|notes    = ${reqs.notes}`;
+                p += `\n|notes    = ${s(reqs.notes)}`;
 
                 // Add closing newline for clean formatting
                 p += `\n`;
@@ -1567,76 +1595,18 @@ export class PCGWEditor {
                 i++;
             }
 
-            const blockContent = wikitext.substring(tempStart, tempEnd);
-            const blockParser = new WikitextParser(blockContent);
-
-            if (reqs.minimum) {
-                blockParser.setParameter('System requirements', 'minTGT', reqs.minimum.target);
-                blockParser.setParameter('System requirements', 'minOS', reqs.minimum.os);
-                blockParser.setParameter('System requirements', 'minCPU', reqs.minimum.cpu);
-                blockParser.setParameter('System requirements', 'minCPU2', reqs.minimum.cpu2);
-                blockParser.setParameter('System requirements', 'minRAM', reqs.minimum.ram);
-                blockParser.setParameter('System requirements', 'minHD', reqs.minimum.hdd);
-                blockParser.setParameter('System requirements', 'minGPU', reqs.minimum.gpu);
-                blockParser.setParameter('System requirements', 'minGPU2', reqs.minimum.gpu2);
-                blockParser.setParameter('System requirements', 'minGPU3', reqs.minimum.gpu3);
-                blockParser.setParameter('System requirements', 'minVRAM', reqs.minimum.vram);
-                blockParser.setParameter('System requirements', 'minOGL', reqs.minimum.ogl);
-                blockParser.setParameter('System requirements', 'minDX', reqs.minimum.dx);
-                blockParser.setParameter('System requirements', 'minSM', reqs.minimum.sm);
-                blockParser.setParameter('System requirements', 'minaudio', reqs.minimum.audio);
-                blockParser.setParameter('System requirements', 'mincont', reqs.minimum.cont);
-                blockParser.setParameter('System requirements', 'minother', reqs.minimum.other);
+            // Strictly reconstruct the section with perfectly ordered parameters
+            if (!hasData()) {
+                // If completely empty now, remove the template
+                this.parser = new WikitextParser(
+                    wikitext.substring(0, tempStart) + wikitext.substring(tempEnd)
+                );
+            } else {
+                const newTemplate = `{{System requirements${buildParams()}}}`;
+                this.parser = new WikitextParser(
+                    wikitext.substring(0, tempStart) + newTemplate + wikitext.substring(tempEnd)
+                );
             }
-            if (reqs.recommended) {
-                blockParser.setParameter('System requirements', 'recTGT', reqs.recommended.target);
-                blockParser.setParameter('System requirements', 'recOS', reqs.recommended.os);
-                blockParser.setParameter('System requirements', 'recCPU', reqs.recommended.cpu);
-                blockParser.setParameter('System requirements', 'recCPU2', reqs.recommended.cpu2);
-                blockParser.setParameter('System requirements', 'recRAM', reqs.recommended.ram);
-                blockParser.setParameter('System requirements', 'recHD', reqs.recommended.hdd);
-                blockParser.setParameter('System requirements', 'recGPU', reqs.recommended.gpu);
-                blockParser.setParameter('System requirements', 'recGPU2', reqs.recommended.gpu2);
-                blockParser.setParameter('System requirements', 'recGPU3', reqs.recommended.gpu3);
-                blockParser.setParameter('System requirements', 'recVRAM', reqs.recommended.vram);
-                blockParser.setParameter('System requirements', 'recOGL', reqs.recommended.ogl);
-                blockParser.setParameter('System requirements', 'recDX', reqs.recommended.dx);
-                blockParser.setParameter('System requirements', 'recSM', reqs.recommended.sm);
-                blockParser.setParameter('System requirements', 'recaudio', reqs.recommended.audio);
-                blockParser.setParameter('System requirements', 'reccont', reqs.recommended.cont);
-                blockParser.setParameter('System requirements', 'recother', reqs.recommended.other);
-            }
-
-            const updateAlt = (prefix: string, spec: any) => {
-                blockParser.setParameter('System requirements', `${prefix}Title`, spec.title);
-                blockParser.setParameter('System requirements', `${prefix}TGT`, spec.target);
-                blockParser.setParameter('System requirements', `${prefix}OS`, spec.os);
-                blockParser.setParameter('System requirements', `${prefix}CPU`, spec.cpu);
-                blockParser.setParameter('System requirements', `${prefix}CPU2`, spec.cpu2);
-                blockParser.setParameter('System requirements', `${prefix}RAM`, spec.ram);
-                blockParser.setParameter('System requirements', `${prefix}HD`, spec.hdd);
-                blockParser.setParameter('System requirements', `${prefix}GPU`, spec.gpu);
-                blockParser.setParameter('System requirements', `${prefix}GPU2`, spec.gpu2);
-                blockParser.setParameter('System requirements', `${prefix}GPU3`, spec.gpu3);
-                blockParser.setParameter('System requirements', `${prefix}VRAM`, spec.vram);
-                blockParser.setParameter('System requirements', `${prefix}OGL`, spec.ogl);
-                blockParser.setParameter('System requirements', `${prefix}DX`, spec.dx);
-                blockParser.setParameter('System requirements', `${prefix}SM`, spec.sm);
-                blockParser.setParameter('System requirements', `${prefix}audio`, spec.audio);
-                blockParser.setParameter('System requirements', `${prefix}cont`, spec.cont);
-                blockParser.setParameter('System requirements', `${prefix}other`, spec.other);
-            };
-
-            if (reqs.alt1) updateAlt('alt1', reqs.alt1);
-            if (reqs.alt2) updateAlt('alt2', reqs.alt2);
-
-            if (reqs.notes) {
-                blockParser.setParameter('System requirements', 'notes', reqs.notes);
-            }
-
-            this.parser = new WikitextParser(
-                wikitext.substring(0, tempStart) + blockParser.getText() + wikitext.substring(tempEnd)
-            );
         };
 
         updateOSReq('Windows', data.windows);

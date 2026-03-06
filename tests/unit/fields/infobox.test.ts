@@ -106,6 +106,20 @@ describe('Field Group: Infobox', () => {
             expect(writer.getText()).toContain('{{Infobox game/row/engine|Unity|build=2022}}');
         });
 
+        it('should write engines with name strictly before build', () => {
+            const data = getCleanData();
+            data.infobox.engines = [{
+                build: 'v1.4',
+                name: 'CustomEngine',
+                type: 'engine'
+            }];
+            const writer = new PCGWEditor('');
+            writer.updateInfobox(data.infobox);
+            const text = writer.getText();
+            expect(text).toContain('{{Infobox game/row/engine|CustomEngine|build=v1.4}}');
+            expect(text).not.toContain('{{Infobox game/row/engine|build=v1.4|CustomEngine}}');
+        });
+
         it('should write engines with all params (Used For, name, build, ref)', () => {
             const data = getCleanData();
             data.infobox.engines = [{
@@ -242,6 +256,17 @@ describe('Field Group: Infobox', () => {
                 writer.updateInfobox(data.infobox);
                 expect(writer.getText()).toContain(`|${param} = ${testVal}`);
             });
+        });
+
+        it('should correctly remove vndb when empty', async () => {
+            const data = getCleanData();
+            // User intentionally leaves it blank
+            data.infobox.links.vndb = '';
+            // Existing text has the parameter
+            const writer = new PCGWEditor('{{Infobox game\n|vndb = v999\n}}');
+            writer.updateInfobox(data.infobox);
+            const text = writer.getText();
+            expect(text).not.toContain('|vndb');
         });
     });
 });

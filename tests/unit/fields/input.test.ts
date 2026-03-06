@@ -123,5 +123,15 @@ describe('Field Group: Input', () => {
                 expect(output).toContain(`|${template} notes = Note for ${template}`);
             }
         });
+
+        it('should enforce Wired as the first connection mode sequentially', () => {
+            const data = getCleanData();
+            // @ts-ignore
+            data.input.playstationConnectionModes = 'Bluetooth, Wired, USB';
+            const editor = new PCGWEditor('{{Input}}\n');
+            editor.updateInput(data.input as any);
+            const output = editor.getText();
+            expect(output).toMatch(/\|playstation connection modes\s*=\s*Wired,\s*Bluetooth,\s*USB/);
+        });
     });
 });
