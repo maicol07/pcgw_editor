@@ -23,6 +23,9 @@ Developing this editor was an exercise in *Vibecoding*—a synergy between human
 
 This is what happens when you code at the speed of thought.
 
+> [!NOTE]
+> **Human-in-the-Loop**: Every AI-generated contribution is carefully reviewed and validated by the project maintainer to ensure quality and consistency.
+
 ---
 
 ## 🚀 Key Features
