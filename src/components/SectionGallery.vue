@@ -6,7 +6,7 @@ import { VueDraggable } from 'vue-draggable-plus';
 import Dialog from 'primevue/dialog';
 import Textarea from 'primevue/textarea';
 import InputText from 'primevue/inputtext';
-import { Images, Plus, Image, ExternalLink, Pencil, Trash2, PanelRight, Grid } from 'lucide-vue-next';
+import { Images, Plus, Image, ExternalLink, Pencil, Trash2, PanelRight, Grid, GripHorizontal } from 'lucide-vue-next';
 import { pcgwApi } from '../services/pcgwApi';
 import type { GalleryImage } from '../models/GameData';
 
@@ -140,6 +140,11 @@ watchEffect(() => {
                 <div v-for="(element, index) in displayImages"
                     :key="typeof element === 'string' ? element : element.name"
                     class="border border-surface-200 dark:border-surface-700 rounded p-3 bg-surface-0 dark:bg-surface-800 relative group flex flex-col h-full cursor-move hover:shadow-md transition-shadow">
+                    <!-- Drag handle visual indicator -->
+                    <div
+                        class="flex justify-center mb-2 text-surface-300 dark:text-surface-600 group-hover:text-surface-500 dark:group-hover:text-surface-400 transition-colors">
+                        <GripHorizontal class="w-5 h-5" />
+                    </div>
                     <div
                         class="relative flex-1 flex items-center justify-center p-2 rounded bg-surface-100 dark:bg-surface-900 overflow-hidden min-h-[150px]">
                         <img v-if="resolvedUrls[element.name]" :src="resolvedUrls[element.name]" :alt="element.name"
