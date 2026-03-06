@@ -142,19 +142,38 @@ const onFilter = async (event: { value?: string, query?: string }) => {
 </script>
 
 <template>
-    <!-- Multiple Selection Mode -->
-    <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
-        :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
-        class="w-full" :display="display" :showToggleAll="false" />
+    <div class="min-w-0">
+        <!-- Multiple Selection Mode -->
+        <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
+            :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
+            class="w-full" :display="display" :showToggleAll="false" />
 
-    <!-- Single Selection Mode -->
-    <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading" :placeholder="placeholder"
-        :dropdown="false" :forceSelection="false" completeOnFocus class="w-full" @complete="onFilter" />
+        <!-- Single Selection Mode -->
+        <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading"
+            :placeholder="placeholder" :dropdown="false" :forceSelection="false" completeOnFocus class="w-full"
+            @complete="onFilter" />
+    </div>
 </template>
 
 <style scoped>
-/* Ensure multiselect fills width */
+/* Ensure multiselect fills width and adapts vertically */
 :deep(.p-multiselect) {
     width: 100%;
+    /* Override fixed heights from global styles for this specific component to allow vertical expansion */
+    height: auto !important;
+    min-height: 2rem;
+}
+
+/* Allow chips to wrap onto new lines instead of expanding horizontally */
+:deep(.p-multiselect-label) {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    overflow: hidden;
+    /* Prevent horizontal scrollbars if any */
+}
+
+/* Adjust compact mode minimum height if needed */
+:global(.compact-mode) :deep(.p-multiselect) {
+    min-height: 1.6rem;
 }
 </style>
