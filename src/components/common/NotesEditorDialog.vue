@@ -75,6 +75,10 @@ const addReference = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wl
     }
 };
 
+const removeReference = (index: number) => {
+    references.value.splice(index, 1);
+};
+
 import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
 
@@ -92,7 +96,7 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
 
 <template>
     <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)"
-        :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal
+        :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal :draggable="false"
         :class="type === 'note' ? 'w-full max-w-6xl' : 'w-full max-w-2xl'">
         <div class="flex flex-col gap-4">
 

@@ -422,7 +422,7 @@ defineExpose({
                             <div
                                 class="flex items-center lg:border-l border-surface-200 dark:border-surface-700 lg:pl-2 ml-auto">
                                 <button type="button" v-tooltip.top="'Source Mode'"
-                                    class="custom-action-btn !text-primary-500 hover:!bg-primary-50 dark:hover:!bg-primary-900/20"
+                                    class="custom-action-btn text-primary-500! hover:bg-primary-50! dark:hover:bg-primary-900/20!"
                                     @click="showSource = !showSource">
                                     <Code class="w-4 h-4" />
                                 </button>
@@ -439,7 +439,7 @@ defineExpose({
                     class="flex items-center justify-between bg-surface-50 dark:bg-surface-800 p-2 border-b border-surface-200 dark:border-surface-700">
                     <span class="text-xs font-semibold text-surface-600 dark:text-surface-300 ml-2">Wikitext Source
                         Editor</span>
-                    <button type="button" v-tooltip.left="'Exit Source Mode'" class="custom-action-btn !ml-auto"
+                    <button type="button" v-tooltip.left="'Exit Source Mode'" class="custom-action-btn ml-auto!"
                         @click="showSource = false">
                         <X class="w-4 h-4" />
                     </button>
@@ -489,7 +489,7 @@ defineExpose({
     </div>
 
     <!-- Sub-dialog for Notes References insertion -->
-    <Dialog v-model:visible="showRefParamDialog" :header="'Insert ' + currentRefType" modal class="w-full max-w-md">
+    <Dialog v-model:visible="showRefParamDialog" :header="'Insert ' + currentRefType" modal class="w-full max-w-md" :draggable="false">
         <div class="flex flex-col gap-3">
             <div v-if="currentRefType === 'Refcheck'" class="flex flex-col gap-2">
                 <InputGroup>
@@ -569,7 +569,7 @@ defineExpose({
                     <InputText v-model="tempRefParams.template" />
                 </InputGroup>
             </div>
-            <div class="flex justify-end gap-2 mt-4 inline-flex w-full">
+            <div class="flex justify-end gap-2 mt-4 w-full">
                 <Button label="Cancel" text @click="showRefParamDialog = false" class="ml-auto" />
                 <Button label="Insert" @click="insertReference" />
             </div>
@@ -577,7 +577,7 @@ defineExpose({
     </Dialog>
 
     <!-- Sub-dialog for Fixbox insertion -->
-    <Dialog v-model:visible="showFixboxDialog" header="Insert Fixbox" modal class="w-full max-w-lg">
+    <Dialog v-model:visible="showFixboxDialog" header="Insert Fixbox" modal class="w-full max-w-lg" :draggable="false">
         <div class="flex flex-col gap-4">
             <InputGroup>
                 <InputGroupAddon>Name/Description</InputGroupAddon>
@@ -604,7 +604,7 @@ defineExpose({
                     class="w-full" />
             </div>
 
-            <div class="flex justify-end gap-2 mt-4 inline-flex w-full">
+            <div class="flex justify-end gap-2 mt-4 w-full">
                 <Button label="Cancel" text @click="showFixboxDialog = false" class="ml-auto" />
                 <Button :label="editingFixboxWikitext ? 'Update Fixbox' : 'Insert Fixbox'" @click="insertFixbox" />
             </div>

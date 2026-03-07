@@ -32,7 +32,7 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
 <template>
     <!-- Gemini API Key Settings Dialog -->
     <Dialog :visible="showApiKeyDialog" @update:visible="emit('update:showApiKeyDialog', $event)" modal
-        :style="{ width: '35rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+        :style="{ width: '35rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" :draggable="false">
         <template #header>
             <div class="flex items-center gap-2">
                 <Key class="text-primary-500 w-5 h-5" />
@@ -63,7 +63,7 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
 
             <div class="flex flex-col gap-2">
                 <label class="font-medium text-sm">API Key</label>
-                <InputText :modelValue="tempApiKey" @update:modelValue="emit('update:tempApiKey', $event)"
+                <InputText :modelValue="tempApiKey" @update:modelValue="emit('update:tempApiKey', $event ?? '')"
                     type="password" placeholder="Enter your Gemini API key..." class="w-full"
                     @keydown="handleApiKeyKeydown" />
             </div>
@@ -90,7 +90,7 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
 
     <!-- Share Summary Dialog -->
     <Dialog :visible="shareSummaryVisible" @update:visible="emit('update:shareSummaryVisible', $event)" modal
-        :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+        :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" :draggable="false">
         <template #header>
             <div class="flex items-center gap-2">
                 <Sparkles class="text-primary-500 w-5 h-5" />
@@ -105,7 +105,7 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
                 </p>
                 <Button v-if="geminiApiKey" text @click="emit('openApiKeyDialog')" severity="secondary">
                     <template #icon>
-                        <Settings class="!w-5 !h-5" />
+                        <Settings class="w-5! h-5!" />
                     </template>
                 </Button>
             </div>

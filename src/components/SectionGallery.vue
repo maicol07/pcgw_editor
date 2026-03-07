@@ -204,7 +204,7 @@ watchEffect(() => {
         </div>
 
         <!-- Caption Dialog -->
-        <Dialog v-model:visible="showCaptionDialog" header="Edit Caption" modal :style="{ width: '400px' }">
+        <Dialog v-model:visible="showCaptionDialog" header="Edit Caption" modal :style="{ width: '400px' }" :draggable="false">
             <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-sm">Image</label>

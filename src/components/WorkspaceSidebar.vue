@@ -434,7 +434,7 @@ defineExpose({ openLinkDialog });
         </div>
     </Drawer>
 
-    <Dialog v-model:visible="isLinkDialogVisible" header="Link to PCGW Page" :style="{ width: '400px' }" modal>
+    <Dialog v-model:visible="isLinkDialogVisible" header="Link to PCGW Page" :style="{ width: '400px' }" modal :draggable="false">
         <div class="flex flex-col gap-4 py-4">
             <div class="flex flex-col gap-2">
                 <label class="font-bold">Search PCGW Page</label>
@@ -459,7 +459,7 @@ defineExpose({ openLinkDialog });
     </Dialog>
 
     <!-- New Page Dialog -->
-    <Dialog v-model:visible="isNewPageDialogVisible" header="Create New Page" :style="{ width: '400px' }" modal>
+    <Dialog v-model:visible="isNewPageDialogVisible" header="Create New Page" :style="{ width: '400px' }" modal :draggable="false">
         <div class="flex flex-col gap-4 py-4">
             <div class="flex flex-col gap-2">
                 <label for="pageTemplate" class="font-bold">Source / Template</label>

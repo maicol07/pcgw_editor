@@ -82,7 +82,7 @@ const shikiHighlighter = async (text: string) => {
 
 <template>
     <Dialog v-model:visible="visibleState" :header="`Update Page: ${pageTitle || 'Unknown'}`"
-        :style="{ width: '95vw', maxWidth: '1600px' }" modal :closable="false">
+        :style="{ width: '95vw', maxWidth: '1600px' }" modal :closable="false" :draggable="false">
         <div class="flex flex-col gap-4 h-[80vh]">
             <Tabs value="0" class="flex flex-col h-full">
                 <TabList>

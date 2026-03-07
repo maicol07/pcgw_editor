@@ -55,7 +55,7 @@ const saveSettings = () => {
 
 <template>
     <Dialog v-model:visible="uiStore.isSettingsOpen" modal header="App Settings" :style="{ width: '450px' }"
-        class="p-fluid glass">
+        :draggable="false" class="p-fluid glass">
         <template #header>
             <div class="flex items-center gap-2">
                 <Palette class="w-5 h-5 text-primary-500" />
