@@ -2,6 +2,8 @@ import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
+import Ripple from 'primevue/ripple';
+import ToastService from 'primevue/toastservice';
 import './style.css';
 import './styles/preview/index.scss';
 import './styles/preview/_icons.scss';
@@ -55,77 +57,9 @@ const MyPreset = definePreset(Aura, {
         }
     },
     components: {
-        panel: {
-            root: {
-                borderRadius: '0.75rem'
-            },
-            content: {
-                padding: '0.5rem'
-            },
-            header: {
-                padding: '0.375rem 0.625rem',
-                borderRadius: '0.75rem 0.75rem 0 0'
-            }
-        },
-        accordion: {
-            panel: {
-                header: {
-                    padding: '0.5rem 0.75rem'
-                }
-            },
-            content: {
-                padding: '0.5rem 0.75rem'
-            }
-        },
-        button: {
-            root: {
-                borderRadius: '0.625rem',
-                padding: {
-                    x: '0.625rem',
-                    y: '0.313rem'
-                }
-            },
-            sm: {
-                fontSize: '0.75rem',
-                padding: {
-                    x: '0.5rem',
-                    y: '0.25rem'
-                }
-            }
-        },
-        inputtext: {
-            root: {
-                borderRadius: '0.625rem',
-                fontSize: '0.875rem'
-            }
-        },
-        select: {
-            root: {
-                borderRadius: '0.625rem'
-            }
-        },
-        textarea: {
-            root: {
-                borderRadius: '0.625rem'
-            }
-        },
-        splitter: {
-            root: {
-                borderRadius: '0'
-            },
-            gutter: {
-                width: '6px',
-                background: 'transparent'
-            }
-        },
         toolbar: {
             root: {
                 padding: '0.375rem 0.625rem',
-                gap: '0.5rem'
-            }
-        },
-        iconfield: {
-            root: {
                 gap: '0.5rem'
             }
         }
@@ -134,6 +68,7 @@ const MyPreset = definePreset(Aura, {
 
 app.use(pinia);
 app.use(PrimeVue, {
+    ripple: true,
     theme: {
         preset: MyPreset,
         options: {
@@ -141,6 +76,7 @@ app.use(PrimeVue, {
         }
     }
 });
+app.use(ToastService);
 
 import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
@@ -148,5 +84,6 @@ app.component('Checkbox', Checkbox);
 app.component('Select', Select);
 
 app.directive('tooltip', Tooltip);
+app.directive('ripple', Ripple);
 
 app.mount('#app');

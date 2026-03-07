@@ -7,7 +7,7 @@ import { computed, ref } from 'vue';
 import {
     Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle,
     Search, Filter, ArrowUpDown, Clock, Calendar, Hash,
-    File, FilePenLine, User, Users, Link,
+    File, FilePenLine, User, Users, Link, Unlink,
     Layout, SortAsc, SortDesc
 } from 'lucide-vue-next';
 import Dialog from 'primevue/dialog';
@@ -29,6 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'update:visible', value: boolean): void;
+
 }>();
 
 const visibleState = computed({
@@ -46,8 +47,8 @@ const importSearch = ref('');
 const importError = ref('');
 
 const importSourceOptions = [
-    { label: 'URL', value: 'url' },
-    { label: 'Search', value: 'search' }
+    { label: 'URL', value: 'url', icon: Link },
+    { label: 'Search', value: 'search', icon: Search }
 ];
 
 // Filtering & Sorting
@@ -138,13 +139,15 @@ const createNewPage = async () => {
                 pageTitleToFetch = importSearch.value;
             }
 
-            const fetchedWikitext = await pcgwApi.fetchWikitext(pageTitleToFetch);
-            if (!fetchedWikitext) {
+            const result = await pcgwApi.fetchWikitext(pageTitleToFetch);
+            if (!result) {
                 importError.value = 'Failed to fetch page content. Please check the title/URL.';
                 return;
             }
-            wikitext = fetchedWikitext;
+            wikitext = result.content;
+            const revid = result.revid;
             title = pageTitleToFetch;
+            store.createPage(title, wikitext, newPageTemplate.value as any, title, revid);
         } else if (newPageTemplate.value !== 'blank') {
             const templateType = newPageTemplate.value as 'singleplayer' | 'multiplayer' | 'unknown';
             const templateWikitext = await pcgwApi.fetchTemplateWikitext(templateType);
@@ -153,9 +156,10 @@ const createNewPage = async () => {
             } else {
                 alert('Failed to load template. Falling back to blank page.');
             }
+            store.createPage(title, wikitext, newPageTemplate.value as any, undefined);
+        } else {
+            store.createPage(title, wikitext, newPageTemplate.value as any, undefined);
         }
-
-        store.createPage(title, wikitext, newPageTemplate.value as any);
         isNewPageDialogVisible.value = false;
         visibleState.value = false;
     } catch (error) {
@@ -173,9 +177,7 @@ const onImportSelect = (event: any) => {
     }
 };
 
-const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleString();
-};
+
 
 const customRename = (page: any) => {
     const newName = prompt("Enter new name:", page.title);
@@ -184,8 +186,39 @@ const customRename = (page: any) => {
     }
 }
 
+const isLinkDialogVisible = ref(false);
+const linkPageId = ref('');
+const linkSearch = ref('');
+const isLinkingPage = ref(false);
+
+const openLinkDialog = (page: any) => {
+    linkPageId.value = page.id;
+    linkSearch.value = page.pcgwPageTitle || page.title;
+    isLinkDialogVisible.value = true;
+};
+
+const submitLinkPage = async () => {
+    if (linkSearch.value && linkPageId.value) {
+        isLinkingPage.value = true;
+        try {
+            const info = await pcgwApi.getLatestRevisionInfo(linkSearch.value);
+            store.linkPage(linkPageId.value, linkSearch.value, info?.revid);
+            isLinkDialogVisible.value = false;
+        } catch (e) {
+            console.error('Failed to link page:', e);
+            alert('Failed to link page. Check the title.');
+        } finally {
+            isLinkingPage.value = false;
+        }
+    }
+};
+
+
+
 const appVersion = __APP_VERSION__;
 const commitHash = __COMMIT_HASH__;
+
+defineExpose({ openLinkDialog });
 </script>
 
 <style scoped>
@@ -236,7 +269,7 @@ const commitHash = __COMMIT_HASH__;
                                 <component :is="filterOptions.find(o => o.value === slotProps.value)?.icon || Filter"
                                     class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
                                 <span class="truncate">{{filterOptions.find(o => o.value === slotProps.value)?.label
-                                }}</span>
+                                    }}</span>
                             </div>
                         </template>
                         <template #option="slotProps">
@@ -254,7 +287,7 @@ const commitHash = __COMMIT_HASH__;
                                 <component :is="sortOptions.find(o => o.value === slotProps.value)?.icon || ArrowUpDown"
                                     class="w-4! h-4! text-surface-400 mr-2 shrink-0" />
                                 <span class="truncate">{{sortOptions.find(o => o.value === slotProps.value)?.label
-                                }}</span>
+                                    }}</span>
                             </div>
                             <span v-else>{{ slotProps.placeholder }}</span>
                         </template>
@@ -280,6 +313,8 @@ const commitHash = __COMMIT_HASH__;
                                 ? 'bg-primary-50/70 dark:bg-primary-950/30 border-primary-500/50 ring-1 ring-primary-500/20 shadow-[0_0_15px_-3px_rgba(168,85,247,0.2)] dark:shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)] pl-4!'
                                 : 'bg-surface-0 dark:bg-surface-900 border-surface-200 dark:border-surface-800 hover:border-primary-400/50 dark:hover:border-primary-500/50 hover:bg-surface-50/50 dark:hover:bg-surface-800/50'
                         ]" @click="store.setActivePage(page.id)">
+
+
                         <!-- Active Indicator -->
                         <div v-if="page.id === store.activePageId"
                             class="absolute top-1/2 -translate-y-1/2 left-0 w-1.5 h-8 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(168,85,247,0.5)]">
@@ -301,12 +336,37 @@ const commitHash = __COMMIT_HASH__;
                                         <Clock class="w-2.5 h-2.5 mr-1" />
                                         {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
                                     </div>
+                                    <div v-if="page.pcgwPageTitle" title="Linked to PCGW"
+                                        class="flex items-center text-[10px] text-primary-500 font-medium ml-1">
+                                        <Link class="w-3 h-3" />
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Floating Actions -->
                             <div
                                 class="absolute top-2 right-2 flex gap-1 transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+                                <template v-if="page.pcgwPageTitle">
+
+                                    <Button severity="secondary" variant="text" size="small"
+                                        v-tooltip.top="'Unlink PCGW Page'"
+                                        class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
+                                        @click.stop="store.unlinkPage(page.id)">
+                                        <template #icon>
+                                            <Unlink class="w-4! h-4!" />
+                                        </template>
+                                    </Button>
+                                </template>
+                                <template v-else>
+                                    <Button severity="secondary" variant="text" size="small"
+                                        v-tooltip.top="'Link to PCGW Page'"
+                                        class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
+                                        @click.stop="openLinkDialog(page)">
+                                        <template #icon>
+                                            <Link class="w-4! h-4!" />
+                                        </template>
+                                    </Button>
+                                </template>
                                 <Button icon="pi pi-download" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Export JSON'"
                                     class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
@@ -373,6 +433,30 @@ const commitHash = __COMMIT_HASH__;
             </div>
         </div>
     </Drawer>
+
+    <Dialog v-model:visible="isLinkDialogVisible" header="Link to PCGW Page" :style="{ width: '400px' }" modal>
+        <div class="flex flex-col gap-4 py-4">
+            <div class="flex flex-col gap-2">
+                <label class="font-bold">Search PCGW Page</label>
+                <IconField>
+                    <InputIcon>
+                        <Search class="w-4 h-4" />
+                    </InputIcon>
+                    <AutocompleteField v-model="linkSearch" dataSource="pages" :multiple="false"
+                        placeholder="Type game title..." class="w-full" />
+                </IconField>
+            </div>
+        </div>
+        <template #footer>
+            <Button label="Cancel" text severity="secondary" @click="isLinkDialogVisible = false"
+                :disabled="isLinkingPage" />
+            <Button label="Link" @click="submitLinkPage" :disabled="!linkSearch || isLinkingPage">
+                <template #icon v-if="isLinkingPage">
+                    <Loader2 class="w-4 h-4 animate-spin mr-2" />
+                </template>
+            </Button>
+        </template>
+    </Dialog>
 
     <!-- New Page Dialog -->
     <Dialog v-model:visible="isNewPageDialogVisible" header="Create New Page" :style="{ width: '400px' }" modal>

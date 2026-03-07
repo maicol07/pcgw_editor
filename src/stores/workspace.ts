@@ -4,6 +4,7 @@ import { initialGameData, GameData } from '../models/GameData';
 import { computed, ref, watch } from 'vue';
 import { generateWikitext } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
+import { pcgwApi } from '../services/pcgwApi';
 
 export interface Page {
     id: string;
@@ -12,6 +13,9 @@ export interface Page {
     baseWikitext: string;
     lastModified: number;
     template?: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown';
+    pcgwPageTitle?: string;
+    localRevisionId?: number;
+    onlineRevisionId?: number; // Latest known revision ID on the server
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
@@ -78,10 +82,18 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
-    async function syncFromWikitext(newWikitext?: string) {
+    async function syncFromWikitext(newWikitext?: string, revid?: number) {
         if (activePage.value) {
             if (newWikitext !== undefined) {
                 activePage.value.wikitext = newWikitext;
+            }
+            if (revid !== undefined) {
+                activePage.value.localRevisionId = revid;
+                // If we synced to this revision, then the online revision is at least this.
+                // We reset onlineRevisionId if it was equal or less.
+                if (!activePage.value.onlineRevisionId || activePage.value.onlineRevisionId <= revid) {
+                    activePage.value.onlineRevisionId = revid;
+                }
             }
             try {
                 // Update baseWikitext to the current wikitext before parsing.
@@ -96,8 +108,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
+    async function checkForUpdates(pageId: string): Promise<boolean> {
+        const page = pages.value.find(p => p.id === pageId);
+        if (!page || !page.pcgwPageTitle) return false;
+
+        const info = await pcgwApi.getLatestRevisionInfo(page.pcgwPageTitle);
+        if (info) {
+            page.onlineRevisionId = info.revid;
+            return !!(page.onlineRevisionId && (!page.localRevisionId || page.onlineRevisionId > page.localRevisionId));
+        }
+        return false;
+    }
+
     // Actions
-    function createPage(title: string = 'Untitled Page', initialWikitext?: string, template: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown' = 'blank') {
+    function createPage(title: string = 'Untitled Page', initialWikitext?: string, template: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown' = 'blank', pcgwPageTitle?: string, revid?: number) {
         let wikitext = initialWikitext;
         if (wikitext === undefined) {
             wikitext = generateWikitext(initialGameData, '');
@@ -110,7 +134,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             wikitext,
             baseWikitext: initialWikitext || '',
             lastModified: Date.now(),
-            template
+            template,
+            pcgwPageTitle,
+            localRevisionId: revid,
+            onlineRevisionId: revid
         };
         // Re-assign the array to ensure VirtualScroller reactivity triggers properly
         pages.value = [...pages.value, newPage];
@@ -142,6 +169,26 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
+    function linkPage(id: string, pcgwTitle: string, revid?: number) {
+        const page = pages.value.find(p => p.id === id);
+        if (page) {
+            page.pcgwPageTitle = pcgwTitle;
+            if (revid !== undefined) {
+                page.localRevisionId = revid;
+                page.onlineRevisionId = revid;
+            }
+            page.lastModified = Date.now();
+        }
+    }
+
+    function unlinkPage(id: string) {
+        const page = pages.value.find(p => p.id === id);
+        if (page) {
+            page.pcgwPageTitle = undefined;
+            page.lastModified = Date.now();
+        }
+    }
+
     function importPage(file: File) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -159,7 +206,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
                         title: importedData.title + ' (Imported)',
                         wikitext: importedData.wikitext || '',
                         baseWikitext: importedData.baseWikitext || '',
-                        lastModified: Date.now()
+                        lastModified: Date.now(),
+                        pcgwPageTitle: importedData.pcgwPageTitle
                     };
                 }
                 // Backward compatibility: old format with data
@@ -170,7 +218,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
                         title: importedData.title + ' (Imported)',
                         wikitext: wikitext,
                         baseWikitext: '',
-                        lastModified: Date.now()
+                        lastModified: Date.now(),
+                        pcgwPageTitle: importedData.pcgwPageTitle
                     };
                 } else {
                     throw new Error('Invalid format');
@@ -194,6 +243,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             title: page.title,
             wikitext: page.wikitext,
             baseWikitext: page.baseWikitext,
+            pcgwPageTitle: page.pcgwPageTitle,
             version: '2.0'
         };
 
@@ -222,9 +272,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         deletePage,
         setActivePage,
         renamePage,
+        linkPage,
+        unlinkPage,
         importPage,
         exportPage,
         syncToWikitext,
-        syncFromWikitext
+        syncFromWikitext,
+        checkForUpdates
     };
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, onMounted, ref, defineAsyncComponent } from 'vue';
+import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent } from 'vue';
 import { useWorkspaceStore } from './stores/workspace';
 import { useUiStore } from './stores/ui';
 import { fieldsConfig } from './config/fields';
@@ -18,12 +18,15 @@ import SplitterPanel from 'primevue/splitterpanel';
 import ModernPanel from './components/common/ModernPanel.vue';
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
 import EditorToolbar from './components/editor/EditorToolbar.vue';
+import Toast from 'primevue/toast';
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
 import GeminiDialogs from './features/ai/GeminiDialogs.vue';
 import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import DynamicSection from './components/schema/DynamicSection.vue';
+import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
+import { pcgwApi } from './services/pcgwApi';
 
 // Icons
 import {
@@ -86,6 +89,36 @@ const {
     generateShareSummary, copyShareSummary
 } = useGeminiSummary(pageTitle, gameData, geminiApiKey);
 
+// --- Diff Merger Logic ---
+const isDiffMergerVisible = ref(false);
+const diffMergerLocalWikitext = ref('');
+const diffMergerOnlineWikitext = ref('');
+const diffMergerOnlineRevid = ref<number | undefined>();
+const diffMergerPageTitle = ref('');
+const workspaceSidebarRef = ref();
+
+const handleUpdateFromPcgw = async (page: any) => {
+    if (!page.pcgwPageTitle) return;
+
+    // Fetch online wikitext
+    const result = await pcgwApi.fetchWikitext(page.pcgwPageTitle);
+    if (!result) {
+        alert('Failed to fetch online page content from PCGW.');
+        return;
+    }
+
+    diffMergerLocalWikitext.value = page.wikitext;
+    diffMergerOnlineWikitext.value = result.content;
+    diffMergerOnlineRevid.value = result.revid;
+    diffMergerPageTitle.value = page.pcgwPageTitle;
+    isDiffMergerVisible.value = true;
+};
+
+const handleDiffMerge = async (mergedText: string) => {
+    // Save to store
+    await workspaceStore.syncFromWikitext(mergedText, diffMergerOnlineRevid.value);
+};
+
 // --- Schema Helpers ---
 const getSchema = (id: string) => computed(() => fieldsConfig.find(s => s.id === id));
 
@@ -124,6 +157,7 @@ const updateGameData = (path: string, value: any) => {
 
 onMounted(() => {
     setTimeout(() => { uiStore.isInitialLoad = false; }, 100);
+    pcgwApi.prewarmCache().catch(console.warn);
 
     const handleGlobalKeydown = (e: KeyboardEvent) => {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
@@ -139,6 +173,27 @@ onMounted(() => {
     };
 
     window.addEventListener('keydown', handleGlobalKeydown);
+
+    // Initial check for updates for all pages
+    const updateChecks = workspaceStore.pages.map(p => {
+        if (p.pcgwPageTitle) return workspaceStore.checkForUpdates(p.id);
+        return Promise.resolve();
+    });
+    Promise.all(updateChecks).catch(console.warn);
+
+    // Periodic check every 5 minutes
+    const interval = setInterval(() => {
+        const checks = workspaceStore.pages.map(p => {
+            if (p.pcgwPageTitle) return workspaceStore.checkForUpdates(p.id);
+            return Promise.resolve();
+        });
+        Promise.all(checks).catch(console.warn);
+    }, 5 * 60 * 1000);
+
+    onUnmounted(() => {
+        clearInterval(interval);
+        window.removeEventListener('keydown', handleGlobalKeydown);
+    });
 });
 </script>
 
@@ -148,14 +203,17 @@ onMounted(() => {
             'comfortable-mode': uiStore.densityMode === 'comfortable',
             'compact-mode': uiStore.densityMode === 'compact'
         }">
-        <WorkspaceSidebar v-model:visible="uiStore.sidebarVisible" />
+        <Toast />
+        <WorkspaceSidebar ref="workspaceSidebarRef" v-model:visible="uiStore.sidebarVisible" />
 
         <Splitter style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern">
             <!-- Left Panel: Editor -->
             <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
                 <EditorToolbar :title="pageTitle" @update:title="pageTitle = $event" :editorMode="editorMode"
                     @update:editorMode="handleModeChange" :isGeneratingSummary="isGeneratingSummary"
-                    @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary" />
+                    @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary"
+                    @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage)"
+                    @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
 
                 <div
                     class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
@@ -441,6 +499,8 @@ onMounted(() => {
 
     <!-- Global Modals -->
     <AppSettings />
+    <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
+        :onlineWikitext="diffMergerOnlineWikitext" :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
 </template>
 
 <style>

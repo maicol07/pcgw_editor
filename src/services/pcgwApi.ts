@@ -260,20 +260,25 @@ class PCGWApiService {
     }
 
     async fetchTemplateWikitext(templateType: 'singleplayer' | 'multiplayer' | 'unknown'): Promise<string | null> {
-        return this.fetchWikitext(`PCGamingWiki:Sample_article/Game_(${templateType})`, `template:${templateType}`);
+        const result = await this.fetchWikitext(`PCGamingWiki:Sample_article/Game_(${templateType})`, `template:${templateType}`);
+        return result?.content || null;
     }
 
-    async fetchWikitext(title: string, cacheKeyBase?: string): Promise<string | null> {
+    async fetchWikitext(title: string, cacheKeyBase?: string): Promise<{ content: string; revid: number } | null> {
         const cacheKey = cacheKeyBase || `wikitext:${title}`;
         const cached = this.getFromCache(cacheKey);
-        if (cached && cached.length > 0) return cached[0];
+        // If cached and cache is a simple string array (old format), we might need to handle it.
+        // For simplicity, let's just clear cache or handle the new format.
+        if (cached && cached.length >= 2) {
+            return { content: cached[0], revid: parseInt(cached[1]) };
+        }
 
         try {
-            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { slots?: { main?: { '*'?: string } } }[] }> } }>({
+            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { revid: number, slots?: { main?: { '*'?: string } } }[] }> } }>({
                 action: 'query',
                 prop: 'revisions',
                 titles: title,
-                rvprop: 'content',
+                rvprop: 'content|ids',
                 rvslots: 'main',
             });
 
@@ -282,12 +287,35 @@ class PCGWApiService {
             const page = pages[0];
 
             const content = page?.revisions?.[0]?.slots?.main?.['*'];
-            if (!content) return null;
+            const revid = page?.revisions?.[0]?.revid;
+            if (content === undefined || revid === undefined) return null;
 
-            this.setCache(cacheKey, [content]);
-            return content;
+            this.setCache(cacheKey, [content, revid.toString()]);
+            return { content, revid };
         } catch (error) {
             console.error(`Failed to fetch wikitext for ${title}:`, error);
+            return null;
+        }
+    }
+
+    async getLatestRevisionInfo(title: string): Promise<{ revid: number } | null> {
+        try {
+            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { revid: number }[] }> } }>({
+                action: 'query',
+                prop: 'revisions',
+                titles: title,
+                rvprop: 'ids',
+                rvlimit: '1'
+            });
+
+            if (!result?.query?.pages) return null;
+            const pages = Object.values(result.query.pages);
+            const page = pages[0];
+            const revid = page?.revisions?.[0]?.revid;
+
+            return revid !== undefined ? { revid } : null;
+        } catch (error) {
+            console.error(`Failed to fetch revision info for ${title}:`, error);
             return null;
         }
     }
@@ -334,7 +362,3 @@ class PCGWApiService {
 }
 
 export const pcgwApi = new PCGWApiService();
-
-setTimeout(() => {
-    pcgwApi.prewarmCache().catch(console.warn);
-}, 2000);

@@ -8,14 +8,22 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
 import Toolbar from 'primevue/toolbar';
+import ToastService from 'primevue/toastservice';
+import Ripple from 'primevue/ripple';
 
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({
     Menu: { template: '<span class="menu-icon"></span>' },
     Wand2: { template: '<span class="wand-icon"></span>' },
     Loader2: { template: '<span class="loader-icon"></span>' },
-    ExternalLink: { template: '<span class="external-link-icon"></span>' },
-    Settings: { template: '<span class="settings-icon"></span>' }
+    Globe: { template: '<span class="globe-icon"></span>' },
+    FileClock: { template: '<span class="file-clock-icon"></span>' },
+    History: { template: '<span class="history-icon"></span>' },
+    Settings: { template: '<span class="settings-icon"></span>' },
+    RefreshCw: { template: '<span class="refresh-cw-icon"></span>' },
+    Unlink: { template: '<span class="unlink-icon"></span>' },
+    Link: { template: '<span class="link-icon"></span>' },
+    Search: { template: '<span class="search-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {
@@ -34,8 +42,11 @@ describe('EditorToolbar.vue', () => {
             wrapper: mount(EditorToolbar, {
                 props: { ...defaultProps, ...props },
                 global: {
-                    plugins: [pinia],
+                    plugins: [pinia, ToastService],
                     components: { Button, InputText, SelectButton, Toolbar },
+                    directives: {
+                        ripple: Ripple
+                    },
                     stubs: {
                         Toolbar: { template: '<div><slot name="start" /><slot name="end" /></div>' }
                     }
