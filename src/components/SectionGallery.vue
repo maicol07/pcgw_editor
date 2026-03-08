@@ -532,12 +532,18 @@ const handleSuggestionsUpdate = async (suggestions: string[]) => {
     const toFetch = suggestions.filter(name => !resolvedInfos[normalizeFilename(name)]);
     if (toFetch.length > 0) {
         const infos = await pcgwApi.getImagesInfo(toFetch);
-        // Normalize returned keys too
         Object.keys(infos).forEach(key => {
             resolvedInfos[normalizeFilename(key)] = infos[key];
         });
     }
 };
+
+defineExpose({
+    initiateDelete,
+    handleConfirmDelete,
+    existingDeletionReason,
+    pcgwDeletionReason
+});
 </script>
 
 <template>

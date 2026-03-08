@@ -12,18 +12,26 @@ import Button from 'primevue/button';
 import { ref } from 'vue';
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
-    Palette: { template: '<span class="palette-icon"></span>' },
-    Bot: { template: '<span class="bot-icon"></span>' },
-    Sun: { template: '<span class="sun-icon"></span>' },
-    Moon: { template: '<span class="moon-icon"></span>' },
-    Monitor: { template: '<span class="monitor-icon"></span>' },
-    Type: { template: '<span class="type-icon"></span>' },
-    Layout: { template: '<span class="layout-icon"></span>' },
-    Key: { template: '<span class="key-icon"></span>' },
-    AlignJustify: { template: '<span class="align-justify-icon"></span>' },
-    AlignLeft: { template: '<span class="align-left-icon"></span>' },
-    Menu: { template: '<span class="menu-icon"></span>' }
+vi.mock('lucide-vue-next', () => {
+    const icons = [
+        'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key', 
+        'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn', 
+        'Info', 'RotateCcw', 'ShieldAlert', 'Wrench', 'FileText', 'Puzzle', 'Keyboard',
+        'MessageSquareWarning', 'Link2', 'ListChecks'
+    ];
+    const mock: any = {};
+    icons.forEach(icon => {
+        mock[icon] = { template: `<span class="${icon.toLowerCase()}-icon"></span>` };
+    });
+    return mock;
+});
+
+// Mock PrimeVue useToast
+const mockToast = {
+    add: vi.fn()
+};
+vi.mock('primevue/usetoast', () => ({
+    useToast: () => mockToast
 }));
 
 describe('AppSettings.vue', () => {
@@ -102,11 +110,21 @@ describe('AppSettings.vue', () => {
         const inputText = wrapper.findComponent(InputText);
         await inputText.setValue('new-test-key');
 
-        // Find Done button
-        const doneButton = wrapper.findComponent(Button);
+        // Find Done button specifically by searching for its text
+        const buttons = wrapper.findAllComponents(Button);
+        const doneButton = buttons.find(b => b.text().includes('Done'));
+        if (!doneButton) throw new Error('Done button not found');
         await doneButton.trigger('click');
 
         expect(mockGeminiApiKey.value).toBe('new-test-key');
         expect(store.isSettingsOpen).toBe(false);
+    });
+
+    it('updates uiStore autoReLogin when toggle is clicked', async () => {
+        const { wrapper, store } = setupWrapper();
+        const toggle = wrapper.findComponent({ name: 'ToggleSwitch' });
+        
+        await toggle.vm.$emit('update:modelValue', true);
+        expect(store.autoReLogin).toBe(true);
     });
 });

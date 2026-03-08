@@ -127,7 +127,7 @@ class PCGWAuthService {
 
     async logout() {
         try {
-            await this.apiPost({ action: 'logout' });
+            await this.apiPost({ action: 'logout' }, 'POST', false);
         } catch (e) {
             console.error('Logout error:', e);
         }
