@@ -672,6 +672,7 @@ export interface GalleryImage {
     name: string;
     caption?: string;
     position?: 'lateral' | 'gallery';
+    localId?: number; // Linked to local file in Dexie
 }
 
 export interface Issue {

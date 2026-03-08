@@ -74,5 +74,17 @@ export default defineConfig({
                 categories: ['utilities', 'productivity']
             }
         })
-    ]
+    ],
+    server: {
+        proxy: {
+            '/pcgw-api': {
+                target: 'https://www.pcgamingwiki.com',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/pcgw-api/, '/w/api.php'),
+                headers: {
+                    'Origin': 'https://www.pcgamingwiki.com'
+                }
+            }
+        }
+    }
 })

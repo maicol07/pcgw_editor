@@ -357,6 +357,59 @@ body {
   line-height: 1.2 !important;
 }
 
+/* Gallery Comfortable Mode */
+.comfortable-mode .gallery-section {
+  padding: 0.75rem !important;
+  gap: 0.75rem !important;
+}
+
+.comfortable-mode .gallery-grid {
+  gap: 0.75rem !important;
+}
+
+.comfortable-mode .gallery-item {
+  padding: 0.5rem !important;
+}
+
+.comfortable-mode .gallery-image-container,
+.comfortable-mode .gallery-image-placeholder {
+  min-height: 120px !important;
+  height: 120px !important;
+}
+
+.comfortable-mode .gallery-image {
+  max-height: 120px !important;
+}
+
+.comfortable-mode .gallery-actions {
+  margin-top: 0.5rem !important;
+  gap: 0.25rem !important;
+}
+
+.comfortable-mode .local-files-area {
+  padding: 0.75rem !important;
+}
+
+.comfortable-mode .local-files-header {
+  margin-bottom: 0.75rem !important;
+}
+
+.comfortable-mode .local-files-list {
+  gap: 0.5rem !important;
+}
+
+.comfortable-mode .local-file-row {
+  padding: 0.4rem !important;
+  gap: 0.5rem !important;
+}
+
+.comfortable-mode .local-file-thumbnail {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+
+
 /* Compact Mode Overrides */
 .compact-mode {
   --spacing-main-section-gap: 0.75rem;
@@ -497,4 +550,68 @@ body {
   font-size: 0.75rem !important;
   margin-bottom: 0 !important;
   line-height: 1.1 !important;
+}
+
+/* Gallery Compact Mode */
+.compact-mode .gallery-section {
+  padding: 0.5rem !important;
+  gap: 0.5rem !important;
+}
+
+.compact-mode .gallery-grid {
+  gap: 0.5rem !important;
+}
+
+.compact-mode .gallery-item {
+  padding: 0.4rem !important;
+}
+
+.compact-mode .gallery-image-container,
+.compact-mode .gallery-image-placeholder {
+  min-height: 100px !important;
+  height: 100px !important;
+}
+
+.compact-mode .gallery-image {
+  max-height: 100px !important;
+}
+
+.compact-mode .gallery-actions {
+  margin-top: 0.25rem !important;
+  gap: 0.1rem !important;
+}
+
+.compact-mode .gallery-actions .p-button {
+  padding: 0.25rem !important;
+}
+
+.compact-mode .gallery-actions .p-button svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.compact-mode .local-files-area {
+  padding: 0.5rem !important;
+}
+
+.compact-mode .local-files-header {
+  margin-bottom: 0.5rem !important;
+}
+
+.compact-mode .local-files-list {
+  gap: 0.25rem !important;
+}
+
+.compact-mode .local-file-row {
+  padding: 0.25rem !important;
+  gap: 0.4rem !important;
+}
+
+.compact-mode .local-file-thumbnail {
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
+.compact-mode .local-files-area .p-fileupload-basic {
+  margin-bottom: 0.5rem !important;
 }

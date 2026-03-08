@@ -14,11 +14,21 @@ export const useUiStore = defineStore('ui', () => {
     const theme = ref<ThemeMode>((localStorage.getItem('theme') as ThemeMode) || 'system');
 
     const fontFamily = ref<string>(localStorage.getItem('fontFamily') || '"Google Sans"');
+    const autoUploadDescription = ref<boolean>(localStorage.getItem('autoUploadDescription') !== 'false');
+    const autoReLogin = ref<boolean>(localStorage.getItem('autoReLogin') === 'true');
 
     // Initialize the property on load
     if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--app-font-family', fontFamily.value);
     }
+
+    watch(autoUploadDescription, (val: boolean) => {
+        localStorage.setItem('autoUploadDescription', val.toString());
+    });
+
+    watch(autoReLogin, (val: boolean) => {
+        localStorage.setItem('autoReLogin', val.toString());
+    });
 
     watch(densityMode, (val: DensityMode) => {
         localStorage.setItem('densityMode', val);
@@ -55,7 +65,7 @@ export const useUiStore = defineStore('ui', () => {
         general: true,
     });
 
-    const panelsRendered = ref<Record<string, boolean>>({});
+
 
     const toggleSidebar = () => {
         sidebarVisible.value = !sidebarVisible.value;
@@ -85,9 +95,11 @@ export const useUiStore = defineStore('ui', () => {
         densityMode,
         fontFamily,
         theme,
+        autoUploadDescription,
+        autoReLogin,
         panelState,
         isSettingsOpen,
-        panelsRendered,
+
         toggleSidebar,
         setEditorMode,
         expandAll,

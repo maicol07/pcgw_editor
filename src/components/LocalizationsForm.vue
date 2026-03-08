@@ -3,10 +3,6 @@ import { LocalizationRow } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-// import Checkbox from 'primevue/checkbox';
-// import Select from 'primevue/select';
-// Actually best to just remove lines or comment them out.
-// Removing them.
 import { Trash2, Plus, GripVertical } from 'lucide-vue-next';
 import { FlagIcon } from '@placetopay/flagicons-vue';
 import { VueDraggable } from 'vue-draggable-plus';

@@ -10,6 +10,7 @@ import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
 
+
 export type EditorMode = 'Visual' | 'Code';
 
 const props = defineProps<{
@@ -131,6 +132,8 @@ const pcgwMenuItems = computed(() => {
             command: () => emit('linkPcgw')
         });
     }
+
+
 
     return items;
 });
@@ -255,4 +258,6 @@ const pcgwMenuItems = computed(() => {
             </div>
         </template>
     </Toolbar>
+
+
 </template>

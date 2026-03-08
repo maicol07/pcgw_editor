@@ -7,11 +7,39 @@ import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import { Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key, AlignJustify, AlignLeft, Menu } from 'lucide-vue-next';
+import ToggleSwitch from 'primevue/toggleswitch';
+import { Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key, AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn, Info, RotateCcw } from 'lucide-vue-next';
+import { pcgwAuth } from '../../services/pcgwAuth';
+import { pcgwApi } from '../../services/pcgwApi';
+import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
+import { useToast } from 'primevue/usetoast';
 
 const uiStore = useUiStore();
 const geminiApiKey = inject<Ref<string>>('geminiApiKey');
 const apiKeyValue = ref(geminiApiKey?.value || '');
+
+const toast = useToast();
+const isLoginVisible = ref(false);
+
+const handleResetCache = () => {
+    pcgwApi.resetCache();
+    toast.add({
+        severity: 'success',
+        summary: 'Cache Reset',
+        detail: 'PCGamingWiki metadata cache has been cleared.',
+        life: 3000
+    });
+};
+
+const handleLogout = async () => {
+    await pcgwAuth.logout();
+    toast.add({
+        severity: 'info',
+        summary: 'Logged Out',
+        detail: 'Logged out from PCGamingWiki.',
+        life: 3000
+    });
+};
 
 watch(() => uiStore.isSettingsOpen, (val) => {
     if (val) apiKeyValue.value = geminiApiKey?.value || '';
@@ -166,6 +194,69 @@ const saveSettings = () => {
                         class="w-full" />
                     <small class="text-surface-500">Required for AI screenshot analysis and automatic summaries.</small>
                 </div>
+
+                <!-- PCGW Login -->
+                <div class="flex flex-col gap-3 mt-2">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <Globe class="w-4 h-4" /> PCGamingWiki Account
+                    </label>
+                    
+                    <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-3 bg-surface-100 dark:bg-surface-800 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                                <Globe class="w-4 h-4 text-green-500" />
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-surface-400 uppercase tracking-tighter">Authenticated as</span>
+                                <span class="font-bold text-sm">{{ pcgwAuth.username }}</span>
+                            </div>
+                        </div>
+                        <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'">
+                            <template #icon>
+                                <LogOut class="w-5 h-5 text-red-500" />
+                            </template>
+                        </Button>
+                    </div>
+
+                    <Button v-else label="Login to PCGW" severity="secondary" variant="outlined" @click="isLoginVisible = true">
+                        <template #icon>
+                            <LogIn class="w-4 h-4 mr-2" />
+                        </template>
+                    </Button>
+
+                    <!-- Auto-relogin Toggle -->
+                    <div class="flex flex-col gap-2 mt-2 p-3 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-100 dark:border-surface-700/50">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                                <RotateCcw class="w-4 h-4 text-primary-500" /> Automatic Session Refresh
+                            </label>
+                            <ToggleSwitch v-model="uiStore.autoReLogin" />
+                        </div>
+                        <p class="text-[11px] text-surface-500 leading-tight m-0">
+                            Automatically renews the session when it expires. Requires storing the bot password locally.
+                        </p>
+                    </div>
+
+                    <!-- Auto-description Toggle -->
+                    <div class="flex flex-col gap-2 p-3 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-100 dark:border-surface-700/50">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                                <Info class="w-4 h-4 text-primary-500" /> Show Upload Attribution
+                            </label>
+                            <ToggleSwitch v-model="uiStore.autoUploadDescription" />
+                        </div>
+                        <p class="text-[11px] text-surface-500 leading-tight m-0">
+                            Automatically appends a link to the editor in your file upload comments on the wiki.
+                        </p>
+                    </div>
+
+                    <!-- Reset Cache Button -->
+                    <Button label="Reset PCGW Cache" severity="secondary" variant="outlined" size="small" class="mt-4 w-full" @click="handleResetCache">
+                        <template #icon>
+                            <RotateCcw class="w-4 h-4 mr-2" />
+                        </template>
+                    </Button>
+                </div>
             </div>
         </div>
 
@@ -175,4 +266,6 @@ const saveSettings = () => {
             </div>
         </template>
     </Dialog>
+
+    <PcgwLoginDialog v-model:visible="isLoginVisible" />
 </template>

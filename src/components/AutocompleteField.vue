@@ -12,6 +12,7 @@ interface Props {
     multiple?: boolean;
     placeholder?: string;
     display?: 'chip' | 'comma';
+    inputClass?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,7 +22,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: string[]): void;
+    (e: 'update:modelValue', value: string | string[]): void;
+    (e: 'suggestions-update', value: string[]): void;
 }>();
 
 const localValue = ref<any>(props.modelValue);
@@ -131,9 +133,11 @@ const onFilter = async (event: { value?: string, query?: string }) => {
             } else {
                 suggestions.value = results;
             }
+            emit('suggestions-update', suggestions.value);
         } catch (error) {
             console.error('Autocomplete search error:', error);
             suggestions.value = props.multiple ? Array.from(selectedSet) : [];
+            emit('suggestions-update', suggestions.value);
         } finally {
             loading.value = false;
         }
@@ -142,16 +146,33 @@ const onFilter = async (event: { value?: string, query?: string }) => {
 </script>
 
 <template>
-    <div class="min-w-0">
+    <div class="w-full relative">
         <!-- Multiple Selection Mode -->
         <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
             :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
-            class="w-full" :display="display" :showToggleAll="false" />
+            class="w-full" :display="display" :showToggleAll="false" :inputClass="['!pl-10', inputClass]">
+            <template #option="slotProps">
+                <slot name="option" :option="slotProps.option" :index="slotProps.index">
+                    {{ slotProps.option }}
+                </slot>
+            </template>
+        </MultiSelect>
 
         <!-- Single Selection Mode -->
         <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading"
             :placeholder="placeholder" :dropdown="false" :forceSelection="false" completeOnFocus class="w-full"
-            @complete="onFilter" />
+            @complete="onFilter" :inputClass="['!pl-10', inputClass]">
+            <template #item="slotProps">
+                <slot name="item" :item="slotProps.item" :index="slotProps.index">
+                    {{ slotProps.item }}
+                </slot>
+            </template>
+            <template #option="slotProps">
+                <slot name="option" :option="slotProps.option" :index="slotProps.index">
+                    {{ slotProps.option }}
+                </slot>
+            </template>
+        </AutoComplete>
     </div>
 </template>
 

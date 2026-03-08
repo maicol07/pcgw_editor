@@ -4,10 +4,11 @@
  */
 import { ofetch } from 'ofetch';
 import { useStorage } from '@vueuse/core';
-
-const API_BASE = 'https://www.pcgamingwiki.com/w/api.php';
+import { getDirectApiUrl } from '../config/api';
 const CACHE_KEY = 'pcgw_api_cache_v2';
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
+
+const normalizeFilename = (name: string) => name.replace(/_/g, ' ').trim();
 
 interface CacheEntry<T> {
     data: T;
@@ -26,7 +27,7 @@ class PCGWApiService {
 
     private async fetchApi<T = any>(params: Record<string, string>): Promise<T | null> {
         try {
-            return await ofetch<T>(API_BASE, {
+            return await ofetch<T>(getDirectApiUrl(), {
                 query: {
                     format: 'json',
                     origin: '*',
@@ -230,33 +231,83 @@ class PCGWApiService {
     }
 
     async getImageUrl(filename: string): Promise<string | null> {
-        if (!filename) return null;
+        const info = await this.getImageInfo(filename);
+        return info?.url || null;
+    }
 
-        const cacheKey = `image:${filename}`;
-        const cached = this.getFromCache(cacheKey);
-        if (cached && cached.length > 0) return cached[0];
+    async getImageInfo(filename: string): Promise<{ url: string; user: string; size: number; width: number; height: number } | null> {
+        const infos = await this.getImagesInfo([filename]);
+        return infos[filename] || null;
+    }
+
+    async getImagesInfo(filenames: string[]): Promise<Record<string, { url: string; user: string; size: number; width: number; height: number }>> {
+        if (!filenames.length) return {};
+
+        const results: Record<string, { url: string; user: string; size: number; width: number; height: number }> = {};
+        const toFetch: string[] = [];
+
+        filenames.forEach(filename => {
+            const key = normalizeFilename(filename);
+            const cacheKey = `image_info:${key}`;
+            const cached = this.cache.value[cacheKey];
+            if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                try {
+                    results[key] = JSON.parse(cached.data[0]);
+                } catch (e) {
+                    toFetch.push(filename);
+                }
+            } else {
+                toFetch.push(filename);
+            }
+        });
+
+        if (!toFetch.length) return results;
 
         try {
-            const result = await this.fetchApi<{ query?: { pages?: Record<string, { imageinfo?: { url: string }[] }> } }>({
-                action: 'query',
-                titles: `File:${filename}`,
-                prop: 'imageinfo',
-                iiprop: 'url',
-            });
+            // MediaWiki query limit is usually 50 for normal users, let's chunk if needed
+            const CHUNK_SIZE = 50;
+            for (let i = 0; i < toFetch.length; i += CHUNK_SIZE) {
+                const chunk = toFetch.slice(i, i + CHUNK_SIZE);
+                const response = await this.fetchApi<{ 
+                    query?: { 
+                        pages?: Record<string, { title: string; imageinfo?: { url: string; user: string; size: number; width: number; height: number }[] }> 
+                    } 
+                }>({
+                    action: 'query',
+                    titles: chunk.map(f => `File:${f}`).join('|'),
+                    prop: 'imageinfo',
+                    iiprop: 'url|user|size|dimensions',
+                });
 
-            if (!result?.query?.pages) return null;
-            const pages = Object.values(result.query.pages);
-            const page = pages[0];
-
-            if (!page?.imageinfo?.[0]?.url) return null;
-
-            const imageUrl = page.imageinfo[0].url;
-            this.setCache(cacheKey, [imageUrl]);
-            return imageUrl;
+                if (response?.query?.pages) {
+                    Object.values(response.query.pages).forEach(page => {
+                        if (page.imageinfo?.[0]) {
+                            const rawName = page.title.replace(/^File:/, '');
+                            const normalizedName = normalizeFilename(rawName);
+                            const info = {
+                                url: page.imageinfo[0].url,
+                                user: page.imageinfo[0].user,
+                                size: page.imageinfo[0].size,
+                                width: page.imageinfo[0].width,
+                                height: page.imageinfo[0].height
+                            };
+                            results[normalizedName] = info;
+                            
+                            // Update cache with normalized name
+                            const cacheKey = `image_info:${normalizedName}`;
+                            this.cache.value[cacheKey] = {
+                                data: [JSON.stringify(info)],
+                                timestamp: Date.now()
+                            };
+                        }
+                    });
+                }
+            }
         } catch (error) {
-            console.error('Failed to get image URL:', error);
-            return null;
+            console.error('Failed to get batch image info:', error);
         }
+
+        return results;
     }
 
     async fetchTemplateWikitext(templateType: 'singleplayer' | 'multiplayer' | 'unknown'): Promise<string | null> {
@@ -356,7 +407,36 @@ class PCGWApiService {
         }
     }
 
-    clearCache(): void {
+    async getPageContent(title: string): Promise<string | null> {
+        try {
+            const response = await this.fetchApi<{ 
+                query?: { 
+                    pages?: Record<string, { revisions?: any[] }> 
+                } 
+            }>({
+                action: 'query',
+                titles: title,
+                prop: 'revisions',
+                rvprop: 'content',
+                rvslots: 'main'
+            });
+
+            const pages = response?.query?.pages || {};
+            const page = Object.values(pages)[0];
+            const revision = page?.revisions?.[0];
+            
+            // Handle both legacy and modern (rvslots) MediaWiki formats
+            if (revision?.slots?.main?.['*']) {
+                return revision.slots.main['*'];
+            }
+            return revision?.['*'] || null;
+        } catch (error) {
+            console.error('Failed to fetch page content:', error);
+            return null;
+        }
+    }
+
+    resetCache(): void {
         this.cache.value = {};
     }
 }
