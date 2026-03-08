@@ -141,6 +141,7 @@ const handleLocalMenuUpload = async (event: any) => {
                 detail: `"${file.name}" added to gallery as placeholder.`,
                 life: 3000
             });
+            showSearchDialog.value = false;
         } catch (e) {
             toast.add({
                 severity: 'error',
