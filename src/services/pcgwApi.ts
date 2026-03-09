@@ -379,7 +379,8 @@ class PCGWApiService {
             // Handle both /wiki/Title and /w/index.php?title=Title
             const pathParts = parsedUrl.pathname.split('/');
             if (pathParts[1] === 'wiki' && pathParts[2]) {
-                return decodeURIComponent(pathParts[2]).replace(/_/g, ' ');
+                const titleParts = pathParts.slice(2).filter(p => p !== '');
+                return decodeURIComponent(titleParts.join('/')).replace(/_/g, ' ');
             }
 
             const titleParam = parsedUrl.searchParams.get('title');
