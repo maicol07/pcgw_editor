@@ -120,4 +120,29 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
             expect.stringContaining('Requesting file deletion')
         );
     });
+
+    it('saves edited caption to the correct item in modelValue', async () => {
+        const image = { name: 'TestCaption.jpg', caption: 'Old Caption', position: 'gallery' };
+        const wrapper = setupWrapper({ modelValue: [image] });
+        
+        // Open the dialog
+        // @ts-ignore
+        wrapper.vm.openCaptionDialog(image, 0);
+        
+        // @ts-ignore
+        expect(wrapper.vm.editingCaption).toBe('Old Caption');
+        
+        // Update the value
+        // @ts-ignore
+        wrapper.vm.editingCaption = 'New Caption';
+        
+        // Save
+        // @ts-ignore
+        wrapper.vm.saveCaption();
+        
+        // Verify emitted update:modelValue
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect(emitted![0][0]).toEqual([{ name: 'TestCaption.jpg', caption: 'New Caption', position: 'gallery' }]);
+    });
 });

@@ -53,18 +53,30 @@ const displayImages = computed({
     }
 });
 
-const openCaptionDialog = (img: GalleryImage) => {
+const editingIndex = ref<number | null>(null);
+
+const openCaptionDialog = (img: GalleryImage, index: number) => {
     editingImage.value = img;
+    editingIndex.value = index;
     editingCaption.value = img.caption || '';
     showCaptionDialog.value = true;
 };
 
 const saveCaption = () => {
-    if (editingImage.value) {
-        editingImage.value.caption = editingCaption.value;
-        emit('update:modelValue', [...props.modelValue]);
+    if (editingIndex.value !== null) {
+        const newValue = [...(props.modelValue || [])];
+        const item = newValue[editingIndex.value];
+        
+        if (typeof item === 'string') {
+            newValue[editingIndex.value] = { name: item, caption: editingCaption.value, position: 'gallery' };
+        } else {
+            newValue[editingIndex.value] = { ...item, caption: editingCaption.value };
+        }
+        emit('update:modelValue', newValue);
     }
     showCaptionDialog.value = false;
+    editingIndex.value = null;
+    editingImage.value = null;
 };
 
 // Caption Edit State
@@ -183,11 +195,19 @@ const removeImage = (index: number) => {
 
 const togglePosition = (index: number) => {
     const newValue = [...(props.modelValue || [])];
-    const item = newValue[index] as GalleryImage;
+    const item = newValue[index];
+
+    let galleryItem: GalleryImage;
+    if (typeof item === 'string') {
+        galleryItem = { name: item, caption: '', position: 'gallery' };
+    } else {
+        galleryItem = { ...item };
+    }
 
     // Toggle
-    const newPos = item.position === 'lateral' ? 'gallery' : 'lateral';
-    newValue[index] = { ...item, position: newPos };
+    const newPos = galleryItem.position === 'lateral' ? 'gallery' : 'lateral';
+    galleryItem.position = newPos;
+    newValue[index] = galleryItem;
     emit('update:modelValue', newValue);
 };
 
@@ -542,7 +562,10 @@ defineExpose({
     initiateDelete,
     handleConfirmDelete,
     existingDeletionReason,
-    pcgwDeletionReason
+    pcgwDeletionReason,
+    openCaptionDialog,
+    saveCaption,
+    editingCaption
 });
 </script>
 
@@ -709,7 +732,7 @@ defineExpose({
                         <div class="flex gap-1">
                             <Button text rounded size="small" v-tooltip="'Edit Caption'"
                                 :class="element.caption ? 'text-primary-500' : 'text-surface-500'"
-                                @click="openCaptionDialog(element)">
+                                @click="openCaptionDialog(element, index)">
                                 <template #icon>
                                     <Pencil class="w-4 h-4" />
                                 </template>
