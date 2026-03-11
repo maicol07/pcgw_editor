@@ -5,7 +5,7 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Search, Menu as MenuIcon, FileClock, History } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Search, Menu as MenuIcon, FileClock, History, UploadCloud } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -25,6 +25,7 @@ const emit = defineEmits<{
     (e: 'toggleSidebar'): void;
     (e: 'generateSummary'): void;
     (e: 'updatePcgw'): void;
+    (e: 'publishPcgw'): void;
     (e: 'linkPcgw'): void;
 }>();
 
@@ -102,6 +103,14 @@ const pcgwMenuItems = computed(() => {
             isChecking: isCheckingUpdates.value
         });
 
+        // 3. Publish Action
+        items.push({
+            label: 'Publish to PCGW',
+            icon: UploadCloud,
+            command: () => emit('publishPcgw'),
+            class: 'text-primary-600 font-bold'
+        });
+
         // Revision Tracking (Compact)
         items.push({
             type: 'info',
@@ -141,7 +150,7 @@ const pcgwMenuItems = computed(() => {
 
 <template>
     <Toolbar
-        class="!border-b !border-0 !rounded-none glass glass-border shadow-soft z-20 !p-1.5 sticky top-0 bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md">
+        class="border-b! border-0! rounded-none! glass glass-border shadow-soft z-20 p-1.5! sticky top-0 bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md">
         <template #start>
             <div class="flex items-center gap-2 md:gap-3">
                 <Button text @click="emit('toggleSidebar')" class="lg:hidden hover-scale h-8! w-8! p-0!"
@@ -152,7 +161,7 @@ const pcgwMenuItems = computed(() => {
                 </Button>
 
                 <span
-                    class="font-bold text-base md:text-lg bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent select-none">
+                    class="font-bold text-base md:text-lg bg-linear-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent select-none">
                     PCGamingWiki Editor
                 </span>
 

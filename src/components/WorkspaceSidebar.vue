@@ -189,27 +189,60 @@ const customRename = (page: any) => {
 const isLinkDialogVisible = ref(false);
 const linkPageId = ref('');
 const linkSearch = ref('');
+const linkUrl = ref('');
+const linkSource = ref<'url' | 'search'>('search');
+const linkError = ref('');
 const isLinkingPage = ref(false);
+
+const linkSourceOptions = [
+    { label: 'URL', value: 'url', icon: Link },
+    { label: 'Search', value: 'search', icon: Search }
+];
 
 const openLinkDialog = (page: any) => {
     linkPageId.value = page.id;
     linkSearch.value = page.pcgwPageTitle || page.title;
+    linkUrl.value = '';
+    linkSource.value = page.pcgwPageTitle ? 'search' : 'search'; // Default to search
+    linkError.value = '';
     isLinkDialogVisible.value = true;
 };
 
 const submitLinkPage = async () => {
-    if (linkSearch.value && linkPageId.value) {
-        isLinkingPage.value = true;
-        try {
-            const info = await pcgwApi.getLatestRevisionInfo(linkSearch.value);
-            store.linkPage(linkPageId.value, linkSearch.value, info?.revid);
-            isLinkDialogVisible.value = false;
-        } catch (e) {
-            console.error('Failed to link page:', e);
-            alert('Failed to link page. Check the title.');
-        } finally {
-            isLinkingPage.value = false;
+    if (!linkPageId.value) return;
+
+    let pcgwTitle = '';
+    linkError.value = '';
+
+    if (linkSource.value === 'url') {
+        const extracted = pcgwApi.extractTitleFromUrl(linkUrl.value);
+        if (!extracted) {
+            linkError.value = 'Invalid PCGW URL';
+            return;
         }
+        pcgwTitle = extracted;
+    } else {
+        if (!linkSearch.value) {
+            linkError.value = 'Please select a page';
+            return;
+        }
+        pcgwTitle = linkSearch.value;
+    }
+
+    isLinkingPage.value = true;
+    try {
+        const info = await pcgwApi.getLatestRevisionInfo(pcgwTitle);
+        if (!info) {
+            linkError.value = 'Failed to find page on PCGamingWiki.';
+            return;
+        }
+        store.linkPage(linkPageId.value, pcgwTitle, info.revid);
+        isLinkDialogVisible.value = false;
+    } catch (e) {
+        console.error('Failed to link page:', e);
+        linkError.value = 'Error linking page. Check the title/URL.';
+    } finally {
+        isLinkingPage.value = false;
     }
 };
 
@@ -437,20 +470,47 @@ defineExpose({ openLinkDialog });
     <Dialog v-model:visible="isLinkDialogVisible" header="Link to PCGW Page" :style="{ width: '400px' }" modal :draggable="false">
         <div class="flex flex-col gap-4 py-4">
             <div class="flex flex-col gap-2">
-                <label class="font-bold">Search PCGW Page</label>
-                <IconField>
-                    <InputIcon>
-                        <Search class="w-4 h-4" />
-                    </InputIcon>
-                    <AutocompleteField v-model="linkSearch" dataSource="pages" :multiple="false"
-                        placeholder="Type game title..." class="w-full" />
-                </IconField>
+                <label class="text-xs font-bold uppercase text-surface-500">Linking Method</label>
+                <SelectButton v-model="linkSource" :options="linkSourceOptions" optionLabel="label"
+                    optionValue="value" class="w-full">
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <component :is="slotProps.option.icon" class="w-4 h-4" />
+                            <span>{{ slotProps.option.label }}</span>
+                        </div>
+                    </template>
+                </SelectButton>
             </div>
+
+            <Transition name="fade-fast" mode="out-in">
+                <div v-if="linkSource === 'url'" class="flex flex-col gap-2">
+                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-400">PCGW URL</label>
+                    <IconField>
+                        <InputIcon>
+                            <Link class="w-4 h-4" />
+                        </InputIcon>
+                        <InputText v-model="linkUrl" placeholder="https://www.pcgamingwiki.com/wiki/..."
+                            class="w-full" size="small" autofocus @keyup.enter="submitLinkPage" />
+                    </IconField>
+                </div>
+                <div v-else class="flex flex-col gap-2">
+                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-400">Search Page</label>
+                    <IconField>
+                        <InputIcon>
+                            <Search class="w-4 h-4" />
+                        </InputIcon>
+                        <AutocompleteField v-model="linkSearch" dataSource="pages" :multiple="false"
+                            placeholder="Type game title..." class="w-full" autofocus />
+                    </IconField>
+                </div>
+            </Transition>
+
+            <Message v-if="linkError" severity="error" variant="simple" size="small">{{ linkError }}</Message>
         </div>
         <template #footer>
             <Button label="Cancel" text severity="secondary" @click="isLinkDialogVisible = false"
                 :disabled="isLinkingPage" />
-            <Button label="Link" @click="submitLinkPage" :disabled="!linkSearch || isLinkingPage">
+            <Button label="Link" @click="submitLinkPage" :disabled="isLinkingPage" severity="primary">
                 <template #icon v-if="isLinkingPage">
                     <Loader2 class="w-4 h-4 animate-spin mr-2" />
                 </template>

@@ -175,10 +175,62 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             page.pcgwPageTitle = pcgwTitle;
             if (revid !== undefined) {
                 page.localRevisionId = revid;
-                page.onlineRevisionId = revid;
+                // If we are linking and have a revision ID, initialization counts as having seen this online version too.
+                if (!page.onlineRevisionId || page.onlineRevisionId < revid) {
+                    page.onlineRevisionId = revid;
+                }
             }
             page.lastModified = Date.now();
         }
+    }
+
+    async function publishPage(id: string, summary: string, force: boolean = false, minor: boolean = false): Promise<any> {
+        const page = pages.value.find(p => p.id === id);
+        if (!page || !page.pcgwPageTitle) {
+            throw new Error('Page is not linked to PCGamingWiki.');
+        }
+
+        // 1. Conflict Check: See if there is a newer version online than what we think is the latest.
+        if (!force) {
+            const isOutdated = await checkForUpdates(id);
+            if (isOutdated) {
+                const error = new Error('A newer version of this page exists on PCGamingWiki.');
+                (error as any).code = 'PUBLISH_CONFLICT';
+                throw error;
+            }
+        }
+
+        // 2. Perform Edit
+        const { pcgwMedia } = await import('../services/pcgwMedia');
+        // Only send baserevid if we want the server to check for conflicts (i.e. not forced)
+        // This is extra safety besides our check.
+        const result = await pcgwMedia.editPage(
+            page.pcgwPageTitle, 
+            page.wikitext, 
+            summary, 
+            !force ? page.localRevisionId : undefined,
+            minor
+        );
+
+        if (result?.edit?.newrevid) {
+            const newRevid = result.edit.newrevid;
+            page.localRevisionId = newRevid;
+            page.onlineRevisionId = newRevid;
+            page.lastModified = Date.now();
+            return result;
+        } else if (result?.edit?.nochange !== undefined) {
+            // No changes were made (wikitext is identical)
+            if (result.edit.newrevid === undefined && page.onlineRevisionId) {
+                page.localRevisionId = page.onlineRevisionId;
+            }
+            return result;
+        } else if (result?.error?.code === 'editconflict' || result?.edit?.result === 'Failure' && result?.edit?.info?.includes('conflict')) {
+            const error = new Error('MediaWiki reported an edit conflict.');
+            (error as any).code = 'PUBLISH_CONFLICT';
+            throw error;
+        }
+
+        throw new Error(result?.edit?.info || result?.error?.info || 'Failed to publish changes to PCGamingWiki.');
     }
 
     function unlinkPage(id: string) {
@@ -278,6 +330,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         exportPage,
         syncToWikitext,
         syncFromWikitext,
-        checkForUpdates
+        checkForUpdates,
+        publishPage
     };
 });

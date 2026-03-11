@@ -19,6 +19,7 @@ import ModernPanel from './components/common/ModernPanel.vue';
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
 import EditorToolbar from './components/editor/EditorToolbar.vue';
 import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
 import GeminiDialogs from './features/ai/GeminiDialogs.vue';
@@ -26,12 +27,16 @@ import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Checkbox from 'primevue/checkbox';
 import { pcgwApi } from './services/pcgwApi';
 
 // Icons
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, UploadCloud, RefreshCw, FileClock
 } from 'lucide-vue-next';
 
 // Async Components
@@ -112,6 +117,59 @@ const handleUpdateFromPcgw = async (page: any) => {
     diffMergerOnlineRevid.value = result.revid;
     diffMergerPageTitle.value = page.pcgwPageTitle;
     isDiffMergerVisible.value = true;
+};
+
+// --- Publish Logic ---
+const isPublishDialogVisible = ref(false);
+const isConflictDialogVisible = ref(false);
+const publishSummary = ref('Updated via PCGW Editor');
+const isMinorEdit = ref(false);
+const isPublishing = ref(false);
+const toast = useToast();
+
+const handlePublishToPcgw = async (force: boolean = false) => {
+    if (!workspaceStore.activePage) return;
+    
+    isPublishing.value = true;
+    try {
+        await workspaceStore.publishPage(workspaceStore.activePage.id, publishSummary.value, force, isMinorEdit.value);
+        
+        // Success
+        isPublishDialogVisible.value = false;
+        isConflictDialogVisible.value = false;
+        toast.add({
+            severity: 'success',
+            summary: 'Published',
+            detail: 'Changes pushed to PCGamingWiki successfully.',
+            life: 5000
+        });
+    } catch (e: any) {
+        console.error('Publish failed:', e);
+        const isConflict = e.code === 'PUBLISH_CONFLICT' || 
+                          e.message?.toLowerCase().includes('conflict') || 
+                          e.message?.includes('CONFLICT');
+        
+        if (isConflict) {
+            isConflictDialogVisible.value = true;
+            isPublishDialogVisible.value = false;
+        } else {
+            toast.add({
+                severity: 'error',
+                summary: 'Publish Failed',
+                detail: e.message || 'Unknown error during publish.',
+                life: 5000
+            });
+        }
+    } finally {
+        isPublishing.value = false;
+    }
+};
+
+const handleOpenMerge = () => {
+    isConflictDialogVisible.value = false;
+    if (workspaceStore.activePage) {
+        handleUpdateFromPcgw(workspaceStore.activePage);
+    }
 };
 
 const handleDiffMerge = async (mergedText: string) => {
@@ -213,6 +271,7 @@ onMounted(() => {
                     @update:editorMode="handleModeChange" :isGeneratingSummary="isGeneratingSummary"
                     @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary"
                     @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage)"
+                    @publishPcgw="isPublishDialogVisible = true"
                     @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
 
                 <div
@@ -501,6 +560,88 @@ onMounted(() => {
     <AppSettings />
     <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
         :onlineWikitext="diffMergerOnlineWikitext" :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
+
+    <!-- Publish Dialog -->
+    <Dialog v-model:visible="isPublishDialogVisible" modal header="Publish to PCGamingWiki" :style="{ width: '450px' }" :draggable="false">
+        <div class="flex flex-col gap-4 py-2">
+            <div class="flex items-center gap-3 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20 mb-2">
+                <div class="p-2 bg-primary-500 rounded-lg shadow-sm">
+                    <UploadCloud class="w-5 h-5 text-white" />
+                </div>
+                <div>
+                    <div class="text-sm font-bold">{{ workspaceStore.activePage?.pcgwPageTitle }}</div>
+                    <div class="text-[10px] text-surface-500">You are about to push your local changes online.</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-surface-500 uppercase">Edit Summary</label>
+                <InputText v-model="publishSummary" placeholder="What did you change?" class="w-full" autofocus @keyup.enter="() => handlePublishToPcgw(false)" />
+                <p class="text-[10px] text-surface-400">This summary will appear in the page history on PCGW.</p>
+            </div>
+            
+            <div class="flex items-center gap-2 mt-2">
+                <Checkbox v-model="isMinorEdit" inputId="minorEdit" :binary="true" />
+                <label for="minorEdit" class="text-sm cursor-pointer select-none">This is a minor edit</label>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <Button label="Cancel" text @click="isPublishDialogVisible = false" :disabled="isPublishing" />
+                <Button label="Publish Changes" @click="handlePublishToPcgw(false)" :loading="isPublishing" severity="primary" />
+            </div>
+        </div>
+    </Dialog>
+
+    <!-- Conflict Dialog -->
+    <Dialog v-model:visible="isConflictDialogVisible" modal header="Conflict Detected" :style="{ width: '500px' }" :draggable="false">
+        <div class="flex flex-col gap-5 py-2">
+            <div class="flex items-start gap-4 bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-900/20">
+                <div class="p-2 bg-amber-500 rounded-lg shadow-sm shrink-0">
+                    <AlertCircle class="w-5 h-5 text-white" />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="text-sm font-bold text-amber-900 dark:text-amber-200">Newer version found online</div>
+                    <div class="text-xs text-amber-800/80 dark:text-amber-200/60 leading-relaxed">
+                        Someone else has modified this page on PCGamingWiki since you last synced. Pushing now would overwrite their changes.
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1 p-3 bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700">
+                    <div class="text-[10px] font-bold text-surface-500 uppercase flex items-center gap-1.5">
+                        <FileClock class="w-3 h-3" /> Recommended Action
+                    </div>
+                    <div class="text-sm font-medium">Use the Merge Tool to integrate online changes with your own.</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <Button label="Open Merge Tool" icon="lucide-refresh-cw" @click="handleOpenMerge" severity="primary" class="w-full">
+                    <template #icon>
+                        <RefreshCw class="w-4 h-4 mr-2" />
+                    </template>
+                </Button>
+                
+                <div class="flex items-center gap-2 py-2">
+                    <div class="h-px flex-1 bg-surface-200 dark:bg-surface-700"></div>
+                    <span class="text-[10px] font-bold text-surface-400 dark:text-surface-600 uppercase">Or proceed anyway</span>
+                    <div class="h-px flex-1 bg-surface-200 dark:bg-surface-700"></div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-start gap-2 text-[10px] text-red-500/80 dark:text-red-400/60 italic leading-tight bg-red-500/5 p-2 rounded border border-red-500/10">
+                        <AlertCircle class="w-3 h-3 shrink-0" />
+                        Force pushing will discard the online changes. Use this only if you are sure your version is correct.
+                    </div>
+                    <div class="flex justify-between gap-3">
+                        <Button label="Cancel" text @click="isConflictDialogVisible = false" class="flex-1" />
+                        <Button label="Force Publish" variant="outlined" severity="danger" @click="handlePublishToPcgw(true)" :loading="isPublishing" class="flex-1" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Dialog>
 </template>
 
 <style>

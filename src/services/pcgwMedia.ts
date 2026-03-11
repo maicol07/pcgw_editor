@@ -57,7 +57,7 @@ class PCGWMediaService {
             return false;
         }
     }
-    async editPage(title: string, text: string, summary: string): Promise<any> {
+    async editPage(title: string, text: string, summary: string, baserevid?: number, minor: boolean = false): Promise<any> {
         if (!pcgwAuth.isLoggedIn) {
             throw new Error('User not authenticated with PCGW');
         }
@@ -73,7 +73,8 @@ class PCGWMediaService {
         formData.append('text', text);
         formData.append('summary', summary);
         formData.append('token', token);
-        formData.append('bot', '1'); // Higher limits if available, usually ignored for normal users
+        if (baserevid) formData.append('baserevid', baserevid.toString());
+        if (minor) formData.append('minor', '1');
 
         try {
             const result = await ofetch(getWorkerProxyUrl(), {
