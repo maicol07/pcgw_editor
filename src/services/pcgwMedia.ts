@@ -19,6 +19,7 @@ class PCGWMediaService {
         formData.append('cookies', pcgwAuth.sessionCookies);
         formData.append('method', 'POST');
         formData.append('action', 'upload');
+        formData.append('assert', 'user');
         formData.append('filename', options.filename);
         if (options.comment) formData.append('comment', options.comment);
         if (options.text) formData.append('text', options.text);
@@ -69,6 +70,7 @@ class PCGWMediaService {
         formData.append('cookies', pcgwAuth.sessionCookies);
         formData.append('method', 'POST');
         formData.append('action', 'edit');
+        formData.append('assert', 'user');
         formData.append('title', title);
         formData.append('text', text);
         formData.append('summary', summary);

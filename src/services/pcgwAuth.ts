@@ -47,12 +47,15 @@ class PCGWAuthService {
             body: {
                 cookies: this.authData.value.sessionCookies,
                 method,
-                params
+                params: {
+                    ...params,
+                    assert: 'user'
+                }
             }
         });
 
         // Handle MediaWiki auth errors reactively
-        if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied') {
+        if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed') {
             if (retry) {
                 const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
                 if (autoReLogin && this.authData.value.username && this.authData.value.password) {
