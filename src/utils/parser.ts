@@ -1350,7 +1350,21 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
         }
     }
 
+    // Restore local file mappings for gallery images
+    try {
+        const { db } = await import('../db');
+        const localFiles = await db.localFiles.toArray();
+        for (const gallery of Object.values(data.galleries)) {
+            for (const img of gallery) {
+                const match = localFiles.find(f => f.name === img.name);
+                if (match && match.id) {
+                    img.localId = match.id;
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to restore local file mappings:', e);
+    }
 
     return data;
 }
-
