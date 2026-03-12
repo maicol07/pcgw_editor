@@ -24,7 +24,7 @@ export default defineConfig({
         vue(),
         tailwindcss(),
         VitePWA({
-            registerType: 'autoUpdate',
+            registerType: 'prompt',
             injectRegister: 'script',
             devOptions: {
                 enabled: true

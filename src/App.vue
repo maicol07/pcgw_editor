@@ -27,6 +27,7 @@ import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
+import ReloadPrompt from './components/common/ReloadPrompt.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -591,6 +592,7 @@ onMounted(() => {
             </div>
         </div>
     </Dialog>
+    <ReloadPrompt />
 
     <!-- Conflict Dialog -->
     <Dialog v-model:visible="isConflictDialogVisible" modal header="Conflict Detected" :style="{ width: '500px' }" :draggable="false">
