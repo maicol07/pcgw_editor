@@ -190,12 +190,11 @@ export class PCGWEditor {
     }
 
     replaceCustomSection(headerRegex: RegExp, newContent: string, defaultHeader: string) {
-        // @ts-ignore - Assuming implementation exists in Parser or we add it
-        if (this.parser.replaceCustomSection) {
-            // @ts-ignore
-            this.parser.replaceCustomSection(headerRegex, newContent, defaultHeader);
-        } else {
-            console.warn('replaceCustomSection not implemented in WikitextParser');
+        const text = this.parser.getText();
+        if (headerRegex.test(text)) {
+            this.parser = new WikitextParser(text.replace(headerRegex, newContent));
+        } else if (defaultHeader) {
+            this.addSection(defaultHeader, newContent);
         }
     }
 
@@ -580,39 +579,52 @@ export class PCGWEditor {
         // Configuration file(s) location
         let configContent = '';
         if (config.configFiles && config.configFiles.length > 0) {
-            configContent = config.configFiles.map(row => {
+            const inner = config.configFiles.map(row => {
                 const paths = row.paths.map(p => `|${p}`).join('');
-                return `{{Game data|config|${row.platform}${paths}}}`;
+                return `{{Game data/config|${row.platform}${paths}}}`;
             }).join('\n');
+            configContent = `{{Game data|\n${inner}\n}}`;
         }
 
         // Save game data location
         let saveContent = '';
         if (config.saveData && config.saveData.length > 0) {
-            saveContent = config.saveData.map(row => {
+            const inner = config.saveData.map(row => {
                 const paths = row.paths.map(p => `|${p}`).join('');
-                return `{{Game data|saves|${row.platform}${paths}}}`;
+                return `{{Game data/saves|${row.platform}${paths}}}`;
             }).join('\n');
+            saveContent = `{{Game data|\n${inner}\n}}`;
         }
 
         if (configContent) {
             this.replaceCustomSection(/===Configuration file\(s\) location===[\s\S]*?(?===|$)/,
-                `===Configuration file(s) location===\n${configContent}\n`,
+                `===Configuration file(s) location===\n${configContent}\n\n`,
                 ''
             );
         }
 
         if (saveContent) {
             this.replaceCustomSection(/===Save game data location===[\s\S]*?(?===|$)/,
-                `===Save game data location===\n${saveContent}\n`,
+                `===Save game data location===\n${saveContent}\n\n`,
                 ''
             );
         }
 
         // If neither header matched (e.g. new file), we might need to create the Game data section structure.
-        // But let's rely on the previous logic to be sufficient for now or explicit addition.
-        if (configContent && !this.originalWikitext.includes('===Configuration file(s) location===')) {
-            this.addSection('Game data', `===Configuration file(s) location===\n${configContent}\n`);
+        if (configContent && !/===Configuration file\(s\) location===/.test(this.parser.getText())) {
+            this.addSection('Game data', `===Configuration file(s) location===\n${configContent}\n\n`);
+        }
+        if (saveContent && !/===Save game data location===/.test(this.parser.getText())) {
+            if (/==\s*Game data\s*==/i.test(this.parser.getText())) {
+                const text = this.parser.getText();
+                const match = text.match(/==\s*Game data\s*==[\s\S]*?(?===|$)/i);
+                if (match && match.index !== undefined) {
+                    const insertPos = match.index + match[0].length;
+                    this.parser = new WikitextParser(text.substring(0, insertPos) + `\n===Save game data location===\n${saveContent}\n\n` + text.substring(insertPos));
+                }
+            } else {
+                this.addSection('Game data', `===Save game data location===\n${saveContent}\n\n`);
+            }
         }
     }
 
@@ -627,8 +639,24 @@ export class PCGWEditor {
             xboxCloud: 'xbox cloud'
         };
 
-        // Ensure template exists
-        this.ensureTemplate('Save game cloud syncing');
+        // Ensure template exists with proper section header
+        if (!this.parser.findTemplate('Save game cloud syncing')) {
+            const hasGameData = /==\s*Game data\s*==/i.test(this.parser.getText());
+            const insertStr = `===[[Glossary:Save game cloud syncing|Save game cloud syncing]]===\n{{Save game cloud syncing\n}}\n`;
+            if (hasGameData) {
+                const text = this.parser.getText();
+                // Find end of game data section but before Video/etc which implies a new "=="
+                // Actually `Game data` section ends at the next `==` heading
+                const nextSectionStartMatch = text.match(/==\s*Game data\s*==[\s\S]*?(?=\n==[^=]+==|$)/i);
+                if (nextSectionStartMatch && nextSectionStartMatch.index !== undefined) {
+                    const insertPos = nextSectionStartMatch.index + nextSectionStartMatch[0].length;
+                    const prefix = !text.substring(0, insertPos).endsWith('\n') ? '\n' : '';
+                    this.parser = new WikitextParser(text.substring(0, insertPos) + prefix + insertStr + text.substring(insertPos));
+                }
+            } else {
+                this.addSection('Game data', insertStr);
+            }
+        }
 
         // Status field
         if (cloud.status) {
@@ -1775,6 +1803,8 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateMonetization(data.monetization);
     editor.updateMicrotransactions(data.microtransactions);
     editor.updateDLC(data.dlc);
+    editor.updateGameData(data.config);
+    editor.updateCloudSync(data.config.cloudSync);
     editor.updateVideo(data.video);
     editor.updateInput(data.input);
     editor.updateAudio(data.audio);

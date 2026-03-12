@@ -100,6 +100,37 @@ describe('Field Group: Game Data', () => {
         });
 
 
+        describe('Parsing Complex Blocks', () => {
+            it('should parse realistic multi-line Game data blocks', async () => {
+                const wikitext = `==Game data==
+===Configuration file(s) location===
+{{Game data|
+{{Game data/config|Windows|%USERPROFILE%\\Config}}
+{{Game data/config|Steam|%USERPROFILE%\\SteamConfig}}
+}}
+
+===Save game data location===
+{{Game data|
+{{Game data/saves|Windows|%USERPROFILE%\\Saves}}
+}}
+`;
+                const data = await parseWikitext(wikitext);
+                
+                expect(data.config.configFiles).toHaveLength(2);
+                expect(data.config.configFiles[0]).toEqual(expect.objectContaining({
+                    platform: 'Windows', paths: ['%USERPROFILE%\\Config']
+                }));
+                expect(data.config.configFiles[1]).toEqual(expect.objectContaining({
+                    platform: 'Steam', paths: ['%USERPROFILE%\\SteamConfig']
+                }));
+                
+                expect(data.config.saveData).toHaveLength(1);
+                expect(data.config.saveData[0]).toEqual(expect.objectContaining({
+                    platform: 'Windows', paths: ['%USERPROFILE%\\Saves']
+                }));
+            });
+        });
+
     });
 
     describe('Writing', () => {
@@ -113,8 +144,69 @@ describe('Field Group: Game Data', () => {
             writer.updateGameData(data.config);
             const text = writer.getText();
 
-            expect(text).toContain('{{Game data|config');
+            expect(text).toContain('===Configuration file(s) location===');
+            expect(text).toContain('{{Game data/config');
             expect(text).toContain('|Windows|%USERPROFILE%\\Config');
+        });
+
+        it('should write Save Game Data', async () => {
+            const data = getCleanData();
+            data.config.saveData = [
+                { platform: 'Windows', paths: ['%USERPROFILE%\\Saves'] }
+            ];
+
+            const writer = new PCGWEditor('');
+            writer.updateGameData(data.config);
+            const text = writer.getText();
+
+            expect(text).toContain('===Save game data location===');
+            expect(text).toContain('{{Game data|\n{{Game data/saves|Windows|%USERPROFILE%\\Saves}}\n}}');
+        });
+
+        it('should write both Config and Save Data', async () => {
+            const data = getCleanData();
+            data.config.configFiles = [
+                { platform: 'Windows', paths: ['%USERPROFILE%\\Config'] }
+            ];
+            data.config.saveData = [
+                { platform: 'Windows', paths: ['%USERPROFILE%\\Saves'] }
+            ];
+
+            const writer = new PCGWEditor('');
+            writer.updateGameData(data.config);
+            const text = writer.getText();
+
+            expect(text).toContain('===Configuration file(s) location===');
+            expect(text).toContain('{{Game data|\n{{Game data/config|Windows|%USERPROFILE%\\Config}}\n}}');
+            expect(text).toContain('===Save game data location===');
+            expect(text).toContain('{{Game data|\n{{Game data/saves|Windows|%USERPROFILE%\\Saves}}\n}}');
+        });
+        
+        it('should update existing Game Data section properly', async () => {
+            const data = getCleanData();
+            data.config.configFiles = [
+                { platform: 'Windows', paths: ['%USERPROFILE%\\NewConfig'] }
+            ];
+            
+            const initialWikitext = `==Game data==
+===Configuration file(s) location===
+{{Game data|
+{{Game data/config|Windows|%USERPROFILE%\\OldConfig}}
+}}
+
+===Save game data location===
+{{Game data|
+{{Game data/saves|Windows|%USERPROFILE%\\Saves}}
+}}
+`;
+            const writer = new PCGWEditor(initialWikitext);
+            writer.updateGameData(data.config);
+            const text = writer.getText();
+            
+            // Should replace config, preserve saves
+            expect(text).toContain('{{Game data/config|Windows|%USERPROFILE%\\NewConfig}}');
+            expect(text).not.toContain('OldConfig');
+            expect(text).toContain('{{Game data/saves|Windows|%USERPROFILE%\\Saves}}');
         });
 
         it('should write Cloud Sync', async () => {
@@ -130,9 +222,60 @@ describe('Field Group: Game Data', () => {
             writer.updateCloudSync(data.config.cloudSync);
             const text = writer.getText();
 
+            expect(text).toContain('===[[Glossary:Save game cloud syncing|Save game cloud syncing]]===');
             expect(text).toContain('{{Save game cloud syncing');
             expect(text).toContain('|discord = true');
             expect(text).toContain('|steam cloud = true');
+        });
+        
+        it('should append Cloud Sync correctly to existing Game data section without rewriting config files', async () => {
+            const data = getCleanData();
+            data.config.cloudSync = {
+                steamCloud: 'true',
+                status: 'true',
+                notes: ''
+            } as any;
+
+            const initialWikitext = `==Game data==
+===Configuration file(s) location===
+{{Game data|
+{{Game data/config|Windows|%USERPROFILE%\\Config}}
+}}
+`;
+            const writer = new PCGWEditor(initialWikitext);
+            writer.updateCloudSync(data.config.cloudSync);
+            const text = writer.getText();
+
+            expect(text).toContain('==Game data==');
+            expect(text).toContain('===Configuration file(s) location===');
+            expect(text).toContain('===[[Glossary:Save game cloud syncing|Save game cloud syncing]]===');
+            expect(text).toContain('{{Save game cloud syncing');
+            expect(text).toContain('|steam cloud = true');
+        });
+        
+        it('should not duplicate Cloud Sync block if it already exists', async () => {
+            const data = getCleanData();
+            data.config.cloudSync = {
+                steamCloud: 'true',
+                status: 'true',
+                notes: ''
+            } as any;
+
+            const initialWikitext = `==Game data==
+===[[Glossary:Save game cloud syncing|Save game cloud syncing]]===
+{{Save game cloud syncing
+|steam cloud = false
+}}
+`;
+            const writer = new PCGWEditor(initialWikitext);
+            writer.updateCloudSync(data.config.cloudSync);
+            const text = writer.getText();
+
+            // Check it updated the template
+            expect(text).toContain('|steam cloud = true');
+            // Check it didn't duplicate the template
+            expect((text.match(/{{Save game cloud syncing/g) || []).length).toBe(1);
+            expect((text.match(/===\[\[Glossary:Save game cloud syncing\|Save game cloud syncing\]\]===/g) || []).length).toBe(1);
         });
     });
 });
