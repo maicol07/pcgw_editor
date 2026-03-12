@@ -19,8 +19,8 @@ const emit = defineEmits<{
 }>();
 
 const toast = useToast();
-const username = ref('');
-const password = ref('');
+const username = ref(pcgwAuth.username);
+const password = ref(pcgwAuth.password);
 const isLoading = ref(false);
 const error = ref('');
 

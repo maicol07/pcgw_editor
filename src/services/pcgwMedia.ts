@@ -1,6 +1,6 @@
 import { ofetch } from 'ofetch';
 import { pcgwAuth } from './pcgwAuth';
-import { getWorkerProxyUrl, getDirectApiUrl } from '../config/api';
+import { getDirectApiUrl } from '../config/api';
 
 export interface UploadOptions {
     filename: string;
@@ -16,10 +16,7 @@ class PCGWMediaService {
         }
 
         const formData = new FormData();
-        formData.append('cookies', pcgwAuth.sessionCookies);
-        formData.append('method', 'POST');
         formData.append('action', 'upload');
-        formData.append('assert', 'user');
         formData.append('filename', options.filename);
         if (options.comment) formData.append('comment', options.comment);
         if (options.text) formData.append('text', options.text);
@@ -27,12 +24,7 @@ class PCGWMediaService {
         formData.append('file', file, options.filename);
 
         try {
-            const result = await ofetch(getWorkerProxyUrl(), {
-                method: 'POST',
-                body: formData
-            });
-
-            return result;
+            return await pcgwAuth.apiPost(formData, 'POST');
         } catch (error) {
             console.error('Upload failed:', error);
             throw error;
@@ -58,6 +50,7 @@ class PCGWMediaService {
             return false;
         }
     }
+
     async editPage(title: string, text: string, summary: string, baserevid?: number, minor: boolean = false): Promise<any> {
         if (!pcgwAuth.isLoggedIn) {
             throw new Error('User not authenticated with PCGW');
@@ -67,10 +60,7 @@ class PCGWMediaService {
         if (!token) throw new Error('Could not obtain CSRF token for editing');
 
         const formData = new FormData();
-        formData.append('cookies', pcgwAuth.sessionCookies);
-        formData.append('method', 'POST');
         formData.append('action', 'edit');
-        formData.append('assert', 'user');
         formData.append('title', title);
         formData.append('text', text);
         formData.append('summary', summary);
@@ -79,10 +69,7 @@ class PCGWMediaService {
         if (minor) formData.append('minor', '1');
 
         try {
-            const result = await ofetch(getWorkerProxyUrl(), {
-                method: 'POST',
-                body: formData
-            });
+            const result = await pcgwAuth.apiPost(formData, 'POST');
 
             if (result?.edit?.result !== 'Success') {
                 throw new Error(result?.edit?.info || result?.error?.info || 'Failed to edit page');

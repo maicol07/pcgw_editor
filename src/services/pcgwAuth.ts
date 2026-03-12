@@ -37,21 +37,45 @@ class PCGWAuthService {
         return this.authData.value.sessionCookies || '';
     }
 
-    private async apiPost(params: Record<string, any>, method: 'GET' | 'POST' = 'POST', retry = true): Promise<any> {
+    get password() {
+        return this.authData.value.password || '';
+    }
+
+    async apiPost(params: Record<string, any> | FormData, method: 'GET' | 'POST' = 'POST', retry = true): Promise<any> {
         if (!this.authData.value.sessionCookies) {
-            throw new Error('No session cookies available');
+            const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
+            if (autoReLogin && this.authData.value.username && this.authData.value.password) {
+                console.log('No session cookies, but autoReLogin is active. Attempting login...');
+                const success = await this.login(this.authData.value.username, this.authData.value.password);
+                if (!success) {
+                    throw new Error('No session cookies available and automatic re-login failed');
+                }
+            } else {
+                throw new Error('No session cookies available');
+            }
         }
 
-        const res = await ofetch(getWorkerProxyUrl(), {
-            method: 'POST',
-            body: {
+        let body: any;
+        if (params instanceof FormData) {
+            body = params;
+            // Ensure cookies and assert are present in FormData
+            if (!body.has('cookies')) body.append('cookies', this.authData.value.sessionCookies);
+            if (!body.has('assert')) body.append('assert', 'user');
+            if (!body.has('method')) body.append('method', method);
+        } else {
+            body = {
                 cookies: this.authData.value.sessionCookies,
                 method,
                 params: {
                     ...params,
                     assert: 'user'
                 }
-            }
+            };
+        }
+
+        const res = await ofetch(getWorkerProxyUrl(), {
+            method: 'POST',
+            body
         });
 
         // Handle MediaWiki auth errors reactively
@@ -134,11 +158,16 @@ class PCGWAuthService {
         } catch (e) {
             console.error('Logout error:', e);
         }
-        this.authData.value.username = '';
+        
+        const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
+        const preservedUsername = autoReLogin ? this.authData.value.username : '';
+        const preservedPassword = autoReLogin ? this.authData.value.password : undefined;
+
+        this.authData.value.username = preservedUsername;
         this.authData.value.isLoggedIn = false;
         this.authData.value.csrfToken = undefined;
         this.authData.value.sessionCookies = undefined;
-        this.authData.value.password = undefined;
+        this.authData.value.password = preservedPassword;
     }
 
     async getCsrfToken(): Promise<string | null> {
