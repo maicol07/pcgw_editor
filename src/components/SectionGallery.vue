@@ -260,7 +260,7 @@ const processUpload = async (force: boolean = false) => {
         await fileStore.updateFileStatus(file.id!, { status: 'uploading' });
 
         // 2. Attempt Upload
-        const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [PCGW Editor](https://github.com/maicol07/pcgw_editor)' : '';
+        const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
         const result = await pcgwMedia.uploadFile(file.blob, {
             filename: editFilename.value,
             comment: (editDescription.value || '') + attribution,
