@@ -4,6 +4,8 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Popover from 'primevue/popover';
+import InputGroup from 'primevue/inputgroup';
+import InputGroupAddon from 'primevue/inputgroupaddon';
 import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
@@ -218,18 +220,18 @@ const selectQuickPath = (value: string) => {
           <div class="grid grid-cols-1 gap-3">
             <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-center group/path">
               <div class="flex-1">
-                <div class="flex">
+                <InputGroup class="h-8">
                   <InputText :id="`path-input-${rowIndex}-${pathIndex}`" v-model="row.paths[pathIndex]"
-                    placeholder="e.g. {{p|appdata}}\GameName\"
-                    class="w-full rounded-r-none! font-mono text-sm border-r-0!" />
-                  <Button icon="pi" severity="secondary" v-tooltip.top="'Insert Special Path'"
-                    class="rounded-l-none! border border-surface-300 dark:border-surface-700 bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 hover:text-primary-500 w-10! px-0!"
-                    @click="(e) => toggleQuickPath(e, rowIndex, pathIndex)">
-                    <template #icon>
-                      <Bookmark class="w-4 h-4" />
-                    </template>
-                  </Button>
-                </div>
+                    placeholder="e.g. {{p|appdata}}\GameName\" class="w-full font-mono text-sm border-r-0!" />
+                  <InputGroupAddon class="p-0">
+                    <Button icon="pi" severity="secondary" v-tooltip.top="'Insert Special Path'"
+                      @click="(e) => toggleQuickPath(e, rowIndex, pathIndex)">
+                      <template #icon>
+                        <Bookmark class="w-4 h-4" />
+                      </template>
+                    </Button>
+                  </InputGroupAddon>
+                </InputGroup>
               </div>
 
               <Button v-if="row.paths.length > 1" text rounded severity="danger"
