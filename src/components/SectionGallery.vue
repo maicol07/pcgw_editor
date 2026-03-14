@@ -177,12 +177,12 @@ const actionMenuItems = computed<any[]>(() => {
             command: () => openPcgwImage(element.name)
         });
         items.push({
-            label: 'Edit on PCGW',
+            label: 'Edit wiki description',
             icon: Pencil,
             command: () => initiateEdit(element)
         });
         items.push({
-            label: 'Rename on PCGW',
+            label: 'Rename wiki file',
             icon: TextCursorInput,
             command: () => initiateRename(element)
         });
