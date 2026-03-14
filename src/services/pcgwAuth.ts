@@ -83,15 +83,18 @@ class PCGWAuthService {
             if (retry) {
                 const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
                 if (autoReLogin && this.authData.value.username && this.authData.value.password) {
-                    console.log('PCGW session expired during request. Attempting automatic re-login...');
+                    console.log(`PCGW session expired for user ${this.authData.value.username}. Attempting automatic re-login...`);
                     const success = await this.login(this.authData.value.username, this.authData.value.password);
                     if (success) {
                         console.log('Re-login successful, retrying original request...');
                         return this.apiPost(params, method, false);
+                    } else {
+                        console.error('Automatic re-login failed.');
                     }
                 }
                 
                 // If we reach here, either auto-login is off or failed
+                console.warn('Session expired and auto-login not possible or failed. Logging out.');
                 this.logout();
                 throw new Error('PCGW session expired. Please log in again.');
             }
@@ -112,7 +115,9 @@ class PCGWAuthService {
             });
 
             if (loginRes.success && loginRes.sessionCookies) {
-                this.authData.value.username = loginRes.username;
+                // IMPORTANT: Use the username provided (which contains @Bot suffix if applicable)
+                // mediawiki might return just the base username in loginRes.username
+                this.authData.value.username = username;
                 this.authData.value.sessionCookies = loginRes.sessionCookies;
                 this.authData.value.password = password;
                 this.authData.value.isLoggedIn = true;
