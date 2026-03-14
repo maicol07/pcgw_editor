@@ -174,7 +174,9 @@ const actionMenuItems = computed<any[]>(() => {
         items.push({
             label: 'View on PCGW',
             icon: ExternalLink,
-            command: () => openPcgwImage(element.name)
+            url: `https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(element.name.replace(/ /g, '_'))}`,
+            target: '_blank',
+            rel: 'noreferrer'
         });
         items.push({
             label: 'Edit wiki description',
@@ -489,10 +491,7 @@ const handleLogout = async () => {
     });
 };
 
-const openPcgwImage = (filename: string) => {
-    const url = `https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(filename.replace(/ /g, '_'))}`;
-    window.open(url, '_blank');
-};
+
 
 // Rename Logic
 const showRenameDialog = ref(false);
@@ -885,13 +884,13 @@ defineExpose({
                                         <span>{{ resolvedInfos[normalizeFilename(option)].user }}</span>
                                     </div>
                                 </div>
-                                <Button text rounded size="small"
-                                    class="p-1! opacity-0 group-hover/search-item:opacity-100 transition-opacity shrink-0"
-                                    v-tooltip.top="'View on PCGW'" @click.stop="openPcgwImage(option)">
-                                    <template #icon>
-                                        <ExternalLink class="w-4 h-4" />
-                                    </template>
-                                </Button>
+                                <a :href="`https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(option.replace(/ /g, '_'))}`"
+                                    target="_blank" rel="noreferrer"
+                                    class="p-button p-button-icon-only p-button-text p-button-rounded p-button-sm p-1! opacity-0 group-hover/search-item:opacity-100 transition-opacity shrink-0 flex items-center justify-center no-underline"
+                                    v-tooltip.top="'View on PCGW'"
+                                    @click.stop>
+                                    <ExternalLink class="w-4 h-4" />
+                                </a>
                             </div>
                         </template>
                     </AutocompleteField>
@@ -1020,7 +1019,7 @@ defineExpose({
             </VueDraggable>
             <Menu ref="menu" id="overlay_menu" :model="actionMenuItems" :popup="true">
                 <template #item="{ item, props }">
-                    <a v-bind="props.action" class="flex items-center">
+                    <a v-bind="props.action" class="flex items-center" :href="item.url" :target="item.target" :rel="item.rel">
                         <component :is="item.icon" v-if="item.icon && typeof item.icon !== 'string'"
                             class="w-4 h-4 mr-2" />
                         <span v-else-if="item.icon" :class="item.icon" class="mr-2" />
