@@ -124,6 +124,8 @@
 
 /* CSS Reset & Base Styles */
 :root {
+  --action-icon-size: 18px;
+  --action-button-padding: 0.4rem;
   /* PrimeVue Compatibility Colors */
   --p-primary-50: #faf5ff;
   --p-primary-100: #f3e8ff;
@@ -232,6 +234,8 @@ body {
   --spacing-section-gap: 0.75rem;
   --spacing-field-gap: 0.4rem;
   --spacing-panel-padding: 0.75rem;
+  --action-icon-size: 16px;
+  --action-button-padding: 0.3rem;
 }
 
 .comfortable-mode .dynamic-section {
@@ -416,6 +420,8 @@ body {
   --spacing-section-gap: 0.5rem;
   --spacing-field-gap: 0.2rem;
   --spacing-panel-padding: 0.4rem;
+  --action-icon-size: 14px;
+  --action-button-padding: 0.25rem;
 }
 
 .compact-mode .dynamic-section {
@@ -581,13 +587,20 @@ body {
   gap: 0.1rem !important;
 }
 
-.compact-mode .gallery-actions .p-button {
-  padding: 0.25rem !important;
+.compact-mode .local-files-area .p-fileupload-basic {
+  margin-bottom: 0.5rem !important;
 }
 
-.compact-mode .gallery-actions .p-button svg {
-  width: 14px !important;
-  height: 14px !important;
+/* Global Action Button Balance Fix */
+.gallery-section .gallery-actions .p-button,
+.settings-logout-btn {
+  padding: var(--action-button-padding) !important;
+}
+
+.gallery-section .gallery-actions .p-button svg,
+.settings-logout-btn svg {
+  width: var(--action-icon-size) !important;
+  height: var(--action-icon-size) !important;
 }
 
 .compact-mode .local-files-area {

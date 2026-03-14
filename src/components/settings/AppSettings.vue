@@ -211,9 +211,10 @@ const saveSettings = () => {
                                 <span class="font-bold text-sm">{{ pcgwAuth.username }}</span>
                             </div>
                         </div>
-                        <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'">
+                        <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
+                            class="settings-logout-btn">
                             <template #icon>
-                                <LogOut class="w-5 h-5 text-red-500" />
+                                <LogOut class="text-red-500" />
                             </template>
                         </Button>
                     </div>

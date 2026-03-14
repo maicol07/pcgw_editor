@@ -790,7 +790,7 @@ defineExpose({
                                 :class="element.caption ? 'text-primary-500' : 'text-surface-500'"
                                 @click="openCaptionDialog(element, index)">
                                 <template #icon>
-                                    <Pencil class="w-4 h-4" />
+                                    <Pencil />
                                 </template>
                             </Button>
                             <Button text rounded size="small"
@@ -798,14 +798,14 @@ defineExpose({
                                 :class="element.position === 'lateral' ? 'text-primary-500' : 'text-surface-500'"
                                 @click="togglePosition(index)">
                                 <template #icon>
-                                    <PanelRight v-if="element.position !== 'lateral'" class="w-4 h-4" />
-                                    <Grid v-else class="w-4 h-4" />
+                                    <PanelRight v-if="element.position !== 'lateral'" />
+                                    <Grid v-else />
                                 </template>
                             </Button>
                             <Button severity="danger" text rounded size="small" @click="removeImage(index)"
                                 v-tooltip="'Remove from Gallery'">
                                 <template #icon>
-                                    <Trash2 class="w-4 h-4" />
+                                    <Trash2 />
                                 </template>
                             </Button>
                         </div>
@@ -818,14 +818,14 @@ defineExpose({
                                     <Button size="small" text rounded severity="primary" v-tooltip="'Replace Image'"
                                         @click="triggerReplace(index)">
                                         <template #icon>
-                                            <Replace class="w-4 h-4" />
+                                            <Replace />
                                         </template>
                                     </Button>
                                     <Button size="small" text rounded severity="primary" v-tooltip="'Upload to PCGW'"
                                         @click="initiateUpload(element)"
                                         :loading="getLocalFile(element.localId)?.status === 'uploading'">
                                         <template #icon>
-                                            <Upload class="w-4 h-4" />
+                                            <Upload />
                                         </template>
                                     </Button>
                                 </div>
@@ -836,7 +836,7 @@ defineExpose({
                                 <Button type="button" @click="toggleMenu($event, element, index)" size="small" text
                                     rounded severity="primary" v-tooltip="'Manage on PCGW'">
                                     <template #icon>
-                                        <MoreVertical class="w-4 h-4" />
+                                        <MoreVertical />
                                     </template>
                                 </Button>
                             </template>
