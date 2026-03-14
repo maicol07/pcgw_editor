@@ -32,33 +32,39 @@ export default defineConfig({
             workbox: {
                 maximumFileSizeToCacheInBytes: 4194304 // 4 MB
             },
-            includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
+            includeAssets: ['favicon.png', 'apple-touch-icon.png', 'maskable-icon.png'],
             manifest: {
-                name: 'PCGW Editor',
+                name: 'PCGamingWiki Editor',
                 short_name: 'PCGW Editor',
                 description: 'PCGamingWiki Editor Tool',
                 theme_color: '#5b21b6',
                 background_color: '#0f172a',
                 icons: [
                     {
-                        src: 'pwa-192x192.png',
-                        sizes: '640x640',
+                        src: 'icons/icon-192x192.png',
+                        sizes: '192x192',
                         type: 'image/png'
                     },
                     {
-                        src: 'pwa-512x512.png',
-                        sizes: '640x640',
-                        type: 'image/png'
-                    },
-                    {
-                        src: 'pwa-512x512.png',
-                        sizes: '640x640',
+                        src: 'icons/icon-384x384.png',
+                        sizes: '384x384',
                         type: 'image/png',
                         purpose: 'any'
                     },
                     {
-                        src: 'maskable-icon.png',
-                        sizes: '640x640',
+                        src: 'icons/icon-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png'
+                    },
+                    {
+                        src: 'icons/icon-192x192-maskable.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                        purpose: 'maskable'
+                    },
+                    {
+                        src: 'icons/icon-512x512-maskable.png',
+                        sizes: '512x512',
                         type: 'image/png',
                         purpose: 'maskable'
                     }

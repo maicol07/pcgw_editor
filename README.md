@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/assets/logo_full.png" alt="PCGamingWiki Editor Logo" width="400">
+</p>
+
 # PCGamingWiki Editor
 
 ![Deploy Status](https://github.com/maicol07/pcgw_editor/actions/workflows/deploy.yml/badge.svg)
