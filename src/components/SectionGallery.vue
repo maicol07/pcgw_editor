@@ -146,6 +146,14 @@ const actionMenuItems = computed<any[]>(() => {
 
     if (element.localId !== undefined) {
         // Local file actions
+        items.push({
+            label: 'View image',
+            icon: ExternalLink,
+            url: getImageUrl(element),
+            target: '_blank',
+            rel: 'noreferrer'
+        });
+
         const matches = matchingWikiFiles[element.localId] || [];
         matches.forEach(match => {
             items.push({
