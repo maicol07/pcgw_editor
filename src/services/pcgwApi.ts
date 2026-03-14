@@ -163,6 +163,33 @@ class PCGWApiService {
         return this.cargoQuery('Infobox_game.Modes', query);
     }
 
+    /**
+     * Finds images on PCGW that match a specific SHA-1 hash
+     * @param sha1 Hex string of the SHA-1 hash
+     */
+    async getImagesByHash(sha1: string): Promise<string[]> {
+        if (!sha1) return [];
+
+        try {
+            const result = await this.fetchApi<{ 
+                query?: { 
+                    allimages?: { title: string }[] 
+                } 
+            }>({
+                action: 'query',
+                list: 'allimages',
+                aisha1: sha1,
+                ailimit: '10'
+            });
+
+            if (!result?.query?.allimages) return [];
+            return result.query.allimages.map(img => img.title.replace(/^File:/, ''));
+        } catch (error) {
+            console.error('Failed to get images by hash:', error);
+            return [];
+        }
+    }
+
     async searchFiles(query: string): Promise<string[]> {
         if (!query || query.length < 2) return [];
 

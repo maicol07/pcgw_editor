@@ -20,8 +20,9 @@ import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link
 } from 'lucide-vue-next';
+import { calculateSha1 } from '../utils/crypto';
 
 interface Props {
     modelValue: (GalleryImage | string)[];
@@ -99,6 +100,31 @@ const duplicateInfo = ref<{ filename: string; type: 'pre-check' | 'warning' } | 
 
 const editFilename = ref('');
 const editDescription = ref('');
+
+// Matching Wiki Files State
+const matchingWikiFiles = reactive<Record<number, string[]>>({});
+
+const checkMatch = async (localId: number) => {
+    const file = fileStore.files.find(f => f.id === localId);
+    if (!file) return;
+
+    try {
+        const sha1 = await calculateSha1(file.blob);
+        const matches = await pcgwApi.getImagesByHash(sha1);
+        matchingWikiFiles[localId] = matches;
+    } catch (e) {
+        console.error('Failed to check match for local file:', e);
+    }
+};
+
+// Watch for local images and check matches
+watchEffect(() => {
+    displayImages.value.forEach(img => {
+        if (img.localId !== undefined && matchingWikiFiles[img.localId] === undefined) {
+            checkMatch(img.localId);
+        }
+    });
+});
 const fileUploadRef = ref<any>(null);
 const replaceFileUploadRef = ref<any>(null);
 const showSearchDialog = ref(false);
@@ -120,6 +146,19 @@ const actionMenuItems = computed<any[]>(() => {
 
     if (element.localId !== undefined) {
         // Local file actions
+        const matches = matchingWikiFiles[element.localId] || [];
+        matches.forEach(match => {
+            items.push({
+                label: `Link to existing PCGW file (${match})`,
+                icon: Link,
+                command: () => linkToWiki(element.localId!, match)
+            });
+        });
+
+        if (matches.length > 0) {
+            items.push({ separator: true });
+        }
+
         items.push({
             label: 'Rename local file',
             icon: TextCursorInput,
@@ -207,6 +246,30 @@ const handleReplaceUpload = async (event: any) => {
         });
     } finally {
         replaceImageIndex.value = null;
+    }
+};
+
+const linkToWiki = (localId: number, wikiFilename: string) => {
+    const newValue = [...(props.modelValue || [])];
+    const index = newValue.findIndex(img => 
+        typeof img !== 'string' && img.localId === localId
+    );
+
+    if (index !== -1) {
+        const item = newValue[index] as GalleryImage;
+        newValue[index] = {
+            ...item,
+            name: wikiFilename,
+            localId: undefined // Link complete
+        };
+        emit('update:modelValue', newValue);
+        
+        toast.add({
+            severity: 'success',
+            summary: 'Linked to PCGW',
+            detail: `"${wikiFilename}" is now linked to the gallery item.`,
+            life: 3000
+        });
     }
 };
 

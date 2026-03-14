@@ -276,5 +276,25 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
             name: 'NewLocalName.png'
         });
     });
+
+    it('should handle linking to existing wiki file correctly', async () => {
+        const localImage = { name: 'MatchMe.png', localId: 101, caption: 'Match Caption', position: 'gallery' };
+        const wrapper = setupWrapper({ modelValue: [localImage] });
+        const vm = wrapper.vm as any;
+
+        // Mock hash calculation and API match
+        vi.mocked(pcgwApi.getImagesByHash).mockResolvedValue(['ExistingWikiFile.png']);
+
+        // 1. Manually trigger linkToWiki (as if clicked from menu)
+        await vm.linkToWiki(101, 'ExistingWikiFile.png');
+
+        // Check emitted events
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect(emitted![0][0][0]).toMatchObject({
+            name: 'ExistingWikiFile.png',
+            localId: undefined // Should be cleared
+        });
+    });
 });
 
