@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import SectionGallery from '../../../src/components/SectionGallery.vue';
 import { pcgwApi } from '../../../src/services/pcgwApi';
@@ -294,6 +294,33 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         expect(emitted![0][0][0]).toMatchObject({
             name: 'ExistingWikiFile.png',
             localId: undefined // Should be cleared
+        });
+    });
+
+    it('should automatically synchronize model when a redirect is detected', async () => {
+        const oldImage = { name: 'OldName.png', caption: 'Stay same', position: 'gallery' };
+        
+        // Mock getImageInfo returning a redirect BEFORE setup
+        vi.mocked(pcgwApi.getImageInfo).mockResolvedValue({
+            url: 'https://pcgw.com/NewName.png',
+            user: 'Admin',
+            size: 1024,
+            width: 800,
+            height: 600,
+            canonicalName: 'NewName.png'
+        });
+
+        const wrapper = setupWrapper({ modelValue: [oldImage] });
+
+        // Wait for watchEffect and async call
+        await flushPromises();
+        await vi.waitUntil(() => wrapper.emitted('update:modelValue') !== undefined, { timeout: 2000 });
+
+        // Check emitted events
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect(emitted![0][0][0]).toMatchObject({
+            name: 'NewName.png'
         });
     });
 });

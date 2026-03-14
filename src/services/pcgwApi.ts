@@ -262,15 +262,15 @@ class PCGWApiService {
         return info?.url || null;
     }
 
-    async getImageInfo(filename: string): Promise<{ url: string; user: string; size: number; width: number; height: number } | null> {
+    async getImageInfo(filename: string): Promise<{ url: string; user: string; size: number; width: number; height: number; canonicalName: string } | null> {
         const infos = await this.getImagesInfo([filename]);
         return infos[filename] || null;
     }
 
-    async getImagesInfo(filenames: string[]): Promise<Record<string, { url: string; user: string; size: number; width: number; height: number }>> {
+    async getImagesInfo(filenames: string[]): Promise<Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }>> {
         if (!filenames.length) return {};
 
-        const results: Record<string, { url: string; user: string; size: number; width: number; height: number }> = {};
+        const results: Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }> = {};
         const toFetch: string[] = [];
 
         filenames.forEach(filename => {
@@ -297,31 +297,50 @@ class PCGWApiService {
                 const chunk = toFetch.slice(i, i + CHUNK_SIZE);
                 const response = await this.fetchApi<{ 
                     query?: { 
-                        pages?: Record<string, { title: string; imageinfo?: { url: string; user: string; size: number; width: number; height: number }[] }> 
+                        pages?: Record<string, { title: string; imageinfo?: { url: string; user: string; size: number; width: number; height: number }[] }>,
+                        redirects?: { from: string; to: string }[]
                     } 
                 }>({
                     action: 'query',
                     titles: chunk.map(f => `File:${f}`).join('|'),
                     prop: 'imageinfo',
                     iiprop: 'url|user|size|dimensions',
+                    redirects: '1'
                 });
 
                 if (response?.query?.pages) {
+                    // Create redirect map (original title -> canonical title)
+                    const redirectMap: Record<string, string> = {};
+                    response.query.redirects?.forEach(r => {
+                        redirectMap[r.from] = r.to;
+                    });
+
                     Object.values(response.query.pages).forEach(page => {
                         if (page.imageinfo?.[0]) {
-                            const rawName = page.title.replace(/^File:/, '');
-                            const normalizedName = normalizeFilename(rawName);
+                            const canonicalTitle = page.title;
+                            const canonicalName = canonicalTitle.replace(/^File:/, '');
+                            const normalizedCanonicalName = normalizeFilename(canonicalName);
+
                             const info = {
                                 url: page.imageinfo[0].url,
                                 user: page.imageinfo[0].user,
                                 size: page.imageinfo[0].size,
                                 width: page.imageinfo[0].width,
-                                height: page.imageinfo[0].height
+                                height: page.imageinfo[0].height,
+                                canonicalName: normalizedCanonicalName
                             };
-                            results[normalizedName] = info;
+
+                            // Map this info to all original keys that point to this page
+                            chunk.forEach(originalName => {
+                                const originalTitle = `File:${originalName}`;
+                                // Either it's the title itself, or it redirects to it
+                                if (originalTitle === canonicalTitle || redirectMap[originalTitle] === canonicalTitle) {
+                                    results[normalizeFilename(originalName)] = info;
+                                }
+                            });
                             
-                            // Update cache with normalized name
-                            const cacheKey = `image_info:${normalizedName}`;
+                            // Also cache by canonical name for future direct lookups
+                            const cacheKey = `image_info:${normalizedCanonicalName}`;
                             this.cache.value[cacheKey] = {
                                 data: [JSON.stringify(info)],
                                 timestamp: Date.now()

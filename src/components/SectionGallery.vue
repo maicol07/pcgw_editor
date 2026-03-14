@@ -414,7 +414,8 @@ const processUpload = async (force: boolean = false) => {
                 user: pcgwAuth.username || '',
                 size: result.upload.imageinfo.size,
                 width: result.upload.imageinfo.width,
-                height: result.upload.imageinfo.height
+                height: result.upload.imageinfo.height,
+                canonicalName: normalizeFilename(editFilename.value)
             };
 
             await fileStore.updateFileStatus(file.id!, {
@@ -733,16 +734,39 @@ const handleConfirmDelete = async () => {
 const normalizeFilename = (name: string) => name.replace(/_/g, ' ').trim();
 
 // Resolved image info (url and uploader)
-const resolvedInfos = reactive<Record<string, { url: string; user: string; size: number; width: number; height: number }>>({});
+const resolvedInfos = reactive<Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }>>({});
 
 // Fetch info for images
 watchEffect(() => {
     props.modelValue?.forEach(async (img) => {
-        const name = normalizeFilename(typeof img === 'string' ? img : img.name);
-        if (!resolvedInfos[name]) {
-            const info = await pcgwApi.getImageInfo(name);
+        const currentName = typeof img === 'string' ? img : img.name;
+        const normalizedItemName = normalizeFilename(currentName);
+        if (!resolvedInfos[normalizedItemName]) {
+            const info = await pcgwApi.getImageInfo(currentName);
             if (info) {
-                resolvedInfos[name] = info;
+                resolvedInfos[normalizedItemName] = info;
+
+                // Sync model if it's a redirect
+                if (info.canonicalName !== normalizedItemName) {
+                    const newValue = [...(props.modelValue || [])];
+                    const idx = newValue.findIndex(item => (typeof item === 'string' ? item : item.name) === currentName);
+                    if (idx !== -1) {
+                        const item = newValue[idx];
+                        if (typeof item === 'string') {
+                            newValue[idx] = info.canonicalName;
+                        } else {
+                            newValue[idx] = { ...item, name: info.canonicalName };
+                        }
+                        emit('update:modelValue', newValue);
+                        
+                        toast.add({
+                            severity: 'info',
+                            summary: 'Filename Synchronized',
+                            detail: `"${currentName}" redirected to "${info.canonicalName}" on PCGW. Editor updated to current name.`,
+                            life: 5000
+                        });
+                    }
+                }
             }
         }
     });
