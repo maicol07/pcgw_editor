@@ -194,16 +194,28 @@ class PCGWApiService {
         if (!query || query.length < 2) return [];
 
         try {
-            const result = await this.fetchApi<{ query?: { search?: { title: string }[] } }>({
-                action: 'query',
-                list: 'search',
-                srsearch: query,
-                srnamespace: '6',
-                srlimit: '10',
-            });
+            const [searchResult, prefixResult] = await Promise.all([
+                this.fetchApi<{ query?: { search?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'search',
+                    srsearch: query,
+                    srnamespace: '6',
+                    srlimit: '20',
+                }),
+                this.fetchApi<{ query?: { allimages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allimages',
+                    aiprefix: query,
+                    ailimit: '20',
+                })
+            ]);
 
-            if (!result?.query?.search) return [];
-            return result.query.search.map((item) => item.title.replace(/^File:/, ''));
+            const searchTitles = searchResult?.query?.search?.map(item => item.title) || [];
+            const prefixTitles = prefixResult?.query?.allimages?.map(item => item.title) || [];
+            
+            // Merge and de-duplicate
+            const allTitles = Array.from(new Set([...prefixTitles, ...searchTitles]));
+            return allTitles.map((title) => title.replace(/^File:/, ''));
         } catch (error) {
             console.error('Failed to search files:', error);
             return [];
