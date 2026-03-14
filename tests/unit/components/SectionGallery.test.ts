@@ -9,6 +9,26 @@ import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 
+// Shared mock objects to ensure test and component use the same instances
+const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
+    mockFileStore: {
+        loadFiles: vi.fn(() => Promise.resolve([])),
+        files: [] as any[],
+        addFile: vi.fn()
+    },
+    mockPcgwAuth: {
+        isLoggedIn: true,
+        username: 'test-user',
+        sessionCookies: 'test-cookies',
+        getCsrfToken: vi.fn(() => Promise.resolve('csrf-token')),
+    },
+    mockPcgwMedia: {
+        editPage: vi.fn(),
+        uploadFile: vi.fn(),
+        checkFileExists: vi.fn(),
+    }
+}));
+
 // Mock services
 vi.mock('../../../src/services/pcgwApi', () => ({
     pcgwApi: {
@@ -21,24 +41,15 @@ vi.mock('../../../src/services/pcgwApi', () => ({
 
 // Mock local store/db to avoid IndexedDB errors
 vi.mock('../../../src/stores/files', () => ({
-    useFileStore: () => ({
-        loadFiles: vi.fn(() => Promise.resolve([])),
-        files: []
-    })
+    useFileStore: () => mockFileStore
 }));
 
 vi.mock('../../../src/services/pcgwAuth', () => ({
-    pcgwAuth: {
-        isLoggedIn: true,
-        sessionCookies: 'test-cookies',
-        getCsrfToken: vi.fn(() => Promise.resolve('csrf-token')),
-    }
+    pcgwAuth: mockPcgwAuth
 }));
 
 vi.mock('../../../src/services/pcgwMedia', () => ({
-    pcgwMedia: {
-        editPage: vi.fn(),
-    }
+    pcgwMedia: mockPcgwMedia
 }));
 
 // Mock Lucide components
@@ -46,7 +57,7 @@ vi.mock('lucide-vue-next', () => {
     const icons = [
         'Images', 'Image', 'GripHorizontal', 'ExternalLink', 'Pencil', 'Trash2', 'PanelRight', 'Grid',
         'Upload', 'CheckCircle2', 'AlertCircle', 'Loader2', 'LogOut', 'HardDrive', 'MoreVertical', 
-        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn'
+        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace'
     ];
     const mock: any = {};
     icons.forEach(i => mock[i] = { template: `<span>${i}</span>` });
@@ -145,4 +156,60 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         expect(emitted).toBeTruthy();
         expect(emitted![0][0]).toEqual([{ name: 'TestCaption.jpg', caption: 'New Caption', position: 'gallery' }]);
     });
+
+    it('should handle image replacement correctly', async () => {
+        const initialImages = [
+            { name: 'Original.png', caption: 'Original Caption', position: 'gallery' }
+        ];
+        const wrapper = setupWrapper({ modelValue: initialImages });
+        
+        // Mock addFile to return a fake ID
+        mockFileStore.addFile.mockResolvedValue(123);
+
+        // Access the component's exposed methods
+        const vm = wrapper.vm as any;
+
+        // 1. Trigger replace for the first image
+        vm.triggerReplace(0);
+        
+        // 2. Simulate file upload result
+        const mockFile = new File(['test'], 'Replacement.png', { type: 'image/png' });
+        await vm.handleReplaceUpload({ files: [mockFile] });
+
+        // Expectations
+        expect(mockFileStore.addFile).toHaveBeenCalledWith(mockFile);
+        
+        // Check emitted events
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        const newValue = emitted![0][0] as any[];
+        
+        expect(newValue[0]).toMatchObject({
+            name: 'Replacement.png',
+            localId: 123,
+            caption: 'Original Caption', // Caption should be preserved
+            position: 'gallery' // Position should be preserved
+        });
+    });
+
+    it('should handle replacement of a simple string image', async () => {
+        const initialImages = ['StringImage.png'];
+        const wrapper = setupWrapper({ modelValue: initialImages });
+        mockFileStore.addFile.mockResolvedValue(456);
+
+        const vm = wrapper.vm as any;
+        vm.triggerReplace(0);
+        
+        const mockFile = new File(['test'], 'NewLocal.png', { type: 'image/png' });
+        await vm.handleReplaceUpload({ files: [mockFile] });
+
+        const newValue = wrapper.emitted('update:modelValue')![0][0] as any[];
+        expect(newValue[0]).toMatchObject({
+            name: 'NewLocal.png',
+            localId: 456,
+            caption: '', // Default for strings
+            position: 'gallery'
+        });
+    });
 });
+

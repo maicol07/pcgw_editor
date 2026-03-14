@@ -20,7 +20,7 @@ import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace
 } from 'lucide-vue-next';
 
 interface Props {
@@ -66,7 +66,7 @@ const saveCaption = () => {
     if (editingIndex.value !== null) {
         const newValue = [...(props.modelValue || [])];
         const item = newValue[editingIndex.value];
-        
+
         if (typeof item === 'string') {
             newValue[editingIndex.value] = { name: item, caption: editingCaption.value, position: 'gallery' };
         } else {
@@ -100,7 +100,9 @@ const duplicateInfo = ref<{ filename: string; type: 'pre-check' | 'warning' } | 
 const editFilename = ref('');
 const editDescription = ref('');
 const fileUploadRef = ref<any>(null);
+const replaceFileUploadRef = ref<any>(null);
 const showSearchDialog = ref(false);
+const replaceImageIndex = ref<number | null>(null);
 
 const menu = ref();
 const activeItem = ref<{ element: GalleryImage; index: number } | null>(null);
@@ -130,9 +132,61 @@ const actionMenuItems = computed<any[]>(() => {
             icon: Trash2,
             class: 'text-red-500',
             command: () => initiateDelete(element)
+        },
+        {
+            separator: true
+        },
+        {
+            label: 'Replace with local image',
+            icon: Replace,
+            command: () => triggerReplace(activeItem.value!.index)
         }
     ];
 });
+
+const triggerReplace = (index: number) => {
+    replaceImageIndex.value = index;
+    replaceFileUploadRef.value?.choose();
+};
+
+const handleReplaceUpload = async (event: any) => {
+    if (replaceImageIndex.value === null) return;
+
+    const file = event.files[0];
+    if (!file) return;
+
+    try {
+        const id = await fileStore.addFile(file);
+        const newValue = [...(props.modelValue || [])];
+        const item = newValue[replaceImageIndex.value];
+
+        const galleryItem: GalleryImage = {
+            name: file.name,
+            caption: typeof item === 'string' ? '' : (item.caption || ''),
+            position: typeof item === 'string' ? 'gallery' : (item.position || 'gallery'),
+            localId: id
+        };
+
+        newValue[replaceImageIndex.value] = galleryItem;
+        emit('update:modelValue', newValue);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Image Replaced',
+            detail: `Replaced with local file "${file.name}".`,
+            life: 3000
+        });
+    } catch (e) {
+        toast.add({
+            severity: 'error',
+            summary: 'Replace Failed',
+            detail: `Could not process replacement file.`,
+            life: 3000
+        });
+    } finally {
+        replaceImageIndex.value = null;
+    }
+};
 
 const handleLocalMenuUpload = async (event: any) => {
     const files = event.files;
@@ -605,6 +659,8 @@ defineExpose({
             <div class="hidden">
                 <FileUpload ref="fileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
                     @uploader="handleLocalMenuUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" />
+                <FileUpload ref="replaceFileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
+                    @uploader="handleReplaceUpload" :multiple="false" accept="image/*" :maxFileSize="10000000" />
             </div>
         </div>
 
@@ -756,15 +812,23 @@ defineExpose({
 
                         <!-- Right: Wiki Actions (Conditional) -->
                         <div class="flex items-center">
-                            <!-- Local file: Single icon -->
+                            <!-- Local file: Actions -->
                             <template v-if="element.localId !== undefined">
-                                <Button size="small" text rounded severity="primary" v-tooltip="'Upload to PCGW'"
-                                    @click="initiateUpload(element)"
-                                    :loading="getLocalFile(element.localId)?.status === 'uploading'">
-                                    <template #icon>
-                                        <Upload class="w-4 h-4" />
-                                    </template>
-                                </Button>
+                                <div class="flex gap-1">
+                                    <Button size="small" text rounded severity="primary" v-tooltip="'Replace Image'"
+                                        @click="triggerReplace(index)">
+                                        <template #icon>
+                                            <Replace class="w-4 h-4" />
+                                        </template>
+                                    </Button>
+                                    <Button size="small" text rounded severity="primary" v-tooltip="'Upload to PCGW'"
+                                        @click="initiateUpload(element)"
+                                        :loading="getLocalFile(element.localId)?.status === 'uploading'">
+                                        <template #icon>
+                                            <Upload class="w-4 h-4" />
+                                        </template>
+                                    </Button>
+                                </div>
                             </template>
 
                             <!-- Wiki file: Management Menu -->
