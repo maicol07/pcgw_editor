@@ -116,37 +116,54 @@ const actionMenuItems = computed<any[]>(() => {
     if (!activeItem.value) return [];
     const { element } = activeItem.value;
 
-    return [
-        {
+    const items: any[] = [];
+
+    if (element.localId !== undefined) {
+        // Local file actions
+        items.push({
+            label: 'Rename local file',
+            icon: TextCursorInput,
+            command: () => initiateRename(element)
+        });
+        items.push({
+            label: 'Replace with another image',
+            icon: Replace,
+            command: () => triggerReplace(activeItem.value!.index)
+        });
+    } else {
+        // Wiki file actions
+        items.push({
             label: 'View on PCGW',
             icon: ExternalLink,
             command: () => openPcgwImage(element.name)
-        },
-        {
+        });
+        items.push({
             label: 'Edit on PCGW',
             icon: Pencil,
             command: () => initiateEdit(element)
-        },
-        {
+        });
+        items.push({
             label: 'Rename on PCGW',
             icon: TextCursorInput,
             command: () => initiateRename(element)
-        },
-        {
+        });
+        items.push({
             label: 'Delete from PCGW',
             icon: Trash2,
             class: 'text-red-500',
             command: () => initiateDelete(element)
-        },
-        {
+        });
+        items.push({
             separator: true
-        },
-        {
+        });
+        items.push({
             label: 'Replace with local image',
             icon: Replace,
             command: () => triggerReplace(activeItem.value!.index)
-        }
-    ];
+        });
+    }
+
+    return items;
 });
 
 const triggerReplace = (index: number) => {
@@ -891,42 +908,25 @@ defineExpose({
                             </Button>
                         </div>
 
-                        <!-- Right: Wiki Actions (Conditional) -->
-                        <div class="flex items-center">
-                            <!-- Local file: Actions -->
-                            <template v-if="element.localId !== undefined">
-                                <div class="flex gap-1">
-                                    <Button size="small" text rounded severity="primary" v-tooltip="'Rename File'"
-                                        @click="initiateRename(element)">
-                                        <template #icon>
-                                            <TextCursorInput />
-                                        </template>
-                                    </Button>
-                                    <Button size="small" text rounded severity="primary" v-tooltip="'Replace Image'"
-                                        @click="triggerReplace(index)">
-                                        <template #icon>
-                                            <Replace />
-                                        </template>
-                                    </Button>
-                                    <Button size="small" text rounded severity="primary" v-tooltip="'Upload to PCGW'"
-                                        @click="initiateUpload(element)"
-                                        :loading="getLocalFile(element.localId)?.status === 'uploading'">
-                                        <template #icon>
-                                            <Upload />
-                                        </template>
-                                    </Button>
-                                </div>
-                            </template>
+                        <!-- Right: Actions & Management -->
+                        <div class="flex items-center gap-1">
+                            <!-- Local file: Primary Upload Action -->
+                            <Button v-if="element.localId !== undefined" size="small" text rounded severity="primary"
+                                v-tooltip="'Upload to PCGW'" @click="initiateUpload(element)"
+                                :loading="getLocalFile(element.localId)?.status === 'uploading'">
+                                <template #icon>
+                                    <Upload />
+                                </template>
+                            </Button>
 
-                            <!-- Wiki file: Management Menu -->
-                            <template v-else>
-                                <Button type="button" @click="toggleMenu($event, element, index)" size="small" text
-                                    rounded severity="primary" v-tooltip="'Manage on PCGW'">
-                                    <template #icon>
-                                        <MoreVertical />
-                                    </template>
-                                </Button>
-                            </template>
+                            <!-- Common Management Menu -->
+                            <Button type="button" @click="toggleMenu($event, element, index)" size="small" text rounded
+                                severity="primary"
+                                v-tooltip="element.localId !== undefined ? 'Local Actions' : 'Manage on PCGW'">
+                                <template #icon>
+                                    <MoreVertical />
+                                </template>
+                            </Button>
                         </div>
                     </div>
                 </div>
