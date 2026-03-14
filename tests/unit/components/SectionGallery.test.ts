@@ -14,7 +14,8 @@ const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
     mockFileStore: {
         loadFiles: vi.fn(() => Promise.resolve([])),
         files: [] as any[],
-        addFile: vi.fn()
+        addFile: vi.fn(),
+        updateFileStatus: vi.fn(() => Promise.resolve())
     },
     mockPcgwAuth: {
         isLoggedIn: true,
@@ -26,6 +27,7 @@ const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
         editPage: vi.fn(),
         uploadFile: vi.fn(),
         checkFileExists: vi.fn(),
+        moveFile: vi.fn(() => Promise.resolve()),
     }
 }));
 
@@ -36,6 +38,7 @@ vi.mock('../../../src/services/pcgwApi', () => ({
         getImagesByHash: vi.fn(() => Promise.resolve([])),
         getImagesInfo: vi.fn(() => Promise.resolve({})),
         getImageInfo: vi.fn(() => Promise.resolve(null)),
+        resetCache: vi.fn(),
     }
 }));
 
@@ -57,7 +60,7 @@ vi.mock('lucide-vue-next', () => {
     const icons = [
         'Images', 'Image', 'GripHorizontal', 'ExternalLink', 'Pencil', 'Trash2', 'PanelRight', 'Grid',
         'Upload', 'CheckCircle2', 'AlertCircle', 'Loader2', 'LogOut', 'HardDrive', 'MoreVertical', 
-        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace'
+        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace', 'TextCursorInput'
     ];
     const mock: any = {};
     icons.forEach(i => mock[i] = { template: `<span>${i}</span>` });
@@ -209,6 +212,68 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
             localId: 456,
             caption: '', // Default for strings
             position: 'gallery'
+        });
+    });
+
+    it('should handle wiki rename correctly', async () => {
+        const initialImages = [
+            { name: 'WikiImage.png', caption: 'Wiki Caption', position: 'gallery' }
+        ];
+        const wrapper = setupWrapper({ modelValue: initialImages });
+        const vm = wrapper.vm as any;
+
+        // 1. Initiate rename
+        vm.initiateRename(initialImages[0]);
+        expect(vm.showRenameDialog).toBe(true);
+        expect(vm.newRenameName).toBe('WikiImage.png');
+
+        // 2. Simulate user input
+        vm.newRenameName = 'NewWikiName.png';
+
+        // 3. Confirm rename
+        await vm.handleConfirmRename();
+
+        expect(mockPcgwMedia.moveFile).toHaveBeenCalledWith(
+            'WikiImage.png',
+            'NewWikiName.png',
+            expect.any(String)
+        );
+
+        // Check emitted events
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect(emitted![0][0][0]).toMatchObject({
+            name: 'NewWikiName.png'
+        });
+    });
+
+    it('should handle local rename correctly', async () => {
+        const initialImages = [
+            { name: 'LocalImage.png', localId: 789, caption: 'Local Caption', position: 'gallery' }
+        ];
+        const wrapper = setupWrapper({ modelValue: initialImages });
+        const vm = wrapper.vm as any;
+
+        // 1. Initiate rename
+        vm.initiateRename(initialImages[0]);
+        expect(vm.showRenameDialog).toBe(true);
+
+        // 2. Simulate user input
+        vm.newRenameName = 'NewLocalName.png';
+
+        // 3. Confirm rename
+        await vm.handleConfirmRename();
+
+        expect(mockFileStore.updateFileStatus).toHaveBeenCalledWith(
+            789,
+            { name: 'NewLocalName.png' }
+        );
+
+        // Check emitted events
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect(emitted![0][0][0]).toMatchObject({
+            name: 'NewLocalName.png'
         });
     });
 });

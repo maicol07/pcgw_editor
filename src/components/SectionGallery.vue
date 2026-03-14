@@ -20,7 +20,7 @@ import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput
 } from 'lucide-vue-next';
 
 interface Props {
@@ -126,6 +126,11 @@ const actionMenuItems = computed<any[]>(() => {
             label: 'Edit on PCGW',
             icon: Pencil,
             command: () => initiateEdit(element)
+        },
+        {
+            label: 'Rename on PCGW',
+            icon: TextCursorInput,
+            command: () => initiateRename(element)
         },
         {
             label: 'Delete from PCGW',
@@ -404,6 +409,80 @@ const handleLogout = async () => {
 const openPcgwImage = (filename: string) => {
     const url = `https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(filename.replace(/ /g, '_'))}`;
     window.open(url, '_blank');
+};
+
+// Rename Logic
+const showRenameDialog = ref(false);
+const renamingImage = ref<GalleryImage | null>(null);
+const newRenameName = ref('');
+const isRenaming = ref(false);
+
+const initiateRename = (element: GalleryImage) => {
+    if (!pcgwAuth.isLoggedIn) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Authentication Required',
+            detail: 'Please login to PCGW to rename files.',
+            life: 3000
+        });
+        return;
+    }
+    renamingImage.value = element;
+    newRenameName.value = element.name;
+    showRenameDialog.value = true;
+};
+
+const handleConfirmRename = async () => {
+    if (!renamingImage.value || !newRenameName.value.trim() || newRenameName.value.trim() === renamingImage.value.name) {
+        showRenameDialog.value = false;
+        return;
+    }
+
+    isRenaming.value = true;
+    try {
+        const fromName = renamingImage.value.name;
+        const toName = newRenameName.value.trim();
+
+        if (renamingImage.value.localId !== undefined) {
+            // Local rename
+            await fileStore.updateFileStatus(renamingImage.value.localId, { name: toName });
+        } else {
+            // Wiki rename
+            await pcgwMedia.moveFile(fromName, toName, 'Renaming file via PCGW Editor');
+            // Update local cache if possible or just rely on next fetch
+            pcgwApi.resetCache();
+        }
+
+        // Update modelValue
+        const newValue = [...(props.modelValue || [])];
+        const itemIdx = newValue.findIndex(img => (typeof img === 'string' ? img : img.name) === fromName);
+        if (itemIdx !== -1) {
+            const item = newValue[itemIdx];
+            if (typeof item === 'string') {
+                newValue[itemIdx] = toName;
+            } else {
+                newValue[itemIdx] = { ...item, name: toName };
+            }
+            emit('update:modelValue', newValue);
+        }
+
+        toast.add({
+            severity: 'success',
+            summary: 'File Renamed',
+            detail: `"${fromName}" moved to "${toName}".`,
+            life: 3000
+        });
+        showRenameDialog.value = false;
+    } catch (e: any) {
+        toast.add({
+            severity: 'error',
+            summary: 'Rename Failed',
+            detail: e.message || 'Failed to rename file.',
+            life: 5000
+        });
+    } finally {
+        isRenaming.value = false;
+    }
 };
 
 // Edit Dialog Logic
@@ -815,6 +894,12 @@ defineExpose({
                             <!-- Local file: Actions -->
                             <template v-if="element.localId !== undefined">
                                 <div class="flex gap-1">
+                                    <Button size="small" text rounded severity="primary" v-tooltip="'Rename File'"
+                                        @click="initiateRename(element)">
+                                        <template #icon>
+                                            <TextCursorInput />
+                                        </template>
+                                    </Button>
                                     <Button size="small" text rounded severity="primary" v-tooltip="'Replace Image'"
                                         @click="triggerReplace(index)">
                                         <template #icon>
@@ -999,6 +1084,53 @@ defineExpose({
                         @click="showPcgwDeleteDialog = false" :disabled="isSavingDelete" />
                     <Button label="Send Request" severity="danger" class="flex-1" @click="handleConfirmDelete"
                         :loading="isSavingDelete">
+                        <template #loadingicon>
+                            <Loader2 class="w-4 h-4 animate-spin mr-2" />
+                        </template>
+                    </Button>
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- PCGW Rename Dialog -->
+        <Dialog v-model:visible="showRenameDialog" modal :header="renamingImage?.localId !== undefined ? 'Rename File' : 'Rename on PCGW'" :draggable="false"
+            class="w-full max-w-sm">
+            <div class="flex flex-col gap-5">
+                <div
+                    class="flex items-center gap-4 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20">
+                    <div class="p-2.5 bg-primary-500 rounded-lg shadow-lg">
+                        <TextCursorInput class="w-5 h-5 text-white" />
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-xs text-primary-600 uppercase tracking-widest">{{ renamingImage?.localId !== undefined ? 'Rename Local File' : 'Rename Wiki File' }}</p>
+                        <p class="text-[11px] opacity-80 leading-tight mt-0.5">{{ renamingImage?.localId !== undefined ? 'Update the name of this local file before upload.' : 'This will rename the file on PCGamingWiki using the Move API.' }}</p>
+                    </div>
+                </div>
+
+                <div v-if="renamingImage" class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-surface-500 uppercase">Current Filename</label>
+                        <div
+                            class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-xs text-surface-400 truncate border border-surface-200 dark:border-surface-700 italic">
+                            {{ renamingImage.name }}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="newRenameName" class="text-[10px] font-bold text-surface-500 uppercase">New
+                            Filename</label>
+                        <InputText id="newRenameName" v-model="newRenameName" placeholder="New-filename.png"
+                            class="w-full text-sm!" @keyup.enter="handleConfirmRename" />
+                        <span class="text-[9px] text-surface-400 italic px-1">Remember to include the extension (e.g.,
+                            .png, .jpg).</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mt-2">
+                    <Button label="Cancel" severity="secondary" text class="flex-1" @click="showRenameDialog = false"
+                        :disabled="isRenaming" />
+                    <Button label="Rename File" severity="primary" class="flex-1" @click="handleConfirmRename"
+                        :loading="isRenaming" :disabled="!newRenameName.trim() || newRenameName.trim() === renamingImage?.name">
                         <template #loadingicon>
                             <Loader2 class="w-4 h-4 animate-spin mr-2" />
                         </template>

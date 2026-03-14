@@ -81,6 +81,43 @@ class PCGWMediaService {
             throw error;
         }
     }
+    
+    async moveFile(from: string, to: string, reason: string): Promise<any> {
+        if (!pcgwAuth.isLoggedIn) {
+            throw new Error('User not authenticated with PCGW');
+        }
+
+        const token = await pcgwAuth.getCsrfToken();
+        if (!token) throw new Error('Could not obtain CSRF token for moving file');
+
+        const fromTitle = from.startsWith('File:') ? from : `File:${from}`;
+        const toTitle = to.startsWith('File:') ? to : `File:${to}`;
+
+        const formData = new FormData();
+        formData.append('action', 'move');
+        formData.append('from', fromTitle);
+        formData.append('to', toTitle);
+        formData.append('reason', reason);
+        formData.append('token', token);
+        formData.append('noredirect', '1'); // Don't leave a redirect behind for files if possible
+
+        try {
+            const result = await pcgwAuth.apiPost(formData, 'POST');
+
+            if (result?.move?.error) {
+                throw new Error(result.move.error.info || 'Failed to move file');
+            }
+            
+            if (result?.error) {
+                throw new Error(result.error.info || 'API error moving file');
+            }
+
+            return result;
+        } catch (error: any) {
+            console.error('Move failed:', error);
+            throw error;
+        }
+    }
 }
 
 export const pcgwMedia = new PCGWMediaService();
