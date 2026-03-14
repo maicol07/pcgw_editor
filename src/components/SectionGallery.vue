@@ -392,7 +392,9 @@ const processUpload = async (force: boolean = false) => {
         });
     } finally {
         isUploading.value = false;
-        selectedFile.value = null;
+        if (!showOverwriteConfirm.value) {
+            selectedFile.value = null;
+        }
     }
 };
 
