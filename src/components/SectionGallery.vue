@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, reactive } from 'vue';
+import { ref, computed, watchEffect, reactive, watch } from 'vue';
 import { useFileStore, LocalFile } from '../stores/files';
 import { useUiStore } from '../stores/ui';
 import { useToast } from 'primevue/usetoast';
@@ -16,11 +16,15 @@ import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
 import FileUpload from 'primevue/fileupload';
 import Menu from 'primevue/menu';
+import MultiSelect from 'primevue/multiselect';
+import InputNumber from 'primevue/inputnumber';
+import RadioButton from 'primevue/radiobutton';
+import ToggleSwitch from 'primevue/toggleswitch';
 import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
@@ -177,7 +181,7 @@ const actionMenuItems = computed<any[]>(() => {
         items.push({
             label: 'Crop image',
             icon: Crop,
-            command: () => initiateCrop(element)
+            command: () => initiateCrop({ type: 'gallery', galleryItem: element })
         });
         items.push({
             label: 'Replace with another image',
@@ -297,24 +301,25 @@ const linkToWiki = (localId: number, wikiFilename: string) => {
 
 const handleLocalMenuUpload = async (event: any) => {
     const files = event.files;
+    const newlyAddedImages: GalleryImage[] = [];
+
     for (const file of files) {
         try {
             const id = await fileStore.addFile(file);
-            const newImages: GalleryImage[] = [{
+            const newImage: GalleryImage = {
                 name: file.name,
                 caption: '',
                 position: 'gallery',
                 localId: id
-            }];
-            emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
-
+            };
+            newlyAddedImages.push(newImage);
+            
             toast.add({
                 severity: 'success',
                 summary: 'Added Local File',
-                detail: `"${file.name}" added to gallery as placeholder.`,
+                detail: `"${file.name}" added to gallery.`,
                 life: 3000
             });
-            showSearchDialog.value = false;
         } catch (e) {
             toast.add({
                 severity: 'error',
@@ -324,6 +329,22 @@ const handleLocalMenuUpload = async (event: any) => {
             });
         }
     }
+
+    if (newlyAddedImages.length > 0) {
+        emit('update:modelValue', [...(props.modelValue || []), ...newlyAddedImages]);
+        
+        if (cropOnUpload.value) {
+            const jobs: CropJob[] = newlyAddedImages.map(img => ({ type: 'gallery', galleryItem: img }));
+            croppingQueue.value = [...croppingQueue.value, ...jobs];
+            // Only start if not already cropping
+            if (!showCropDialog.value) {
+                processNextCrop();
+            }
+        }
+    }
+    
+    fileUploadRef.value?.clear();
+    showSearchDialog.value = false;
 };
 
 const getFileUrl = (blob: Blob) => {
@@ -826,29 +847,51 @@ const croppingImage = ref<GalleryImage | null>(null);
 const cropperRef = ref<any>(null);
 const isCropping = ref(false);
 const cropImageUrl = ref<string>('');
+const cropOnUpload = ref(false);
 
-const initiateCrop = (element: GalleryImage) => {
-    if (element.localId === undefined) return;
-    const file = fileStore.files.find(f => f.id === element.localId);
-    if (!file) return;
+interface CropJob {
+    type: 'gallery' | 'combine';
+    galleryItem?: GalleryImage;
+    combineItem?: CombineItem;
+}
 
-    croppingImage.value = element;
-    cropImageUrl.value = getFileUrl(file.blob);
+const croppingQueue = ref<CropJob[]>([]);
+
+const initiateCrop = (job: CropJob) => {
+    if (job.type === 'gallery' && job.galleryItem?.localId !== undefined) {
+        const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
+        if (!file) return;
+        croppingImage.value = job.galleryItem;
+        cropImageUrl.value = getFileUrl(file.blob);
+    } else if (job.type === 'combine' && job.combineItem) {
+        if (!job.combineItem.url) return;
+        // Faking a gallery image for the cropper's internal tracking
+        croppingImage.value = { 
+            name: job.combineItem.name, 
+            caption: '', 
+            position: 'gallery',
+            localId: job.combineItem.id as any // Using combiner item ID
+        };
+        cropImageUrl.value = job.combineItem.url;
+    } else {
+        return;
+    }
+    
     showCropDialog.value = true;
 };
 
-const handleConfirmCrop = () => {
-    if (!cropperRef.value || !croppingImage.value || croppingImage.value.localId === undefined) return;
+const processNextCrop = () => {
+    if (croppingQueue.value.length > 0) {
+        initiateCrop(croppingQueue.value[0]);
+    }
+};
+
+const handleConfirmCrop = async () => {
+    if (!cropperRef.value || !croppingImage.value) return;
 
     isCropping.value = true;
     const { canvas } = cropperRef.value.getResult();
     if (!canvas) {
-        isCropping.value = false;
-        return;
-    }
-
-    const localFile = fileStore.files.find(f => f.id === croppingImage.value?.localId);
-    if (!localFile) {
         isCropping.value = false;
         return;
     }
@@ -859,24 +902,41 @@ const handleConfirmCrop = () => {
             return;
         }
 
-        const newFile = new File([blob], localFile.name, { type: blob.type, lastModified: Date.now() });
+        const currentJob = croppingQueue.value[0] || (croppingImage.value ? { type: 'gallery', galleryItem: croppingImage.value } : null);
+        if (!currentJob) {
+            isCropping.value = false;
+            return;
+        }
 
-        await fileStore.updateFileStatus(localFile.id!, {
-            blob: newFile,
-            size: newFile.size,
-            type: newFile.type,
-            lastModified: newFile.lastModified
-        });
+        if (currentJob.type === 'gallery' && currentJob.galleryItem?.localId !== undefined) {
+            const localFile = fileStore.files.find(f => f.id === currentJob.galleryItem?.localId);
+            if (localFile) {
+                const newFile = new File([blob], localFile.name, { type: blob.type, lastModified: Date.now() });
+                await fileStore.updateFileStatus(localFile.id!, {
+                    blob: newFile,
+                    size: newFile.size,
+                    type: newFile.type,
+                    lastModified: newFile.lastModified
+                });
+            }
+        } else if (currentJob.type === 'combine' && currentJob.combineItem) {
+            const item = currentJob.combineItem;
+            // Create a brand new file from the blob
+            const newFile = new File([blob], item.name, { type: 'image/png', lastModified: Date.now() });
+            item.file = newFile;
+            if (item.url) URL.revokeObjectURL(item.url);
+            item.url = URL.createObjectURL(newFile);
+        }
 
         toast.add({
             severity: 'success',
             summary: 'Image Cropped',
-            detail: `"${localFile.name}" has been successfully cropped.`,
+            detail: `"${currentJob.galleryItem?.name || currentJob.combineItem?.name}" has been successfully cropped.`,
             life: 3000
         });
 
         closeCropDialog();
-    }, localFile.type);
+    }, 'image/png');
 };
 
 const closeCropDialog = () => {
@@ -884,6 +944,213 @@ const closeCropDialog = () => {
     croppingImage.value = null;
     isCropping.value = false;
     cropImageUrl.value = '';
+
+    if (croppingQueue.value.length > 0) {
+        croppingQueue.value.shift();
+        if (croppingQueue.value.length > 0) {
+            setTimeout(() => {
+                processNextCrop();
+            }, 300); // Wait for dialog animation
+        }
+    }
+};
+
+// Combine Images Logic
+const showCombineDialog = ref(false);
+const combineOrientation = ref<'horizontal' | 'vertical'>('vertical');
+const combineGap = ref<number>(0);
+
+interface CombineItem {
+    id: string;
+    type: 'local' | 'gallery';
+    file?: File;
+    galleryImage?: GalleryImage;
+    url?: string;
+    name: string;
+}
+
+const combineQueue = ref<CombineItem[]>([]);
+const combinePreviewUrl = ref<string>('');
+const isCombining = ref(false);
+const isGeneratingPreview = ref(false);
+const combineUploadRef = ref<any>(null);
+
+// For selecting existing images into the queue
+const combineTempGallerySelection = ref<any[]>([]);
+
+const handleCombineTempSelect = () => {
+    // Add newly selected valid images
+    for (const img of combineTempGallerySelection.value) {
+        const itemObj = typeof img === 'string' ? { name: img } as GalleryImage : img;
+        const exists = combineQueue.value.some(q => q.type === 'gallery' && q.name === itemObj.name);
+        if (!exists) {
+            const url = getImageUrl(itemObj);
+            if (url) {
+                combineQueue.value.push({
+                    id: 'gallery-' + Math.random().toString(36).substring(2, 9),
+                    type: 'gallery',
+                    galleryImage: itemObj,
+                    url,
+                    name: itemObj.name
+                });
+            }
+        }
+    }
+    combineTempGallerySelection.value = [];
+};
+
+const handleCombineLocalUpload = (event: any) => {
+    const newItems: CombineItem[] = [];
+    for (const file of event.files) {
+        const item: CombineItem = {
+            id: 'local-' + Math.random().toString(36).substring(2, 9),
+            type: 'local',
+            file,
+            url: URL.createObjectURL(file), // Need object URL for canvas drawing & preview rendering
+            name: file.name
+        };
+        newItems.push(item);
+    }
+    combineQueue.value = [...combineQueue.value, ...newItems];
+
+    if (cropOnUpload.value) {
+        const jobs: CropJob[] = newItems.map(item => ({ type: 'combine', combineItem: item }));
+        croppingQueue.value = [...croppingQueue.value, ...jobs];
+        if (!showCropDialog.value) {
+            processNextCrop();
+        }
+    }
+    combineUploadRef.value?.clear();
+};
+
+const removeCombineItem = (index: number) => {
+    const item = combineQueue.value[index];
+    if (item.type === 'local' && item.url) {
+        URL.revokeObjectURL(item.url);
+    }
+    combineQueue.value.splice(index, 1);
+};
+
+// Generate Preview live!
+let previewObjUrlBlob: Blob | null = null;
+const generatePreview = async () => {
+    if (combineQueue.value.length === 0) {
+        if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
+        combinePreviewUrl.value = '';
+        previewObjUrlBlob = null;
+        return;
+    }
+    
+    isGeneratingPreview.value = true;
+    try {
+        const sources = combineQueue.value.map(item => item.url).filter(Boolean) as string[];
+        
+        const images = await Promise.all(sources.map(src => {
+            return new Promise<HTMLImageElement>((resolve, reject) => {
+                const imgElement = new window.Image();
+                imgElement.crossOrigin = 'anonymous';
+                imgElement.onload = () => resolve(imgElement);
+                imgElement.onerror = () => reject(new Error('Failed to load image from URL'));
+                imgElement.src = src;
+            });
+        }));
+
+        let totalWidth = 0;
+        let totalHeight = 0;
+        const gap = combineGap.value || 0;
+
+        if (combineOrientation.value === 'horizontal') {
+            totalHeight = Math.max(...images.map(i => i.height));
+            totalWidth = images.reduce((sum, i) => sum + i.width, 0) + gap * Math.max(0, images.length - 1);
+        } else {
+            totalWidth = Math.max(...images.map(i => i.width));
+            totalHeight = images.reduce((sum, i) => sum + i.height, 0) + gap * Math.max(0, images.length - 1);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = totalWidth;
+        canvas.height = totalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No 2D context');
+
+        ctx.clearRect(0, 0, totalWidth, totalHeight);
+
+        let currentX = 0;
+        let currentY = 0;
+
+        for (const imgElement of images) {
+            if (combineOrientation.value === 'horizontal') {
+                ctx.drawImage(imgElement, currentX, 0);
+                currentX += imgElement.width + gap;
+            } else {
+                ctx.drawImage(imgElement, 0, currentY);
+                currentY += imgElement.height + gap;
+            }
+        }
+
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (blob) {
+            if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
+            combinePreviewUrl.value = URL.createObjectURL(blob);
+            previewObjUrlBlob = blob;
+        } else {
+            previewObjUrlBlob = null;
+        }
+    } catch (e) {
+        console.error("Preview building failed", e);
+    } finally {
+        isGeneratingPreview.value = false;
+    }
+};
+
+watch([combineQueue, combineOrientation, combineGap], () => {
+    generatePreview();
+}, { deep: true });
+
+const closeCombineDialog = () => {
+    showCombineDialog.value = false;
+    combineQueue.value.forEach(item => {
+        if (item.type === 'local' && item.url) URL.revokeObjectURL(item.url);
+    });
+    combineQueue.value = [];
+    if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
+    combinePreviewUrl.value = '';
+    previewObjUrlBlob = null;
+    combineTempGallerySelection.value = [];
+};
+
+const handleConfirmCombine = async () => {
+    if (combineQueue.value.length < 2 || !previewObjUrlBlob) {
+        toast.add({ severity: 'warn', summary: 'Missing Data', detail: 'Please select at least 2 images and wait for preview.', life: 3000 });
+        return;
+    }
+
+    isCombining.value = true;
+    try {
+        // We already have the combined blob rendered exactly from the latest preview!
+        const blob = previewObjUrlBlob;
+
+        // 4. Save to fileStore
+        const combinedFile = new File([blob], `combined_${Date.now()}.png`, { type: 'image/png', lastModified: Date.now() });
+        const id = await fileStore.addFile(combinedFile);
+
+        // 5. Add to gallery
+        const newImages: GalleryImage[] = [{
+            name: combinedFile.name,
+            caption: '',
+            position: 'gallery',
+            localId: id
+        }];
+        emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
+
+        toast.add({ severity: 'success', summary: 'Images Combined', detail: 'Combined image added to gallery.', life: 3000 });
+        closeCombineDialog();
+    } catch (e: any) {
+        console.error(e);
+        toast.add({ severity: 'error', summary: 'Combination Failed', detail: e.message || 'An error occurred.', life: 3000 });
+    } finally {
+        isCombining.value = false;
+    }
 };
 
 defineExpose({
@@ -923,7 +1190,7 @@ defineExpose({
             </div>
         </div>
 
-        <div class="flex gap-2 relative z-10">
+        <div class="flex gap-2 relative z-10 w-full sm:w-auto">
             <Button label="Add Image" outlined @click="showSearchDialog = true" class="flex-1">
                 <template #icon>
                     <Plus class="w-4 h-4 mr-2" />
@@ -942,9 +1209,15 @@ defineExpose({
             :draggable="false">
             <div class="flex flex-col gap-6 py-4">
                 <div class="flex flex-col gap-3">
-                    <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
-                        <Upload class="w-4 h-4" /> From your computer
-                    </label>
+                    <div class="flex items-center justify-between">
+                        <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
+                            <Upload class="w-4 h-4" /> From your computer
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <label for="cropOnUpload" class="text-[10px] text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
+                            <ToggleSwitch v-model="cropOnUpload" inputId="cropOnUpload" class="scale-75 origin-right" />
+                        </div>
+                    </div>
                     <Button label="Upload Files" severity="secondary" @click="() => fileUploadRef?.choose()"
                         class="w-full">
                         <template #icon>
@@ -986,7 +1259,22 @@ defineExpose({
                     </AutocompleteField>
                 </div>
 
-                <div class="flex justify-end gap-2 mt-2">
+                <div class="border-t border-surface-100 dark:border-surface-700 relative flex justify-center mt-4">
+                    <span class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-[10px] text-surface-400 uppercase tracking-widest font-bold">Advanced Tools</span>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
+                        <Combine class="w-4 h-4" /> Layout Builder
+                    </label>
+                    <Button label="Open Image Combiner" severity="secondary" @click="() => { showSearchDialog = false; showCombineDialog = true; }" class="w-full">
+                        <template #icon>
+                            <Combine class="w-4 h-4 mr-2" />
+                        </template>
+                    </Button>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-surface-100 dark:border-surface-700">
                     <Button label="Cancel" text @click="showSearchDialog = false" />
                     <Button label="Add Selected" @click="() => { addImage(); showSearchDialog = false; }"
                         :disabled="!newImage || newImage.length === 0" />
@@ -1390,17 +1678,110 @@ defineExpose({
         </Dialog>
 
         <!-- Image Cropper Dialog -->
-        <Dialog v-model:visible="showCropDialog" header="Crop Image" modal :style="{ width: '800px' }" :draggable="false" @hide="closeCropDialog">
+        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal :style="{ width: '800px' }" :draggable="false" @hide="closeCropDialog">
             <div class="flex flex-col gap-4">
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
                     <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
-                    <Button label="Cancel" text @click="closeCropDialog" :disabled="isCropping" />
-                    <Button label="Apply Crop" severity="primary" @click="handleConfirmCrop" :loading="isCropping">
+                    <Button :label="croppingQueue.length > 1 ? 'Skip' : 'Cancel'" text @click="closeCropDialog" :disabled="isCropping" />
+                    <Button :label="croppingQueue.length > 1 ? 'Apply & Next' : 'Apply Crop'" severity="primary" @click="handleConfirmCrop" :loading="isCropping">
                         <template #icon>
                             <Loader2 v-if="isCropping" class="w-4 h-4 animate-spin mr-2" />
                             <Crop v-else class="w-4 h-4 mr-2" />
+                        </template>
+                    </Button>
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- Combine Images Dialog -->
+        <Dialog v-model:visible="showCombineDialog" header="Combine Images Builder" modal :style="{ width: '100%', maxWidth: '800px' }" class="mx-4" :draggable="false" @hide="closeCombineDialog">
+            <div class="flex flex-col gap-6 py-4">
+                
+                <!-- Live Preview -->
+                <div v-if="combinePreviewUrl" class="w-full h-64 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-center overflow-hidden bg-white dark:bg-black relative shadow-inner">
+                    <img :src="combinePreviewUrl" class="w-full h-full object-contain" />
+                    <div v-if="isGeneratingPreview" class="absolute inset-0 bg-surface-0/50 dark:bg-surface-900/50 flex items-center justify-center">
+                        <Loader2 class="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                </div>
+                <div v-else class="w-full h-32 border border-dashed border-surface-300 dark:border-surface-600 rounded-lg flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-surface-500 text-sm italic">
+                    Add at least 2 images to generate a preview
+                </div>
+
+                <div class="flex items-center gap-8">
+                    <div class="flex flex-col gap-2 flex-1">
+                        <label class="font-bold text-xs text-surface-500 uppercase">Orientation</label>
+                        <div class="flex items-center gap-4 bg-surface-100 dark:bg-surface-800 py-2 px-3 rounded-md w-fit">
+                            <div class="flex items-center gap-2 cursor-pointer" @click="combineOrientation = 'horizontal'">
+                                <RadioButton v-model="combineOrientation" inputId="horizontal" name="orientation" value="horizontal" />
+                                <label for="horizontal" class="text-sm cursor-pointer">Horizontal</label>
+                            </div>
+                            <div class="flex items-center gap-2 cursor-pointer" @click="combineOrientation = 'vertical'">
+                                <RadioButton v-model="combineOrientation" inputId="vertical" name="orientation" value="vertical" />
+                                <label for="vertical" class="text-sm cursor-pointer">Vertical</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold text-xs text-surface-500 uppercase">Gap (px)</label>
+                        <InputNumber v-model="combineGap" inputId="gap" :min="0" :max="1000" class="w-20" inputClass="w-full" />
+                    </div>
+                </div>
+
+                <hr class="border-surface-100 dark:border-surface-700" />
+
+                <!-- Unified Queue -->
+                <div class="flex flex-col gap-2 relative">
+                    <div class="flex items-center justify-between">
+                        <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
+                            <Images class="w-4 h-4" /> Layout Queue
+                        </label>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <label for="combineCropOnUpload" class="text-[10px] text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
+                                <ToggleSwitch v-model="cropOnUpload" inputId="combineCropOnUpload" class="scale-75 origin-right" />
+                            </div>
+                            <MultiSelect v-model="combineTempGallerySelection" :options="displayImages" optionLabel="name" 
+                                placeholder="Add from Gallery..." class="w-56 text-sm" @change="handleCombineTempSelect">
+                                <template #option="slotProps">
+                                    <span class="truncate text-xs">{{ typeof slotProps.option === 'string' ? slotProps.option : slotProps.option.name }}</span>
+                                </template>
+                            </MultiSelect>
+                            <FileUpload ref="combineUploadRef" mode="basic" name="files[]" :auto="true" customUpload 
+                                @uploader="handleCombineLocalUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" 
+                                chooseLabel="Upload Local..." class="p-button-sm" />
+                        </div>
+                    </div>
+                    
+                    <div v-if="combineQueue.length === 0" class="w-full text-center py-4 text-surface-400 text-sm">
+                        No images layered yet. Added images will appear here.
+                    </div>
+                    
+                    <VueDraggable v-else v-model="combineQueue" class="flex flex-col gap-1.5 mt-2" handle=".drag-handle" :animation="150">
+                        <div v-for="(item, idx) in combineQueue" :key="item.id" class="flex items-center justify-between bg-surface-100 dark:bg-surface-800 p-2 rounded text-sm border border-surface-200 dark:border-surface-700 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
+                            <div class="flex items-center gap-3 overflow-hidden flex-1">
+                                <GripHorizontal class="w-4 h-4 text-surface-400 cursor-move drag-handle shrink-0 hover:text-primary transition-colors" />
+                                <div class="w-8 h-8 rounded bg-surface-200 dark:bg-surface-900 border border-surface-300 dark:border-surface-600 flex items-center justify-center overflow-hidden shrink-0">
+                                    <img v-if="item.url" :src="item.url" class="w-full h-full object-cover" />
+                                    <Image v-else class="w-4 h-4 text-surface-400" />
+                                </div>
+                                <span class="truncate">{{ item.name }}</span>
+                                <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-surface-300 dark:bg-surface-600 text-surface-600 dark:text-surface-300 ml-2 shrink-0">{{ item.type }}</span>
+                            </div>
+                            <Button icon="pi pi-times" text severity="danger" size="small" @click="removeCombineItem(idx)" class="p-1 w-6 h-6 shrink-0 ml-2" />
+                        </div>
+                    </VueDraggable>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 border-t border-surface-100 dark:border-surface-700 pt-4">
+                    <Button label="Cancel" text @click="closeCombineDialog" :disabled="isCombining" />
+                    <Button label="Confirm & Add Image" severity="primary" @click="handleConfirmCombine" :loading="isCombining" :disabled="combineQueue.length < 2 || !previewObjUrlBlob">
+                        <template #icon>
+                            <Loader2 v-if="isCombining" class="w-4 h-4 animate-spin mr-2" />
+                            <Combine v-else class="w-4 h-4 mr-2" />
                         </template>
                     </Button>
                 </div>
