@@ -20,9 +20,11 @@ import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
+import { Cropper } from 'vue-advanced-cropper';
+import 'vue-advanced-cropper/dist/style.css';
 
 interface Props {
     modelValue: (GalleryImage | string)[];
@@ -173,6 +175,11 @@ const actionMenuItems = computed<any[]>(() => {
             command: () => initiateRename(element)
         });
         items.push({
+            label: 'Crop image',
+            icon: Crop,
+            command: () => initiateCrop(element)
+        });
+        items.push({
             label: 'Replace with another image',
             icon: Replace,
             command: () => triggerReplace(activeItem.value!.index)
@@ -227,9 +234,14 @@ const handleReplaceUpload = async (event: any) => {
     if (!file) return;
 
     try {
-        const id = await fileStore.addFile(file);
         const newValue = [...(props.modelValue || [])];
         const item = newValue[replaceImageIndex.value];
+
+        if (typeof item !== 'string' && item.localId !== undefined) {
+            await fileStore.removeFile(item.localId).catch(console.error);
+        }
+
+        const id = await fileStore.addFile(file);
 
         const galleryItem: GalleryImage = {
             name: file.name,
@@ -338,6 +350,10 @@ const addImage = () => {
 
 const removeImage = (index: number) => {
     const newValue = [...(props.modelValue || [])];
+    const item = newValue[index];
+    if (typeof item !== 'string' && item.localId !== undefined) {
+        fileStore.removeFile(item.localId).catch(console.error);
+    }
     newValue.splice(index, 1);
     emit('update:modelValue', newValue);
 };
@@ -802,6 +818,72 @@ const handleSuggestionsUpdate = async (suggestions: string[]) => {
             resolvedInfos[normalizeFilename(key)] = infos[key];
         });
     }
+};
+
+// Crop Logic
+const showCropDialog = ref(false);
+const croppingImage = ref<GalleryImage | null>(null);
+const cropperRef = ref<any>(null);
+const isCropping = ref(false);
+const cropImageUrl = ref<string>('');
+
+const initiateCrop = (element: GalleryImage) => {
+    if (element.localId === undefined) return;
+    const file = fileStore.files.find(f => f.id === element.localId);
+    if (!file) return;
+
+    croppingImage.value = element;
+    cropImageUrl.value = getFileUrl(file.blob);
+    showCropDialog.value = true;
+};
+
+const handleConfirmCrop = () => {
+    if (!cropperRef.value || !croppingImage.value || croppingImage.value.localId === undefined) return;
+
+    isCropping.value = true;
+    const { canvas } = cropperRef.value.getResult();
+    if (!canvas) {
+        isCropping.value = false;
+        return;
+    }
+
+    const localFile = fileStore.files.find(f => f.id === croppingImage.value?.localId);
+    if (!localFile) {
+        isCropping.value = false;
+        return;
+    }
+
+    canvas.toBlob(async (blob: Blob | null) => {
+        if (!blob) {
+            isCropping.value = false;
+            return;
+        }
+
+        const newFile = new File([blob], localFile.name, { type: blob.type, lastModified: Date.now() });
+
+        await fileStore.updateFileStatus(localFile.id!, {
+            blob: newFile,
+            size: newFile.size,
+            type: newFile.type,
+            lastModified: newFile.lastModified
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'Image Cropped',
+            detail: `"${localFile.name}" has been successfully cropped.`,
+            life: 3000
+        });
+
+        closeCropDialog();
+    }, localFile.type);
+};
+
+const closeCropDialog = () => {
+    showCropDialog.value = false;
+    croppingImage.value = null;
+    isCropping.value = false;
+    cropImageUrl.value = '';
 };
 
 defineExpose({
@@ -1303,6 +1385,24 @@ defineExpose({
                 <div class="flex justify-end gap-2 mt-4">
                     <Button label="Cancel" text @click="showOverwriteConfirm = false" />
                     <Button label="Yes, Overwrite" severity="warning" @click="processUpload(true)" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- Image Cropper Dialog -->
+        <Dialog v-model:visible="showCropDialog" header="Crop Image" modal :style="{ width: '800px' }" :draggable="false" @hide="closeCropDialog">
+            <div class="flex flex-col gap-4">
+                <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
+                    <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" />
+                </div>
+                <div class="flex justify-end gap-2 mt-2">
+                    <Button label="Cancel" text @click="closeCropDialog" :disabled="isCropping" />
+                    <Button label="Apply Crop" severity="primary" @click="handleConfirmCrop" :loading="isCropping">
+                        <template #icon>
+                            <Loader2 v-if="isCropping" class="w-4 h-4 animate-spin mr-2" />
+                            <Crop v-else class="w-4 h-4 mr-2" />
+                        </template>
+                    </Button>
                 </div>
             </div>
         </Dialog>
