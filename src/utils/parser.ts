@@ -1215,6 +1215,9 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
             if (parts[0].toLowerCase().includes('.jpg') ||
                 parts[0].toLowerCase().includes('.png') ||
                 parts[0].toLowerCase().includes('.jpeg') ||
+                parts[0].toLowerCase().includes('.svg') ||
+                parts[0].toLowerCase().includes('.gif') ||
+                parts[0].toLowerCase().includes('.webp') ||
                 parts[0].toLowerCase().startsWith('file:')) {
                 results.push({
                     name: parts[0].trim().replace(/^File:/i, ''),
@@ -1228,13 +1231,26 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
             const parts = content.split('|').map(p => p.trim());
             for (let i = 0; i < parts.length; i++) {
                 const part = parts[i].replace(/^\s*[\w\s-]+\s*=\s*/, '');
-                if (part.toLowerCase().includes('.jpg') || part.toLowerCase().includes('.png') || part.toLowerCase().startsWith('file:')) {
+                if (
+                    part.toLowerCase().includes('.jpg') || 
+                    part.toLowerCase().includes('.png') || 
+                    part.toLowerCase().includes('.jpeg') ||
+                    part.toLowerCase().includes('.svg') ||
+                    part.toLowerCase().includes('.gif') ||
+                    part.toLowerCase().includes('.webp') ||
+                    part.toLowerCase().startsWith('file:')) {
                     const name = part.replace(/^File:/i, '');
                     let caption = '';
                     // If next part isn't another image, it's likely the caption
                     if (i + 1 < parts.length) {
                         const next = parts[i + 1].toLowerCase();
-                        if (!next.includes('.jpg') && !next.includes('.png') && !next.startsWith('file:')) {
+                        if (!next.includes('.jpg') && 
+                            !next.includes('.png') && 
+                            !next.includes('.jpeg') && 
+                            !next.includes('.svg') && 
+                            !next.includes('.gif') && 
+                            !next.includes('.webp') && 
+                            !next.startsWith('file:')) {
                             caption = parts[i + 1];
                             i++; // Skip caption
                         }
