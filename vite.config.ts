@@ -26,6 +26,7 @@ export default defineConfig({
         VitePWA({
             registerType: 'prompt',
             injectRegister: 'script',
+            manifestFilename: 'manifest.json',
             devOptions: {
                 enabled: true
             },
