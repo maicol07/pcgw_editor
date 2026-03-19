@@ -9,6 +9,10 @@ import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 
+// Mock URL methods
+global.URL.createObjectURL = vi.fn(() => 'mock-url');
+global.URL.revokeObjectURL = vi.fn();
+
 // Shared mock objects to ensure test and component use the same instances
 const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
     mockFileStore: {
@@ -43,7 +47,7 @@ vi.mock('../../../src/services/pcgwApi', () => ({
 }));
 
 // Mock local store/db to avoid IndexedDB errors
-vi.mock('../../../src/stores/files', () => ({
+vi.mock('@/stores/files', () => ({
     useFileStore: () => mockFileStore
 }));
 
@@ -60,7 +64,7 @@ vi.mock('lucide-vue-next', () => {
     const icons = [
         'Images', 'Image', 'GripHorizontal', 'ExternalLink', 'Pencil', 'Trash2', 'PanelRight', 'Grid',
         'Upload', 'CheckCircle2', 'AlertCircle', 'Loader2', 'LogOut', 'HardDrive', 'MoreVertical', 
-        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace', 'TextCursorInput'
+        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace', 'TextCursorInput', 'Crop', 'Combine'
     ];
     const mock: any = {};
     icons.forEach(i => mock[i] = { template: `<span>${i}</span>` });
@@ -71,6 +75,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
         vi.clearAllMocks();
+        mockFileStore.files.length = 0;
     });
 
     const setupWrapper = (props = {}) => {
@@ -86,6 +91,18 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
                     Button: true,
                     Image: true,
                     ProgressBar: true,
+                    ToggleButton: true, // If used anywhere
+                    MultiSelect: true,
+                    InputNumber: true,
+                    RadioButton: true,
+                    ToggleSwitch: true,
+                    FileUpload: {
+                        template: '<div><slot></slot></div>',
+                        methods: {
+                            choose: vi.fn(),
+                            clear: vi.fn(),
+                        }
+                    },
                     WysiwygEditor: true,
                     PcgwMediaBadge: true,
                 }
@@ -104,13 +121,12 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         vi.mocked(pcgwApi.getPageContent).mockResolvedValue('{{delete|reason=Old reason}}\nExisting content');
         
         const wrapper = setupWrapper({ modelValue: [image] });
+        const vm = wrapper.vm as any;
         
-        // @ts-ignore
-        await wrapper.vm.initiateDelete(image);
+        await vm.initiateDelete(image);
         
         expect(pcgwApi.getPageContent).toHaveBeenCalledWith('File:Test.jpg');
-        // @ts-ignore
-        expect(wrapper.vm.existingDeletionReason).toBe('Old reason');
+        expect(vm.existingDeletionReason).toBe('Old reason');
     });
 
     it('replaces existing delete tag in handleConfirmDelete', async () => {
@@ -118,15 +134,11 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         vi.mocked(pcgwApi.getPageContent).mockResolvedValue('{{delete|reason=Old reason}}\nSome content');
         
         const wrapper = setupWrapper({ modelValue: [image] });
+        const vm = wrapper.vm as any;
         
-        // @ts-ignore
-        await wrapper.vm.initiateDelete(image);
-        
-        // @ts-ignore
-        wrapper.vm.pcgwDeletionReason = 'New reason';
-        
-        // @ts-ignore
-        await wrapper.vm.handleConfirmDelete();
+        await vm.initiateDelete(image);
+        vm.pcgwDeletionReason = 'New reason';
+        await vm.handleConfirmDelete();
         
         expect(pcgwMedia.editPage).toHaveBeenCalledWith(
             'File:Test.jpg',
@@ -138,21 +150,17 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
     it('saves edited caption to the correct item in modelValue', async () => {
         const image = { name: 'TestCaption.jpg', caption: 'Old Caption', position: 'gallery' };
         const wrapper = setupWrapper({ modelValue: [image] });
+        const vm = wrapper.vm as any;
         
         // Open the dialog
-        // @ts-ignore
-        wrapper.vm.openCaptionDialog(image, 0);
-        
-        // @ts-ignore
-        expect(wrapper.vm.editingCaption).toBe('Old Caption');
+        vm.openCaptionDialog(image, 0);
+        expect(vm.editingCaption).toBe('Old Caption');
         
         // Update the value
-        // @ts-ignore
-        wrapper.vm.editingCaption = 'New Caption';
+        vm.editingCaption = 'New Caption';
         
         // Save
-        // @ts-ignore
-        wrapper.vm.saveCaption();
+        vm.saveCaption();
         
         // Verify emitted update:modelValue
         const emitted = wrapper.emitted('update:modelValue');
@@ -227,7 +235,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         expect(vm.showRenameDialog).toBe(true);
         expect(vm.newRenameName).toBe('WikiImage.png');
 
-        // 2. Simulate user input
+        // @ts-ignore
         vm.newRenameName = 'NewWikiName.png';
 
         // 3. Confirm rename
@@ -242,7 +250,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         // Check emitted events
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();
-        expect(emitted![0][0][0]).toMatchObject({
+        expect((emitted as any)[0][0][0]).toMatchObject({
             name: 'NewWikiName.png'
         });
     });
@@ -272,7 +280,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         // Check emitted events
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();
-        expect(emitted![0][0][0]).toMatchObject({
+        expect((emitted as any)[0][0][0]).toMatchObject({
             name: 'NewLocalName.png'
         });
     });
@@ -291,7 +299,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         // Check emitted events
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();
-        expect(emitted![0][0][0]).toMatchObject({
+        expect((emitted as any)[0][0][0]).toMatchObject({
             name: 'ExistingWikiFile.png',
             localId: undefined // Should be cleared
         });
@@ -319,9 +327,98 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         // Check emitted events
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();
-        expect(emitted![0][0][0]).toMatchObject({
+        expect((emitted as any)[0][0][0]).toMatchObject({
             name: 'NewName.png'
         });
+    });
+
+    it('should open crop dialog when initiateCrop is called manually', async () => {
+        const wrapper = setupWrapper();
+        const vm = wrapper.vm as any;
+        const mockFile = { id: 2002, blob: new Blob(), name: 'Manual.png' };
+        mockFileStore.files.push(mockFile);
+        
+        vm.initiateCrop({ type: 'gallery', galleryItem: { localId: 2002, name: 'Manual.png' } });
+        
+        expect(vm.showCropDialog).toBe(true);
+        expect(vm.cropImageUrl).toBe('mock-url');
+    });
+
+    it('should handle crop on upload toggle and queueing', async () => {
+        const wrapper = setupWrapper();
+        const vm = wrapper.vm as any;
+        
+        // 1. Enable crop on upload
+        vm.cropOnUpload = true;
+        
+        // 2. Simulate upload
+        const mockFile = new File(['test'], 'ToCrop.png', { type: 'image/png' });
+        mockFileStore.addFile.mockResolvedValue(1001);
+        mockFileStore.files.push({ id: 1001, blob: mockFile, name: 'ToCrop.png' });
+        
+        await vm.handleLocalMenuUpload({ files: [mockFile] });
+        await flushPromises();
+        
+        // 3. Verify it was added to croppingQueue
+        expect(vm.croppingQueue.length).toBe(1);
+        expect(vm.croppingQueue[0].type).toBe('gallery');
+        expect(vm.croppingQueue[0].galleryItem.localId).toBe(1001);
+        
+        // 4. Verify cropper dialog opened
+        expect(vm.showCropDialog).toBe(true);
+    });
+
+    it('should handle image combiner upload and cropping', async () => {
+        const wrapper = setupWrapper();
+        const vm = wrapper.vm as any;
+        
+        // 1. Enable crop on upload
+        vm.cropOnUpload = true;
+        
+        // 2. Simulate combiner upload
+        const mockFile = new File(['test'], 'CombineMe.png', { type: 'image/png' });
+        await vm.handleCombineLocalUpload({ files: [mockFile] });
+        await flushPromises();
+        
+        // 3. Verify it was added to both queues
+        expect(vm.combineQueue.length).toBe(1);
+        expect(vm.croppingQueue.length).toBe(1);
+        expect(vm.croppingQueue[0].type).toBe('combine');
+        // 4. Verify cropper dialog opened
+        expect(vm.showCropDialog).toBe(true);
+    });
+
+    it('should handle sequential cropping multiple uploads', async () => {
+        vi.useFakeTimers();
+        const wrapper = setupWrapper();
+        const vm = wrapper.vm as any;
+        vm.cropOnUpload = true;
+        
+        const file1 = new File(['1'], 'one.png', { type: 'image/png' });
+        const file2 = new File(['2'], 'two.png', { type: 'image/png' });
+        
+        mockFileStore.addFile.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+        mockFileStore.files.push({ id: 1, blob: file1, name: 'one.png' });
+        mockFileStore.files.push({ id: 2, blob: file2, name: 'two.png' });
+        
+        await vm.handleLocalMenuUpload({ files: [file1, file2] });
+        await flushPromises();
+        
+        expect(vm.croppingQueue.length).toBe(2);
+        expect(vm.showCropDialog).toBe(true);
+        expect(vm.croppingImage.name).toBe('one.png');
+        
+        // Simulate first crop completion (closing dialog triggers next)
+        vm.closeCropDialog();
+        
+        // Wait for timeout that triggers processNextCrop
+        await vi.advanceTimersByTimeAsync(400);
+        await flushPromises();
+        
+        expect(vm.croppingQueue.length).toBe(1);
+        expect(vm.croppingImage.name).toBe('two.png');
+        
+        vi.useRealTimers();
     });
 });
 
