@@ -5,11 +5,20 @@ import GameDataPathForm from '../../../src/components/GameDataPathForm.vue';
 import { GameDataPathRow } from '../../../src/models/GameData';
 
 // Mock Components
+const PathInputFieldStub = {
+    template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" class="p-inputtext path-input-field-stub" />',
+    props: ['modelValue'],
+    emits: ['update:modelValue']
+};
+
 const InputTextStub = {
     template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" class="p-inputtext" />',
     props: ['modelValue'],
     emits: ['update:modelValue']
 };
+
+const InputGroupStub = { template: '<div class="p-inputgroup"><slot /></div>' };
+const InputGroupAddonStub = { template: '<span class="p-inputgroup-addon"><slot /></span>' };
 
 const ButtonStub = {
     template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>',
@@ -38,7 +47,8 @@ vi.mock('lucide-vue-next', () => ({
     Bookmark: { template: '<span class="icon-bookmark"></span>' },
     Folder: { template: '<span class="icon-folder"></span>' },
     Save: { template: '<span class="icon-save"></span>' },
-    Gamepad2: { template: '<span class="icon-gamepad2"></span>' }
+    Gamepad2: { template: '<span class="icon-gamepad2"></span>' },
+    Search: { template: '<span class="icon-search"></span>' }
 }));
 
 // Mock imported icons (using strings or stubs)
@@ -66,10 +76,13 @@ describe('GameDataPathForm.vue', () => {
                 props: { rows, title: 'Test Paths' },
                 global: {
                     stubs: {
-                        InputText: InputTextStub,
+                        PathInputField: PathInputFieldStub,
                         Button: ButtonStub,
                         Select: SelectStub,
-                        Popover: PopoverStub
+                        Popover: PopoverStub,
+                        InputText: InputTextStub,
+                        InputGroup: InputGroupStub,
+                        InputGroupAddon: InputGroupAddonStub
                     }
                 }
             }),
@@ -82,7 +95,7 @@ describe('GameDataPathForm.vue', () => {
         const selects = wrapper.findAllComponents(SelectStub);
         expect(selects.length).toBe(rows.length);
 
-        const inputs = wrapper.findAllComponents(InputTextStub);
+        const inputs = wrapper.findAllComponents(PathInputFieldStub);
         // Each path has an input
         expect(inputs.length).toBe(rows[0].paths.length);
     });
@@ -143,7 +156,7 @@ describe('GameDataPathForm.vue', () => {
 
     it('updates path value', async () => {
         const { wrapper } = setupWrapper();
-        const inputs = wrapper.findAllComponents(InputTextStub);
+        const inputs = wrapper.findAllComponents(PathInputFieldStub);
 
         await inputs[0].vm.$emit('update:modelValue', 'New Path');
 

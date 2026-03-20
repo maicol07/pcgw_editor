@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { GameDataPathRow } from '../models/GameData';
-import InputText from 'primevue/inputtext';
+import PathInputField from './ui/PathInputField.vue';
+import { specialPaths, SpecialPath } from '../utils/specialPaths';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Popover from 'primevue/popover';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
-import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2 } from 'lucide-vue-next';
+import InputText from 'primevue/inputtext';
+import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 // Icons
@@ -87,22 +89,25 @@ const removePath = (rowIndex: number, pathIndex: number) => {
   }
 };
 
-const quickPaths = [
-  { label: 'Steam', value: '{{p|steam}}' },
-  { label: 'Ubisoft', value: '{{p|uplay}}' },
-  { label: 'Origin', value: '{{p|origin}}' },
-  { label: 'GOG', value: '{{p|gog}}' },
-  { label: 'Battle.net', value: '{{p|battlenet}}' },
-  { label: 'Epic', value: '{{p|epic}}' },
-  { label: 'MS Store', value: '{{p|msstore}}' },
-  { label: 'AppData', value: '{{p|appdata}}' },
-  { label: 'Local AppData', value: '{{p|localappdata}}' },
-  { label: 'ProgramData', value: '{{p|programdata}}' },
-  { label: 'User Profile', value: '{{p|userprofile}}' },
-  { label: 'Game Dir', value: '{{p|game}}' },
-  { label: 'System', value: '{{p|system}}' },
-  { label: 'User Home (Linux)', value: '{{p|user}}' }
-];
+const searchQuery = ref('');
+
+const pathsByCategory = computed(() => {
+  const groups: Record<string, SpecialPath[]> = {};
+  const query = searchQuery.value.toLowerCase().trim();
+
+  specialPaths.forEach(p => {
+    if (query) {
+      if (!p.label.toLowerCase().includes(query) && 
+          !p.value.toLowerCase().includes(query) && 
+          !p.helpText.toLowerCase().includes(query)) {
+        return;
+      }
+    }
+    if (!groups[p.category]) groups[p.category] = [];
+    groups[p.category].push(p);
+  });
+  return groups;
+});
 
 // insertQuickPath removed since logic is moved to selectQuickPath with cursor support
 
@@ -115,6 +120,13 @@ const getPlatformIcon = (val: string) => {
 // Popover logic
 const op = ref();
 const activeInput = ref<{ row: number, path: number, id: string } | null>(null);
+const pathInputRefs = ref<Record<string, any>>({});
+
+const setPathInputRef = (el: any, rowIndex: number, pathIndex: number) => {
+    if (el) {
+        pathInputRefs.value[`${rowIndex}-${pathIndex}`] = el;
+    }
+};
 
 const toggleQuickPath = (event: Event, rowIndex: number, pathIndex: number) => {
   activeInput.value = {
@@ -127,21 +139,20 @@ const toggleQuickPath = (event: Event, rowIndex: number, pathIndex: number) => {
 
 const selectQuickPath = (value: string) => {
   if (activeInput.value) {
-    const { row, path, id } = activeInput.value;
-    const inputEl = document.getElementById(id) as HTMLInputElement;
+    const { row, path } = activeInput.value;
+    const componentInstance = pathInputRefs.value[`${row}-${path}`];
 
-    let newValue = props.rows[row].paths[path] || '';
-    if (inputEl) {
-      const start = inputEl.selectionStart || 0;
-      const end = inputEl.selectionEnd || 0;
-      newValue = newValue.substring(0, start) + value + newValue.substring(end);
+    if (componentInstance && componentInstance.insertAtCaret) {
+        componentInstance.insertAtCaret(value);
+        // Force an update to parent
+        setTimeout(() => emit('update:rows', [...props.rows]), 0);
     } else {
-      newValue += value;
+        let newValue = props.rows[row].paths[path] || '';
+        newValue += value;
+        const newRows = [...props.rows];
+        newRows[row].paths[path] = newValue;
+        emit('update:rows', newRows);
     }
-
-    const newRows = [...props.rows];
-    newRows[row].paths[path] = newValue;
-    emit('update:rows', newRows);
 
     op.value.hide();
   }
@@ -220,9 +231,12 @@ const selectQuickPath = (value: string) => {
           <div class="grid grid-cols-1 gap-3">
             <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-center group/path">
               <div class="flex-1">
-                <InputGroup class="h-8">
-                  <InputText :id="`path-input-${rowIndex}-${pathIndex}`" v-model="row.paths[pathIndex]"
-                    placeholder="e.g. {{p|appdata}}\GameName\" class="w-full font-mono text-sm border-r-0!" />
+                <InputGroup class="min-h-8">
+                  <PathInputField 
+                    :id="`path-input-${rowIndex}-${pathIndex}`" 
+                    :ref="(el) => setPathInputRef(el, rowIndex, pathIndex)"
+                    v-model="row.paths[pathIndex]"
+                    placeholder="e.g. {{p|appdata}}\GameName\" class="w-full border-r-0! rounded-r-none" />
                   <InputGroupAddon class="p-0">
                     <Button icon="pi" severity="secondary" v-tooltip.top="'Insert Special Path'"
                       @click="(e) => toggleQuickPath(e, rowIndex, pathIndex)">
@@ -247,13 +261,33 @@ const selectQuickPath = (value: string) => {
       </div>
     </div>
 
-    <Popover ref="op">
-      <div class="flex flex-col gap-2 p-1 max-w-sm">
-        <span class="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">Insert
-          Special Path</span>
-        <div class="flex flex-wrap gap-2">
-          <Button v-for="item in quickPaths" :key="item.label" :label="item.label" severity="secondary"
-            variant="outlined" size="small" class="text-xs! py-1! px-2!" @click="selectQuickPath(item.value)" />
+    <Popover ref="op" @hide="searchQuery = ''">
+      <div class="flex flex-col w-80">
+        <div class="p-2 border-b border-surface-200 dark:border-surface-800">
+          <InputGroup>
+             <InputGroupAddon class="bg-transparent! border-r-0!">
+               <Search class="w-4 h-4 text-surface-400" />
+             </InputGroupAddon>
+             <InputText v-model="searchQuery" placeholder="Search special paths..." class="w-full text-sm border-l-0!" autofocus />
+          </InputGroup>
+        </div>
+        
+        <div class="flex flex-col gap-4 p-2 max-h-80 overflow-y-auto">
+          <div v-if="Object.keys(pathsByCategory).length === 0" class="text-center py-6 text-sm text-surface-500">
+            No paths found matching "{{ searchQuery }}"
+          </div>
+          
+          <div v-for="(paths, category) in pathsByCategory" :key="String(category)" class="flex flex-col gap-2">
+            <span class="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1 sticky top-0 bg-surface-0 dark:bg-surface-900 z-10 py-1">{{ category }}</span>
+            <div class="flex flex-col gap-1">
+               <button v-for="item in paths" :key="item.id" 
+                 class="flex flex-col items-start px-3 py-2 text-left hover:bg-surface-100 dark:hover:bg-surface-800 rounded-md transition-colors w-full"
+                 @click="selectQuickPath(item.value)">
+                 <span class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ item.label }}</span>
+                 <span class="text-xs text-surface-500 dark:text-surface-400 w-full line-clamp-2" :title="item.helpText">{{ item.helpText }}</span>
+               </button>
+            </div>
+          </div>
         </div>
       </div>
     </Popover>
