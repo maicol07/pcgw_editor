@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue';
-import { usePreview, PreviewMode } from '../../composables/usePreview';
+import { ref, computed } from 'vue';
+import { PreviewMode } from '../../composables/usePreview';
 import SelectButton from 'primevue/selectbutton';
-import { Loader2, AlertTriangle, Monitor, Sparkles, RefreshCw } from 'lucide-vue-next';
+import { Monitor, AlertTriangle } from 'lucide-vue-next';
 import PreviewLegend from './PreviewLegend.vue';
 
 // This component accepts the logic from usePreview as props or we can bind v-models?
@@ -43,9 +43,9 @@ const processedContent = computed(() => {
         }
 
         if (el.id && text) {
-            // Clone for text extraction to remove edit links
+            // Clone for text extraction to remove edit links and dot/link suffixes
             const clone = el.cloneNode(true) as HTMLElement;
-            clone.querySelectorAll('.mw-editsection').forEach(e => e.remove());
+            clone.querySelectorAll('.mw-editsection, .mw-linkhere').forEach(e => e.remove());
             const cleanText = clone.textContent?.trim() || text;
 
             extractedHeadings.push({
@@ -120,7 +120,7 @@ const scrollToHeading = (id: string) => {
                 <div
                     class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 shadow-xl rounded-xl p-4 flex flex-col items-center gap-3">
                     <div class="flex items-center gap-1.5 h-8">
-                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite]"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-bounce"></div>
                         <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_100ms]"></div>
                         <div class="w-2.5 h-2.5 rounded-full bg-primary-500 animate-[bounce_1s_infinite_200ms]"></div>
                     </div>
@@ -136,7 +136,7 @@ const scrollToHeading = (id: string) => {
             <div class="h-full overflow-auto p-4 custom-scrollbar scroll-smooth" ref="scrollContainer">
                 <div v-if="error"
                     class="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-center gap-2 mb-4 text-sm">
-                    <AlertTriangle class="w-5 h-5 flex-shrink-0" />
+                    <AlertTriangle class="w-5 h-5 shrink-0" />
                     <span>{{ error }}</span>
                 </div>
 
