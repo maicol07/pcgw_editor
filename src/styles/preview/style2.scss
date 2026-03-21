@@ -6326,7 +6326,7 @@ body.mw-mmv-lightbox-open * {
     height: auto
 }
 
-.page-normaltable tr:first-of-type th {
+.page-normaltable thead tr:first-of-type th {
     border-bottom: 2px solid #556db3;
     padding: 10px 2px;
     color: #fff;
@@ -6334,7 +6334,7 @@ body.mw-mmv-lightbox-open * {
     font-weight: 600
 }
 
-.page-normaltable tr:first-of-type th a {
+.page-normaltable thead tr:first-of-type th a {
     color: #fff;
     font-weight: 600
 }

@@ -1,4 +1,4 @@
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { renderWikitextToHtml } from '../utils/renderer';
 
 export type PreviewMode = 'Local' | 'API';
@@ -28,7 +28,7 @@ export function usePreview(
 
     const fetchPreview = async (text: string) => {
         if (previewMode.value === 'Local') {
-            renderedHtml.value = renderWikitextToHtml(text);
+            renderedHtml.value = renderWikitextToHtml(text, titleSource());
             return;
         }
 
@@ -73,7 +73,7 @@ export function usePreview(
             console.error("Preview fetch failed:", e);
             error.value = `Failed to load preview: ${e.message}. Using local renderer.`;
             // Fallback
-            renderedHtml.value = renderWikitextToHtml(text);
+            renderedHtml.value = renderWikitextToHtml(text, titleSource());
         } finally {
             isLoading.value = false;
         }

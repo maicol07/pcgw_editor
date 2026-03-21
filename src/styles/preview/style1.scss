@@ -431,24 +431,25 @@ table.template-tocbox td.template-tocbox-body span.collapsibletoc-section-neithe
     color: #000
 }
 
-.notice-stub,
-.notice-cleanup {
+.notice.notice-stub,
+.notice.notice-cleanup {
+    color: #000;
     background-color: #ffe8b3
 }
 
-.notice-text a,
-.notice-text>span>a,
-.notice-text>span>a.external,
-.notice-text>span>a.external:visited,
-.notice-text a.external,
-.notice-text a.external:visited,
-.notice-text a.new,
-.notice-text a.new:visited {
+.notice .notice-text a,
+.notice .notice-text>span>a,
+.notice .notice-text>span>a.external,
+.notice .notice-text>span>a.external:visited,
+.notice .notice-text a.external,
+.notice .notice-text a.external:visited,
+.notice .notice-text a.new,
+.notice .notice-text a.new:visited {
     color: #375898
 }
 
-.notice-stub.notice-section,
-.notice-cleanup.notice-section {
+.notice.notice-stub.notice-section,
+.notice.notice-cleanup.notice-section {
     background-color: #FFF
 }
 
@@ -729,10 +730,6 @@ dd>a.extiw:first-child {
     vertical-align: top
 }
 
-.template-infobox-info {
-    font-size: 1.1rem
-}
-
 .template-infobox-info>a {}
 
 td.template-infobox-info .external {
@@ -845,7 +842,7 @@ td.table-assignment-body-assigned .external {
 
 h3 {
     border-left: 5px solid #7babde;
-    padding-left: 10px;
+    padding-left: 10px !important;
     position: relative;
     left: -15px
 }
