@@ -1475,6 +1475,7 @@ export class PCGWEditor {
             const wikitext = this.parser.getText();
             const templates = this.parser.findTemplates('System requirements');
             let match: { index: number; content: string } | undefined;
+            let finalOS = os;
 
             for (const t of templates) {
                 // We need to check if this template belongs to the requested OS
@@ -1489,15 +1490,19 @@ export class PCGWEditor {
                     foundOS = t.content.substring(legacyOS.valueStart, legacyOS.valueEnd).trim();
                 }
 
-                if (foundOS.toLowerCase() === os.toLowerCase()) {
+                const isMacMatch = os.toLowerCase() === 'mac' && (foundOS.toLowerCase() === 'mac' || foundOS.toLowerCase() === 'os x');
+                const isExactMatch = foundOS.toLowerCase() === os.toLowerCase();
+
+                if (isExactMatch || isMacMatch) {
                     match = { index: t.start, content: t.content };
+                    finalOS = foundOS;
                     break;
                 }
             }
 
             // Helper to build parameters string
             const buildParams = () => {
-                let p = `\n|OSfamily = ${os}`;
+                let p = `\n|OSfamily = ${finalOS}`;
 
                 const s = (val: any) => (val !== undefined && val !== null) ? val : '';
 

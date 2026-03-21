@@ -220,6 +220,47 @@ describe('Wikitext Generation & Parsing Issues', () => {
             // Should be correctly replaced
             expect(text).toContain('{{Availability|\n{{Availability/row| Steam | 123 | Steam | | | Windows }}\n}}');
         });
+
+        // 15. System requirements synonyms (Mac/OS X)
+        it('should NOT duplicate Mac section if OS X is used in wikitext', async () => {
+            const initialWikitext = `== System requirements ==
+{{System requirements
+|OSfamily = OS X
+|minOS    = 10.15
+}}`;
+            const editor = new PCGWEditor(initialWikitext);
+            editor.updateSystemRequirements({
+                windows: {},
+                mac: { minimum: { os: '10.15' }, recommended: {}, notes: '' },
+                linux: {}
+            } as any);
+
+            const text = editor.getText();
+            const occurrences = text.split('{{System requirements').length - 1;
+            expect(occurrences).toBe(1);
+            expect(text).toContain('OSfamily = OS X');
+        });
+
+        it('should update existing OS X requirements instead of adding Mac', async () => {
+            const initialWikitext = `== System requirements ==
+{{System requirements
+|OSfamily = OS X
+|minOS    = 10.15
+}}`;
+            const editor = new PCGWEditor(initialWikitext);
+            editor.updateSystemRequirements({
+                windows: {},
+                mac: { minimum: { os: '11.0' }, recommended: {}, notes: 'Updated' },
+                linux: {}
+            } as any);
+
+            const text = editor.getText();
+            expect(text).toContain('OSfamily = OS X');
+            expect(text).toContain('minOS    = 11.0');
+            expect(text).toContain('notes    = Updated');
+            const occurrences = text.split('{{System requirements').length - 1;
+            expect(occurrences).toBe(1);
+        });
     });
 
     describe('Parsing (Code -> Visual)', () => {
