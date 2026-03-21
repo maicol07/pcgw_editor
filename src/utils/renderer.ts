@@ -749,7 +749,7 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
         sysTemplates.forEach(tpl => {
             const data = parseTemplate('System requirements', tpl.content) || {};
             // Simple render
-            const os = data['os'] || 'System';
+            const os = data['osfamily'] || data['os'] || 'Windows';
             const h = `
          <div class="sysreq sysreq_${os} container-pcgwikitable">
             <table class="pcgwikitable table-standard template-infotable page-normaltable" id="table-sysreqs-${os.toLowerCase()}">
