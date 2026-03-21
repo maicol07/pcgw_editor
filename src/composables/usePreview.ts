@@ -12,6 +12,7 @@ export function usePreview(
     const isLoading = ref(false);
     const error = ref('');
     const isPending = ref(false); // True during debounce
+    let abortController: AbortController | null = null;
 
     // Simple Debounce
     const debounce = (fn: Function, delay: number) => {
@@ -27,7 +28,14 @@ export function usePreview(
     };
 
     const fetchPreview = async (text: string) => {
+        // Cancel any pending request
+        if (abortController) {
+            abortController.abort();
+            abortController = null;
+        }
+
         if (previewMode.value === 'Local') {
+            isLoading.value = false;
             renderedHtml.value = renderWikitextToHtml(text, titleSource());
             return;
         }
@@ -52,10 +60,13 @@ export function usePreview(
             title: titleSource() || 'Main Page'
         });
 
+        abortController = new AbortController();
+
         try {
             const response = await fetch('https://www.pcgamingwiki.com/w/api.php', {
                 method: 'POST',
-                body: params
+                body: params,
+                signal: abortController.signal
             });
 
             if (!response.ok) {
@@ -70,6 +81,10 @@ export function usePreview(
             }
             renderedHtml.value = data.parse.text['*'];
         } catch (e: any) {
+            if (e.name === 'AbortError') {
+                // Request cancelled intentionally
+                return;
+            }
             console.error("Preview fetch failed:", e);
             error.value = `Failed to load preview: ${e.message}. Using local renderer.`;
             // Fallback
