@@ -377,6 +377,7 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         
         // 2. Simulate combiner upload
         const mockFile = new File(['test'], 'CombineMe.png', { type: 'image/png' });
+        mockFileStore.addFile.mockResolvedValue(1234);
         await vm.handleCombineLocalUpload({ files: [mockFile] });
         await flushPromises();
         

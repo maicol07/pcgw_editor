@@ -668,11 +668,24 @@ export interface GameMiddleware {
     anticheatNotes?: string;
 }
 
+export interface CombineConfigItem {
+    name: string;
+    type: 'local' | 'gallery';
+    localId?: number;
+}
+
+export interface CombineConfig {
+    orientation: 'horizontal' | 'vertical';
+    gap: number;
+    items: CombineConfigItem[];
+}
+
 export interface GalleryImage {
     name: string;
     caption?: string;
     position?: 'lateral' | 'gallery';
     localId?: number; // Linked to local file in Dexie
+    combineConfig?: CombineConfig;
 }
 
 export interface Issue {

@@ -183,6 +183,13 @@ const actionMenuItems = computed<any[]>(() => {
             icon: Crop,
             command: () => initiateCrop({ type: 'gallery', galleryItem: element })
         });
+        if (element.combineConfig) {
+            items.push({
+                label: 'Edit layout combination',
+                icon: Combine,
+                command: () => triggerEditCombine(activeItem.value!.index)
+            });
+        }
         items.push({
             label: 'Replace with another image',
             icon: Replace,
@@ -856,6 +863,7 @@ interface CropJob {
 }
 
 const croppingQueue = ref<CropJob[]>([]);
+const currentManualCropJob = ref<CropJob | null>(null);
 
 const initiateCrop = (job: CropJob) => {
     if (job.type === 'gallery' && job.galleryItem?.localId !== undefined) {
@@ -865,16 +873,21 @@ const initiateCrop = (job: CropJob) => {
         cropImageUrl.value = getFileUrl(file.blob);
     } else if (job.type === 'combine' && job.combineItem) {
         if (!job.combineItem.url) return;
-        // Faking a gallery image for the cropper's internal tracking
+        cropImageUrl.value = job.combineItem.url;
+        // We set a placeholder for the gallery image to keep progressbar/dialog happy
         croppingImage.value = { 
             name: job.combineItem.name, 
             caption: '', 
             position: 'gallery',
-            localId: job.combineItem.id as any // Using combiner item ID
+            localId: job.combineItem.localId || 0
         };
-        cropImageUrl.value = job.combineItem.url;
     } else {
         return;
+    }
+    
+    // If not triggered by the auto-uploader queue, track it manually
+    if (!croppingQueue.value.find((j: CropJob) => j === job)) {
+        currentManualCropJob.value = job;
     }
     
     showCropDialog.value = true;
@@ -902,7 +915,7 @@ const handleConfirmCrop = async () => {
             return;
         }
 
-        const currentJob = croppingQueue.value[0] || (croppingImage.value ? { type: 'gallery', galleryItem: croppingImage.value } : null);
+        const currentJob = croppingQueue.value[0] || currentManualCropJob.value;
         if (!currentJob) {
             isCropping.value = false;
             return;
@@ -923,9 +936,26 @@ const handleConfirmCrop = async () => {
             const item = currentJob.combineItem;
             // Create a brand new file from the blob
             const newFile = new File([blob], item.name, { type: 'image/png', lastModified: Date.now() });
+            
+            // If it's a local file, also update it in the file store so it persists
+            if (item.localId) {
+                await fileStore.updateFileStatus(item.localId, {
+                    blob: newFile,
+                    size: newFile.size,
+                    type: newFile.type,
+                    lastModified: newFile.lastModified
+                });
+            }
+            
             item.file = newFile;
             if (item.url) URL.revokeObjectURL(item.url);
             item.url = URL.createObjectURL(newFile);
+            
+            // Force reactivity by re-assigning the item in the queue if possible
+            const qIdx = combineQueue.value.indexOf(item);
+            if (qIdx !== -1) {
+                combineQueue.value[qIdx] = { ...item };
+            }
         }
 
         toast.add({
@@ -944,6 +974,7 @@ const closeCropDialog = () => {
     croppingImage.value = null;
     isCropping.value = false;
     cropImageUrl.value = '';
+    currentManualCropJob.value = null;
 
     if (croppingQueue.value.length > 0) {
         croppingQueue.value.shift();
@@ -965,6 +996,7 @@ interface CombineItem {
     type: 'local' | 'gallery';
     file?: File;
     galleryImage?: GalleryImage;
+    localId?: number;
     url?: string;
     name: string;
 }
@@ -999,13 +1031,15 @@ const handleCombineTempSelect = () => {
     combineTempGallerySelection.value = [];
 };
 
-const handleCombineLocalUpload = (event: any) => {
+const handleCombineLocalUpload = async (event: any) => {
     const newItems: CombineItem[] = [];
     for (const file of event.files) {
+        const id = await fileStore.addFile(file);
         const item: CombineItem = {
-            id: 'local-' + Math.random().toString(36).substring(2, 9),
+            id: 'local-' + id,
             type: 'local',
             file,
+            localId: id,
             url: URL.createObjectURL(file), // Need object URL for canvas drawing & preview rendering
             name: file.name
         };
@@ -1107,16 +1141,64 @@ watch([combineQueue, combineOrientation, combineGap], () => {
     generatePreview();
 }, { deep: true });
 
+const editingCombineIndex = ref<number | null>(null);
+
+const triggerEditCombine = (index: number) => {
+    const newValue = props.modelValue || [];
+    const item = newValue[index];
+    if (typeof item === 'string' || !item.combineConfig) return;
+
+    editingCombineIndex.value = index;
+    const config = item.combineConfig;
+
+    combineOrientation.value = config.orientation;
+    combineGap.value = config.gap;
+
+    const newQueue: CombineItem[] = [];
+    for (const cfgItem of config.items) {
+        if (cfgItem.type === 'local' && cfgItem.localId) {
+            const localFile = fileStore.files.find(f => f.id === cfgItem.localId);
+            if (localFile) {
+                newQueue.push({
+                    id: 'restored-local-' + cfgItem.localId,
+                    type: 'local',
+                    localId: cfgItem.localId,
+                    url: getFileUrl(localFile.blob),
+                    name: cfgItem.name,
+                    file: localFile.blob as File
+                });
+            }
+        } else if (cfgItem.type === 'gallery') {
+            const galleryImg: GalleryImage = { name: cfgItem.name, position: 'gallery', localId: cfgItem.localId };
+            newQueue.push({
+                id: 'restored-gallery-' + Math.random().toString(36).substring(2, 9),
+                type: 'gallery',
+                galleryImage: galleryImg,
+                url: getImageUrl(galleryImg),
+                name: cfgItem.name
+            });
+        }
+    }
+    
+    combineQueue.value = newQueue;
+    showCombineDialog.value = true;
+};
+
+const openUrl = (url?: string) => {
+    if (url) window.open(url, '_blank');
+};
+
 const closeCombineDialog = () => {
     showCombineDialog.value = false;
     combineQueue.value.forEach(item => {
-        if (item.type === 'local' && item.url) URL.revokeObjectURL(item.url);
+        if (item.type === 'local' && item.url && item.id.startsWith('local-')) URL.revokeObjectURL(item.url);
     });
     combineQueue.value = [];
     if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
     combinePreviewUrl.value = '';
     previewObjUrlBlob = null;
     combineTempGallerySelection.value = [];
+    editingCombineIndex.value = null;
 };
 
 const handleConfirmCombine = async () => {
@@ -1127,23 +1209,42 @@ const handleConfirmCombine = async () => {
 
     isCombining.value = true;
     try {
-        // We already have the combined blob rendered exactly from the latest preview!
         const blob = previewObjUrlBlob;
-
-        // 4. Save to fileStore
         const combinedFile = new File([blob], `combined_${Date.now()}.png`, { type: 'image/png', lastModified: Date.now() });
         const id = await fileStore.addFile(combinedFile);
 
-        // 5. Add to gallery
+        const combineConfig = {
+            orientation: combineOrientation.value,
+            gap: combineGap.value,
+            items: combineQueue.value.map(q => ({
+                name: q.name,
+                type: q.type,
+                localId: q.localId || q.galleryImage?.localId
+            }))
+        };
+
         const newImages: GalleryImage[] = [{
             name: combinedFile.name,
             caption: '',
             position: 'gallery',
-            localId: id
+            localId: id,
+            combineConfig
         }];
-        emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
 
-        toast.add({ severity: 'success', summary: 'Images Combined', detail: 'Combined image added to gallery.', life: 3000 });
+        if (editingCombineIndex.value !== null) {
+            const newValue = [...(props.modelValue || [])];
+            const oldItem = newValue[editingCombineIndex.value];
+            if (typeof oldItem !== 'string' && oldItem.localId !== undefined) {
+                await fileStore.removeFile(oldItem.localId).catch(console.error);
+            }
+            newValue[editingCombineIndex.value] = newImages[0];
+            emit('update:modelValue', newValue);
+            toast.add({ severity: 'success', summary: 'Image Updated', detail: 'Combined image has been modified.', life: 3000 });
+        } else {
+            emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
+            toast.add({ severity: 'success', summary: 'Images Combined', detail: 'Combined image added to gallery.', life: 3000 });
+        }
+
         closeCombineDialog();
     } catch (e: any) {
         console.error(e);
@@ -1771,7 +1872,23 @@ defineExpose({
                                 <span class="truncate">{{ item.name }}</span>
                                 <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-surface-300 dark:bg-surface-600 text-surface-600 dark:text-surface-300 ml-2 shrink-0">{{ item.type }}</span>
                             </div>
-                            <Button icon="pi pi-times" text severity="danger" size="small" @click="removeCombineItem(idx)" class="p-1 w-6 h-6 shrink-0 ml-2" />
+                            <div class="flex items-center gap-0.5 shrink-0 ml-2">
+                                <Button text severity="secondary" @click="initiateCrop({ type: 'combine', combineItem: item })" class="p-1" v-tooltip.bottom="'Crop Image'">
+                                    <template #icon>
+                                        <Crop class="w-5 h-5" />
+                                    </template>
+                                </Button>
+                                <Button text severity="info" @click="openUrl(item.url)" class="p-1" v-tooltip.bottom="'View Image'">
+                                    <template #icon>
+                                        <ExternalLink class="w-5 h-5" />
+                                    </template>
+                                </Button>
+                                <Button text severity="danger" @click="removeCombineItem(idx)" class="p-1" v-tooltip.bottom="'Remove Image'">
+                                    <template #icon>
+                                        <Trash2 class="w-5 h-5" />
+                                    </template>
+                                </Button>
+                            </div>
                         </div>
                     </VueDraggable>
                 </div>
