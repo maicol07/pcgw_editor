@@ -120,5 +120,40 @@ Old2.jpg
             expect(text).not.toContain('Old2.jpg');
             expect(text).not.toContain('<gallery>');
         });
+
+        it('should NOT have an empty line after the last {{Image}} tag', async () => {
+            const wikitext = `==Video==\n{{Video|}}`;
+            const editor = new PCGWEditor(wikitext);
+
+            editor.updateSectionImages('Video', [
+                { name: 'Test.jpg', caption: 'Caption', position: 'lateral' }
+            ]);
+
+            const text = editor.getText();
+            const lines = text.split('\n').filter(l => l.trim() !== '' || l === '');
+            const imageLineIndex = lines.findIndex(l => l.includes('{{Image|Test.jpg|Caption}}'));
+            const nextLine = lines[imageLineIndex + 1];
+            
+            expect(nextLine).not.toBe('');
+            expect(nextLine).toBe('{{Video|}}');
+        });
+
+        it('should handle multiple images with single newline after the last one', async () => {
+            const wikitext = `==Video==\n{{Video|}}`;
+            const editor = new PCGWEditor(wikitext);
+
+            editor.updateSectionImages('Video', [
+                { name: '1.jpg', caption: 'C1', position: 'lateral' },
+                { name: '2.jpg', caption: 'C2', position: 'lateral' }
+            ]);
+
+            const text = editor.getText();
+            const lines = text.split('\n');
+            const firstImageIndex = lines.findIndex(l => l.includes('{{Image|1.jpg|C1}}'));
+            const secondImageIndex = lines.findIndex(l => l.includes('{{Image|2.jpg|C2}}'));
+            
+            expect(secondImageIndex).toBe(firstImageIndex + 1);
+            expect(lines[secondImageIndex + 1]).toBe('{{Video|}}');
+        });
     });
 });

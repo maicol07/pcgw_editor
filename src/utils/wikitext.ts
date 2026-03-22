@@ -706,7 +706,7 @@ export class PCGWEditor {
 
         let topWikitext = '';
         if (topImages.length > 0) {
-            topWikitext = topImages.map(img => `{{Image|${img.name}|${img.caption}}}`).join('\n') + '\n\n';
+            topWikitext = topImages.map(img => `{{Image|${img.name}|${img.caption}}}`).join('\n') + '\n';
         }
 
         let bottomWikitext = '';
