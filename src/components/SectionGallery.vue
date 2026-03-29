@@ -1809,7 +1809,7 @@ defineExpose({
         <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal :style="{ width: '800px' }" :draggable="false">
             <div class="flex flex-col gap-4">
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
-                    <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" />
+                    <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" auto-zoom />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
                     <Button :label="croppingQueue.length > 1 ? 'Skip' : 'Cancel'" text @click="closeCropDialog" :disabled="isCropping" />
