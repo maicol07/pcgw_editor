@@ -19,7 +19,8 @@ const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
         loadFiles: vi.fn(() => Promise.resolve([])),
         files: [] as any[],
         addFile: vi.fn(),
-        updateFileStatus: vi.fn(() => Promise.resolve())
+        updateFileStatus: vi.fn(() => Promise.resolve()),
+        removeFile: vi.fn(() => Promise.resolve())
     },
     mockPcgwAuth: {
         isLoggedIn: true,
@@ -504,5 +505,80 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         expect(vm.combineQueue[1].url).toBe('https://pcgw/ExistingWiki.png');
         
         expect(pcgwApi.getImageInfo).toHaveBeenCalledWith('MissingWiki.png');
+    });
+
+    it('should toggle selection state of images', async () => {
+        const image = { name: 'Batch1.png', position: 'gallery' };
+        const wrapper = setupWrapper({ modelValue: [image] });
+        const vm = wrapper.vm as any;
+        
+        expect(vm.selectedKeys.size).toBe(0);
+        
+        vm.toggleSelection(image);
+        expect(vm.selectedKeys.size).toBe(1);
+        expect(vm.isSelected(image)).toBe(true);
+        
+        vm.toggleSelection(image);
+        expect(vm.selectedKeys.size).toBe(0);
+        expect(vm.isSelected(image)).toBe(false);
+    });
+
+    it('should select all and clear selection', async () => {
+        const images = [
+            { name: 'Batch1.png', position: 'gallery' },
+            { name: 'Batch2.png', position: 'gallery' }
+        ];
+        const wrapper = setupWrapper({ modelValue: images });
+        const vm = wrapper.vm as any;
+        
+        vm.selectAll();
+        expect(vm.selectedKeys.size).toBe(2);
+        
+        vm.clearSelection();
+        expect(vm.selectedKeys.size).toBe(0);
+    });
+
+    it('should batch remove selected images', async () => {
+        const images = [
+            { name: 'Batch1.png', position: 'gallery' },
+            { name: 'Batch2.png', position: 'gallery', localId: 99 }
+        ];
+        const wrapper = setupWrapper({ modelValue: images });
+        const vm = wrapper.vm as any;
+        
+        vm.selectAll();
+        vm.batchRemove();
+        
+        // Emitted new modelValue should be empty
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        expect((emitted![0] as any)[0]).toEqual([]);
+        
+        // Also local file should be removed
+        expect(mockFileStore.removeFile).toHaveBeenCalledWith(99);
+    });
+
+    it('should batch toggle position of selected images', async () => {
+        const images = [
+            { name: 'Batch1.png', position: 'gallery' },
+            { name: 'Batch2.png', position: 'lateral' },
+            { name: 'Unselected.png', position: 'gallery' } // We won't select this one
+        ];
+        const wrapper = setupWrapper({ modelValue: images });
+        const vm = wrapper.vm as any;
+        
+        // Manually select only the first two
+        vm.toggleSelection(images[0]);
+        vm.toggleSelection(images[1]);
+        
+        vm.batchTogglePosition();
+        
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        const newValue = (emitted![0] as any)[0];
+        
+        expect(newValue[0].position).toBe('lateral');
+        expect(newValue[1].position).toBe('gallery');
+        expect(newValue[2].position).toBe('gallery'); // Unchanged
     });
 });

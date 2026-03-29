@@ -20,11 +20,13 @@ import MultiSelect from 'primevue/multiselect';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
 import ToggleSwitch from 'primevue/toggleswitch';
+import Checkbox from 'primevue/checkbox';
 import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
 import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
-    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine
+    Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
+    X, ArrowRightLeft, ListChecks
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
@@ -61,6 +63,38 @@ const displayImages = computed({
 });
 
 const editingIndex = ref<number | null>(null);
+
+// Batch Select State
+const selectedKeys = ref<Set<string>>(new Set());
+
+const getItemKey = (element: GalleryImage | string) => {
+    if (typeof element === 'string') return 'wiki-' + element;
+    return element.localId !== undefined ? 'local-' + element.localId : 'wiki-' + element.name;
+};
+
+const toggleSelection = (element: GalleryImage | string) => {
+    const key = getItemKey(element);
+    const newSet = new Set(selectedKeys.value);
+    if (newSet.has(key)) {
+        newSet.delete(key);
+    } else {
+        newSet.add(key);
+    }
+    selectedKeys.value = newSet;
+};
+
+const isSelected = (element: GalleryImage | string) => {
+    return selectedKeys.value.has(getItemKey(element));
+};
+
+const selectAll = () => {
+    selectedKeys.value = new Set(displayImages.value.map(img => getItemKey(img)));
+};
+
+const clearSelection = () => {
+    selectedKeys.value.clear();
+};
+
 
 const openCaptionDialog = (img: GalleryImage, index: number) => {
     editingImage.value = img;
@@ -403,6 +437,174 @@ const togglePosition = (index: number) => {
     newValue[index] = galleryItem;
     emit('update:modelValue', newValue);
 };
+
+// Batch Operations Methods
+const batchRemove = () => {
+    const newValue = [...(props.modelValue || [])].filter(item => {
+        const keep = !selectedKeys.value.has(getItemKey(item));
+        if (!keep && typeof item !== 'string' && item.localId !== undefined) {
+             fileStore.removeFile(item.localId).catch(console.error);
+        }
+        return keep;
+    });
+    emit('update:modelValue', newValue);
+    clearSelection();
+    toast.add({ severity: 'success', summary: 'Batch Remove', detail: 'Selected images removed from gallery.', life: 3000 });
+};
+
+const batchTogglePosition = () => {
+    const newValue = [...(props.modelValue || [])].map(item => {
+        if (!selectedKeys.value.has(getItemKey(item))) return item;
+        let galleryItem: GalleryImage = typeof item === 'string' ? { name: item, caption: '', position: 'gallery' } : { ...item };
+        galleryItem.position = galleryItem.position === 'lateral' ? 'gallery' : 'lateral';
+        return galleryItem;
+    });
+    emit('update:modelValue', newValue);
+    clearSelection();
+    toast.add({ severity: 'success', summary: 'Batch Move', detail: 'Selected images positions toggled.', life: 3000 });
+};
+
+const batchCrop = () => {
+    const jobs: CropJob[] = [];
+    displayImages.value.forEach(img => {
+        if (selectedKeys.value.has(getItemKey(img))) {
+            jobs.push({ type: 'gallery', galleryItem: img });
+        }
+    });
+
+    if (jobs.length > 0) {
+        croppingQueue.value = [...croppingQueue.value, ...jobs];
+        if (!showCropDialog.value) {
+            processNextCrop();
+        }
+        clearSelection();
+    }
+};
+
+const batchCombine = () => {
+    const itemsToCombine: CombineItem[] = [];
+    displayImages.value.forEach(async img => {
+        if (selectedKeys.value.has(getItemKey(img))) {
+            const itemObj = typeof img === 'string' ? { name: img } as GalleryImage : img;
+            let url = getImageUrl(itemObj);
+            if (!url) {
+                const info = await pcgwApi.getImageInfo(itemObj.name);
+                if (info) {
+                    resolvedInfos[normalizeFilename(itemObj.name)] = info;
+                    url = info.url;
+                }
+            }
+            if (url) {
+                itemsToCombine.push({
+                    id: 'gallery-batch-' + Math.random().toString(36).substring(2, 9),
+                    type: 'gallery',
+                    galleryImage: itemObj,
+                    url,
+                    name: itemObj.name
+                });
+            }
+        }
+    });
+    combineQueue.value = itemsToCombine;
+    showCombineDialog.value = true;
+    clearSelection();
+};
+
+const batchUpload = async () => {
+    // Collect all local files in selection
+    const localItems = displayImages.value.filter(img => selectedKeys.value.has(getItemKey(img)) && img.localId !== undefined);
+    
+    if (localItems.length === 0) {
+        toast.add({ severity: 'info', summary: 'No Local Files', detail: 'No local files selected to upload.', life: 3000 });
+        return;
+    }
+    
+    // Process them sequentially without prompts (skipping overwrites by appending hash locally if needed, or simply let the API error for dupes.)
+    toast.add({ severity: 'info', summary: 'Batch Upload Started', detail: `Uploading ${localItems.length} images...`, life: 3000 });
+    
+    let successCount = 0;
+    for (const item of localItems) {
+        if (!item.localId) continue;
+        const file = fileStore.files.find(f => f.id === item.localId);
+        if (!file) continue;
+        
+        try {
+            await fileStore.updateFileStatus(file.id!, { status: 'uploading' });
+            const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
+            const result = await pcgwMedia.uploadFile(file.blob, {
+                filename: file.name,
+                comment: (file.description || '') + attribution,
+                ignorewarnings: false
+            });
+            if (result?.upload?.result === 'Success') {
+                resolvedInfos[normalizeFilename(file.name)] = {
+                    url: result.upload.imageinfo.url,
+                    user: pcgwAuth.username || '',
+                    size: result.upload.imageinfo.size,
+                    width: result.upload.imageinfo.width,
+                    height: result.upload.imageinfo.height,
+                    canonicalName: normalizeFilename(file.name)
+                };
+                await fileStore.updateFileStatus(file.id!, {
+                    status: 'uploaded',
+                    name: file.name,
+                    pcgwUrl: result.upload.imageinfo.descriptionurl
+                });
+                // Update model
+                const newValue = [...(props.modelValue || [])];
+                const placeholderIndex = newValue.findIndex(img => typeof img !== 'string' && img.localId === file.id);
+                if (placeholderIndex !== -1) {
+                    const existing = newValue[placeholderIndex] as GalleryImage;
+                    newValue[placeholderIndex] = { ...existing, name: file.name, localId: undefined };
+                    emit('update:modelValue', newValue);
+                }
+                successCount++;
+            }
+        } catch (e) {
+            console.error('Batch upload error for', file.name, e);
+            await fileStore.updateFileStatus(file.id!, { status: 'error', error: String(e) });
+        }
+    }
+    
+    clearSelection();
+    toast.add({ severity: 'success', summary: 'Batch Upload Completed', detail: `${successCount} out of ${localItems.length} uploaded successfully.`, life: 5000 });
+};
+
+const batchDeletePcgw = async () => {
+    const wikiItems = displayImages.value.filter(img => selectedKeys.value.has(getItemKey(img)) && img.localId === undefined);
+    
+    if (wikiItems.length === 0) {
+         toast.add({ severity: 'info', summary: 'No Wiki Files', detail: 'No wiki files selected for deletion.', life: 3000 });
+         return;
+    }
+    
+    toast.add({ severity: 'info', summary: 'Batch Delete Started', detail: `Requesting deletion for ${wikiItems.length} images...`, life: 3000 });
+    let successCount = 0;
+    
+    for (const item of wikiItems) {
+        try {
+            const title = `File:${item.name}`;
+            let currentContent = await pcgwApi.getPageContent(title) || '';
+            const deleteTemplate = '{{delete|reason=Batch deletion via PCGW Editor}}';
+            const deleteRegex = /\{\{delete(?:\s*\|\s*reason\s*=\s*[^}]*)?\}\}/gi;
+
+            let newContent = '';
+            if (deleteRegex.test(currentContent)) {
+                newContent = currentContent.replace(deleteRegex, deleteTemplate);
+            } else {
+                newContent = `${deleteTemplate}\n${currentContent}`;
+            }
+            await pcgwMedia.editPage(title, newContent, 'Requesting file deletion via template (batch)');
+            successCount++;
+        } catch (e) {
+            console.error('Failed to batch delete', item.name, e);
+        }
+    }
+    
+    clearSelection();
+    toast.add({ severity: 'success', summary: 'Batch Delete Completed', detail: `${successCount} out of ${wikiItems.length} deletion tags added.`, life: 5000 });
+};
+
 
 const initiateUpload = (file: LocalFile | GalleryImage) => {
     if (!pcgwAuth.isLoggedIn) {
@@ -1318,19 +1520,59 @@ defineExpose({
             </div>
         </div>
 
-        <div class="flex gap-2 relative z-10 w-full sm:w-auto">
-            <Button label="Add Image" outlined @click="showSearchDialog = true" class="flex-1">
-                <template #icon>
-                    <Plus class="w-4 h-4 mr-2" />
-                </template>
-            </Button>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 relative z-10 w-full mb-2">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <Button label="Add Image" outlined @click="showSearchDialog = true" class="flex-1 sm:w-auto">
+                    <template #icon>
+                        <Plus class="w-4 h-4 mr-2" />
+                    </template>
+                </Button>
+                <Button v-tooltip.top="'Select All'" severity="secondary" outlined @click="selectAll" class="px-3" :disabled="!displayImages || displayImages.length === 0" aria-label="Select All">
+                    <template #icon><ListChecks class="w-4 h-4" /></template>
+                </Button>
+                <Button v-tooltip.top="'Deselect All'" severity="secondary" outlined @click="clearSelection" class="px-3" :disabled="selectedKeys.size === 0" aria-label="Deselect All">
+                    <template #icon><X class="w-4 h-4" /></template>
+                </Button>
 
-            <div class="hidden">
-                <FileUpload ref="fileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
-                    @uploader="handleLocalMenuUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" />
-                <FileUpload ref="replaceFileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
-                    @uploader="handleReplaceUpload" :multiple="false" accept="image/*" :maxFileSize="10000000" />
+                <div class="hidden">
+                    <FileUpload ref="fileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
+                        @uploader="handleLocalMenuUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" />
+                    <FileUpload ref="replaceFileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
+                        @uploader="handleReplaceUpload" :multiple="false" accept="image/*" :maxFileSize="10000000" />
+                </div>
             </div>
+
+            <!-- Batch Actions Toolbar -->
+            <Transition
+                enter-active-class="transition duration-200 ease-out" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition duration-150 ease-in" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95"
+            >
+                <div v-if="selectedKeys.size > 0" class="flex items-center gap-1.5 p-1.5 bg-primary-50 dark:bg-primary-900/40 border border-primary-200 dark:border-primary-800 rounded-lg shadow-sm">
+                    <span class="text-xs font-bold text-primary-600 dark:text-primary-400 px-2">{{ selectedKeys.size }} selected</span>
+                    <div class="h-4 w-px bg-primary-200 dark:bg-primary-700/50 mx-1"></div>
+
+                    <Button v-tooltip.top="'Toggle Position'" text size="small" rounded severity="primary" @click="batchTogglePosition" class="p-1!">
+                        <template #icon><ArrowRightLeft class="w-4 h-4" /></template>
+                    </Button>
+                    <Button v-tooltip.top="'Crop Selected'" text size="small" rounded severity="primary" @click="batchCrop" class="p-1!">
+                        <template #icon><Crop class="w-4 h-4" /></template>
+                    </Button>
+                    <Button v-tooltip.top="'Combine Selected'" text size="small" rounded severity="primary" @click="batchCombine" class="p-1!">
+                        <template #icon><Combine class="w-4 h-4" /></template>
+                    </Button>
+                    
+                    <div class="h-4 w-px bg-primary-200 dark:bg-primary-700/50 mx-1"></div>
+                    <Button v-tooltip.top="'Upload Local to PCGW'" text size="small" rounded severity="success" @click="batchUpload" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('local-'))">
+                        <template #icon><Upload class="w-4 h-4" /></template>
+                    </Button>
+                    <Button v-tooltip.top="'Request Wiki Deletion'" text size="small" rounded severity="warning" @click="batchDeletePcgw" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('wiki-'))">
+                        <template #icon><AlertCircle class="w-4 h-4" /></template>
+                    </Button>
+                    <Button v-tooltip.top="'Remove from Gallery'" text size="small" rounded severity="danger" @click="batchRemove" class="p-1!">
+                        <template #icon><Trash2 class="w-4 h-4" /></template>
+                    </Button>
+                </div>
+            </Transition>
         </div>
 
         <Dialog v-model:visible="showSearchDialog" header="Add Image" modal :style="{ width: '500px' }"
@@ -1416,10 +1658,9 @@ defineExpose({
                 <div v-for="(element, index) in displayImages"
                     :key="typeof element === 'string' ? element : element.name"
                     class="gallery-item border border-surface-200 dark:border-surface-700 rounded p-3 bg-surface-0 dark:bg-surface-800 relative group flex flex-col h-full cursor-move hover:shadow-md transition-shadow">
-                    <!-- Drag handle visual indicator -->
-                    <div
-                        class="flex justify-center mb-2 text-surface-300 dark:text-surface-600 group-hover:text-surface-500 dark:group-hover:text-surface-400 transition-colors">
-                        <GripHorizontal class="w-5 h-5" />
+                    <div class="flex justify-between items-center mb-2 px-1 text-surface-400 group-hover:text-surface-600 dark:group-hover:text-surface-300 transition-colors">
+                        <Checkbox :modelValue="isSelected(element)" @update:modelValue="toggleSelection(element)" :binary="true" />
+                        <GripHorizontal class="w-5 h-5 cursor-move" />
                     </div>
                     <div
                         class="gallery-image-container relative flex-1 flex items-center justify-center p-2 rounded bg-surface-100 dark:bg-surface-900 overflow-hidden min-h-[150px]">
