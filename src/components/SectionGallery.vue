@@ -969,25 +969,30 @@ const handleConfirmCrop = async () => {
             life: 3000
         });
 
-        closeCropDialog();
+        showCropDialog.value = false;
     }, 'image/png');
 };
 
-const closeCropDialog = () => {
-    showCropDialog.value = false;
-    croppingImage.value = null;
-    isCropping.value = false;
-    cropImageUrl.value = '';
-    currentManualCropJob.value = null;
+watch(showCropDialog, (newVal) => {
+    if (!newVal && croppingImage.value) {
+        croppingImage.value = null;
+        isCropping.value = false;
+        cropImageUrl.value = '';
+        currentManualCropJob.value = null;
 
-    if (croppingQueue.value.length > 0) {
-        croppingQueue.value.shift();
         if (croppingQueue.value.length > 0) {
-            setTimeout(() => {
-                processNextCrop();
-            }, 300); // Wait for dialog animation
+            croppingQueue.value.shift();
+            if (croppingQueue.value.length > 0) {
+                setTimeout(() => {
+                    processNextCrop();
+                }, 300); // Wait for dialog animation
+            }
         }
     }
+});
+
+const closeCropDialog = () => {
+    showCropDialog.value = false;
 };
 
 // Combine Images Logic
@@ -1801,7 +1806,7 @@ defineExpose({
         </Dialog>
 
         <!-- Image Cropper Dialog -->
-        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal :style="{ width: '800px' }" :draggable="false" @hide="closeCropDialog">
+        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal :style="{ width: '800px' }" :draggable="false">
             <div class="flex flex-col gap-4">
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
                     <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" />
