@@ -6,7 +6,7 @@ import InputText from 'primevue/inputtext';
 import Checkbox from 'primevue/checkbox';
 import { MisMerge2 } from '@mismerge/vue';
 import { DefaultDarkColors, DefaultLightColors } from '@mismerge/core/colors';
-import { UploadCloud, GitCompare } from 'lucide-vue-next';
+import { UploadCloud, GitCompare, Wand2 } from 'lucide-vue-next';
 import { codeToHtml } from 'shiki';
 import '@mismerge/core/styles.css';
 
@@ -16,11 +16,14 @@ const props = defineProps<{
     onlineWikitext: string;
     pageTitle?: string;
     isPublishing: boolean;
+    isGeneratingSummary?: boolean;
+    suggestedSummary?: string;
 }>();
 
 const emit = defineEmits<{
     (e: 'update:visible', value: boolean): void;
     (e: 'publish', payload: { summary: string; minor: boolean }): void;
+    (e: 'requestAiSummary'): void;
 }>();
 
 const visibleState = computed({
@@ -36,6 +39,12 @@ watch(() => props.visible, (newVal) => {
     if (newVal) {
         summary.value = 'Updated via PCGW Editor';
         isMinorEdit.value = false;
+    }
+});
+
+watch(() => props.suggestedSummary, (val) => {
+    if (val) {
+        summary.value = val;
     }
 });
 
@@ -106,7 +115,14 @@ const shikiHighlighter = async (text: string) => {
             <div class="bg-surface-50 dark:bg-surface-900/50 p-4 rounded-lg border border-surface-200 dark:border-surface-700 flex flex-col gap-3">
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-surface-500 uppercase">Edit Summary</label>
-                    <InputText v-model="summary" placeholder="What did you change?" class="w-full" :disabled="isPublishing" @keyup.enter="publish" />
+                    <div class="flex gap-2">
+                        <InputText v-model="summary" placeholder="What did you change?" class="w-full" :disabled="isPublishing || isGeneratingSummary" @keyup.enter="publish" />
+                        <Button @click="emit('requestAiSummary')" :loading="isGeneratingSummary" :disabled="isPublishing" severity="secondary" v-tooltip.top="'Generate summary with AI'">
+                            <template #icon>
+                                <Wand2 class="w-4 h-4" />
+                            </template>
+                        </Button>
+                    </div>
                     <p class="text-[10px] text-surface-400">This summary will appear in the page history on PCGW.</p>
                 </div>
                 

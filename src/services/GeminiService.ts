@@ -119,4 +119,31 @@ export class GeminiService {
 
         return this.generateContent(prompt, model);
     }
+
+    /**
+     * Generates a short Git-style commit message/edit summary by comparing old and new wikitext.
+     */
+    async generateEditSummary(oldWikitext: string, newWikitext: string, model: string = 'gemini-3-flash-preview'): Promise<string> {
+        const prompt = `
+            You are a system generating a concise edit summary (commit message) for a wiki page update.
+            Compare the old wikitext to the new wikitext below. 
+            Identify the primary functional or content changes.
+            Write exactly ONE sentence, maximum 80 characters, describing the change. No markdown, no prefixes like "Change:", just the sentence.
+            Do not mention "wikitext" or "code", just talk about the content that changed (e.g., "Updated system requirements", "Added a new image gallery", "Corrected release date", "Fixed a typo").
+
+            Old Wikitext:
+            """
+            ${oldWikitext}
+            """
+
+            New Wikitext:
+            """
+            ${newWikitext}
+            """
+        `;
+
+        const response = await this.generateContent(prompt, model);
+        // Clean up the output in case the AI adds quotes or newlines
+        return response.replace(/^["']|["']$/g, '').replace(/\r?\n/g, ' ').trim();
+    }
 }

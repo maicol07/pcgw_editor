@@ -9,7 +9,8 @@ import Checkbox from 'primevue/checkbox';
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({
     UploadCloud: { template: '<span class="upload-cloud-icon"></span>' },
-    GitCompare: { template: '<span class="git-compare-icon"></span>' }
+    GitCompare: { template: '<span class="git-compare-icon"></span>' },
+    Wand2: { template: '<span class="wand-icon"></span>' }
 }));
 
 // Mock Shiki
@@ -91,16 +92,42 @@ describe('PublishDiffDialog.vue', () => {
         }]);
     });
 
-    it('disables inputs when isPublishing is true', async () => {
-        const wrapper = setupWrapper({ isPublishing: true });
+    it('emits requestAiSummary when Wand button is clicked', async () => {
+        const wrapper = setupWrapper();
+        const buttons = wrapper.findAllComponents(Button);
+        // The Wand button has no text label, but has the Wand2 icon. We can find it by its lack of label or via a class.
+        // It has v-tooltip "'Generate summary with AI'". But let's find it by looking for the one without a label.
+        const wandBtn = buttons.find(b => !b.props('label') && b.props('severity') === 'secondary');
+        
+        expect(wandBtn).toBeDefined();
+        await wandBtn!.trigger('click');
+
+        expect(wrapper.emitted('requestAiSummary')).toBeTruthy();
+        expect(wrapper.emitted('requestAiSummary')!.length).toBe(1);
+    });
+
+    it('updates internal summary when suggestedSummary prop changes', async () => {
+        const wrapper = setupWrapper();
+        
+        await wrapper.setProps({ suggestedSummary: 'AI generated message' });
+        
+        const summaryInput = wrapper.findComponent(InputText);
+        expect(summaryInput.props('modelValue')).toBe('AI generated message');
+    });
+
+    it('disables inputs when isPublishing or isGeneratingSummary is true', async () => {
+        const wrapper = setupWrapper({ isGeneratingSummary: true });
         
         const summaryInput = wrapper.findComponent(InputText);
         expect(summaryInput.props('disabled')).toBe(true);
-
-        const checkbox = wrapper.findComponent(Checkbox);
-        expect(checkbox.props('disabled')).toBe(true);
-
+        
         const buttons = wrapper.findAllComponents(Button);
+        const wandBtn = buttons.find(b => !b.props('label') && b.props('severity') === 'secondary');
+        expect(wandBtn!.props('loading')).toBe(true);
+
+        await wrapper.setProps({ isGeneratingSummary: false, isPublishing: true });
+        
+        expect(summaryInput.props('disabled')).toBe(true);
         const cancelBtn = buttons.find(b => b.props('label') === 'Cancel');
         expect(cancelBtn!.attributes('disabled')).toBeDefined();
 

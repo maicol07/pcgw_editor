@@ -124,6 +124,8 @@ const isPublishDialogVisible = ref(false); // Kept for fallback or removed later
 const isPublishDiffDialogVisible = ref(false);
 const publishDiffOnlineWikitext = ref('');
 const publishDiffLocalWikitext = ref('');
+const isGeneratingEditSummary = ref(false);
+const suggestedEditSummary = ref('');
 const isConflictDialogVisible = ref(false);
 const publishSummary = ref('Updated via PCGW Editor');
 const isMinorEdit = ref(false);
@@ -146,7 +148,32 @@ const handleOpenPublishDialog = async () => {
     
     publishDiffOnlineWikitext.value = result.content;
     publishDiffLocalWikitext.value = workspaceStore.activePage.wikitext;
+    suggestedEditSummary.value = ''; // Reset suggested summary
     isPublishDiffDialogVisible.value = true;
+};
+
+const handleGenerateEditSummary = async () => {
+    if (!geminiApiKey.value) {
+        showApiKeyDialog.value = true;
+        return;
+    }
+    
+    isGeneratingEditSummary.value = true;
+    try {
+        const { GeminiService } = await import('./services/GeminiService');
+        const geminiService = new GeminiService(geminiApiKey.value);
+        suggestedEditSummary.value = await geminiService.generateEditSummary(
+            publishDiffOnlineWikitext.value,
+            publishDiffLocalWikitext.value
+        );
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: 'AI Error', detail: 'Error generating summary: ' + e.message, life: 5000 });
+        if (e.message.includes('API key')) {
+            clearApiKey();
+        }
+    } finally {
+        isGeneratingEditSummary.value = false;
+    }
 };
 
 const handlePublishFromDialog = async (payload: { summary: string; minor: boolean }) => {
@@ -598,7 +625,10 @@ onMounted(() => {
         :onlineWikitext="publishDiffOnlineWikitext"
         :pageTitle="workspaceStore.activePage?.pcgwPageTitle"
         :isPublishing="isPublishing"
+        :isGeneratingSummary="isGeneratingEditSummary"
+        :suggestedSummary="suggestedEditSummary"
         @publish="handlePublishFromDialog"
+        @requestAiSummary="handleGenerateEditSummary"
     />
 
     <ReloadPrompt />
