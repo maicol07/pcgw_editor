@@ -411,14 +411,29 @@ export class WikitextParser {
      * Insert a new parameter into a template.
      * Ensures proper formatting with newlines and pipes.
      */
-    insertParameter(templateName: string, paramName: string, value: string): void {
+    insertParameter(templateName: string, paramName: string, value: string, insertAfterParam?: string, insertBeforeParam?: string): void {
         const template = this.findTemplate(templateName);
         if (!template) {
             return;
         }
 
         // Find the position just before the closing }}
-        const insertPos = template.end - 2;
+        let insertPos = template.end - 2;
+
+        let posFound = false;
+        if (insertAfterParam) {
+            const afterParam = this.findParameter(templateName, insertAfterParam);
+            if (afterParam) {
+                insertPos = afterParam.end;
+                posFound = true;
+            }
+        }
+        if (!posFound && insertBeforeParam) {
+            const beforeParam = this.findParameter(templateName, insertBeforeParam);
+            if (beforeParam) {
+                insertPos = beforeParam.start;
+            }
+        }
 
         // Check if we need a leading newline
         const charBefore = insertPos > 0 ? this.wikitext[insertPos - 1] : '';
@@ -437,11 +452,12 @@ export class WikitextParser {
      * Replace content between two pipe-delimited parameters.
      * Useful for replacing lists of nested templates.
      */
-    replaceParameterContent(templateName: string, paramName: string, newContent: string): void {
+    replaceParameterContent(templateName: string, paramName: string, newContent: string, insertAfterParam?: string, insertBeforeParam?: string): void {
         const param = this.findParameter(templateName, paramName);
         if (!param) {
             // Parameter doesn't exist, insert it
-            this.insertParameter(templateName, paramName, '\n' + newContent + '\n');
+            const defaultInsert = newContent.trim().length === 0 ? '' : '\n' + newContent + '\n';
+            this.insertParameter(templateName, paramName, defaultInsert, insertAfterParam, insertBeforeParam);
             return;
         }
 
@@ -450,10 +466,15 @@ export class WikitextParser {
         const after = this.wikitext.substring(param.valueEnd);
 
         // Ensure proper spacing
-        const needsLeadingNewline = newContent.trim().length > 0 && !newContent.startsWith('\n');
-        const needsTrailingNewline = newContent.trim().length > 0 && !newContent.endsWith('\n');
-
-        const formatted = (needsLeadingNewline ? '\n' : '') + newContent + (needsTrailingNewline ? '\n' : '');
+        let formatted = newContent;
+        if (newContent.trim().length > 0) {
+            const needsLeadingNewline = !newContent.startsWith('\n');
+            const needsTrailingNewline = !newContent.endsWith('\n');
+            formatted = (needsLeadingNewline ? '\n' : '') + newContent + (needsTrailingNewline ? '\n' : '');
+        } else {
+            // If the content is empty, just output a single newline to maintain parameter separation
+            formatted = '\n';
+        }
 
         this.wikitext = before + formatted + after;
     }

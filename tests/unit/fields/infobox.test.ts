@@ -67,6 +67,22 @@ describe('Field Group: Infobox', () => {
             expect(writer.getText()).toContain('{{Infobox game/row/publisher|Pub One}}');
         });
 
+        it('should insert publishers immediately after developers', () => {
+            const wikitext = `{{Infobox game\n|cover = Test.jpg\n|developers = {{Infobox game/row/developer|Dev1}}\n|engines = {{Infobox game/row/engine|Eng1}}\n}}`;
+            const data = getCleanData();
+            data.infobox.cover = 'Test.jpg';
+            data.infobox.developers = [{ name: 'Dev1', type: 'developer' }];
+            data.infobox.publishers = [{ name: 'Pub1', type: 'publisher' }];
+            data.infobox.engines = [{ name: 'Eng1', type: 'engine' }];
+
+            const writer = new PCGWEditor(wikitext);
+            writer.updateInfobox(data.infobox);
+            
+            const result = writer.getText();
+            // Verify order using regex: developer should be followed by publisher, then engine
+            expect(result).toMatch(/\|developers\s*=.*?\|publishers\s*=.*?\|engines\s*=/s);
+        });
+
         it('should parse engines', async () => {
             const wikitext = `{{Infobox game|engines = {{Infobox game/row/engine|Engine X}}}}`;
             const data = await parseWikitext(wikitext);

@@ -311,8 +311,9 @@ export class PCGWEditor {
         this.updateSection('Infobox game', infobox.links, linkMap);
 
         this.updateInfoboxList('developers', infobox.developers);
-        this.updateInfoboxList('publishers', infobox.publishers);
-        this.updateInfoboxList('engines', infobox.engines);
+        this.updateInfoboxList('publishers', infobox.publishers, 'developers');
+        // Let's pass 'release dates' as insertBeforeParam just in case? No, 'publishers' as insertAfterParam is fine.
+        this.updateInfoboxList('engines', infobox.engines, 'publishers', 'release dates');
         this.updateReleaseDates(infobox.releaseDates);
         this.updateReception(infobox.reception);
         this.updateTaxonomy(infobox.taxonomy);
@@ -402,9 +403,9 @@ export class PCGWEditor {
     }
 
     // ... private updateInfoboxList ... (kept as is, but needing to be preserved)
-    private updateInfoboxList(paramName: string, items: any[]) {
+    private updateInfoboxList(paramName: string, items: any[], insertAfterParam?: string, insertBeforeParam?: string) {
         if (!items || items.length === 0) {
-            this.parser.replaceParameterContent('Infobox game', paramName, '\n');
+            this.parser.replaceParameterContent('Infobox game', paramName, '', insertAfterParam, insertBeforeParam);
             return;
         }
         const formattedItems = items.map(item => {
@@ -448,7 +449,7 @@ export class PCGWEditor {
         // If formatNestedRows returns "Row1Row2", we want "Row1\nRow2" or similar.
         // In WikitextParser, formatNestedRows typically joins with newlines if configured.
 
-        this.parser.replaceParameterContent('Infobox game', paramName, listContent);
+        this.parser.replaceParameterContent('Infobox game', paramName, listContent, insertAfterParam, insertBeforeParam);
     }
 
     updateIntroduction(data: GameData['introduction']) {
