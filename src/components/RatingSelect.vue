@@ -72,22 +72,22 @@ const optionItems = computed(() => {
 
 <template>
     <div class="rating-select-wrapper">
-        <Select v-model="model" :options="optionItems" optionLabel="label" optionValue="value" class="min-w-[8rem]"
+        <Select v-model="model" :options="optionItems" optionLabel="label" optionValue="value" class="min-w-32"
             size="small">
             <template #value="slotProps">
                 <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <img :src="icons[slotProps.value as RatingValue]" :alt="slotProps.value" class="rating-icon" />
-                    <span>{{ labels[slotProps.value as RatingValue] }}</span>
+                    <img :src="icons[slotProps.value as RatingValue]" :alt="slotProps.value" class="w-5 h-5 shrink-0 object-contain" />
+                    <span class="leading-none mt-0.5">{{ labels[slotProps.value as RatingValue] }}</span>
                 </div>
                 <span v-else>{{ slotProps.placeholder }}</span>
             </template>
             <template #option="slotProps">
                 <div class="flex flex-col gap-1 py-1">
                     <div class="flex items-center gap-2">
-                        <img :src="slotProps.option.icon" :alt="slotProps.option.label" class="rating-icon" />
-                        <span class="font-medium">{{ slotProps.option.label }}</span>
+                        <img :src="slotProps.option.icon" :alt="slotProps.option.label" class="w-5 h-5 shrink-0 object-contain" />
+                        <span class="font-medium leading-none mt-0.5">{{ slotProps.option.label }}</span>
                     </div>
-                    <div class="text-xs text-surface-500 dark:text-surface-400 pl-6">
+                    <div class="text-xs text-surface-500 dark:text-surface-400 pl-7 leading-tight">
                         {{ slotProps.option.description }}
                     </div>
                 </div>
@@ -95,12 +95,3 @@ const optionItems = computed(() => {
         </Select>
     </div>
 </template>
-
-<style scoped>
-.rating-select-wrapper :deep(.rating-icon) {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-    vertical-align: middle;
-}
-</style>
