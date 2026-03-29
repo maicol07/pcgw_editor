@@ -9,6 +9,7 @@ import { Info } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import { getIconSrc } from '../utils/icons';
+import { getRatingOption } from '../utils/ratings';
 
 const props = defineProps<{
   label: string;
@@ -90,10 +91,16 @@ const localNotes = computed({
           <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
         </template>
         <template #option="slotProps">
-          <div class="flex items-center">
-            <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
-              class="w-4 h-4 mr-2" />
-            <span class="text-sm">{{ slotProps.option }}</span>
+          <div class="flex flex-col gap-1 py-1">
+            <div class="flex items-center gap-2">
+              <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
+                class="w-5 h-5 shrink-0 object-contain" />
+              <span class="font-medium leading-none mt-0.5 text-sm">{{ getRatingOption(slotProps.option).label }}</span>
+            </div>
+            <div v-if="getRatingOption(slotProps.option).description"
+              class="text-xs text-surface-500 dark:text-surface-400 pl-7 leading-tight max-w-xs">
+              {{ getRatingOption(slotProps.option).description }}
+            </div>
           </div>
         </template>
       </MultiSelect>
@@ -101,18 +108,24 @@ const localNotes = computed({
       <Select v-else :modelValue="value" @update:modelValue="emit('update:value', $event)" :options="ratingOptions"
         class="w-full rounded-none! border-l-0! border-r-0!" placeholder="Select...">
         <template #value="slotProps">
-          <div class="flex items-center" v-if="slotProps.value">
+          <div class="flex items-center gap-2" v-if="slotProps.value">
             <img v-if="getIconSrc(slotProps.value)" :src="getIconSrc(slotProps.value)" :alt="slotProps.value"
-              class="w-4 h-4 mr-2" />
-            <span class="text-sm">{{ slotProps.value }}</span>
+              class="w-5 h-5 shrink-0 object-contain" />
+            <span class="text-sm leading-none mt-0.5">{{ getRatingOption(slotProps.value).label }}</span>
           </div>
           <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
         </template>
         <template #option="slotProps">
-          <div class="flex items-center">
-            <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
-              class="w-4 h-4 mr-2" />
-            <span class="text-sm">{{ slotProps.option }}</span>
+          <div class="flex flex-col gap-1 py-1">
+            <div class="flex items-center gap-2">
+              <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
+                class="w-5 h-5 shrink-0 object-contain" />
+              <span class="font-medium leading-none mt-0.5 text-sm">{{ getRatingOption(slotProps.option).label }}</span>
+            </div>
+            <div v-if="getRatingOption(slotProps.option).description"
+              class="text-xs text-surface-500 dark:text-surface-400 pl-7 leading-tight max-w-xs">
+              {{ getRatingOption(slotProps.option).description }}
+            </div>
           </div>
         </template>
       </Select>
