@@ -27,17 +27,16 @@ import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
+import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
 import ReloadPrompt from './components/common/ReloadPrompt.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Checkbox from 'primevue/checkbox';
 import { pcgwApi } from './services/pcgwApi';
 
 // Icons
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, UploadCloud, RefreshCw, FileClock
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock
 } from 'lucide-vue-next';
 
 // Async Components
@@ -121,12 +120,40 @@ const handleUpdateFromPcgw = async (page: any) => {
 };
 
 // --- Publish Logic ---
-const isPublishDialogVisible = ref(false);
+const isPublishDialogVisible = ref(false); // Kept for fallback or removed later
+const isPublishDiffDialogVisible = ref(false);
+const publishDiffOnlineWikitext = ref('');
+const publishDiffLocalWikitext = ref('');
 const isConflictDialogVisible = ref(false);
 const publishSummary = ref('Updated via PCGW Editor');
 const isMinorEdit = ref(false);
 const isPublishing = ref(false);
 const toast = useToast();
+
+const handleOpenPublishDialog = async () => {
+    if (!workspaceStore.activePage || !workspaceStore.activePage.pcgwPageTitle) {
+        toast.add({ severity: 'error', summary: 'Publish Error', detail: 'Page is not linked to PCGamingWiki.' });
+        return;
+    }
+    
+    toast.add({ severity: 'info', summary: 'Loading Diff', detail: 'Fetching latest online version...', life: 2000 });
+    const result = await pcgwApi.fetchWikitext(workspaceStore.activePage.pcgwPageTitle);
+    
+    if (!result) {
+        toast.add({ severity: 'error', summary: 'Fetch Error', detail: 'Failed to fetch online page content from PCGW.' });
+        return;
+    }
+    
+    publishDiffOnlineWikitext.value = result.content;
+    publishDiffLocalWikitext.value = workspaceStore.activePage.wikitext;
+    isPublishDiffDialogVisible.value = true;
+};
+
+const handlePublishFromDialog = async (payload: { summary: string; minor: boolean }) => {
+    publishSummary.value = payload.summary;
+    isMinorEdit.value = payload.minor;
+    await handlePublishToPcgw(false);
+};
 
 const handlePublishToPcgw = async (force: boolean = false) => {
     if (!workspaceStore.activePage) return;
@@ -137,6 +164,7 @@ const handlePublishToPcgw = async (force: boolean = false) => {
         
         // Success
         isPublishDialogVisible.value = false;
+        isPublishDiffDialogVisible.value = false;
         isConflictDialogVisible.value = false;
         toast.add({
             severity: 'success',
@@ -153,6 +181,7 @@ const handlePublishToPcgw = async (force: boolean = false) => {
         if (isConflict) {
             isConflictDialogVisible.value = true;
             isPublishDialogVisible.value = false;
+            isPublishDiffDialogVisible.value = false;
         } else {
             toast.add({
                 severity: 'error',
@@ -272,7 +301,7 @@ onMounted(() => {
                     @update:editorMode="handleModeChange" :isGeneratingSummary="isGeneratingSummary"
                     @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary"
                     @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage)"
-                    @publishPcgw="isPublishDialogVisible = true"
+                    @publishPcgw="handleOpenPublishDialog"
                     @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
 
                 <div
@@ -562,36 +591,16 @@ onMounted(() => {
     <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
         :onlineWikitext="diffMergerOnlineWikitext" :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
 
-    <!-- Publish Dialog -->
-    <Dialog v-model:visible="isPublishDialogVisible" modal header="Publish to PCGamingWiki" :style="{ width: '450px' }" :draggable="false">
-        <div class="flex flex-col gap-4 py-2">
-            <div class="flex items-center gap-3 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20 mb-2">
-                <div class="p-2 bg-primary-500 rounded-lg shadow-sm">
-                    <UploadCloud class="w-5 h-5 text-white" />
-                </div>
-                <div>
-                    <div class="text-sm font-bold">{{ workspaceStore.activePage?.pcgwPageTitle }}</div>
-                    <div class="text-[10px] text-surface-500">You are about to push your local changes online.</div>
-                </div>
-            </div>
+    <!-- Publish Diff Dialog -->
+    <PublishDiffDialog 
+        v-model:visible="isPublishDiffDialogVisible" 
+        :localWikitext="publishDiffLocalWikitext"
+        :onlineWikitext="publishDiffOnlineWikitext"
+        :pageTitle="workspaceStore.activePage?.pcgwPageTitle"
+        :isPublishing="isPublishing"
+        @publish="handlePublishFromDialog"
+    />
 
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-surface-500 uppercase">Edit Summary</label>
-                <InputText v-model="publishSummary" placeholder="What did you change?" class="w-full" autofocus @keyup.enter="() => handlePublishToPcgw(false)" />
-                <p class="text-[10px] text-surface-400">This summary will appear in the page history on PCGW.</p>
-            </div>
-            
-            <div class="flex items-center gap-2 mt-2">
-                <Checkbox v-model="isMinorEdit" inputId="minorEdit" :binary="true" />
-                <label for="minorEdit" class="text-sm cursor-pointer select-none">This is a minor edit</label>
-            </div>
-
-            <div class="flex justify-end gap-2 mt-4">
-                <Button label="Cancel" text @click="isPublishDialogVisible = false" :disabled="isPublishing" />
-                <Button label="Publish Changes" @click="handlePublishToPcgw(false)" :loading="isPublishing" severity="primary" />
-            </div>
-        </div>
-    </Dialog>
     <ReloadPrompt />
 
     <!-- Conflict Dialog -->
