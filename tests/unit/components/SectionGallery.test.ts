@@ -421,5 +421,88 @@ describe('SectionGallery.vue - Enhancement Deletion', () => {
         
         vi.useRealTimers();
     });
-});
 
+    it('should transform a cropped gallery item into a local item within combine queue', async () => {
+        const wrapper = setupWrapper();
+        const vm = wrapper.vm as any;
+        
+        // Push a gallery item into the combine queue
+        vm.combineQueue.push({
+            id: 'gallery-123',
+            type: 'gallery',
+            name: 'WikiImage.png',
+            galleryImage: { name: 'WikiImage.png', caption: '', position: 'gallery' },
+            url: 'mock-url' // needs url to start crop
+        });
+        
+        // Initiate crop
+        vm.initiateCrop({ type: 'combine', combineItem: vm.combineQueue[0] });
+        
+        // Assert dialog is open
+        expect(vm.showCropDialog).toBe(true);
+        expect(vm.croppingQueue.length).toBe(0); 
+        
+        // Mock cropper component result
+        vm.cropperRef = {
+            getResult: () => ({
+                canvas: {
+                    toBlob: (cb: any) => cb(new Blob(['cropped-data'], { type: 'image/png' }))
+                }
+            })
+        };
+        
+        // Mock addFile to return a specific local ID
+        mockFileStore.addFile.mockResolvedValueOnce(999);
+        
+        // Confirm crop
+        await vm.handleConfirmCrop();
+        await flushPromises();
+        
+        // Assert the item in combine queue is now 'local' type
+        const item = vm.combineQueue[0];
+        expect(item.type).toBe('local');
+        expect(item.localId).toBe(999);
+        expect(item.id).toBe('local-999');
+        
+        expect(mockFileStore.addFile).toHaveBeenCalled();
+    });
+
+    it('should fetch missing URLs asynchronously when editing combine layout', async () => {
+        const initialImages = [
+            {
+                name: 'Combined_Image.png',
+                position: 'gallery',
+                combineConfig: {
+                    orientation: 'horizontal',
+                    gap: 10,
+                    items: [
+                        { name: 'MissingWiki.png', type: 'gallery' },
+                        { name: 'ExistingWiki.png', type: 'gallery' }
+                    ]
+                }
+            }
+        ];
+        
+        const wrapper = setupWrapper({ modelValue: initialImages });
+        const vm = wrapper.vm as any;
+        
+        // Set mock responses
+        vi.mocked(pcgwApi.getImageInfo).mockImplementation(async (name) => {
+            if (name === 'MissingWiki.png') return { url: 'https://pcgw/MissingWiki.png' } as any;
+            if (name === 'ExistingWiki.png') return { url: 'https://pcgw/ExistingWiki.png' } as any;
+            return null;
+        });
+        
+        // Trigger edit combine
+        await vm.triggerEditCombine(0);
+        await flushPromises();
+        
+        // Assert combineQueue contains items with properly fetched URLs
+        expect(vm.combineQueue.length).toBe(2);
+        expect(vm.combineQueue[0].name).toBe('MissingWiki.png');
+        expect(vm.combineQueue[0].url).toBe('https://pcgw/MissingWiki.png');
+        expect(vm.combineQueue[1].url).toBe('https://pcgw/ExistingWiki.png');
+        
+        expect(pcgwApi.getImageInfo).toHaveBeenCalledWith('MissingWiki.png');
+    });
+});

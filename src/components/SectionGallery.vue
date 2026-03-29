@@ -945,10 +945,14 @@ const handleConfirmCrop = async () => {
                     type: newFile.type,
                     lastModified: newFile.lastModified
                 });
+            } else {
+                item.localId = await fileStore.addFile(newFile);
+                item.type = 'local';
+                item.id = 'local-' + item.localId;
             }
             
             item.file = newFile;
-            if (item.url) URL.revokeObjectURL(item.url);
+            if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
             item.url = URL.createObjectURL(newFile);
             
             // Force reactivity by re-assigning the item in the queue if possible
@@ -1010,13 +1014,21 @@ const combineUploadRef = ref<any>(null);
 // For selecting existing images into the queue
 const combineTempGallerySelection = ref<any[]>([]);
 
-const handleCombineTempSelect = () => {
+const handleCombineTempSelect = async () => {
     // Add newly selected valid images
     for (const img of combineTempGallerySelection.value) {
         const itemObj = typeof img === 'string' ? { name: img } as GalleryImage : img;
         const exists = combineQueue.value.some(q => q.type === 'gallery' && q.name === itemObj.name);
         if (!exists) {
-            const url = getImageUrl(itemObj);
+            let url = getImageUrl(itemObj);
+            if (!url) {
+                const info = await pcgwApi.getImageInfo(itemObj.name);
+                if (info) {
+                    resolvedInfos[normalizeFilename(itemObj.name)] = info;
+                    url = info.url;
+                }
+            }
+            
             if (url) {
                 combineQueue.value.push({
                     id: 'gallery-' + Math.random().toString(36).substring(2, 9),
@@ -1143,7 +1155,7 @@ watch([combineQueue, combineOrientation, combineGap], () => {
 
 const editingCombineIndex = ref<number | null>(null);
 
-const triggerEditCombine = (index: number) => {
+const triggerEditCombine = async (index: number) => {
     const newValue = props.modelValue || [];
     const item = newValue[index];
     if (typeof item === 'string' || !item.combineConfig) return;
@@ -1170,11 +1182,21 @@ const triggerEditCombine = (index: number) => {
             }
         } else if (cfgItem.type === 'gallery') {
             const galleryImg: GalleryImage = { name: cfgItem.name, position: 'gallery', localId: cfgItem.localId };
+            
+            let url = getImageUrl(galleryImg);
+            if (!url) {
+                const info = await pcgwApi.getImageInfo(cfgItem.name);
+                if (info) {
+                    resolvedInfos[normalizeFilename(cfgItem.name)] = info;
+                    url = info.url;
+                }
+            }
+            
             newQueue.push({
                 id: 'restored-gallery-' + Math.random().toString(36).substring(2, 9),
                 type: 'gallery',
                 galleryImage: galleryImg,
-                url: getImageUrl(galleryImg),
+                url: url,
                 name: cfgItem.name
             });
         }
@@ -1861,8 +1883,9 @@ defineExpose({
                         No images layered yet. Added images will appear here.
                     </div>
                     
-                    <VueDraggable v-else v-model="combineQueue" class="flex flex-col gap-1.5 mt-2" handle=".drag-handle" :animation="150">
-                        <div v-for="(item, idx) in combineQueue" :key="item.id" class="flex items-center justify-between bg-surface-100 dark:bg-surface-800 p-2 rounded text-sm border border-surface-200 dark:border-surface-700 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
+                    <VueDraggable v-else v-model="combineQueue" target=".sortable-combine-list" handle=".drag-handle" :animation="150" ghost-class="opacity-50">
+                        <TransitionGroup name="list" tag="div" class="sortable-combine-list flex flex-col gap-1.5 mt-2 relative w-full">
+                            <div v-for="(item, idx) in combineQueue" :key="item.id" class="flex items-center justify-between bg-surface-100 dark:bg-surface-800 p-2 rounded text-sm border border-surface-200 dark:border-surface-700 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors w-full z-10">
                             <div class="flex items-center gap-3 overflow-hidden flex-1">
                                 <GripHorizontal class="w-4 h-4 text-surface-400 cursor-move drag-handle shrink-0 hover:text-primary transition-colors" />
                                 <div class="w-8 h-8 rounded bg-surface-200 dark:bg-surface-900 border border-surface-300 dark:border-surface-600 flex items-center justify-center overflow-hidden shrink-0">
@@ -1889,7 +1912,8 @@ defineExpose({
                                     </template>
                                 </Button>
                             </div>
-                        </div>
+                            </div>
+                        </TransitionGroup>
                     </VueDraggable>
                 </div>
 
@@ -1909,3 +1933,16 @@ defineExpose({
         <PcgwLoginDialog v-model:visible="isLoginDialogVisible" />
     </div>
 </template>
+
+<style scoped>
+.list-enter-active,
+.list-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-enter-from,
+.list-leave-to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+}
+</style>
