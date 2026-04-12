@@ -58,10 +58,10 @@ const sortBy = ref('recent');
 
 const filterOptions = [
     { label: 'All Templates', value: 'all', icon: Layout },
-    { label: 'Blank', value: 'blank', icon: File },
     { label: 'Existing PCGW Page', value: 'pcgw', icon: FilePenLine },
     { label: 'Singleplayer', value: 'singleplayer', icon: User },
     { label: 'Multiplayer', value: 'multiplayer', icon: Users },
+    { label: 'Blank (for developers)', value: 'blank', icon: File },
 ];
 
 const sortOptions = [
@@ -99,16 +99,15 @@ const filteredPages = computed(() => {
 });
 
 const templateOptions = [
-    { label: 'Blank', value: 'blank', icon: File },
     { label: 'Existing PCGW Page', value: 'pcgw', icon: FilePenLine },
     { label: 'Singleplayer', value: 'singleplayer', icon: User },
     { label: 'Multiplayer', value: 'multiplayer', icon: Users },
-    { label: 'Unknown Template', value: 'unknown' }
+    { label: 'Blank (for developers)', value: 'blank', icon: File },
 ];
 
 const openNewPageDialog = () => {
     newPageTitle.value = 'Untitled Page';
-    newPageTemplate.value = 'blank';
+    newPageTemplate.value = 'singleplayer';
     importUrl.value = '';
     importSearch.value = '';
     importError.value = '';
