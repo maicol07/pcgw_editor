@@ -397,7 +397,7 @@ export class PCGWEditor {
             if (d.ref) row += `|ref=${d.ref}`;
             row += `}}`;
             return row;
-        }).join('');
+        }).join('\n');
 
         this.parser.replaceParameterContent('Infobox game', 'release dates', listContent);
     }

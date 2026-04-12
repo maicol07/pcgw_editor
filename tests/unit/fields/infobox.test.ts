@@ -173,6 +173,17 @@ describe('Field Group: Infobox', () => {
             writer.updateInfobox(data.infobox);
             expect(writer.getText()).toContain('{{Infobox game/row/date|Windows|2020-01-01}}');
         });
+
+        it('should format multiple release dates on separate lines', async () => {
+            const data = getCleanData();
+            data.infobox.releaseDates = [
+                { platform: 'Windows', date: 'March 19, 2026' },
+                { platform: 'OS X', date: 'March 19, 2026' }
+            ];
+            const writer = new PCGWEditor('');
+            writer.updateInfobox(data.infobox);
+            expect(writer.getText()).toContain('{{Infobox game/row/date|Windows|March 19, 2026}}\n{{Infobox game/row/date|OS X|March 19, 2026}}');
+        });
     });
 
     describe('Reception', () => {
