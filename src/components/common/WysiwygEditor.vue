@@ -379,7 +379,7 @@ defineExpose({
                                 </span>
                                 <span class="ql-formats">
                                     <button class="ql-link" v-tooltip.bottom="'Link'"></button>
-                                    <button class="ql-code-block" v-tooltip.bottom="'Code'"></button>
+                                    <button class="ql-code" v-tooltip.bottom="'Code'"></button>
                                 </span>
                                 <span class="ql-formats">
                                     <button class="ql-list" value="ordered" v-tooltip.bottom="'Ordered List'"></button>

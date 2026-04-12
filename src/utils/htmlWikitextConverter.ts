@@ -24,6 +24,7 @@ export const wikitextToHtml = (wikitext: string): string => {
     html = html.replace(/<pre>([\s\S]*?)<\/pre>/gi, '<pre>$1</pre>');
 
     // Code
+    html = html.replace(/\{\{Code\|(.*?)\}\}/gi, '<code>$1</code>');
     html = html.replace(/<code>(.*?)<\/code>/g, '<code>$1</code>');
 
     // Links [url title] -> <a href="url">title</a>
@@ -36,7 +37,7 @@ export const wikitextToHtml = (wikitext: string): string => {
     });
 
     // Fixboxes
-    html = html.replace(/\{\{Fixbox\s*\|([^}]+)\}\}/gi, (match, content) => {
+    html = html.replace(/\{\{Fixbox\s*\|([^}]+)\}\}/gi, (_match, content) => {
         let description = '';
         let ref = '';
         let fix = '';
@@ -155,11 +156,11 @@ export const htmlToWikitext = (html: string): string => {
 
     // Formatting tags like Code
     wikitext = wikitext.replace(/<pre[^>]*>(.*?)<\/pre>/gi, "<code>$1</code>\n");
-    wikitext = wikitext.replace(/<code[^>]*>(.*?)<\/code>/gi, "<code>$1</code>");
+    wikitext = wikitext.replace(/<code[^>]*>(.*?)<\/code>/gi, "{{Code|$1}}");
 
     // Fixboxes
     const fixboxRegex = /<table[^>]*class=["'][^"']*fixbox([^"']*)["'][^>]*>([\s\S]*?)<\/table>/gi;
-    wikitext = wikitext.replace(fixboxRegex, (match, classes, innerHtml) => {
+    wikitext = wikitext.replace(fixboxRegex, (_match, classes, innerHtml) => {
         const isCollapsed = classes && classes.includes('mw-collapsed');
         let desc = '';
         let refRaw = '';
