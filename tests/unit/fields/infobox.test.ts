@@ -22,9 +22,9 @@ describe('Field Group: Infobox', () => {
         });
 
         it('should parse license', async () => {
-            const wikitext = `{{Infobox game|license = open source}}`;
+            const wikitext = `{{Infobox game|license = commercial}}`;
             const data = await parseWikitext(wikitext);
-            expect(data.infobox.license).toBe('open source');
+            expect(data.infobox.license).toBe('commercial');
         });
 
         it('should write license', async () => {

@@ -60,10 +60,9 @@ export const fieldsConfig: SectionDefinition[] = [
                         placeholder: 'Select license',
                         options: [
                             { label: 'Commercial', value: 'commercial', description: 'Proprietary software sold commercially' },
+                            { label: 'Former commercial', value: 'former commercial', description: 'Paid games that have been re-released for free' },
                             { label: 'Freeware', value: 'freeware', description: 'Free to use but proprietary' },
-                            { label: 'Open Source / Free Software', value: 'open source', description: 'Free and open source licensed' },
-                            { label: 'Abandonware', value: 'abandonware', description: 'No longer supported or sold' },
-                            { label: 'Donationware', value: 'donationware', description: 'Free with optional donations' },
+                            { label: 'Free-to-play', value: 'free-to-play', description: 'Free to play with in-game purchases' },
                             { label: 'Shareware', value: 'shareware', description: 'Try before you buy' },
                         ]
                     }, {
