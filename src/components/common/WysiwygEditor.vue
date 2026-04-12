@@ -13,10 +13,12 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Textarea from 'primevue/textarea';
+import { VueDraggable } from 'vue-draggable-plus';
+
 import {
     ListChecks, Link2, MessageSquareWarning,
     Keyboard, FileText, Globe, Code, X, Wrench,
-    BookOpen
+    BookOpen, GripVertical, Plus
 } from 'lucide-vue-next';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
 import { useReferences } from '../../composables/useReferences';
@@ -24,6 +26,7 @@ import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
 import CodeEditor from '../CodeEditor.vue';
 import Quill from 'quill';
+import { KEYBOARD_GROUPS } from '../../constants/keyboardKeys';
 
 const BlockEmbed = Quill.import('blots/block/embed') as any;
 
@@ -102,9 +105,37 @@ const onTextChange = (e: any) => {
 const { cleanParams } = useReferences();
 
 const showRefParamDialog = ref(false);
-const currentRefType = ref<'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink'>('Refcheck');
-const wrapInRef = ref(true);
+type ReferenceType = 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink';
+const currentRefType = ref<ReferenceType>('Refcheck');
 const tempRefParams = ref<Record<string, string>>({});
+// State for keyboard keys
+const selectedKeys = ref<string[]>([]);
+const customKey = ref('');
+
+const addCustomKey = () => {
+    if (customKey.value.trim()) {
+        selectedKeys.value.push(customKey.value.trim());
+        customKey.value = '';
+    }
+};
+
+const addStandardKey = (val: string) => {
+    selectedKeys.value.push(val);
+};
+
+const getKeyLabel = (val: string) => {
+    for (const group of KEYBOARD_GROUPS) {
+        const item = group.items.find(i => i.value === val);
+        if (item) return item.label;
+    }
+    return val;
+};
+
+const removeKey = (index: number) => {
+    selectedKeys.value.splice(index, 1);
+};
+
+const wrapInRef = ref(true);
 const citationTarget = ref<'editor' | 'fixbox'>('editor');
 
 const showFixboxDialog = ref(false);
@@ -250,7 +281,7 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
     userSuggestions.value = await pcgwApi.searchUsers(event.query);
 }, 300);
 
-const openRefParamDialog = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink', target: 'editor' | 'fixbox' = 'editor') => {
+const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = 'editor') => {
     currentRefType.value = type;
     citationTarget.value = target;
     const today = new Date().toISOString().split('T')[0];
@@ -263,12 +294,14 @@ const openRefParamDialog = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink'
     if (type === 'Refurl') { params.date = today; params.url = ''; params.title = ''; }
     if (type === 'cn') { params.date = today; }
 
-    if (type === 'key') { params.keys = ''; }
     if (type === 'ilink') { params.page = ''; params.text = ''; }
     if (type === 'wlink') { params.page = ''; params.text = ''; }
     if (type === 'ulink') { params.user = ''; params.id = ''; }
     if (type === 'tlink') { params.template = ''; }
-
+    if (type === 'key') {
+        selectedKeys.value = [];
+    }
+    
     tempRefParams.value = params;
     showRefParamDialog.value = true;
 };
@@ -286,7 +319,7 @@ const insertReference = () => {
     const params = cleanParams(tempRefParams.value);
 
     if (currentRefType.value === 'key') {
-        const keys = (params.keys || '').split(',').map(k => k.trim()).filter(Boolean);
+        const keys = selectedKeys.value.map(k => k.trim()).filter(Boolean);
         template = keys.length > 0 ? `{{Key|${keys.join('|')}}}` : '';
     } else if (currentRefType.value === 'ilink') {
         template = params.text ? `[[${params.page}|${params.text}]]` : `[[${params.page}]]`;
@@ -589,12 +622,48 @@ defineExpose({
             </div>
 
             <!-- New Snippet Inputs -->
-            <div v-if="currentRefType === 'key'" class="flex flex-col gap-2">
-                <InputGroup>
-                    <InputGroupAddon>Keys</InputGroupAddon>
-                    <InputText v-model="tempRefParams.keys" placeholder="e.g. Alt, Enter" />
-                </InputGroup>
-                <small class="text-surface-500">Separate multiple keys with a comma.</small>
+            <div v-else-if="currentRefType === 'key'" class="flex flex-col gap-6">
+                <!-- Selection List -->
+                <div class="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-2">
+                    <div v-for="group in KEYBOARD_GROUPS" :key="group.label" class="flex flex-col gap-2">
+                        <label class="text-[10px] font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
+                        <div class="flex flex-wrap gap-1.5">
+                            <Button v-for="item in group.items" :key="item.value"
+                                :label="item.label" size="small" severity="secondary" variant="outlined"
+                                @click="addStandardKey(item.value)"
+                                class="py-1! px-2! text-xs font-mono" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Key Input -->
+                <div class="flex flex-col gap-2 pt-4 border-t border-surface-200 dark:border-surface-700">
+                    <label class="text-xs font-bold uppercase text-surface-500">Add Custom Key</label>
+                    <InputGroup>
+                        <InputText v-model="customKey" placeholder="e.g. MediaPlay" @keyup.enter="addCustomKey" />
+                        <Button @click="addCustomKey" severity="secondary">
+                            <Plus class="w-4 h-4" />
+                        </Button>
+                    </InputGroup>
+                </div>
+
+                <!-- Reorder List (Horizontal) -->
+                <div v-if="selectedKeys.length > 0" class="flex flex-col gap-2">
+                    <label class="text-xs font-bold uppercase text-surface-500">Order (Drag to reorder)</label>
+                    <VueDraggable v-model="selectedKeys" class="flex flex-wrap items-center gap-2 bg-surface-50 dark:bg-surface-900 p-3 rounded-lg border border-dashed border-surface-300 dark:border-surface-700" handle=".drag-handle">
+                        <div v-for="(key, index) in selectedKeys" :key="index"
+                            class="flex items-center gap-2 bg-surface-0 dark:bg-surface-800 px-2 py-1 rounded-md border border-surface-200 dark:border-surface-700 shadow-sm animate-in fade-in zoom-in duration-200">
+                            <div class="drag-handle cursor-grab active:cursor-grabbing text-surface-400">
+                                <GripVertical class="w-3 h-3" />
+                            </div>
+                            <span class="font-mono text-sm font-bold">{{ getKeyLabel(key) }}</span>
+                            <button @click="removeKey(index)" class="text-surface-400 hover:text-danger-500 p-0.5 transition-colors">
+                                <X class="w-3 h-3" />
+                            </button>
+                        </div>
+                    </VueDraggable>
+                    <p class="text-[10px] text-surface-400 italic">Format: &#123;&#123;Key|{{ selectedKeys.join('|') }}&#125;&#125;</p>
+                </div>
             </div>
             <div v-if="currentRefType === 'ilink' || currentRefType === 'wlink'" class="flex flex-col gap-2">
                 <InputGroup>

@@ -8,10 +8,11 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
 import AutoComplete from 'primevue/autocomplete';
 import Checkbox from 'primevue/checkbox';
+import { VueDraggable } from 'vue-draggable-plus';
 import {
     Check, Link, CircleHelp,
     CheckCircle, AlignLeft, X,
-    Globe, Keyboard
+    Globe, Keyboard, GripVertical, Plus
 } from 'lucide-vue-next';
 
 import { useReferences } from '../../composables/useReferences';
@@ -99,6 +100,57 @@ const userSuggestions = ref<string[]>([]);
 const searchUser = useDebounceFn(async (event: { query: string }) => {
     userSuggestions.value = await pcgwApi.searchUsers(event.query);
 }, 300);
+
+import { KEYBOARD_GROUPS } from '../../constants/keyboardKeys';
+const customKey = ref<Record<string, string>>({});
+
+const getKeys = (params: Record<string, string>) => {
+    return Object.keys(params)
+        .filter(k => !isNaN(Number(k)))
+        .sort((a, b) => Number(a) - Number(b))
+        .map(k => params[k]);
+};
+
+const updateKeys = (refItem: any, keys: string[]) => {
+    // Remove old numeric keys
+    Object.keys(refItem.params).forEach(k => {
+        if (!isNaN(Number(k))) delete refItem.params[k];
+    });
+    // Add new ones
+    keys.forEach((k, i) => {
+        refItem.params[(i + 1).toString()] = k;
+    });
+};
+
+const addCustomKey = (refItem: any) => {
+    const id = refItem.id;
+    if (customKey.value[id]?.trim()) {
+        const currentKeys = getKeys(refItem.params);
+        currentKeys.push(customKey.value[id].trim());
+        updateKeys(refItem, currentKeys);
+        customKey.value[id] = '';
+    }
+};
+
+const addStandardKey = (refItem: any, val: string) => {
+    const currentKeys = getKeys(refItem.params);
+    currentKeys.push(val);
+    updateKeys(refItem, currentKeys);
+};
+
+const getKeyLabel = (val: string) => {
+    for (const group of KEYBOARD_GROUPS) {
+        const item = group.items.find(i => i.value === val);
+        if (item) return item.label;
+    }
+    return val;
+};
+
+const removeKey = (refItem: any, index: number) => {
+    const currentKeys = getKeys(refItem.params);
+    currentKeys.splice(index, 1);
+    updateKeys(refItem, currentKeys);
+};
 
 </script>
 
@@ -258,12 +310,46 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
                         </div>
 
                         <!-- Formatting & Link Fields -->
-                        <div v-else-if="ref.type === 'key'" class="flex flex-col gap-2">
-                            <InputGroup>
-                                <InputGroupAddon>Keys</InputGroupAddon>
-                                <InputText v-model="ref.params.keys" placeholder="e.g. Alt, Enter" />
-                            </InputGroup>
-                            <small class="text-surface-500">Separate multiple keys with a comma.</small>
+                        <div v-else-if="ref.type === 'key'" class="flex flex-col gap-6">
+                            <!-- Selection List -->
+                            <div class="flex flex-col gap-4 max-h-[250px] overflow-y-auto pr-2">
+                                <div v-for="group in KEYBOARD_GROUPS" :key="group.label" class="flex flex-col gap-2">
+                                    <label class="text-[10px] font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <Button v-for="item in group.items" :key="item.value"
+                                            :label="item.label" size="small" severity="secondary" variant="outlined"
+                                            @click="addStandardKey(ref, item.value)"
+                                            class="py-1! px-2! text-xs font-mono" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-2 pt-4 border-t border-surface-200 dark:border-surface-700">
+                                <label class="text-xs font-bold uppercase text-surface-500">Add Custom Key</label>
+                                <InputGroup>
+                                    <InputText v-model="customKey[ref.id]" placeholder="e.g. MediaPlay" @keyup.enter="addCustomKey(ref)" />
+                                    <Button @click="addCustomKey(ref)" severity="secondary">
+                                        <Plus class="w-4 h-4" />
+                                    </Button>
+                                </InputGroup>
+                            </div>
+
+                            <div v-if="getKeys(ref.params).length > 0" class="flex flex-col gap-2">
+                                <label class="text-xs font-bold uppercase text-surface-500">Order (Drag to reorder)</label>
+                                <VueDraggable :modelValue="getKeys(ref.params)" @update:modelValue="updateKeys(ref, $event)"
+                                    class="flex flex-wrap items-center gap-2 bg-surface-100 dark:bg-surface-800 p-3 rounded-lg border border-dashed border-surface-300 dark:border-surface-700" handle=".drag-handle">
+                                    <div v-for="(key, index) in getKeys(ref.params)" :key="index"
+                                        class="flex items-center gap-2 bg-surface-0 dark:bg-surface-900 px-2 py-1 rounded-md border border-surface-200 dark:border-surface-700 shadow-sm">
+                                        <div class="drag-handle cursor-grab active:cursor-grabbing text-surface-400">
+                                            <GripVertical class="w-3 h-3" />
+                                        </div>
+                                        <span class="font-mono text-xs font-bold">{{ getKeyLabel(key) }}</span>
+                                        <button @click="removeKey(ref, index)" class="text-surface-400 hover:text-danger-500 p-0.5 transition-colors">
+                                            <X class="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </VueDraggable>
+                            </div>
                         </div>
 
                         <div v-else-if="ref.type === 'ilink' || ref.type === 'wlink'" class="grid grid-cols-2 gap-2">

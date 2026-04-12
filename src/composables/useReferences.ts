@@ -29,13 +29,19 @@ export function useReferences() {
                 const fullMatch = match[0];
                 const isWrapped = fullMatch.trim().startsWith('<ref>') && fullMatch.trim().endsWith('</ref>');
 
+                let positionalIndex = 1;
                 if (paramStr) {
                     const paramPairs = paramStr.split('|');
                     paramPairs.forEach(p => {
                         if (!p.trim()) return;
-                        const [key, val] = p.split('=');
-                        if (key && val !== undefined) {
-                            params[key.trim()] = val.trim();
+                        const eqIndex = p.indexOf('=');
+                        if (eqIndex !== -1) {
+                            const pk = p.substring(0, eqIndex).trim();
+                            const pv = p.substring(eqIndex + 1).trim();
+                            params[pk] = pv;
+                        } else {
+                            params[positionalIndex.toString()] = p.trim();
+                            positionalIndex++;
                         }
                     });
                 }
@@ -52,12 +58,24 @@ export function useReferences() {
         return refs.map(r => {
             if (r.type === 'text') return r.content || '';
 
-            const params = Object.entries(r.params)
-                .filter(([_, v]) => v !== undefined && v !== null && v !== '')
-                .map(([k, v]) => `${k}=${v}`)
+            const sortedKeys = Object.keys(r.params).sort((a, b) => {
+                const isANum = !isNaN(Number(a));
+                const isBNum = !isNaN(Number(b));
+                if (isANum && isBNum) return Number(a) - Number(b);
+                if (isANum) return -1;
+                if (isBNum) return 1;
+                return a.localeCompare(b);
+            });
+
+            const paramsStr = sortedKeys
+                .filter(k => r.params[k] !== undefined && r.params[k] !== null && r.params[k] !== '')
+                .map(k => {
+                    if (!isNaN(Number(k))) return r.params[k];
+                    return `${k}=${r.params[k]}`;
+                })
                 .join('|');
 
-            let template = `{{${r.type}${params ? '|' + params : ''}}}`;
+            let template = `{{${r.type}${paramsStr ? '|' + paramsStr : ''}}}`;
             
             if (r.wrapInRef && ['Refcheck', 'Refurl', 'cn'].includes(r.type)) {
                 template = `<ref>${template}</ref>`;
