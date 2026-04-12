@@ -15,7 +15,8 @@ import Checkbox from 'primevue/checkbox';
 import Textarea from 'primevue/textarea';
 import {
     ListChecks, Link2, MessageSquareWarning,
-    Keyboard, FileText, Globe, User, Puzzle, Code, X, Wrench
+    Keyboard, FileText, Globe, User, Puzzle, Code, X, Wrench,
+    BookOpen
 } from 'lucide-vue-next';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
 import { useReferences } from '../../composables/useReferences';
@@ -102,7 +103,9 @@ const { cleanParams } = useReferences();
 
 const showRefParamDialog = ref(false);
 const currentRefType = ref<'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink'>('Refcheck');
+const wrapInRef = ref(true);
 const tempRefParams = ref<Record<string, string>>({});
+const citationTarget = ref<'editor' | 'fixbox'>('editor');
 
 const showFixboxDialog = ref(false);
 const tempFixboxParams = ref({
@@ -247,10 +250,14 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
     userSuggestions.value = await pcgwApi.searchUsers(event.query);
 }, 300);
 
-const openRefParamDialog = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink') => {
+const openRefParamDialog = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink', target: 'editor' | 'fixbox' = 'editor') => {
     currentRefType.value = type;
+    citationTarget.value = target;
     const today = new Date().toISOString().split('T')[0];
     const params: Record<string, string> = {};
+    
+    // Default wrapInRef to true for citation types
+    wrapInRef.value = ['Refcheck', 'Refurl', 'cn'].includes(type);
 
     if (type === 'Refcheck') { params.date = today; params.user = 'User'; }
     if (type === 'Refurl') { params.date = today; params.url = ''; params.title = ''; }
@@ -292,10 +299,22 @@ const insertReference = () => {
     } else {
         const paramStr = Object.entries(params).map(([k, v]) => `${k}=${v}`).join('|');
         template = `{{${currentRefType.value}${paramStr ? '|' + paramStr : ''}}}`;
+        
+        // Wrap in <ref> if selected for citation types
+        if (wrapInRef.value && ['Refcheck', 'Refurl', 'cn'].includes(currentRefType.value)) {
+            template = `<ref>${template}</ref>`;
+        }
     }
 
     if (!template) {
         showRefParamDialog.value = false;
+        return;
+    }
+
+    if (citationTarget.value === 'fixbox') {
+        tempFixboxParams.value.ref = template;
+        showRefParamDialog.value = false;
+        citationTarget.value = 'editor';
         return;
     }
 
@@ -376,44 +395,62 @@ defineExpose({
                                 <!-- Snippet Tools -->
                                 <span
                                     class="ql-formats lg:ml-2 lg:pl-2 lg:border-l border-surface-200 dark:border-surface-700 mt-2 sm:mt-0">
-                                    <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
-                                        @click="openRefParamDialog('Refcheck')">
-                                        <ListChecks class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
-                                        @click="openRefParamDialog('Refurl')">
-                                        <Link2 class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
-                                        @click="openRefParamDialog('cn')">
-                                        <MessageSquareWarning class="w-4 h-4" />
-                                    </button>
-                                    <div class="hidden xl:block w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
-                                    <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
-                                        @click="openRefParamDialog('key')">
-                                        <Keyboard class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
-                                        @click="openRefParamDialog('ilink')">
-                                        <FileText class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
-                                        @click="openRefParamDialog('wlink')">
-                                        <Globe class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'User'" class="custom-action-btn"
-                                        @click="openRefParamDialog('ulink')">
-                                        <User class="w-4 h-4" />
-                                    </button>
-                                    <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
-                                        @click="openRefParamDialog('tlink')">
-                                        <Puzzle class="w-4 h-4" />
-                                    </button>
-                                    <div class="hidden xl:block w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
-                                    <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
-                                        @click="openFixboxDialog()">
-                                        <Wrench class="w-4 h-4 text-orange-500" />
-                                    </button>
+                                    <!-- Citations Group -->
+                                    <div class="flex items-center gap-0.5 px-0.5 mr-2">
+                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5 px-1 border-r border-surface-200 dark:border-surface-700">Citations</span>
+                                        <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
+                                            @click="openRefParamDialog('Refcheck')">
+                                            <ListChecks class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
+                                            @click="openRefParamDialog('Refurl')">
+                                            <Link2 class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
+                                            @click="openRefParamDialog('cn')">
+                                            <MessageSquareWarning class="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Links Group -->
+                                    <div class="flex items-center gap-0.5 px-1 mr-2 border-r border-surface-200 dark:border-surface-750">
+                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Links</span>
+                                        <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
+                                            @click="openRefParamDialog('ilink')">
+                                            <FileText class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
+                                            @click="openRefParamDialog('wlink')">
+                                            <Globe class="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Formatting/Other Group -->
+                                    <div class="flex items-center gap-0.5 px-1">
+                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Formatting</span>
+                                        <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
+                                            @click="openRefParamDialog('key')">
+                                            <Keyboard class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" v-tooltip.top="'User'" class="custom-action-btn"
+                                            @click="openRefParamDialog('ulink')">
+                                            <User class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
+                                            @click="openRefParamDialog('tlink')">
+                                            <Puzzle class="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
+                                    
+                                    <div class="flex items-center gap-1 pl-1">
+                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none">Tools</span>
+                                        <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
+                                            @click="openFixboxDialog()">
+                                            <Wrench class="w-4 h-4 text-orange-500" />
+                                        </button>
+                                    </div>
                                 </span>
                                 <!-- Custom extra toolbar items -->
                                 <slot name="custom-toolbar"></slot>
@@ -448,39 +485,58 @@ defineExpose({
                 <!-- Keep snippet tools accessible in Source Mode too! -->
                 <div
                     class="flex flex-wrap items-center gap-1 bg-surface-50 dark:bg-surface-800 p-2 border-b border-surface-200 dark:border-surface-700">
-                    <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
-                        @click="openRefParamDialog('Refcheck')">
-                        <ListChecks class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
-                        @click="openRefParamDialog('Refurl')">
-                        <Link2 class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
-                        @click="openRefParamDialog('cn')">
-                        <MessageSquareWarning class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
-                        @click="openRefParamDialog('key')">
-                        <Keyboard class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
-                        @click="openRefParamDialog('ilink')">
-                        <FileText class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
-                        @click="openRefParamDialog('wlink')">
-                        <Globe class="w-4 h-4" />
-                    </button>
-                    <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
-                        @click="openRefParamDialog('tlink')">
-                        <Puzzle class="w-4 h-4" />
-                    </button>
-                    <div class="hidden xl:block w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
-                    <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
-                        @click="openFixboxDialog()">
-                        <Wrench class="w-4 h-4 text-orange-500" />
-                    </button>
+                    <!-- Same Grouping for Consistency -->
+                    <div class="flex items-center gap-0.5 px-0.5">
+                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5 px-1 border-r border-surface-200 dark:border-surface-600">Citations</span>
+                        <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
+                            @click="openRefParamDialog('Refcheck')">
+                            <ListChecks class="w-4 h-4" />
+                        </button>
+                        <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
+                            @click="openRefParamDialog('Refurl')">
+                            <Link2 class="w-4 h-4" />
+                        </button>
+                        <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
+                            @click="openRefParamDialog('cn')">
+                            <MessageSquareWarning class="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                    <div class="flex items-center gap-0.5 px-1">
+                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Links</span>
+                        <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
+                            @click="openRefParamDialog('ilink')">
+                            <FileText class="w-4 h-4" />
+                        </button>
+                        <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
+                            @click="openRefParamDialog('wlink')">
+                            <Globe class="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                    <div class="flex items-center gap-0.5 px-1">
+                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Formatting</span>
+                        <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
+                            @click="openRefParamDialog('key')">
+                            <Keyboard class="w-4 h-4" />
+                        </button>
+                        <button type="button" v-tooltip.top="'User'" class="custom-action-btn"
+                            @click="openRefParamDialog('ulink')">
+                            <User class="w-4 h-4" />
+                        </button>
+                        <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
+                            @click="openRefParamDialog('tlink')">
+                            <Puzzle class="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none">Tools</span>
+                        <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
+                            @click="openFixboxDialog()">
+                            <Wrench class="w-4 h-4 text-orange-500" />
+                        </button>
+                    </div>
                 </div>
                 <!-- The actual CodeMirror Editor -->
                 <CodeEditor v-model="localWikitext" :style="editorStyle || 'height: 250px'" />
@@ -491,7 +547,23 @@ defineExpose({
     <!-- Sub-dialog for Notes References insertion -->
     <Dialog v-model:visible="showRefParamDialog" :header="'Insert ' + currentRefType" modal class="w-full max-w-md" :draggable="false">
         <div class="flex flex-col gap-3">
-            <div v-if="currentRefType === 'Refcheck'" class="flex flex-col gap-2">
+            <!-- Wrap in <ref> Option for citations -->
+            <div v-if="['Refcheck', 'Refurl', 'cn'].includes(currentRefType)" 
+                class="p-3 bg-primary-50 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800 rounded-lg flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                    <Checkbox v-model="wrapInRef" :binary="true" inputId="wrapInRef" />
+                    <label for="wrapInRef" class="text-sm font-bold cursor-pointer select-none flex items-center gap-2">
+                         Wrap in &lt;ref&gt; tags
+                         <BookOpen class="w-3.5 h-3.5 text-primary-600" />
+                    </label>
+                </div>
+                <p class="text-[11px] text-surface-500 dark:text-surface-400 pl-7 leading-tight">
+                    This will place the citation in the <strong>References</strong> section at the bottom of the page.
+                    Disable this if you want to insert the template directly in-line.
+                </p>
+            </div>
+
+            <div v-if="currentRefType === 'Refcheck'" class="flex flex-col gap-2 pt-2">
                 <InputGroup>
                     <InputGroupAddon>User</InputGroupAddon>
                     <AutoComplete v-model="tempRefParams.user" :suggestions="userSuggestions" @complete="searchUser"
@@ -506,7 +578,7 @@ defineExpose({
                     <InputText v-model="tempRefParams.comment" />
                 </InputGroup>
             </div>
-            <div v-if="currentRefType === 'Refurl'" class="flex flex-col gap-2">
+            <div v-if="currentRefType === 'Refurl'" class="flex flex-col gap-2 pt-2">
                 <InputGroup>
                     <InputGroupAddon>URL</InputGroupAddon>
                     <InputText v-model="tempRefParams.url" />
@@ -524,7 +596,7 @@ defineExpose({
                     <InputText v-model="tempRefParams.snippet" />
                 </InputGroup>
             </div>
-            <div v-if="currentRefType === 'cn'" class="flex flex-col gap-2">
+            <div v-if="currentRefType === 'cn'" class="flex flex-col gap-2 pt-2">
                 <InputGroup>
                     <InputGroupAddon>Date</InputGroupAddon>
                     <InputText v-model="tempRefParams.date" />
@@ -577,17 +649,43 @@ defineExpose({
     </Dialog>
 
     <!-- Sub-dialog for Fixbox insertion -->
-    <Dialog v-model:visible="showFixboxDialog" header="Insert Fixbox" modal class="w-full max-w-lg" :draggable="false">
+    <Dialog v-model:visible="showFixboxDialog" header="Insert Fixbox" modal class="w-full max-w-md" :draggable="false">
         <div class="flex flex-col gap-4">
             <InputGroup>
                 <InputGroupAddon>Name/Description</InputGroupAddon>
                 <InputText v-model="tempFixboxParams.description" placeholder="Short description or name of the fix" />
             </InputGroup>
 
-            <InputGroup>
-                <InputGroupAddon>Reference (Optional)</InputGroupAddon>
-                <InputText v-model="tempFixboxParams.ref" placeholder="<ref>Reference text</ref>" />
-            </InputGroup>
+            <div class="flex flex-col gap-2 p-3 bg-surface-50 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
+                <div class="flex items-center justify-between gap-4">
+                    <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Reference</label>
+                    <div v-if="tempFixboxParams.ref" class="flex items-center gap-2 max-w-[200px]">
+                        <span class="text-[11px] truncate italic text-primary-500 font-mono" :title="tempFixboxParams.ref">
+                            {{ tempFixboxParams.ref }}
+                        </span>
+                        <Button icon="pi pi-times" severity="danger" text rounded size="small" 
+                            class="w-6! h-6!" @click="tempFixboxParams.ref = ''" v-tooltip.top="'Clear reference'" />
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refcheck', 'fixbox')" 
+                        class="flex-1 gap-2" v-tooltip.top="'Add Refcheck'">
+                        <ListChecks class="w-4 h-4" />
+                        <span class="text-xs hidden sm:inline">Refcheck</span>
+                    </Button>
+                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refurl', 'fixbox')" 
+                        class="flex-1 gap-2" v-tooltip.top="'Add Refurl'">
+                        <Link2 class="w-4 h-4" />
+                        <span class="text-xs hidden sm:inline">Refurl</span>
+                    </Button>
+                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('cn', 'fixbox')" 
+                        class="flex-1 gap-2" v-tooltip.top="'Add Citation Required'">
+                        <MessageSquareWarning class="w-4 h-4" />
+                        <span class="text-xs hidden sm:inline">Citation</span>
+                    </Button>
+                </div>
+            </div>
 
             <div class="flex items-center gap-2 mt-2">
                 <Checkbox v-model="tempFixboxParams.collapsed" inputId="fixboxCollapsed" :binary="true" />

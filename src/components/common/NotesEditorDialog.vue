@@ -7,9 +7,11 @@ import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
 import AutoComplete from 'primevue/autocomplete';
+import Checkbox from 'primevue/checkbox';
 import {
     Check, Link, CircleHelp,
-    CheckCircle, AlignLeft, X
+    CheckCircle, AlignLeft, X,
+    Globe, Keyboard, User, Puzzle
 } from 'lucide-vue-next';
 
 import { useReferences } from '../../composables/useReferences';
@@ -71,7 +73,13 @@ const addReference = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wl
         if (type === 'Refcheck') params.user = 'User';
         if (type === 'Refurl') { params.url = ''; params.title = ''; }
 
-        references.value.push({ id: crypto.randomUUID(), type: type as any, params });
+        const isCitation = ['Refcheck', 'Refurl', 'cn'].includes(type);
+        references.value.push({ 
+            id: crypto.randomUUID(), 
+            type: type as any, 
+            params, 
+            wrapInRef: isCitation 
+        });
     }
 };
 
@@ -102,25 +110,68 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
 
             <!-- Reference Mode UI -->
             <div v-if="type === 'ref'" class="flex flex-col gap-3">
-                <div class="flex gap-2 mb-2">
-                    <Button label="Refcheck" size="small" severity="secondary" variant="outlined"
-                        @click="addReference('Refcheck')">
-                        <template #icon>
-                            <Check class="w-4 h-4" />
-                        </template>
-                    </Button>
-                    <Button label="Refurl" size="small" severity="secondary" variant="outlined"
-                        @click="addReference('Refurl')">
-                        <template #icon>
-                            <Link class="w-4 h-4" />
-                        </template>
-                    </Button>
-                    <Button label="Citation" size="small" severity="secondary" variant="outlined"
-                        @click="addReference('cn')">
-                        <template #icon>
-                            <CircleHelp class="w-4 h-4" />
-                        </template>
-                    </Button>
+                <div class="flex flex-col gap-3">
+                    <!-- Citations Group -->
+                    <div class="flex flex-col gap-1.5 p-2 border border-surface-200 dark:border-surface-700 rounded-lg">
+                        <span class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Citations</span>
+                        <div class="flex flex-wrap gap-2">
+                            <Button label="Refcheck" size="small" severity="secondary" variant="outlined"
+                                @click="addReference('Refcheck')">
+                                <template #icon>
+                                    <Check class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="Refurl" size="small" severity="secondary" variant="outlined"
+                                @click="addReference('Refurl')">
+                                <template #icon>
+                                    <Link class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="Citation" size="small" severity="secondary" variant="outlined"
+                                @click="addReference('cn')">
+                                <template #icon>
+                                    <CircleHelp class="w-4 h-4" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Links & Formatting Group -->
+                    <div class="flex flex-col gap-1.5 p-2 border border-surface-200 dark:border-surface-700 rounded-lg">
+                        <span class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Links & Formatting</span>
+                        <div class="flex flex-wrap gap-2">
+                            <Button label="Page Link" size="small" severity="secondary" variant="text"
+                                @click="addReference('ilink')">
+                                <template #icon>
+                                    <AlignLeft class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="Wiki Link" size="small" severity="secondary" variant="text"
+                                @click="addReference('wlink')">
+                                <template #icon>
+                                    <Globe class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="Key" size="small" severity="secondary" variant="text"
+                                @click="addReference('key')">
+                                <template #icon>
+                                    <Keyboard class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="User" size="small" severity="secondary" variant="text"
+                                @click="addReference('ulink')">
+                                <template #icon>
+                                    <User class="w-4 h-4" />
+                                </template>
+                            </Button>
+                            <Button label="Template" size="small" severity="secondary" variant="text"
+                                @click="addReference('tlink')">
+                                <template #icon>
+                                    <Puzzle class="w-4 h-4" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-if="references.length === 0"
@@ -150,6 +201,16 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
                                     <X class="w-4 h-4" />
                                 </template>
                             </Button>
+                        </div>
+
+                        <!-- Wrap in <ref> toggle for Citations -->
+                        <div v-if="['Refcheck', 'Refurl', 'cn'].includes(ref.type)" 
+                            class="mb-3 p-2 bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-800 rounded flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                <Checkbox v-model="ref.wrapInRef" :binary="true" :inputId="'wrapRef' + index" />
+                                <label :for="'wrapRef' + index" class="text-xs font-bold cursor-pointer select-none">Wrap in &lt;ref&gt; tags</label>
+                            </div>
+                            <p class="text-[10px] text-surface-500 pl-6 leading-none">Places citation in the <strong>References</strong> section at bottom of page.</p>
                         </div>
 
                         <!-- Refcheck Fields -->
@@ -206,6 +267,44 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
                         <!-- Text Content -->
                         <div v-if="ref.type === 'text'">
                             <Textarea v-model="ref.content" rows="2" autoResize class="w-full" />
+                        </div>
+
+                        <!-- Formatting & Link Fields -->
+                        <div v-else-if="ref.type === 'key'" class="flex flex-col gap-2">
+                            <InputGroup>
+                                <InputGroupAddon>Keys</InputGroupAddon>
+                                <InputText v-model="ref.params.keys" placeholder="e.g. Alt, Enter" />
+                            </InputGroup>
+                            <small class="text-surface-500">Separate multiple keys with a comma.</small>
+                        </div>
+
+                        <div v-else-if="ref.type === 'ilink' || ref.type === 'wlink'" class="grid grid-cols-2 gap-2">
+                            <InputGroup>
+                                <InputGroupAddon>Page</InputGroupAddon>
+                                <InputText v-model="ref.params.page" />
+                            </InputGroup>
+                            <InputGroup>
+                                <InputGroupAddon>Text</InputGroupAddon>
+                                <InputText v-model="ref.params.text" />
+                            </InputGroup>
+                        </div>
+
+                        <div v-else-if="ref.type === 'ulink'" class="grid grid-cols-2 gap-2">
+                            <InputGroup>
+                                <InputGroupAddon>User</InputGroupAddon>
+                                <InputText v-model="ref.params.user" />
+                            </InputGroup>
+                            <InputGroup>
+                                <InputGroupAddon>ID</InputGroupAddon>
+                                <InputText v-model="ref.params.id" />
+                            </InputGroup>
+                        </div>
+
+                        <div v-else-if="ref.type === 'tlink'">
+                            <InputGroup>
+                                <InputGroupAddon>Template</InputGroupAddon>
+                                <InputText v-model="ref.params.template" />
+                            </InputGroup>
                         </div>
                     </div>
                 </div>
