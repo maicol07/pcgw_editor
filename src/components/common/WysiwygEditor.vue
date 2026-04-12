@@ -15,7 +15,7 @@ import Checkbox from 'primevue/checkbox';
 import Textarea from 'primevue/textarea';
 import {
     ListChecks, Link2, MessageSquareWarning,
-    Keyboard, FileText, Globe, User, Puzzle, Code, X, Wrench,
+    Keyboard, FileText, Globe, Code, X, Wrench,
     BookOpen
 } from 'lucide-vue-next';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
@@ -366,8 +366,6 @@ defineExpose({
                                 <span class="ql-formats">
                                     <button class="ql-bold" v-tooltip.bottom="'Bold'"></button>
                                     <button class="ql-italic" v-tooltip.bottom="'Italic'"></button>
-                                    <button class="ql-underline" v-tooltip.bottom="'Underline'"></button>
-                                    <button class="ql-strike" v-tooltip.bottom="'Strikethrough'"></button>
                                 </span>
                                 <span class="ql-formats">
                                     <select class="ql-header" defaultValue="0" v-tooltip.bottom="'Heading'">
@@ -382,7 +380,6 @@ defineExpose({
                                 <span class="ql-formats">
                                     <button class="ql-link" v-tooltip.bottom="'Link'"></button>
                                     <button class="ql-code-block" v-tooltip.bottom="'Code'"></button>
-                                    <button class="ql-blockquote" v-tooltip.bottom="'Blockquote'"></button>
                                 </span>
                                 <span class="ql-formats">
                                     <button class="ql-list" value="ordered" v-tooltip.bottom="'Ordered List'"></button>
@@ -431,14 +428,6 @@ defineExpose({
                                         <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
                                             @click="openRefParamDialog('key')">
                                             <Keyboard class="w-4 h-4" />
-                                        </button>
-                                        <button type="button" v-tooltip.top="'User'" class="custom-action-btn"
-                                            @click="openRefParamDialog('ulink')">
-                                            <User class="w-4 h-4" />
-                                        </button>
-                                        <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
-                                            @click="openRefParamDialog('tlink')">
-                                            <Puzzle class="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -519,14 +508,6 @@ defineExpose({
                         <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
                             @click="openRefParamDialog('key')">
                             <Keyboard class="w-4 h-4" />
-                        </button>
-                        <button type="button" v-tooltip.top="'User'" class="custom-action-btn"
-                            @click="openRefParamDialog('ulink')">
-                            <User class="w-4 h-4" />
-                        </button>
-                        <button type="button" v-tooltip.top="'Template'" class="custom-action-btn"
-                            @click="openRefParamDialog('tlink')">
-                            <Puzzle class="w-4 h-4" />
                         </button>
                     </div>
                     <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>

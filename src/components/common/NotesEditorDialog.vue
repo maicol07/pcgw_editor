@@ -11,7 +11,7 @@ import Checkbox from 'primevue/checkbox';
 import {
     Check, Link, CircleHelp,
     CheckCircle, AlignLeft, X,
-    Globe, Keyboard, User, Puzzle
+    Globe, Keyboard
 } from 'lucide-vue-next';
 
 import { useReferences } from '../../composables/useReferences';
@@ -156,18 +156,6 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
                                 @click="addReference('key')">
                                 <template #icon>
                                     <Keyboard class="w-4 h-4" />
-                                </template>
-                            </Button>
-                            <Button label="User" size="small" severity="secondary" variant="text"
-                                @click="addReference('ulink')">
-                                <template #icon>
-                                    <User class="w-4 h-4" />
-                                </template>
-                            </Button>
-                            <Button label="Template" size="small" severity="secondary" variant="text"
-                                @click="addReference('tlink')">
-                                <template #icon>
-                                    <Puzzle class="w-4 h-4" />
                                 </template>
                             </Button>
                         </div>
