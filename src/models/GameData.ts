@@ -686,6 +686,7 @@ export interface GalleryImage {
     position?: 'lateral' | 'gallery';
     localId?: number; // Linked to local file in Dexie
     combineConfig?: CombineConfig;
+    preferLocal?: boolean;
 }
 
 export interface Issue {

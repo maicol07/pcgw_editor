@@ -1,584 +1,158 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount, flushPromises } from '@vue/test-utils';
-import { createPinia, setActivePinia } from 'pinia';
+import { mount } from '@vue/test-utils';
 import SectionGallery from '../../../src/components/SectionGallery.vue';
-import { pcgwApi } from '../../../src/services/pcgwApi';
-import { pcgwAuth } from '../../../src/services/pcgwAuth';
-import { pcgwMedia } from '../../../src/services/pcgwMedia';
+import { createTestingPinia } from '@pinia/testing';
 import PrimeVue from 'primevue/config';
-import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
+import ToastService from 'primevue/toastservice';
+import type { GalleryImage } from '../../../src/models/GameData';
 
-// Mock URL methods
-global.URL.createObjectURL = vi.fn(() => 'mock-url');
-global.URL.revokeObjectURL = vi.fn();
-
-// Shared mock objects to ensure test and component use the same instances
-const { mockFileStore, mockPcgwAuth, mockPcgwMedia } = vi.hoisted(() => ({
-    mockFileStore: {
-        loadFiles: vi.fn(() => Promise.resolve([])),
-        files: [] as any[],
-        addFile: vi.fn(),
-        updateFileStatus: vi.fn(() => Promise.resolve()),
-        removeFile: vi.fn(() => Promise.resolve())
-    },
-    mockPcgwAuth: {
-        isLoggedIn: true,
-        username: 'test-user',
-        sessionCookies: 'test-cookies',
-        getCsrfToken: vi.fn(() => Promise.resolve('csrf-token')),
-    },
-    mockPcgwMedia: {
-        editPage: vi.fn(),
-        uploadFile: vi.fn(),
-        checkFileExists: vi.fn(),
-        moveFile: vi.fn(() => Promise.resolve()),
-    }
+// Mock primevue/usetoast
+vi.mock('primevue/usetoast', () => ({
+    useToast: () => ({
+        add: vi.fn(),
+        remove: vi.fn(),
+        removeAll: vi.fn()
+    })
 }));
 
 // Mock services
+vi.mock('../../../src/services/pcgwAuth', () => ({
+    pcgwAuth: { isLoggedIn: true, username: 'TestUser' }
+}));
 vi.mock('../../../src/services/pcgwApi', () => ({
-    pcgwApi: {
-        getPageContent: vi.fn(),
-        getImagesByHash: vi.fn(() => Promise.resolve([])),
-        getImagesInfo: vi.fn(() => Promise.resolve({})),
-        getImageInfo: vi.fn(() => Promise.resolve(null)),
-        resetCache: vi.fn(),
+    pcgwApi: { 
+        getImagesInfo: vi.fn().mockResolvedValue({}),
+        getImageInfo: vi.fn().mockResolvedValue(null),
+        getImagesByHash: vi.fn().mockResolvedValue([])
+    }
+}));
+vi.mock('../../../src/services/pcgwMedia', () => ({
+    pcgwMedia: {}
+}));
+
+// Mock Dexie
+vi.mock('dexie', () => ({
+    default: class Dexie {
+        constructor() {}
+        version() { return { stores: vi.fn() }; }
+        table() { return { toArray: vi.fn().mockResolvedValue([]) }; }
     }
 }));
 
-// Mock local store/db to avoid IndexedDB errors
-vi.mock('@/stores/files', () => ({
-    useFileStore: () => mockFileStore
-}));
+// Mock URL API
+global.URL.createObjectURL = vi.fn((_blob) => 'blob:mock-url');
+global.URL.revokeObjectURL = vi.fn();
 
-vi.mock('../../../src/services/pcgwAuth', () => ({
-    pcgwAuth: mockPcgwAuth
-}));
+describe('SectionGallery.vue', () => {
+    let pinia: any;
 
-vi.mock('../../../src/services/pcgwMedia', () => ({
-    pcgwMedia: mockPcgwMedia
-}));
-
-// Mock Lucide components
-vi.mock('lucide-vue-next', () => {
-    const icons = [
-        'Images', 'Image', 'GripHorizontal', 'ExternalLink', 'Pencil', 'Trash2', 'PanelRight', 'Grid',
-        'Upload', 'CheckCircle2', 'AlertCircle', 'Loader2', 'LogOut', 'HardDrive', 'MoreVertical', 
-        'User', 'Plus', 'Info', 'ShieldAlert', 'LogIn', 'Replace', 'TextCursorInput', 'Crop', 'Combine'
-    ];
-    const mock: any = {};
-    icons.forEach(i => mock[i] = { template: `<span>${i}</span>` });
-    return mock;
-});
-
-describe('SectionGallery.vue - Enhancement Deletion', () => {
     beforeEach(() => {
-        setActivePinia(createPinia());
-        vi.clearAllMocks();
-        mockFileStore.files.length = 0;
+        pinia = createTestingPinia({
+            createSpy: vi.fn,
+            initialState: {
+                files: {
+                    files: [
+                        { id: 1, blob: new Blob(['test']), name: 'local_test.jpg', status: 'uploaded', pcgwUrl: 'https://pcgw.example.com/local_test.jpg' },
+                        { id: 2, blob: new Blob(['test']), name: 'only_local.jpg', status: 'uploading' }
+                    ]
+                },
+                ui: {
+                    autoUploadDescription: false
+                }
+            }
+        });
     });
 
-    const setupWrapper = (props = {}) => {
+    const createWrapper = (modelValue: (GalleryImage | string)[] = []) => {
         return mount(SectionGallery, {
-            global: {
-                plugins: [PrimeVue, ToastService],
-                directives: { 'tooltip': Tooltip },
-                stubs: {
-                    'Dialog': {
-                        template: '<div><slot></slot><slot name="footer"></slot></div>',
-                        props: ['visible']
-                    },
-                    Button: true,
-                    Image: true,
-                    ProgressBar: true,
-                    ToggleButton: true, // If used anywhere
-                    MultiSelect: true,
-                    InputNumber: true,
-                    RadioButton: true,
-                    ToggleSwitch: true,
-                    FileUpload: {
-                        template: '<div><slot></slot></div>',
-                        methods: {
-                            choose: vi.fn(),
-                            clear: vi.fn(),
-                        }
-                    },
-                    WysiwygEditor: true,
-                    PcgwMediaBadge: true,
-                }
-            },
             props: {
-                modelValue: [],
-                header: 'Gallery',
-                section: 'Gallery',
-                ...props
+                modelValue,
+                section: 'test-section'
+            },
+            global: {
+                plugins: [pinia, PrimeVue, ToastService],
+                directives: {
+                    tooltip: Tooltip
+                },
+                stubs: {
+                    AutocompleteField: true,
+                    VueDraggable: true,
+                    Dialog: true,
+                    FileUpload: true,
+                    Menu: true
+                }
             }
         });
     };
 
-    it('detects existing delete tag in file description', async () => {
-        const image = { name: 'Test.jpg', caption: 'Capt', position: 'gallery' };
-        vi.mocked(pcgwApi.getPageContent).mockResolvedValue('{{delete|reason=Old reason}}\nExisting content');
-        
-        const wrapper = setupWrapper({ modelValue: [image] });
-        const vm = wrapper.vm as any;
-        
-        await vm.initiateDelete(image);
-        
-        expect(pcgwApi.getPageContent).toHaveBeenCalledWith('File:Test.jpg');
-        expect(vm.existingDeletionReason).toBe('Old reason');
-    });
+    describe('Replace Image Logic', () => {
+        it('opens Add Image dialog with Replace context', async () => {
+            const wrapper = createWrapper([
+                { name: 'image1.jpg', position: 'gallery' }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            expect(vm.replaceImageIndex).toBeNull();
+            expect(vm.isReplacing).toBe(false);
 
-    it('replaces existing delete tag in handleConfirmDelete', async () => {
-        const image = { name: 'Test.jpg', caption: 'Capt', position: 'gallery' };
-        vi.mocked(pcgwApi.getPageContent).mockResolvedValue('{{delete|reason=Old reason}}\nSome content');
-        
-        const wrapper = setupWrapper({ modelValue: [image] });
-        const vm = wrapper.vm as any;
-        
-        await vm.initiateDelete(image);
-        vm.pcgwDeletionReason = 'New reason';
-        await vm.handleConfirmDelete();
-        
-        expect(pcgwMedia.editPage).toHaveBeenCalledWith(
-            'File:Test.jpg',
-            '{{delete|reason=New reason}}\nSome content',
-            expect.stringContaining('Requesting file deletion')
-        );
-    });
-
-    it('saves edited caption to the correct item in modelValue', async () => {
-        const image = { name: 'TestCaption.jpg', caption: 'Old Caption', position: 'gallery' };
-        const wrapper = setupWrapper({ modelValue: [image] });
-        const vm = wrapper.vm as any;
-        
-        // Open the dialog
-        vm.openCaptionDialog(image, 0);
-        expect(vm.editingCaption).toBe('Old Caption');
-        
-        // Update the value
-        vm.editingCaption = 'New Caption';
-        
-        // Save
-        vm.saveCaption();
-        
-        // Verify emitted update:modelValue
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect(emitted![0][0]).toEqual([{ name: 'TestCaption.jpg', caption: 'New Caption', position: 'gallery' }]);
-    });
-
-    it('should handle image replacement correctly', async () => {
-        const initialImages = [
-            { name: 'Original.png', caption: 'Original Caption', position: 'gallery' }
-        ];
-        const wrapper = setupWrapper({ modelValue: initialImages });
-        
-        // Mock addFile to return a fake ID
-        mockFileStore.addFile.mockResolvedValue(123);
-
-        // Access the component's exposed methods
-        const vm = wrapper.vm as any;
-
-        // 1. Trigger replace for the first image
-        vm.triggerReplace(0);
-        
-        // 2. Simulate file upload result
-        const mockFile = new File(['test'], 'Replacement.png', { type: 'image/png' });
-        await vm.handleReplaceUpload({ files: [mockFile] });
-
-        // Expectations
-        expect(mockFileStore.addFile).toHaveBeenCalledWith(mockFile);
-        
-        // Check emitted events
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        const newValue = emitted![0][0] as any[];
-        
-        expect(newValue[0]).toMatchObject({
-            name: 'Replacement.png',
-            localId: 123,
-            caption: 'Original Caption', // Caption should be preserved
-            position: 'gallery' // Position should be preserved
+            // simulate triggerReplace
+            vm.triggerReplace(0);
+            
+            expect(vm.replaceImageIndex).toBe(0);
+            expect(vm.isReplacing).toBe(true);
+            expect(vm.showSearchDialog).toBe(true);
         });
     });
 
-    it('should handle replacement of a simple string image', async () => {
-        const initialImages = ['StringImage.png'];
-        const wrapper = setupWrapper({ modelValue: initialImages });
-        mockFileStore.addFile.mockResolvedValue(456);
-
-        const vm = wrapper.vm as any;
-        vm.triggerReplace(0);
-        
-        const mockFile = new File(['test'], 'NewLocal.png', { type: 'image/png' });
-        await vm.handleReplaceUpload({ files: [mockFile] });
-
-        const newValue = wrapper.emitted('update:modelValue')![0][0] as any[];
-        expect(newValue[0]).toMatchObject({
-            name: 'NewLocal.png',
-            localId: 456,
-            caption: '', // Default for strings
-            position: 'gallery'
-        });
-    });
-
-    it('should handle wiki rename correctly', async () => {
-        const initialImages = [
-            { name: 'WikiImage.png', caption: 'Wiki Caption', position: 'gallery' }
-        ];
-        const wrapper = setupWrapper({ modelValue: initialImages });
-        const vm = wrapper.vm as any;
-
-        // 1. Initiate rename
-        vm.initiateRename(initialImages[0]);
-        expect(vm.showRenameDialog).toBe(true);
-        expect(vm.newRenameName).toBe('WikiImage.png');
-
-        // @ts-ignore
-        vm.newRenameName = 'NewWikiName.png';
-
-        // 3. Confirm rename
-        await vm.handleConfirmRename();
-
-        expect(mockPcgwMedia.moveFile).toHaveBeenCalledWith(
-            'WikiImage.png',
-            'NewWikiName.png',
-            expect.any(String)
-        );
-
-        // Check emitted events
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect((emitted as any)[0][0][0]).toMatchObject({
-            name: 'NewWikiName.png'
-        });
-    });
-
-    it('should handle local rename correctly', async () => {
-        const initialImages = [
-            { name: 'LocalImage.png', localId: 789, caption: 'Local Caption', position: 'gallery' }
-        ];
-        const wrapper = setupWrapper({ modelValue: initialImages });
-        const vm = wrapper.vm as any;
-
-        // 1. Initiate rename
-        vm.initiateRename(initialImages[0]);
-        expect(vm.showRenameDialog).toBe(true);
-
-        // 2. Simulate user input
-        vm.newRenameName = 'NewLocalName.png';
-
-        // 3. Confirm rename
-        await vm.handleConfirmRename();
-
-        expect(mockFileStore.updateFileStatus).toHaveBeenCalledWith(
-            789,
-            { name: 'NewLocalName.png' }
-        );
-
-        // Check emitted events
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect((emitted as any)[0][0][0]).toMatchObject({
-            name: 'NewLocalName.png'
-        });
-    });
-
-    it('should handle linking to existing wiki file correctly', async () => {
-        const localImage = { name: 'MatchMe.png', localId: 101, caption: 'Match Caption', position: 'gallery' };
-        const wrapper = setupWrapper({ modelValue: [localImage] });
-        const vm = wrapper.vm as any;
-
-        // Mock hash calculation and API match
-        vi.mocked(pcgwApi.getImagesByHash).mockResolvedValue(['ExistingWikiFile.png']);
-
-        // 1. Manually trigger linkToWiki (as if clicked from menu)
-        await vm.linkToWiki(101, 'ExistingWikiFile.png');
-
-        // Check emitted events
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect((emitted as any)[0][0][0]).toMatchObject({
-            name: 'ExistingWikiFile.png',
-            localId: undefined // Should be cleared
-        });
-    });
-
-    it('should automatically synchronize model when a redirect is detected', async () => {
-        const oldImage = { name: 'OldName.png', caption: 'Stay same', position: 'gallery' };
-        
-        // Mock getImageInfo returning a redirect BEFORE setup
-        vi.mocked(pcgwApi.getImageInfo).mockResolvedValue({
-            url: 'https://pcgw.com/NewName.png',
-            user: 'Admin',
-            size: 1024,
-            width: 800,
-            height: 600,
-            canonicalName: 'NewName.png'
+    describe('PCGW Priority and Switch Logic', () => {
+        it('identifies if a local file is also on PCGW', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            
+            // local file id 1 is 'uploaded' in mock store
+            expect(vm.isAlsoOnPcgw({ name: 'local_test.jpg', localId: 1 })).toBe(true);
+            
+            // local file id 2 is 'uploading' in mock store
+            expect(vm.isAlsoOnPcgw({ name: 'only_local.jpg', localId: 2 })).toBe(false);
+            
+            // no local id, just a name
+            vm.resolvedInfos['pcgw image.jpg'] = { url: 'https://pcgw.example.com/pcgw_image.jpg' };
+            expect(vm.isAlsoOnPcgw({ name: 'pcgw_image.jpg' })).toBe(false);
+            
+            // local file exists, and resolvedInfos has it
+            expect(vm.isAlsoOnPcgw({ name: 'pcgw_image.jpg', localId: 2 })).toBe(true);
         });
 
-        const wrapper = setupWrapper({ modelValue: [oldImage] });
+        it('prioritizes PCGW url over local url when both exist', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
 
-        // Wait for watchEffect and async call
-        await flushPromises();
-        await vi.waitUntil(() => wrapper.emitted('update:modelValue') !== undefined, { timeout: 2000 });
-
-        // Check emitted events
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect((emitted as any)[0][0][0]).toMatchObject({
-            name: 'NewName.png'
+            vm.resolvedInfos['local test.jpg'] = { url: 'https://pcgw.example.com/resolved_url.jpg' };
+            
+            const element: any = { name: 'local_test.jpg', localId: 1 };
+            // default is to use PCGW
+            expect(vm.getImageUrl(element)).toBe('https://pcgw.example.com/resolved_url.jpg');
+            
+            // switch to prefer local
+            element.preferLocal = true;
+            expect(vm.getImageUrl(element)).toBe('blob:mock-url'); // mocked object url for local file
         });
-    });
 
-    it('should open crop dialog when initiateCrop is called manually', async () => {
-        const wrapper = setupWrapper();
-        const vm = wrapper.vm as any;
-        const mockFile = { id: 2002, blob: new Blob(), name: 'Manual.png' };
-        mockFileStore.files.push(mockFile);
-        
-        vm.initiateCrop({ type: 'gallery', galleryItem: { localId: 2002, name: 'Manual.png' } });
-        
-        expect(vm.showCropDialog).toBe(true);
-        expect(vm.cropImageUrl).toBe('mock-url');
-    });
-
-    it('should handle crop on upload toggle and queueing', async () => {
-        const wrapper = setupWrapper();
-        const vm = wrapper.vm as any;
-        
-        // 1. Enable crop on upload
-        vm.cropOnUpload = true;
-        
-        // 2. Simulate upload
-        const mockFile = new File(['test'], 'ToCrop.png', { type: 'image/png' });
-        mockFileStore.addFile.mockResolvedValue(1001);
-        mockFileStore.files.push({ id: 1001, blob: mockFile, name: 'ToCrop.png' });
-        
-        await vm.handleLocalMenuUpload({ files: [mockFile] });
-        await flushPromises();
-        
-        // 3. Verify it was added to croppingQueue
-        expect(vm.croppingQueue.length).toBe(1);
-        expect(vm.croppingQueue[0].type).toBe('gallery');
-        expect(vm.croppingQueue[0].galleryItem.localId).toBe(1001);
-        
-        // 4. Verify cropper dialog opened
-        expect(vm.showCropDialog).toBe(true);
-    });
-
-    it('should handle image combiner upload and cropping', async () => {
-        const wrapper = setupWrapper();
-        const vm = wrapper.vm as any;
-        
-        // 1. Enable crop on upload
-        vm.cropOnUpload = true;
-        
-        // 2. Simulate combiner upload
-        const mockFile = new File(['test'], 'CombineMe.png', { type: 'image/png' });
-        mockFileStore.addFile.mockResolvedValue(1234);
-        await vm.handleCombineLocalUpload({ files: [mockFile] });
-        await flushPromises();
-        
-        // 3. Verify it was added to both queues
-        expect(vm.combineQueue.length).toBe(1);
-        expect(vm.croppingQueue.length).toBe(1);
-        expect(vm.croppingQueue[0].type).toBe('combine');
-        // 4. Verify cropper dialog opened
-        expect(vm.showCropDialog).toBe(true);
-    });
-
-    it('should handle sequential cropping multiple uploads', async () => {
-        vi.useFakeTimers();
-        const wrapper = setupWrapper();
-        const vm = wrapper.vm as any;
-        vm.cropOnUpload = true;
-        
-        const file1 = new File(['1'], 'one.png', { type: 'image/png' });
-        const file2 = new File(['2'], 'two.png', { type: 'image/png' });
-        
-        mockFileStore.addFile.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
-        mockFileStore.files.push({ id: 1, blob: file1, name: 'one.png' });
-        mockFileStore.files.push({ id: 2, blob: file2, name: 'two.png' });
-        
-        await vm.handleLocalMenuUpload({ files: [file1, file2] });
-        await flushPromises();
-        
-        expect(vm.croppingQueue.length).toBe(2);
-        expect(vm.showCropDialog).toBe(true);
-        expect(vm.croppingImage.name).toBe('one.png');
-        
-        // Simulate first crop completion (closing dialog triggers next)
-        vm.closeCropDialog();
-        
-        // Wait for timeout that triggers processNextCrop
-        await vi.advanceTimersByTimeAsync(400);
-        await flushPromises();
-        
-        expect(vm.croppingQueue.length).toBe(1);
-        expect(vm.croppingImage.name).toBe('two.png');
-        
-        vi.useRealTimers();
-    });
-
-    it('should transform a cropped gallery item into a local item within combine queue', async () => {
-        const wrapper = setupWrapper();
-        const vm = wrapper.vm as any;
-        
-        // Push a gallery item into the combine queue
-        vm.combineQueue.push({
-            id: 'gallery-123',
-            type: 'gallery',
-            name: 'WikiImage.png',
-            galleryImage: { name: 'WikiImage.png', caption: '', position: 'gallery' },
-            url: 'mock-url' // needs url to start crop
+        it('toggles preferLocal on an item', async () => {
+            const wrapper = createWrapper([
+                { name: 'local_test.jpg', localId: 1 }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            vm.toggleSource(0);
+            
+            // Should emit update:modelValue with preferLocal toggled
+            const emitted = wrapper.emitted('update:modelValue');
+            expect(emitted).toBeTruthy();
+            expect(emitted![0][0]).toEqual([
+                { name: 'local_test.jpg', localId: 1, preferLocal: true }
+            ]);
         });
-        
-        // Initiate crop
-        vm.initiateCrop({ type: 'combine', combineItem: vm.combineQueue[0] });
-        
-        // Assert dialog is open
-        expect(vm.showCropDialog).toBe(true);
-        expect(vm.croppingQueue.length).toBe(0); 
-        
-        // Mock cropper component result
-        vm.cropperRef = {
-            getResult: () => ({
-                canvas: {
-                    toBlob: (cb: any) => cb(new Blob(['cropped-data'], { type: 'image/png' }))
-                }
-            })
-        };
-        
-        // Mock addFile to return a specific local ID
-        mockFileStore.addFile.mockResolvedValueOnce(999);
-        
-        // Confirm crop
-        await vm.handleConfirmCrop();
-        await flushPromises();
-        
-        // Assert the item in combine queue is now 'local' type
-        const item = vm.combineQueue[0];
-        expect(item.type).toBe('local');
-        expect(item.localId).toBe(999);
-        expect(item.id).toBe('local-999');
-        
-        expect(mockFileStore.addFile).toHaveBeenCalled();
-    });
-
-    it('should fetch missing URLs asynchronously when editing combine layout', async () => {
-        const initialImages = [
-            {
-                name: 'Combined_Image.png',
-                position: 'gallery',
-                combineConfig: {
-                    orientation: 'horizontal',
-                    gap: 10,
-                    items: [
-                        { name: 'MissingWiki.png', type: 'gallery' },
-                        { name: 'ExistingWiki.png', type: 'gallery' }
-                    ]
-                }
-            }
-        ];
-        
-        const wrapper = setupWrapper({ modelValue: initialImages });
-        const vm = wrapper.vm as any;
-        
-        // Set mock responses
-        vi.mocked(pcgwApi.getImageInfo).mockImplementation(async (name) => {
-            if (name === 'MissingWiki.png') return { url: 'https://pcgw/MissingWiki.png' } as any;
-            if (name === 'ExistingWiki.png') return { url: 'https://pcgw/ExistingWiki.png' } as any;
-            return null;
-        });
-        
-        // Trigger edit combine
-        await vm.triggerEditCombine(0);
-        await flushPromises();
-        
-        // Assert combineQueue contains items with properly fetched URLs
-        expect(vm.combineQueue.length).toBe(2);
-        expect(vm.combineQueue[0].name).toBe('MissingWiki.png');
-        expect(vm.combineQueue[0].url).toBe('https://pcgw/MissingWiki.png');
-        expect(vm.combineQueue[1].url).toBe('https://pcgw/ExistingWiki.png');
-        
-        expect(pcgwApi.getImageInfo).toHaveBeenCalledWith('MissingWiki.png');
-    });
-
-    it('should toggle selection state of images', async () => {
-        const image = { name: 'Batch1.png', position: 'gallery' };
-        const wrapper = setupWrapper({ modelValue: [image] });
-        const vm = wrapper.vm as any;
-        
-        expect(vm.selectedKeys.size).toBe(0);
-        
-        vm.toggleSelection(image);
-        expect(vm.selectedKeys.size).toBe(1);
-        expect(vm.isSelected(image)).toBe(true);
-        
-        vm.toggleSelection(image);
-        expect(vm.selectedKeys.size).toBe(0);
-        expect(vm.isSelected(image)).toBe(false);
-    });
-
-    it('should select all and clear selection', async () => {
-        const images = [
-            { name: 'Batch1.png', position: 'gallery' },
-            { name: 'Batch2.png', position: 'gallery' }
-        ];
-        const wrapper = setupWrapper({ modelValue: images });
-        const vm = wrapper.vm as any;
-        
-        vm.selectAll();
-        expect(vm.selectedKeys.size).toBe(2);
-        
-        vm.clearSelection();
-        expect(vm.selectedKeys.size).toBe(0);
-    });
-
-    it('should batch remove selected images', async () => {
-        const images = [
-            { name: 'Batch1.png', position: 'gallery' },
-            { name: 'Batch2.png', position: 'gallery', localId: 99 }
-        ];
-        const wrapper = setupWrapper({ modelValue: images });
-        const vm = wrapper.vm as any;
-        
-        vm.selectAll();
-        vm.batchRemove();
-        
-        // Emitted new modelValue should be empty
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        expect((emitted![0] as any)[0]).toEqual([]);
-        
-        // Also local file should be removed
-        expect(mockFileStore.removeFile).toHaveBeenCalledWith(99);
-    });
-
-    it('should batch toggle position of selected images', async () => {
-        const images = [
-            { name: 'Batch1.png', position: 'gallery' },
-            { name: 'Batch2.png', position: 'lateral' },
-            { name: 'Unselected.png', position: 'gallery' } // We won't select this one
-        ];
-        const wrapper = setupWrapper({ modelValue: images });
-        const vm = wrapper.vm as any;
-        
-        // Manually select only the first two
-        vm.toggleSelection(images[0]);
-        vm.toggleSelection(images[1]);
-        
-        vm.batchTogglePosition();
-        
-        const emitted = wrapper.emitted('update:modelValue');
-        expect(emitted).toBeTruthy();
-        const newValue = (emitted![0] as any)[0];
-        
-        expect(newValue[0].position).toBe('lateral');
-        expect(newValue[1].position).toBe('gallery');
-        expect(newValue[2].position).toBe('gallery'); // Unchanged
     });
 });

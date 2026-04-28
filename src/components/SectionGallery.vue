@@ -165,8 +165,8 @@ watchEffect(() => {
         }
     });
 });
+
 const fileUploadRef = ref<any>(null);
-const replaceFileUploadRef = ref<any>(null);
 const showSearchDialog = ref(false);
 const replaceImageIndex = ref<number | null>(null);
 
@@ -269,52 +269,20 @@ const actionMenuItems = computed<any[]>(() => {
 
 const triggerReplace = (index: number) => {
     replaceImageIndex.value = index;
-    replaceFileUploadRef.value?.choose();
+    showSearchDialog.value = true;
 };
 
-const handleReplaceUpload = async (event: any) => {
-    if (replaceImageIndex.value === null) return;
+const isReplacing = computed(() => replaceImageIndex.value !== null);
 
-    const file = event.files[0];
-    if (!file) return;
-
-    try {
-        const newValue = [...(props.modelValue || [])];
-        const item = newValue[replaceImageIndex.value];
-
-        if (typeof item !== 'string' && item.localId !== undefined) {
-            await fileStore.removeFile(item.localId).catch(console.error);
-        }
-
-        const id = await fileStore.addFile(file);
-
-        const galleryItem: GalleryImage = {
-            name: file.name,
-            caption: typeof item === 'string' ? '' : (item.caption || ''),
-            position: typeof item === 'string' ? 'gallery' : (item.position || 'gallery'),
-            localId: id
-        };
-
-        newValue[replaceImageIndex.value] = galleryItem;
-        emit('update:modelValue', newValue);
-
-        toast.add({
-            severity: 'success',
-            summary: 'Image Replaced',
-            detail: `Replaced with local file "${file.name}".`,
-            life: 3000
-        });
-    } catch (e) {
-        toast.add({
-            severity: 'error',
-            summary: 'Replace Failed',
-            detail: `Could not process replacement file.`,
-            life: 3000
-        });
-    } finally {
-        replaceImageIndex.value = null;
+watch(showSearchDialog, (newVal) => {
+    if (!newVal) {
+        setTimeout(() => {
+            if (!showSearchDialog.value) replaceImageIndex.value = null;
+        }, 300);
     }
-};
+});
+
+// `handleReplaceUpload` removed as its logic is merged into `handleLocalMenuUpload`
 
 const linkToWiki = (localId: number, wikiFilename: string) => {
     const newValue = [...(props.modelValue || [])];
@@ -341,6 +309,50 @@ const linkToWiki = (localId: number, wikiFilename: string) => {
 };
 
 const handleLocalMenuUpload = async (event: any) => {
+    if (isReplacing.value && replaceImageIndex.value !== null) {
+        const file = event.files[0];
+        if (!file) return;
+
+        try {
+            const newValue = [...(props.modelValue || [])];
+            const item = newValue[replaceImageIndex.value];
+
+            if (typeof item !== 'string' && item.localId !== undefined) {
+                await fileStore.removeFile(item.localId).catch(console.error);
+            }
+
+            const id = await fileStore.addFile(file);
+
+            const galleryItem: GalleryImage = {
+                name: file.name,
+                caption: typeof item === 'string' ? '' : (item.caption || ''),
+                position: typeof item === 'string' ? 'gallery' : (item.position || 'gallery'),
+                localId: id
+            };
+
+            newValue[replaceImageIndex.value] = galleryItem;
+            emit('update:modelValue', newValue);
+
+            toast.add({
+                severity: 'success',
+                summary: 'Image Replaced',
+                detail: `Replaced with local file "${file.name}".`,
+                life: 3000
+            });
+        } catch (e) {
+            toast.add({
+                severity: 'error',
+                summary: 'Replace Failed',
+                detail: `Could not process replacement file.`,
+                life: 3000
+            });
+        }
+        
+        fileUploadRef.value?.clear();
+        showSearchDialog.value = false;
+        return;
+    }
+
     const files = event.files;
     const newlyAddedImages: GalleryImage[] = [];
 
@@ -405,7 +417,27 @@ const addImage = () => {
         // Handle both single and multiple selections from Autocomplete
         const items = Array.isArray(newImage.value) ? newImage.value : [newImage.value];
         const newImages: GalleryImage[] = items.map((name: string) => ({ name: name, caption: '', position: 'gallery' }));
-        emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
+        
+        if (isReplacing.value && replaceImageIndex.value !== null) {
+            const newValue = [...(props.modelValue || [])];
+            const itemToReplace = newValue[replaceImageIndex.value];
+            
+            if (typeof itemToReplace !== 'string' && itemToReplace.localId !== undefined) {
+                fileStore.removeFile(itemToReplace.localId).catch(console.error);
+            }
+            
+            const firstNew = newImages[0];
+            firstNew.caption = typeof itemToReplace === 'string' ? '' : (itemToReplace.caption || '');
+            firstNew.position = typeof itemToReplace === 'string' ? 'gallery' : (itemToReplace.position || 'gallery');
+            
+            newValue.splice(replaceImageIndex.value, 1, ...newImages);
+            emit('update:modelValue', newValue);
+            
+            toast.add({ severity: 'success', summary: 'Image Replaced', detail: `Replaced with PCGW file(s).`, life: 3000 });
+        } else {
+            emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
+        }
+        
         newImage.value = '';
     }
 };
@@ -1025,12 +1057,33 @@ watchEffect(() => {
     });
 });
 
+const isAlsoOnPcgw = (element: GalleryImage) => {
+    if (!element.localId) return false;
+    const file = getLocalFile(element.localId);
+    if (file?.status === 'uploaded') return true;
+    if (resolvedInfos[normalizeFilename(element.name)]?.url) return true;
+    return false;
+};
+
 const getImageUrl = (element: GalleryImage) => {
+    const pcgwUrl = resolvedInfos[normalizeFilename(element.name)]?.url;
+    
     if (element.localId) {
-        const file = fileStore.files.find(f => f.id === element.localId);
-        if (file) return getFileUrl(file.blob);
+        if (element.preferLocal || !pcgwUrl) {
+            const file = fileStore.files.find(f => f.id === element.localId);
+            if (file) return getFileUrl(file.blob);
+        }
     }
-    return resolvedInfos[normalizeFilename(element.name)]?.url;
+    return pcgwUrl;
+};
+
+const toggleSource = (index: number) => {
+    const newValue = [...(props.modelValue || [])];
+    const item = newValue[index];
+    if (typeof item === 'string') return;
+    
+    newValue[index] = { ...item, preferLocal: !item.preferLocal };
+    emit('update:modelValue', newValue);
 };
 
 
@@ -1490,7 +1543,16 @@ defineExpose({
     pcgwDeletionReason,
     openCaptionDialog,
     saveCaption,
-    editingCaption
+    editingCaption,
+    // For testing
+    triggerReplace,
+    isReplacing,
+    isAlsoOnPcgw,
+    getImageUrl,
+    toggleSource,
+    resolvedInfos,
+    replaceImageIndex,
+    showSearchDialog
 });
 </script>
 
@@ -1536,9 +1598,7 @@ defineExpose({
 
                 <div class="hidden">
                     <FileUpload ref="fileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
-                        @uploader="handleLocalMenuUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" />
-                    <FileUpload ref="replaceFileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
-                        @uploader="handleReplaceUpload" :multiple="false" accept="image/*" :maxFileSize="10000000" />
+                        @uploader="handleLocalMenuUpload" :multiple="!isReplacing" accept="image/*" :maxFileSize="10000000" />
                 </div>
             </div>
 
@@ -1575,7 +1635,7 @@ defineExpose({
             </Transition>
         </div>
 
-        <Dialog v-model:visible="showSearchDialog" header="Add Image" modal :style="{ width: '500px' }"
+        <Dialog v-model:visible="showSearchDialog" :header="isReplacing ? 'Replace Image' : 'Add Image'" modal :style="{ width: '500px' }"
             :draggable="false">
             <div class="flex flex-col gap-6 py-4">
                 <div class="flex flex-col gap-3">
@@ -1646,7 +1706,7 @@ defineExpose({
 
                 <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-surface-100 dark:border-surface-700">
                     <Button label="Cancel" text @click="showSearchDialog = false" />
-                    <Button label="Add Selected" @click="() => { addImage(); showSearchDialog = false; }"
+                    <Button :label="isReplacing ? 'Replace Selected' : 'Add Selected'" @click="() => { addImage(); showSearchDialog = false; }"
                         :disabled="!newImage || newImage.length === 0" />
                 </div>
             </div>
@@ -1677,6 +1737,13 @@ defineExpose({
                             <div v-if="element.localId"
                                 class="bg-surface-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/20 flex items-center gap-1 uppercase tracking-tight">
                                 <HardDrive class="w-3 h-3" /> Local
+                            </div>
+                            <div v-if="element.localId && isAlsoOnPcgw(element)"
+                                class="bg-surface-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-1 py-0.5 rounded border border-white/20 flex items-center gap-1">
+                                <Button size="small" text rounded class="p-0! w-4 h-4 text-white" @click.stop="toggleSource(index)" v-tooltip="element.preferLocal ? 'Switch to PCGW version' : 'Switch to Local version'">
+                                    <ArrowRightLeft class="w-3 h-3" />
+                                </Button>
+                                <span class="uppercase tracking-tight">{{ element.preferLocal ? 'Local' : 'PCGW' }}</span>
                             </div>
                             <div v-if="element.localId && getLocalFile(element.localId)?.status === 'uploading'"
                                 class="bg-primary-500 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-tight">
