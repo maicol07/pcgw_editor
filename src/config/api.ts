@@ -1,3 +1,5 @@
+import pkg from '../../package.json';
+
 const PROXY_PREFIX = ''; // Optional, e.g. 'https://cors-anywhere.herokuapp.com/'
 const PCGW_API_URL = 'https://www.pcgamingwiki.com/w/api.php';
 
@@ -28,5 +30,10 @@ export const getApiHeaders = () => {
     if (API_CONFIG.proxyPrefix.includes('cors-anywhere')) {
         headers['X-Requested-With'] = 'XMLHttpRequest';
     }
+    
+    const userAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
+    headers['User-Agent'] = userAgent;
+    headers['Api-User-Agent'] = userAgent;
+
     return headers;
 };

@@ -1,6 +1,6 @@
 import { ofetch } from 'ofetch';
 import { pcgwAuth } from './pcgwAuth';
-import { getDirectApiUrl } from '../config/api';
+import { getDirectApiUrl, getApiHeaders } from '../config/api';
 
 export interface UploadOptions {
     filename: string;
@@ -40,7 +40,8 @@ class PCGWMediaService {
                     prop: 'info',
                     format: 'json',
                     origin: '*'
-                }
+                },
+                headers: getApiHeaders()
             });
             const pages = result?.query?.pages || {};
             const page = Object.values(pages)[0] as any;

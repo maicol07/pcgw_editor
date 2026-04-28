@@ -4,7 +4,7 @@
  */
 import { ofetch } from 'ofetch';
 import { useStorage } from '@vueuse/core';
-import { getDirectApiUrl } from '../config/api';
+import { getDirectApiUrl, getApiHeaders } from '../config/api';
 const CACHE_KEY = 'pcgw_api_cache_v2';
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -33,6 +33,7 @@ class PCGWApiService {
                     origin: '*',
                     ...params
                 },
+                headers: getApiHeaders(),
                 parseResponse: JSON.parse
             });
         } catch (error) {

@@ -1,7 +1,7 @@
 import { ofetch } from 'ofetch';
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
-import { getWorkerLoginUrl, getWorkerProxyUrl } from '../config/api';
+import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders } from '../config/api';
 
 const AUTH_STORAGE_KEY = 'pcgw_auth_data_v2';
 
@@ -75,7 +75,8 @@ class PCGWAuthService {
 
         const res = await ofetch(getWorkerProxyUrl(), {
             method: 'POST',
-            body
+            body,
+            headers: getApiHeaders()
         });
 
         // Handle MediaWiki auth errors reactively
@@ -111,7 +112,8 @@ class PCGWAuthService {
                 body: {
                     username,
                     password
-                }
+                },
+                headers: getApiHeaders()
             });
 
             if (loginRes.success && loginRes.sessionCookies) {

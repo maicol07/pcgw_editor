@@ -11,7 +11,8 @@ vi.mock('ofetch', () => ({
 vi.mock('../../../src/config/api', () => ({
     getWorkerLoginUrl: () => 'http://login-worker.test',
     getWorkerProxyUrl: () => 'http://proxy-worker.test',
-    getDirectApiUrl: () => 'http://direct-api.test'
+    getDirectApiUrl: () => 'http://direct-api.test',
+    getApiHeaders: () => ({})
 }));
 
 describe('pcgwAuth.ts - Session Refresh and Login', () => {
