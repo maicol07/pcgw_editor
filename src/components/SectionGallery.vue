@@ -274,13 +274,7 @@ const triggerReplace = (index: number) => {
 
 const isReplacing = computed(() => replaceImageIndex.value !== null);
 
-watch(showSearchDialog, (newVal) => {
-    if (!newVal) {
-        setTimeout(() => {
-            if (!showSearchDialog.value) replaceImageIndex.value = null;
-        }, 300);
-    }
-});
+// Watch logic moved below to handle both Search and Combine dialogs together
 
 // `handleReplaceUpload` removed as its logic is merged into `handleLocalMenuUpload`
 
@@ -1252,6 +1246,16 @@ const closeCropDialog = () => {
 
 // Combine Images Logic
 const showCombineDialog = ref(false);
+
+watch([showSearchDialog, showCombineDialog], ([newSearch, newCombine]) => {
+    if (!newSearch && !newCombine) {
+        setTimeout(() => {
+            if (!showSearchDialog.value && !showCombineDialog.value) {
+                replaceImageIndex.value = null;
+            }
+        }, 300);
+    }
+});
 const combineOrientation = ref<'horizontal' | 'vertical'>('vertical');
 const combineGap = ref<number>(0);
 
@@ -1522,6 +1526,20 @@ const handleConfirmCombine = async () => {
             newValue[editingCombineIndex.value] = newImages[0];
             emit('update:modelValue', newValue);
             toast.add({ severity: 'success', summary: 'Image Updated', detail: 'Combined image has been modified.', life: 3000 });
+        } else if (isReplacing.value && replaceImageIndex.value !== null) {
+            const newValue = [...(props.modelValue || [])];
+            const oldItem = newValue[replaceImageIndex.value];
+            if (typeof oldItem !== 'string' && oldItem.localId !== undefined) {
+                await fileStore.removeFile(oldItem.localId).catch(console.error);
+            }
+            
+            const newImage = newImages[0];
+            newImage.caption = typeof oldItem === 'string' ? '' : (oldItem.caption || '');
+            newImage.position = typeof oldItem === 'string' ? 'gallery' : (oldItem.position || 'gallery');
+            
+            newValue[replaceImageIndex.value] = newImage;
+            emit('update:modelValue', newValue);
+            toast.add({ severity: 'success', summary: 'Image Replaced', detail: 'Replaced with combined image.', life: 3000 });
         } else {
             emit('update:modelValue', [...(props.modelValue || []), ...newImages]);
             toast.add({ severity: 'success', summary: 'Images Combined', detail: 'Combined image added to gallery.', life: 3000 });
@@ -1552,7 +1570,11 @@ defineExpose({
     toggleSource,
     resolvedInfos,
     replaceImageIndex,
-    showSearchDialog
+    showSearchDialog,
+    showCombineDialog,
+    combineQueue,
+    handleConfirmCombine,
+    setPreviewObjUrlBlob: (blob: Blob | null) => previewObjUrlBlob = blob
 });
 </script>
 

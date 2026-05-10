@@ -6,6 +6,7 @@ import PrimeVue from 'primevue/config';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import type { GalleryImage } from '../../../src/models/GameData';
+import { useFileStore } from '../../../src/stores/files';
 
 // Mock primevue/usetoast
 vi.mock('primevue/usetoast', () => ({
@@ -102,6 +103,59 @@ describe('SectionGallery.vue', () => {
             expect(vm.replaceImageIndex).toBe(0);
             expect(vm.isReplacing).toBe(true);
             expect(vm.showSearchDialog).toBe(true);
+        });
+
+        it('replaces the image instead of appending when combined via Image Combiner', async () => {
+            const wrapper = createWrapper([
+                { name: 'image1.jpg', position: 'gallery', localId: 10 },
+                { name: 'image2.jpg', position: 'gallery' }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(100);
+            (fileStore.removeFile as any).mockResolvedValue(true);
+            
+            // 1. Trigger replace for the first image
+            vm.triggerReplace(0);
+            expect(vm.isReplacing).toBe(true);
+            expect(vm.replaceImageIndex).toBe(0);
+
+            // 2. Simulate clicking "Open Image Combiner" inside the Add Image dialog
+            vm.showSearchDialog = false;
+            vm.showCombineDialog = true;
+
+            // Wait a bit to ensure the timeout inside the watch doesn't clear the replaceImageIndex
+            await new Promise(resolve => setTimeout(resolve, 350));
+            
+            expect(vm.isReplacing).toBe(true); // Should still be replacing!
+            expect(vm.replaceImageIndex).toBe(0);
+
+            // 3. Prepare combine queue and preview blob
+            vm.combineQueue = [
+                { type: 'local', name: 'image3.jpg', localId: 3 },
+                { type: 'local', name: 'image4.jpg', localId: 4 }
+            ];
+            vm.setPreviewObjUrlBlob(new Blob(['preview']));
+
+            // 4. Confirm combination
+            await vm.handleConfirmCombine();
+
+            // 5. Verify the replacement in modelValue
+            const emitted = wrapper.emitted('update:modelValue');
+            expect(emitted).toBeTruthy();
+            const lastEmission = emitted![emitted!.length - 1][0] as any[];
+            
+            // The gallery length should remain 2 (image1 replaced, image2 untouched)
+            expect(lastEmission.length).toBe(2);
+            
+            // The first image should be the newly combined image
+            const newCombinedImage = lastEmission[0];
+            expect(newCombinedImage.name).toContain('combined_');
+            expect(newCombinedImage.position).toBe('gallery');
+            
+            // The second image should still be image2
+            expect(lastEmission[1].name).toBe('image2.jpg');
         });
     });
 
