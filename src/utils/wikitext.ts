@@ -637,7 +637,8 @@ export class PCGWEditor {
             eaApp: 'ea app',
             steamCloud: 'steam cloud',
             ubisoftConnect: 'ubisoft connect',
-            xboxCloud: 'xbox cloud'
+            xboxCloud: 'xbox cloud',
+            icloud: 'icloud'
         };
 
         // Ensure template exists with proper section header

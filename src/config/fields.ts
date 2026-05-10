@@ -7,7 +7,7 @@ import {
     GitFork, Tags, AlertCircle, Brush, Trash2, Gamepad2, DollarSign, PlusCircle, Star,
     Monitor, Grid2X2, Maximize, Minimize, ScanLine, LineChart, ArrowUpRight, FastForward, RefreshCcw, Clock, Zap, Sun, Sparkles, Palette, Eye,
     Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet, Settings, Plug, Smartphone, Search, Hand, Wifi, Headset,
-    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle
+    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle, Cloud
 } from 'lucide-vue-next';
 import { FIELD_DEFINITIONS } from './fieldDefinitions';
 import * as h from './fieldHelpers';
@@ -369,6 +369,7 @@ export const fieldsConfig: SectionDefinition[] = [
                     f('config.cloudSync.eaApp', h.rating('EA App', { field: 'eaApp', icon: Box }, { key: 'config.cloudSync' })),
                     f('config.cloudSync.ubisoftConnect', h.rating('Ubisoft Connect', { field: 'ubisoftConnect', icon: Box }, { key: 'config.cloudSync' })),
                     f('config.cloudSync.xboxCloud', h.rating('Xbox Cloud', { field: 'xboxCloud', icon: AppWindow }, { key: 'config.cloudSync' })),
+                    f('config.cloudSync.icloud', h.rating('iCloud', { field: 'icloud', icon: Cloud }, { key: 'config.cloudSync' })),
                 ]
             }
         ]

@@ -628,6 +628,7 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
         mapCloud('gog galaxy', 'gogGalaxy');
         mapCloud('ea app', 'eaApp');
         mapCloud('xbox cloud', 'xboxCloud');
+        mapCloud('icloud', 'icloud');
         mapCloud('status', 'status');
         data.config.cloudSync.notes = getParam(cloud, 'notes') || '';
     }

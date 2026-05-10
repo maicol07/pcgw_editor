@@ -156,6 +156,7 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
     'config.cloudSync.eaApp': { wikitextParam: 'ea_app' },
     'config.cloudSync.ubisoftConnect': { wikitextParam: 'ubisoft_connect' },
     'config.cloudSync.xboxCloud': { wikitextParam: 'xbox_cloud' },
+    'config.cloudSync.icloud': { wikitextParam: 'icloud' },
 
     // Video
     'video.analysis': { wikitextParam: '' }, // Special

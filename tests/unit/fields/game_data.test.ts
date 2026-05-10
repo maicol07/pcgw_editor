@@ -11,7 +11,7 @@ describe('Field Group: Game Data', () => {
         infobox: {} as any,
         introduction: {} as any,
         availability: [],
-        gameData: { configFiles: [], saveData: [], xdg: null, cloudSync: { discord: 'unknown', epicGamesLauncher: 'unknown', gogGalaxy: 'unknown', eaApp: 'unknown', steamCloud: 'unknown', ubisoftConnect: 'unknown', xboxCloud: 'unknown', status: 'unknown', notes: '' } },
+        gameData: { configFiles: [], saveData: [], xdg: null, cloudSync: { discord: 'unknown', epicGamesLauncher: 'unknown', gogGalaxy: 'unknown', eaApp: 'unknown', steamCloud: 'unknown', ubisoftConnect: 'unknown', xboxCloud: 'unknown', icloud: 'unknown', status: 'unknown', notes: '' } },
         video: {}, input: {}, audio: {}, network: {}, vr: {}, localizations: [], api: {},
         systemRequirements: { windows: {}, mac: {}, linux: {} } as any,
         monetization: {}, microtransactions: {},
@@ -85,7 +85,8 @@ describe('Field Group: Game Data', () => {
                 { key: 'ea app', name: 'EA app', field: 'eaApp' },
                 { key: 'steam cloud', name: 'Steam Cloud', field: 'steamCloud' },
                 { key: 'ubisoft connect', name: 'Ubisoft Connect', field: 'ubisoftConnect' },
-                { key: 'xbox cloud', name: 'Xbox Cloud', field: 'xboxCloud' }
+                { key: 'xbox cloud', name: 'Xbox Cloud', field: 'xboxCloud' },
+                { key: 'icloud', name: 'iCloud', field: 'icloud' }
             ];
 
             const template = (props: string) => `{{Save game cloud syncing\n${props}\n}}`;

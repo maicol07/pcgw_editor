@@ -533,6 +533,8 @@ export interface CloudSync {
     ubisoftConnectNotes?: string;
     xboxCloud: RatingValue;
     xboxCloudNotes?: string;
+    icloud: RatingValue;
+    icloudNotes?: string;
     status?: RatingValue;
     notes?: string;
 }
@@ -967,6 +969,8 @@ export const initialGameData: GameData = {
             ubisoftConnectNotes: '',
             xboxCloud: 'unknown',
             xboxCloudNotes: '',
+            icloud: 'unknown',
+            icloudNotes: '',
         }
     },
     requirements: {

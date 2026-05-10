@@ -386,7 +386,8 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
                 { id: 'gog galaxy', label: 'GOG Galaxy' },
                 { id: 'steam cloud', label: 'Steam Cloud' },
                 { id: 'ubisoft connect', label: 'Ubisoft Connect' },
-                { id: 'xbox cloud', label: 'Xbox Cloud' }
+                { id: 'xbox cloud', label: 'Xbox Cloud' },
+                { id: 'icloud', label: 'iCloud' }
             ];
             let cRows = '';
             services.forEach(s => {
