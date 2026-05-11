@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { getApiHeaders, API_CONFIG } from '../../../src/config/api';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { getApiHeaders, API_CONFIG, apiFetch } from '../../../src/config/api';
 import pkg from '../../../package.json';
 
 describe('src/config/api.ts', () => {
@@ -28,4 +28,44 @@ describe('src/config/api.ts', () => {
         expect(headers).toHaveProperty('User-Agent', expectedUserAgent);
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
     });
+});
+
+describe('apiFetch throttling and retry', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({}),
+            text: async () => '',
+            headers: new Headers()
+        } as unknown as Response);
+    });
+
+    afterEach(() => {
+        vi.runAllTimers(); // clear any pending timers so they don't leak
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+    });
+
+    it('should space requests by at least 1 second (MIN_DELAY)', async () => {
+        const fetchMock = global.fetch as any;
+        
+        // Fire two requests simultaneously
+        apiFetch('/test1');
+        apiFetch('/test2');
+
+        // Fast forward 10ms
+        await vi.advanceTimersByTimeAsync(10);
+        expect(fetchMock).toHaveBeenCalledTimes(1); // First request is immediate
+
+        // Fast forward 500ms - second request still hasn't fired due to MIN_DELAY
+        await vi.advanceTimersByTimeAsync(500);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        // Fast forward another 500ms (total 1000ms) - second request should now fire
+        await vi.advanceTimersByTimeAsync(500);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
 });

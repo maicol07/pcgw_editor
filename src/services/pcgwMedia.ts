@@ -1,6 +1,5 @@
-import { ofetch } from 'ofetch';
 import { pcgwAuth } from './pcgwAuth';
-import { getDirectApiUrl, getApiHeaders } from '../config/api';
+import { getDirectApiUrl, getApiHeaders, apiFetch } from '../config/api';
 
 export interface UploadOptions {
     filename: string;
@@ -33,7 +32,7 @@ class PCGWMediaService {
 
     async checkFileExists(filename: string): Promise<boolean> {
         try {
-            const result = await ofetch(getDirectApiUrl(), {
+            const result = await apiFetch(getDirectApiUrl(), {
                 query: {
                     action: 'query',
                     titles: `File:${filename}`,

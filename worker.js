@@ -18,6 +18,8 @@ export default {
             'Access-Control-Allow-Headers': 'Content-Type, api-user-agent, User-Agent, X-Requested-With',
         };
 
+        const clientUserAgent = request.headers.get('api-user-agent') || request.headers.get('user-agent') || 'PCGW-WorkerBridge/1.0';
+
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: corsHeaders });
         }
@@ -35,7 +37,9 @@ export default {
 
                 if (!username || !password) return new Response(JSON.stringify({ error: 'Username and password required' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
-                const tokenResponse = await fetch(`${PCGW_API}?action=query&meta=tokens&type=login&format=json`);
+                const tokenResponse = await fetch(`${PCGW_API}?action=query&meta=tokens&type=login&format=json`, {
+                    headers: { 'User-Agent': clientUserAgent }
+                });
                 const tokenData = await tokenResponse.json();
                 const loginToken = tokenData?.query?.tokens?.logintoken;
                 const initialCookies = tokenResponse.headers.get('set-cookie') || '';
@@ -51,7 +55,7 @@ export default {
 
                 const loginResponse = await fetch(PCGW_API, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': initialCookies, 'User-Agent': 'PCGW-WorkerBridge/1.0' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': initialCookies, 'User-Agent': clientUserAgent },
                     body: loginParams.toString()
                 });
 
@@ -110,7 +114,7 @@ export default {
                 if (method.toUpperCase() === 'POST') {
                     // Automatically retrieve the CSRF token
                     const tokenReq = await fetch(`${PCGW_API}?action=query&meta=tokens&format=json`, {
-                        headers: { 'Cookie': cookies, 'User-Agent': 'PCGW-WorkerBridge/1.0' }
+                        headers: { 'Cookie': cookies, 'User-Agent': clientUserAgent }
                     });
                     const tokenData = await tokenReq.json();
                     const csrfToken = tokenData?.query?.tokens?.csrftoken;
@@ -120,7 +124,7 @@ export default {
                         method: 'POST',
                         headers: {
                             'Cookie': cookies,
-                            'User-Agent': 'PCGW-WorkerBridge/1.0'
+                            'User-Agent': clientUserAgent
                         }
                     };
 
@@ -151,12 +155,26 @@ export default {
                     }
                     mwResponse = await fetch(getUrl.toString(), {
                         method: 'GET',
-                        headers: { 'Cookie': cookies, 'User-Agent': 'PCGW-WorkerBridge/1.0' }
+                        headers: { 'Cookie': cookies, 'User-Agent': clientUserAgent }
                     });
                 }
 
-                const mwData = await mwResponse.json();
-                return new Response(JSON.stringify(mwData), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+                const responseText = await mwResponse.text();
+                let mwData;
+                try {
+                    mwData = JSON.parse(responseText);
+                } catch {
+                    mwData = { error: 'Invalid JSON from MediaWiki', raw: responseText };
+                }
+
+                const responseHeaders = { 'Content-Type': 'application/json', ...corsHeaders };
+                const retryAfter = mwResponse.headers.get('retry-after');
+                if (retryAfter) responseHeaders['Retry-After'] = retryAfter;
+
+                return new Response(JSON.stringify(mwData), { 
+                    status: mwResponse.status, 
+                    headers: responseHeaders 
+                });
 
             } catch (error) {
                 return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });

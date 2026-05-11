@@ -1,3 +1,4 @@
+import { ofetch } from 'ofetch';
 import pkg from '../../package.json';
 
 const PROXY_PREFIX = ''; // Optional, e.g. 'https://cors-anywhere.herokuapp.com/'
@@ -37,3 +38,76 @@ export const getApiHeaders = () => {
 
     return headers;
 };
+
+// Queue system to handle the 20 requests/minute rate limit from PCGamingWiki
+class RequestQueue {
+    private queue: (() => void)[] = [];
+    private isProcessing = false;
+    private requestTimes: number[] = [];
+    private readonly RATE_LIMIT = 18; // Max 18 requests per minute to be safe (limit is 20)
+    private readonly TIME_WINDOW = 60 * 1000; // 60 seconds
+    private readonly MIN_DELAY = 1000; // 1 second minimum between requests
+    private lastRequestTime = 0;
+
+    async waitForTurn(): Promise<void> {
+        return new Promise(resolve => {
+            this.queue.push(resolve);
+            this.processQueue();
+        });
+    }
+
+    private async processQueue() {
+        if (this.isProcessing || this.queue.length === 0) return;
+        this.isProcessing = true;
+
+        while (this.queue.length > 0) {
+            const now = Date.now();
+            
+            // Clean up old request times outside the 60s window
+            this.requestTimes = this.requestTimes.filter(time => now - time < this.TIME_WINDOW);
+
+            // Wait if we hit the limit
+            if (this.requestTimes.length >= this.RATE_LIMIT) {
+                const oldestRequest = this.requestTimes[0];
+                const waitTime = this.TIME_WINDOW - (now - oldestRequest);
+                if (waitTime > 0) {
+                    await new Promise(res => setTimeout(res, waitTime));
+                    continue;
+                }
+            }
+
+            // Enforce minimum delay to prevent burst limits
+            const timeSinceLast = Date.now() - this.lastRequestTime;
+            if (timeSinceLast < this.MIN_DELAY) {
+                await new Promise(res => setTimeout(res, this.MIN_DELAY - timeSinceLast));
+            }
+
+            const resolve = this.queue.shift();
+            if (resolve) {
+                this.requestTimes.push(Date.now());
+                this.lastRequestTime = Date.now();
+                resolve();
+            }
+        }
+        this.isProcessing = false;
+    }
+}
+
+const queue = new RequestQueue();
+
+// Global custom ofetch instance that respects the queue and handles 429 retries
+export const apiFetch = ofetch.create({
+    retry: 3,
+    retryDelay: (ctx) => {
+        const retryAfter = ctx.response?.headers.get('Retry-After');
+        if (retryAfter) {
+            const parsed = parseInt(retryAfter, 10);
+            if (!isNaN(parsed)) return parsed * 1000;
+        }
+        return 3000; // default 3s backoff
+    },
+    retryStatusCodes: [429, 500, 502, 503, 504],
+    onRequest: async () => {
+        await queue.waitForTurn();
+    }
+});

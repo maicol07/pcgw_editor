@@ -1,7 +1,6 @@
-import { ofetch } from 'ofetch';
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
-import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders } from '../config/api';
+import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders, apiFetch } from '../config/api';
 
 const AUTH_STORAGE_KEY = 'pcgw_auth_data_v2';
 
@@ -73,7 +72,7 @@ class PCGWAuthService {
             };
         }
 
-        const res = await ofetch(getWorkerProxyUrl(), {
+        const res = await apiFetch(getWorkerProxyUrl(), {
             method: 'POST',
             body,
             headers: getApiHeaders()
@@ -107,7 +106,7 @@ class PCGWAuthService {
     async login(username: string, password: string): Promise<boolean> {
         this._isInitializing.value = true;
         try {
-            const loginRes = await ofetch<{ success: boolean; username: string; sessionCookies?: string; data?: any }>(getWorkerLoginUrl(), {
+            const loginRes = await apiFetch<{ success: boolean; username: string; sessionCookies?: string; data?: any }>(getWorkerLoginUrl(), {
                 method: 'POST',
                 body: {
                     username,

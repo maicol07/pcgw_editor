@@ -2,9 +2,8 @@
  * PCGamingWiki Cargo API Service
  * Provides search and autocomplete functionality using Cargo tables with caching
  */
-import { ofetch } from 'ofetch';
 import { useStorage } from '@vueuse/core';
-import { getDirectApiUrl, getApiHeaders } from '../config/api';
+import { getDirectApiUrl, getApiHeaders, apiFetch } from '../config/api';
 const CACHE_KEY = 'pcgw_api_cache_v2';
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -27,7 +26,7 @@ class PCGWApiService {
 
     private async fetchApi<T = any>(params: Record<string, string>): Promise<T | null> {
         try {
-            return await ofetch<T>(getDirectApiUrl(), {
+            return await apiFetch<T>(getDirectApiUrl(), {
                 query: {
                     format: 'json',
                     origin: '*',
