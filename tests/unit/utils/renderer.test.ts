@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderWikitextToHtml } from './renderer';
+import { renderWikitextToHtml } from '../../../src/utils/renderer';
 
 describe('renderer.ts', () => {
     describe('TOC and Heading Parsing', () => {

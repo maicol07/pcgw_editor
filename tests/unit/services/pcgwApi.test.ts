@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pcgwApi } from './pcgwApi';
+import { pcgwApi } from '../../../src/services/pcgwApi';
 
 describe('pcgwApi', () => {
     describe('extractTitleFromUrl', () => {

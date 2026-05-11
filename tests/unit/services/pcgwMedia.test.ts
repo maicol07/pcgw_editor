@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { pcgwMedia } from './pcgwMedia';
-import { pcgwAuth } from './pcgwAuth';
-import { ofetch } from 'ofetch';
+import { pcgwMedia } from '../../../src/services/pcgwMedia';
+import { pcgwAuth } from '../../../src/services/pcgwAuth';
+import { apiFetch } from '../../../src/config/api';
 
-vi.mock('ofetch', () => ({
-    ofetch: vi.fn()
+vi.mock('../../../src/config/api', () => ({
+    getWorkerLoginUrl: () => 'http://login-worker.test',
+    getWorkerProxyUrl: () => 'http://proxy-worker.test',
+    getDirectApiUrl: () => 'http://direct-api.test',
+    getApiHeaders: () => ({}),
+    apiFetch: vi.fn()
 }));
 
 // Mock pcgwAuth to simulate logged-in state and intercept apiPost
-vi.mock('./pcgwAuth', () => {
+vi.mock('../../../src/services/pcgwAuth', () => {
     return {
         pcgwAuth: {
             isLoggedIn: true,
@@ -19,7 +23,7 @@ vi.mock('./pcgwAuth', () => {
     };
 });
 
-const mockOfetch = vi.mocked(ofetch);
+const mockOfetch = vi.mocked(apiFetch);
 const mockPcgwAuth = vi.mocked(pcgwAuth);
 
 describe('PCGWMediaService', () => {
@@ -57,7 +61,7 @@ describe('PCGWMediaService', () => {
         expect((formData as FormData).get('minor')).toBe('1');
     });
 
-    it('should check if file exists using ofetch direct API', async () => {
+    it('should check if file exists using apiFetch direct API', async () => {
         mockOfetch.mockResolvedValueOnce({ query: { pages: { '1': { pageid: 123 } } } });
         
         const exists = await pcgwMedia.checkFileExists('test.txt');

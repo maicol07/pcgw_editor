@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { usePreview } from './usePreview';
+import { usePreview } from '../../../src/composables/usePreview';
 import { ref, nextTick } from 'vue';
-import * as renderer from '../utils/renderer';
+import * as renderer from '../../../src/utils/renderer';
 
 describe('usePreview', () => {
     let mockFetch: any;
