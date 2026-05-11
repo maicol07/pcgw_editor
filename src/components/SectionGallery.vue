@@ -731,7 +731,7 @@ const processUpload = async (force: boolean = false) => {
             });
         } else if (result?.upload?.result === 'Warning' || result?.warnings) {
             const warnings = result.upload?.warnings || result.warnings;
-            if (warnings?.duplicate) {
+            if (warnings?.duplicate || warnings?.exists || warnings?.['exists-normalized'] || warnings?.['was-deleted'] || warnings?.['duplicate-archive']) {
                 isUploading.value = false;
                 duplicateInfo.value = { filename: editFilename.value, type: 'warning' };
                 showOverwriteConfirm.value = true;

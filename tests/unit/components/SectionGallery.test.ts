@@ -209,4 +209,63 @@ describe('SectionGallery.vue', () => {
             ]);
         });
     });
+
+    describe('Upload Warning Handling', () => {
+        it('handles exists-normalized warning and shows overwrite confirm dialog', async () => {
+            const wrapper = createWrapper([
+                { name: 'test_upload.jpg', position: 'gallery', localId: 1 }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            const { pcgwMedia } = await import('../../../src/services/pcgwMedia');
+            (pcgwMedia as any).uploadFile = vi.fn().mockResolvedValue({
+                upload: {
+                    result: 'Warning',
+                    warnings: {
+                        'exists-normalized': 'Test_Upload.jpg'
+                    }
+                }
+            });
+            (pcgwMedia as any).checkFileExists = vi.fn().mockResolvedValue(false);
+            
+            vm.selectedFile = { id: 1, blob: new Blob(['test']), name: 'test_upload.jpg' };
+            vm.editFilename = 'test_upload.jpg';
+            
+            await vm.processUpload();
+            
+            expect(vm.isUploading).toBe(false);
+            expect(vm.showOverwriteConfirm).toBe(true);
+            expect(vm.duplicateInfo).toEqual({ filename: 'test_upload.jpg', type: 'warning' });
+        });
+
+        it('throws error for unhandled upload warnings', async () => {
+            const wrapper = createWrapper([
+                { name: 'test_upload.jpg', position: 'gallery', localId: 1 }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            const { pcgwMedia } = await import('../../../src/services/pcgwMedia');
+            (pcgwMedia as any).uploadFile = vi.fn().mockResolvedValue({
+                upload: {
+                    result: 'Warning',
+                    warnings: {
+                        'some-other-warning': true
+                    }
+                }
+            });
+            (pcgwMedia as any).checkFileExists = vi.fn().mockResolvedValue(false);
+            
+            vm.selectedFile = { id: 1, blob: new Blob(['test']), name: 'test_upload.jpg' };
+            vm.editFilename = 'test_upload.jpg';
+            
+            await vm.processUpload();
+            
+            expect(vm.isUploading).toBe(false);
+            const fileStore = useFileStore();
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(1, {
+                status: 'error',
+                error: 'Upload warning: {"some-other-warning":true}'
+            });
+        });
+    });
 });
