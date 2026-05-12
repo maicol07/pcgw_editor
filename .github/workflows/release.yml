@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      is_main: ${{ steps.check_main.outputs.is_main }}
     
     steps:
       - name: Checkout
@@ -42,3 +44,12 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           body_path: CHANGELOG.md
+
+  deploy:
+    needs: release
+    if: needs.release.outputs.is_main == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
