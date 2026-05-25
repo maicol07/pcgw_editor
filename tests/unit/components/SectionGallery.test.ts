@@ -63,6 +63,27 @@ describe('SectionGallery.vue', () => {
                 }
             }
         });
+
+        // Mock window.Image globally to resolve onload immediately by default with safe dimensions
+        const defaultMockImage = {
+            width: 100,
+            height: 100,
+            onload: null as any,
+            onerror: null as any,
+            set src(_val: string) {
+                setTimeout(() => {
+                    if (this.onload) this.onload();
+                }, 0);
+            }
+        };
+        vi.spyOn(window, 'Image').mockImplementation(function() {
+            return defaultMockImage;
+        } as any);
+
+        // Mock HTMLCanvasElement.prototype.toBlob globally
+        vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, callback: any) {
+            callback(new Blob(['resized_blob_data']));
+        });
     });
 
     const createWrapper = (modelValue: (GalleryImage | string)[] = []) => {
@@ -396,6 +417,172 @@ describe('SectionGallery.vue', () => {
             const addedFile = (fileStore.addFile as any).mock.calls[0][0] as File;
             expect(addedFile.name).toContain('.webp');
             expect(addedFile.type).toBe('image/webp');
+        });
+    });
+
+    describe('Image Megapixel Validation & Auto-resizing', () => {
+        let mockImage: any;
+
+        beforeEach(() => {
+            // Mock window.Image
+            mockImage = {
+                width: 0,
+                height: 0,
+                onload: null as any,
+                onerror: null as any,
+                set src(_val: string) {
+                    setTimeout(() => {
+                        if (this.onload) this.onload();
+                    }, 0);
+                }
+            };
+            vi.spyOn(window, 'Image').mockImplementation(function() {
+                return mockImage;
+            } as any);
+
+            // Mock HTMLCanvasElement.prototype.toBlob
+            vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, callback: any) {
+                callback(new Blob(['resized_blob_data']));
+            });
+        });
+
+        it('does not trigger warning dialog for images under 12.5 MP', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 3000;
+            mockImage.height = 4000; // 12 MP (under 12.5 MP)
+
+            const file = new File([new Blob(['test'])], 'under_limit.jpg', { type: 'image/jpeg' });
+            
+            const resultPromise = vm.checkAndResizeImage(file);
+            const resultFile = await resultPromise;
+
+            expect(vm.showMpWarningDialog).toBe(false);
+            expect(resultFile).toBe(file);
+        });
+
+        it('triggers warning dialog for images over 12.5 MP', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 4000;
+            mockImage.height = 4000; // 16 MP (over 12.5 MP)
+
+            const file = new File([new Blob(['test'])], 'over_limit.jpg', { type: 'image/jpeg' });
+            
+            const resultPromise = vm.checkAndResizeImage(file);
+
+            // Wait a tick for the image onload to run
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(vm.showMpWarningDialog).toBe(true);
+            expect(vm.mpWarningData).not.toBeNull();
+            expect(vm.mpWarningData.filename).toBe('over_limit.jpg');
+            expect(vm.mpWarningData.mp).toBe(16);
+            expect(vm.mpWarningData.newWidth).toBeLessThan(4000);
+            expect(vm.mpWarningData.newHeight).toBeLessThan(4000);
+        });
+
+        it('keeps the original file when choosing No/KeepOriginal', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 4000;
+            mockImage.height = 4000; // 16 MP
+
+            const file = new File([new Blob(['test'])], 'over_limit.jpg', { type: 'image/jpeg' });
+            const resultPromise = vm.checkAndResizeImage(file);
+
+            // Wait a tick for onload
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Choose KeepOriginal
+            vm.handleMpKeepOriginal();
+
+            const resultFile = await resultPromise;
+            expect(vm.showMpWarningDialog).toBe(false);
+            expect(resultFile).toStrictEqual(file);
+        });
+
+        it('returns null when choosing Cancel', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 4000;
+            mockImage.height = 4000; // 16 MP
+
+            const file = new File([new Blob(['test'])], 'over_limit.jpg', { type: 'image/jpeg' });
+            const resultPromise = vm.checkAndResizeImage(file);
+
+            // Wait a tick for onload
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Choose Cancel
+            vm.handleMpCancel();
+
+            const resultFile = await resultPromise;
+            expect(vm.showMpWarningDialog).toBe(false);
+            expect(resultFile).toBeNull();
+        });
+
+        it('resizes the image when choosing Yes/ResizeConfirm', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 4000;
+            mockImage.height = 4000; // 16 MP
+
+            const file = new File([new Blob(['test'])], 'over_limit.jpg', { type: 'image/jpeg' });
+            const resultPromise = vm.checkAndResizeImage(file);
+
+            // Wait a tick for onload
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Choose ResizeConfirm
+            vm.handleMpResizeConfirm();
+
+            // Wait a tick for resizing process
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            const resultFile = await resultPromise;
+            expect(vm.showMpWarningDialog).toBe(false);
+            expect(resultFile).not.toBeNull();
+            expect(resultFile.name).toBe('over_limit.jpg');
+            expect(resultFile.type).toBe('image/jpeg');
+        });
+
+        it('correctly detects and records large images reactively in largeImages map', async () => {
+            const fileStore = useFileStore();
+            // Mock file in store with id 5
+            fileStore.files.push({
+                id: 5,
+                blob: new Blob(['test']),
+                size: 100,
+                name: 'large_gallery_file.jpg',
+                type: 'image/jpeg',
+                status: 'local',
+                lastModified: Date.now()
+            });
+
+            const wrapper = createWrapper([
+                { name: 'large_gallery_file.jpg', localId: 5, position: 'gallery' }
+            ]);
+            const vm = wrapper.vm as any;
+
+            mockImage.width = 4000;
+            mockImage.height = 4000; // 16 MP
+
+            // Trigger dimension check
+            vm.checkGalleryItemMp(5);
+
+            // Wait a tick for onload
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(vm.largeImages[5]).not.toBeNull();
+            expect(vm.largeImages[5].mp).toBe(16);
+            expect(vm.largeImages[5].width).toBe(4000);
+            expect(vm.largeImages[5].height).toBe(4000);
         });
     });
 });

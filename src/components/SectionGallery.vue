@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, reactive, watch } from 'vue';
+import { ref, computed, watchEffect, reactive, watch, toRaw } from 'vue';
 import { useFileStore, LocalFile } from '../stores/files';
 import { useUiStore } from '../stores/ui';
 import { useToast } from 'primevue/usetoast';
@@ -27,7 +27,7 @@ import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
-    X, ArrowRightLeft, ListChecks
+    X, ArrowRightLeft, ListChecks, TriangleAlert
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
@@ -129,6 +129,198 @@ const showCaptionDialog = ref(false);
 const fileStore = useFileStore();
 const uiStore = useUiStore();
 const toast = useToast();
+
+const MAX_PCGW_MP = 12.5;
+const MAX_PCGW_PIXELS = MAX_PCGW_MP * 1000000;
+
+const showMpWarningDialog = ref(false);
+const mpWarningData = ref<{
+    filename: string;
+    width: number;
+    height: number;
+    mp: number;
+    newWidth: number;
+    newHeight: number;
+    file: File;
+} | null>(null);
+
+let mpWarningResolve: ((file: File | null) => void) | null = null;
+
+const checkAndResizeImage = (file: File): Promise<File | null> => {
+    return new Promise((resolve) => {
+        if (!file.type.startsWith('image/')) {
+            resolve(file);
+            return;
+        }
+
+        const img = new window.Image();
+        const objectUrl = URL.createObjectURL(file);
+        
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const width = img.width;
+            const height = img.height;
+            const pixels = width * height;
+            
+            if (pixels > MAX_PCGW_PIXELS) {
+                const mp = Number((pixels / 1000000).toFixed(2));
+                const maxPixels = 12490000; // slightly under 12.5MP to be safe
+                const ratio = width / height;
+                const newHeight = Math.floor(Math.sqrt(maxPixels / ratio));
+                const newWidth = Math.floor(Math.sqrt(maxPixels * ratio));
+                
+                mpWarningData.value = {
+                    filename: file.name,
+                    width,
+                    height,
+                    mp,
+                    newWidth,
+                    newHeight,
+                    file
+                };
+                
+                showMpWarningDialog.value = true;
+                
+                mpWarningResolve = (resultFile) => {
+                    showMpWarningDialog.value = false;
+                    mpWarningData.value = null;
+                    mpWarningResolve = null;
+                    resolve(resultFile);
+                };
+            } else {
+                resolve(file);
+            }
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            // If image loading fails, proceed with the original file
+            resolve(file);
+        };
+
+        img.src = objectUrl;
+    });
+};
+
+const handleMpResizeConfirm = () => {
+    if (!mpWarningData.value || !mpWarningResolve) return;
+    
+    const { file, newWidth, newHeight } = mpWarningData.value;
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const resizedFile = new File([blob], file.name, {
+                        type: file.type,
+                        lastModified: Date.now()
+                    });
+                    if (mpWarningResolve) mpWarningResolve(resizedFile);
+                } else {
+                    if (mpWarningResolve) mpWarningResolve(file);
+                }
+            }, file.type);
+        } else {
+            if (mpWarningResolve) mpWarningResolve(file);
+        }
+    };
+    
+    img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        if (mpWarningResolve) mpWarningResolve(file);
+    };
+    
+    img.src = objectUrl;
+};
+
+const handleMpKeepOriginal = () => {
+    if (mpWarningData.value && mpWarningResolve) {
+        mpWarningResolve(toRaw(mpWarningData.value.file));
+    }
+};
+
+const handleMpCancel = () => {
+    if (mpWarningResolve) {
+        mpWarningResolve(null);
+    }
+};
+
+const largeImages = reactive<Record<number, { width: number; height: number; mp: number }>>({});
+
+const checkGalleryItemMp = (localId: number) => {
+    if (largeImages[localId] !== undefined) return;
+    
+    const file = fileStore.files.find(f => f.id === localId);
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+        largeImages[localId] = null as any;
+        return;
+    }
+    
+    const objectUrl = URL.createObjectURL(file.blob);
+    const img = new window.Image();
+    img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const width = img.width;
+        const height = img.height;
+        const pixels = width * height;
+        if (pixels > MAX_PCGW_PIXELS) {
+            largeImages[localId] = {
+                width,
+                height,
+                mp: Number((pixels / 1000000).toFixed(2))
+            };
+        } else {
+            largeImages[localId] = null as any;
+        }
+    };
+    img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        largeImages[localId] = null as any;
+    };
+    img.src = objectUrl;
+};
+
+// Watch effect to check local files
+watchEffect(() => {
+    displayImages.value.forEach(img => {
+        if (img.localId !== undefined && largeImages[img.localId] === undefined) {
+            checkGalleryItemMp(img.localId);
+        }
+    });
+});
+
+const triggerResizeForLocalItem = (localId: number) => {
+    const file = fileStore.files.find(f => f.id === localId);
+    if (!file) return;
+    
+    const fileObj = new File([file.blob], file.name, { type: file.type });
+    checkAndResizeImage(fileObj).then(async (resizedFile) => {
+        if (resizedFile && resizedFile !== fileObj) {
+            await fileStore.updateFileStatus(localId, {
+                blob: resizedFile,
+                size: resizedFile.size,
+                lastModified: resizedFile.lastModified
+            });
+            delete largeImages[localId];
+            checkGalleryItemMp(localId);
+            
+            toast.add({
+                severity: 'success',
+                summary: 'Image Resized',
+                detail: 'Successfully resized image to fit within PCGW limits.',
+                life: 3000
+            });
+        }
+    });
+};
 
 const isLoginDialogVisible = ref(false);
 const isUploading = ref(false);
@@ -556,9 +748,27 @@ const batchUpload = async () => {
         if (!file) continue;
         
         try {
+            let uploadBlob: Blob = file.blob;
+            const fileObj = new File([file.blob], file.name, { type: file.type });
+            const finalFile = await checkAndResizeImage(fileObj);
+            if (!finalFile) {
+                continue; // Cancelled for this file
+            }
+            
+            if (finalFile !== fileObj) {
+                await fileStore.updateFileStatus(file.id!, {
+                    blob: finalFile,
+                    size: finalFile.size,
+                    lastModified: finalFile.lastModified
+                });
+                delete largeImages[file.id!];
+                checkGalleryItemMp(file.id!);
+                uploadBlob = finalFile;
+            }
+
             await fileStore.updateFileStatus(file.id!, { status: 'uploading' });
             const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
-            const result = await pcgwMedia.uploadFile(file.blob, {
+            const result = await pcgwMedia.uploadFile(uploadBlob, {
                 filename: file.name,
                 comment: (file.description || '') + attribution,
                 ignorewarnings: false
@@ -660,6 +870,24 @@ const processUpload = async (force: boolean = false) => {
     const file = selectedFile.value;
 
     try {
+        let uploadBlob: Blob = file.blob;
+        const fileObj = new File([file.blob], file.name, { type: file.type });
+        const finalFile = await checkAndResizeImage(fileObj);
+        if (!finalFile) {
+            return; // Cancelled
+        }
+        
+        if (finalFile !== fileObj) {
+            await fileStore.updateFileStatus(file.id!, {
+                blob: finalFile,
+                size: finalFile.size,
+                lastModified: finalFile.lastModified
+            });
+            delete largeImages[file.id!];
+            checkGalleryItemMp(file.id!);
+            uploadBlob = finalFile;
+        }
+
         // 1. Pre-check if not forced
         if (!force) {
             isChecking.value = true;
@@ -683,7 +911,7 @@ const processUpload = async (force: boolean = false) => {
 
         // 2. Attempt Upload
         const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
-        const result = await pcgwMedia.uploadFile(file.blob, {
+        const result = await pcgwMedia.uploadFile(uploadBlob, {
             filename: editFilename.value,
             comment: (editDescription.value || '') + attribution,
             ignorewarnings: force
@@ -1133,11 +1361,12 @@ const getOriginalFormatForCrop = (job: CropJob): string => {
         const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
         if (file?.type) return file.type;
     } else if (job.type === 'combine' && job.combineItem) {
-        if (job.combineItem.localId) {
-            const file = fileStore.files.find(f => f.id === job.combineItem.localId);
+        const combineItem = job.combineItem;
+        if (combineItem.localId) {
+            const file = fileStore.files.find(f => f.id === combineItem.localId);
             if (file?.type) return file.type;
         }
-        if (job.combineItem.file?.type) return job.combineItem.file.type;
+        if (combineItem.file?.type) return combineItem.file.type;
     }
     
     const name = job.galleryItem?.name || job.combineItem?.name || '';
@@ -1703,7 +1932,15 @@ defineExpose({
     replaceExtension,
     initiateCrop,
     handleConfirmCrop,
-    cropperRef
+    cropperRef,
+    showMpWarningDialog,
+    mpWarningData,
+    checkAndResizeImage,
+    handleMpResizeConfirm,
+    handleMpKeepOriginal,
+    handleMpCancel,
+    largeImages,
+    triggerResizeForLocalItem
 });
 </script>
 
@@ -1928,6 +2165,16 @@ defineExpose({
                             class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 text-center truncate pointer-events-none">
                             {{ element.caption }}
                         </div>
+                    </div>
+
+                    <!-- Large Image Alert Banner -->
+                    <div v-if="element.localId && largeImages[element.localId]"
+                        class="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded flex flex-col gap-1.5 relative z-10">
+                        <div class="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 text-xs font-medium">
+                            <TriangleAlert class="w-4 h-4 shrink-0 text-amber-500" />
+                            <span>Exceeds 12.5 MP ({{ largeImages[element.localId].mp }} MP)</span>
+                        </div>
+                        <Button label="Resize Image" severity="warning" size="small" class="w-full text-[10px]! py-1!" @click.stop="triggerResizeForLocalItem(element.localId)" />
                     </div>
 
                     <!-- Actions -->
@@ -2260,6 +2507,38 @@ defineExpose({
                 <div class="flex justify-end gap-2 mt-4">
                     <Button label="Cancel" text @click="showOverwriteConfirm = false" />
                     <Button label="Yes, Overwrite" severity="warning" @click="processUpload(true)" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- MP Warning and Auto-resizing Dialog -->
+        <Dialog v-model:visible="showMpWarningDialog" modal :draggable="false" class="w-full max-w-md" :closable="false">
+            <template #header>
+                <div class="flex items-center gap-2">
+                    <TriangleAlert class="w-5 h-5 text-amber-500 animate-bounce" />
+                    <span class="font-bold">Image Too Large</span>
+                </div>
+            </template>
+            <div class="flex flex-col gap-4 py-2">
+                <p class="text-sm leading-relaxed">
+                    The file <strong class="break-all">"{{ mpWarningData?.filename }}"</strong> has a resolution of 
+                    <strong>{{ mpWarningData?.width }}x{{ mpWarningData?.height }} ({{ mpWarningData?.mp }} MP)</strong>.
+                </p>
+                <p class="text-sm leading-relaxed">
+                    PCGW supports a maximum of <strong>12.5 MP</strong> to correctly generate thumbnails. Uploading a larger image will cause thumbnail generation errors in the gallery on the wiki.
+                </p>
+                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 flex flex-col gap-1">
+                    <span class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase">Automatic Resizing:</span>
+                    <span class="text-xs text-surface-600 dark:text-surface-300">
+                        Resize to: <strong>{{ mpWarningData?.newWidth }}x{{ mpWarningData?.newHeight }} (~12.5 MP)</strong>
+                    </span>
+                    <span class="text-[10px] text-surface-400 italic">Original aspect ratio will be preserved exactly.</span>
+                </div>
+
+                <div class="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-surface-100 dark:border-surface-700">
+                    <Button label="Cancel" severity="danger" text class="w-full sm:w-auto" @click="handleMpCancel" />
+                    <Button label="No, keep original" severity="secondary" text class="w-full sm:w-auto" @click="handleMpKeepOriginal" />
+                    <Button label="Yes, resize" severity="warning" class="w-full sm:w-auto" @click="handleMpResizeConfirm" />
                 </div>
             </div>
         </Dialog>
