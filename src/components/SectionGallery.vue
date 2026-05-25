@@ -17,6 +17,7 @@ import ProgressBar from 'primevue/progressbar';
 import FileUpload from 'primevue/fileupload';
 import Menu from 'primevue/menu';
 import MultiSelect from 'primevue/multiselect';
+import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -1105,6 +1106,89 @@ const isCropping = ref(false);
 const cropImageUrl = ref<string>('');
 const cropOnUpload = ref(false);
 
+const cropFormatOptions = [
+    { label: 'PNG', value: 'image/png' },
+    { label: 'JPEG', value: 'image/jpeg' },
+    { label: 'WebP', value: 'image/webp' }
+];
+
+const selectedCropFormat = ref('image/png');
+const selectedCombineFormat = ref('image/png');
+const isCombineFormatManuallySelected = ref(false);
+
+const onCombineFormatChange = () => {
+    isCombineFormatManuallySelected.value = true;
+};
+
+const getImageFormatFromName = (name: string): string => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (ext === 'png') return 'image/png';
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    if (ext === 'webp') return 'image/webp';
+    return 'image/png'; // Default fallback
+};
+
+const getOriginalFormatForCrop = (job: CropJob): string => {
+    if (job.type === 'gallery' && job.galleryItem?.localId !== undefined) {
+        const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
+        if (file?.type) return file.type;
+    } else if (job.type === 'combine' && job.combineItem) {
+        if (job.combineItem.localId) {
+            const file = fileStore.files.find(f => f.id === job.combineItem.localId);
+            if (file?.type) return file.type;
+        }
+        if (job.combineItem.file?.type) return job.combineItem.file.type;
+    }
+    
+    const name = job.galleryItem?.name || job.combineItem?.name || '';
+    return getImageFormatFromName(name);
+};
+
+const getCombineItemFormat = (item: CombineItem): string => {
+    if (item.type === 'local' && item.localId) {
+        const file = fileStore.files.find(f => f.id === item.localId);
+        if (file?.type) return file.type;
+    }
+    if (item.file?.type) return item.file.type;
+    return getImageFormatFromName(item.name);
+};
+
+const getDefaultCombineFormat = (queue: CombineItem[]): string => {
+    if (queue.length === 0) return 'image/png';
+    
+    const formats = queue.map(getCombineItemFormat);
+    const counts: Record<string, number> = {};
+    const firstOccurrences: string[] = [];
+    
+    formats.forEach(fmt => {
+        if (!counts[fmt]) {
+            counts[fmt] = 0;
+            firstOccurrences.push(fmt);
+        }
+        counts[fmt]++;
+    });
+    
+    let maxCount = 0;
+    formats.forEach(fmt => {
+        if (counts[fmt] > maxCount) {
+            maxCount = counts[fmt];
+        }
+    });
+    
+    const tiedFormats = firstOccurrences.filter(fmt => counts[fmt] === maxCount);
+    return tiedFormats[0] || 'image/png';
+};
+
+const replaceExtension = (filename: string, newMime: string): string => {
+    const parts = filename.split('.');
+    if (parts.length <= 1) return filename;
+    parts.pop();
+    let ext = 'png';
+    if (newMime === 'image/jpeg') ext = 'jpg';
+    else if (newMime === 'image/webp') ext = 'webp';
+    return parts.join('.') + '.' + ext;
+};
+
 interface CropJob {
     type: 'gallery' | 'combine';
     galleryItem?: GalleryImage;
@@ -1115,6 +1199,7 @@ const croppingQueue = ref<CropJob[]>([]);
 const currentManualCropJob = ref<CropJob | null>(null);
 
 const initiateCrop = (job: CropJob) => {
+    selectedCropFormat.value = getOriginalFormatForCrop(job);
     if (job.type === 'gallery' && job.galleryItem?.localId !== undefined) {
         const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
         if (!file) return;
@@ -1158,6 +1243,8 @@ const handleConfirmCrop = async () => {
         return;
     }
 
+    const targetMime = selectedCropFormat.value;
+
     canvas.toBlob(async (blob: Blob | null) => {
         if (!blob) {
             isCropping.value = false;
@@ -1173,25 +1260,41 @@ const handleConfirmCrop = async () => {
         if (currentJob.type === 'gallery' && currentJob.galleryItem?.localId !== undefined) {
             const localFile = fileStore.files.find(f => f.id === currentJob.galleryItem?.localId);
             if (localFile) {
-                const newFile = new File([blob], localFile.name, { type: blob.type, lastModified: Date.now() });
+                const newName = replaceExtension(localFile.name, targetMime);
+                const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
                 await fileStore.updateFileStatus(localFile.id!, {
+                    name: newName,
                     blob: newFile,
                     size: newFile.size,
-                    type: newFile.type,
+                    type: targetMime,
                     lastModified: newFile.lastModified
                 });
+                
+                // Update the gallery item's name in modelValue so it updates in the gallery
+                const newValue = [...(props.modelValue || [])];
+                const itemIdx = newValue.findIndex(img => (typeof img === 'string' ? img : img.localId) === localFile.id);
+                if (itemIdx !== -1) {
+                    const item = newValue[itemIdx];
+                    if (typeof item === 'string') {
+                        newValue[itemIdx] = newName;
+                    } else {
+                        newValue[itemIdx] = { ...item, name: newName };
+                    }
+                    emit('update:modelValue', newValue);
+                }
             }
         } else if (currentJob.type === 'combine' && currentJob.combineItem) {
             const item = currentJob.combineItem;
-            // Create a brand new file from the blob
-            const newFile = new File([blob], item.name, { type: 'image/png', lastModified: Date.now() });
+            const newName = replaceExtension(item.name, targetMime);
+            const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
             
             // If it's a local file, also update it in the file store so it persists
             if (item.localId) {
                 await fileStore.updateFileStatus(item.localId, {
+                    name: newName,
                     blob: newFile,
                     size: newFile.size,
-                    type: newFile.type,
+                    type: targetMime,
                     lastModified: newFile.lastModified
                 });
             } else {
@@ -1200,6 +1303,7 @@ const handleConfirmCrop = async () => {
                 item.id = 'local-' + item.localId;
             }
             
+            item.name = newName;
             item.file = newFile;
             if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
             item.url = URL.createObjectURL(newFile);
@@ -1219,7 +1323,7 @@ const handleConfirmCrop = async () => {
         });
 
         showCropDialog.value = false;
-    }, 'image/png');
+    }, targetMime);
 };
 
 watch(showCropDialog, (newVal) => {
@@ -1398,7 +1502,8 @@ const generatePreview = async () => {
             }
         }
 
-        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+        const targetMime = selectedCombineFormat.value || 'image/png';
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, targetMime));
         if (blob) {
             if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
             combinePreviewUrl.value = URL.createObjectURL(blob);
@@ -1413,8 +1518,14 @@ const generatePreview = async () => {
     }
 };
 
-watch([combineQueue, combineOrientation, combineGap], () => {
+watch([combineQueue, combineOrientation, combineGap, selectedCombineFormat], () => {
     generatePreview();
+}, { deep: true });
+
+watch(combineQueue, (newQueue) => {
+    if (!isCombineFormatManuallySelected.value) {
+        selectedCombineFormat.value = getDefaultCombineFormat(newQueue);
+    }
 }, { deep: true });
 
 const editingCombineIndex = ref<number | null>(null);
@@ -1485,6 +1596,7 @@ const closeCombineDialog = () => {
     previewObjUrlBlob = null;
     combineTempGallerySelection.value = [];
     editingCombineIndex.value = null;
+    isCombineFormatManuallySelected.value = false;
 };
 
 const handleConfirmCombine = async () => {
@@ -1496,7 +1608,12 @@ const handleConfirmCombine = async () => {
     isCombining.value = true;
     try {
         const blob = previewObjUrlBlob;
-        const combinedFile = new File([blob], `combined_${Date.now()}.png`, { type: 'image/png', lastModified: Date.now() });
+        const targetMime = selectedCombineFormat.value;
+        let ext = 'png';
+        if (targetMime === 'image/jpeg') ext = 'jpg';
+        else if (targetMime === 'image/webp') ext = 'webp';
+        
+        const combinedFile = new File([blob], `combined_${Date.now()}.${ext}`, { type: targetMime, lastModified: Date.now() });
         const id = await fileStore.addFile(combinedFile);
 
         const combineConfig = {
@@ -1574,7 +1691,19 @@ defineExpose({
     showCombineDialog,
     combineQueue,
     handleConfirmCombine,
-    setPreviewObjUrlBlob: (blob: Blob | null) => previewObjUrlBlob = blob
+    setPreviewObjUrlBlob: (blob: Blob | null) => previewObjUrlBlob = blob,
+    selectedCropFormat,
+    selectedCombineFormat,
+    isCombineFormatManuallySelected,
+    cropFormatOptions,
+    getImageFormatFromName,
+    getOriginalFormatForCrop,
+    getCombineItemFormat,
+    getDefaultCombineFormat,
+    replaceExtension,
+    initiateCrop,
+    handleConfirmCrop,
+    cropperRef
 });
 </script>
 
@@ -2141,14 +2270,20 @@ defineExpose({
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
                     <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" auto-zoom />
                 </div>
-                <div class="flex justify-end gap-2 mt-2">
-                    <Button :label="croppingQueue.length > 1 ? 'Skip' : 'Cancel'" text @click="closeCropDialog" :disabled="isCropping" />
-                    <Button :label="croppingQueue.length > 1 ? 'Apply & Next' : 'Apply Crop'" severity="primary" @click="handleConfirmCrop" :loading="isCropping">
-                        <template #icon>
-                            <Loader2 v-if="isCropping" class="w-4 h-4 animate-spin mr-2" />
-                            <Crop v-else class="w-4 h-4 mr-2" />
-                        </template>
-                    </Button>
+                <div class="flex items-center justify-between w-full mt-2 pt-2 border-t border-surface-100 dark:border-surface-700">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Format:</span>
+                        <Select v-model="selectedCropFormat" :options="cropFormatOptions" optionLabel="label" optionValue="value" class="w-32 text-xs" />
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <Button :label="croppingQueue.length > 1 ? 'Skip' : 'Cancel'" text @click="closeCropDialog" :disabled="isCropping" />
+                        <Button :label="croppingQueue.length > 1 ? 'Apply & Next' : 'Apply Crop'" severity="primary" @click="handleConfirmCrop" :loading="isCropping">
+                            <template #icon>
+                                <Loader2 v-if="isCropping" class="w-4 h-4 animate-spin mr-2" />
+                                <Crop v-else class="w-4 h-4 mr-2" />
+                            </template>
+                        </Button>
+                    </div>
                 </div>
             </div>
         </Dialog>
@@ -2181,6 +2316,11 @@ defineExpose({
                                 <label for="vertical" class="text-sm cursor-pointer">Vertical</label>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold text-xs text-surface-500 uppercase">Format</label>
+                        <Select v-model="selectedCombineFormat" :options="cropFormatOptions" optionLabel="label" optionValue="value" class="w-32" @change="onCombineFormatChange" />
                     </div>
 
                     <div class="flex flex-col gap-2">

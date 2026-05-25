@@ -268,4 +268,134 @@ describe('SectionGallery.vue', () => {
             });
         });
     });
+
+    describe('Image Format Selection Logic', () => {
+        it('correctly retrieves MIME type from file extension', () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            expect(vm.getImageFormatFromName('photo.png')).toBe('image/png');
+            expect(vm.getImageFormatFromName('photo.jpg')).toBe('image/jpeg');
+            expect(vm.getImageFormatFromName('photo.jpeg')).toBe('image/jpeg');
+            expect(vm.getImageFormatFromName('photo.webp')).toBe('image/webp');
+            expect(vm.getImageFormatFromName('photo.unknown')).toBe('image/png'); // fallback
+        });
+
+        it('correctly replaces file extension based on MIME type', () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            expect(vm.replaceExtension('image.png', 'image/jpeg')).toBe('image.jpg');
+            expect(vm.replaceExtension('image.jpg', 'image/webp')).toBe('image.webp');
+            expect(vm.replaceExtension('image.webp', 'image/png')).toBe('image.png');
+            expect(vm.replaceExtension('no-ext', 'image/png')).toBe('no-ext'); // no extension to replace
+        });
+
+        it('extracts correct original format for crop jobs', () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            // Crop job from local file in gallery with JPEG format in store
+            const galleryJob = {
+                type: 'gallery' as const,
+                galleryItem: { name: 'local_test.jpg', localId: 1, position: 'gallery' as const }
+            };
+            expect(vm.getOriginalFormatForCrop(galleryJob)).toBe('image/jpeg'); // Mock store file 1 is JPEG implicitly or falls back to name if no file type
+
+            // Crop job from combine item with file type
+            const combineJob = {
+                type: 'combine' as const,
+                combineItem: {
+                    name: 'combined_image.png',
+                    type: 'local' as const,
+                    id: 'local-10',
+                    file: new File([new Blob([''])], 'combined_image.png', { type: 'image/png' })
+                }
+            };
+            expect(vm.getOriginalFormatForCrop(combineJob)).toBe('image/png');
+        });
+
+        it('determines the most used format in combine queue with tiebreaker', () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            // 2 JPEGs and 1 PNG -> JPEG
+            const queue1 = [
+                { id: '1', type: 'local' as const, name: 'image1.jpg', file: new File([], 'image1.jpg', { type: 'image/jpeg' }) },
+                { id: '2', type: 'local' as const, name: 'image2.png', file: new File([], 'image2.png', { type: 'image/png' }) },
+                { id: '3', type: 'local' as const, name: 'image3.jpg', file: new File([], 'image3.jpg', { type: 'image/jpeg' }) }
+            ];
+            expect(vm.getDefaultCombineFormat(queue1)).toBe('image/jpeg');
+
+            // 1 JPEG and 1 PNG (Tie) -> first one in queue (JPEG)
+            const queue2 = [
+                { id: '1', type: 'local' as const, name: 'image1.jpg', file: new File([], 'image1.jpg', { type: 'image/jpeg' }) },
+                { id: '2', type: 'local' as const, name: 'image2.png', file: new File([], 'image2.png', { type: 'image/png' }) }
+            ];
+            expect(vm.getDefaultCombineFormat(queue2)).toBe('image/jpeg');
+
+            // 1 PNG and 1 JPEG (Tie) -> first one in queue (PNG)
+            const queue3 = [
+                { id: '1', type: 'local' as const, name: 'image1.png', file: new File([], 'image1.png', { type: 'image/png' }) },
+                { id: '2', type: 'local' as const, name: 'image2.jpg', file: new File([], 'image2.jpg', { type: 'image/jpeg' }) }
+            ];
+            expect(vm.getDefaultCombineFormat(queue3)).toBe('image/png');
+        });
+
+        it('updates selectedCombineFormat reactively on combineQueue changes unless manual flag is set', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            expect(vm.selectedCombineFormat).toBe('image/png');
+            expect(vm.isCombineFormatManuallySelected).toBe(false);
+
+            // Add JPEG image to queue
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'image1.jpg', file: new File([], 'image1.jpg', { type: 'image/jpeg' }) }
+            ];
+            await wrapper.vm.$nextTick(); // Wait for watcher to trigger
+
+            expect(vm.selectedCombineFormat).toBe('image/jpeg');
+
+            // Override manually
+            vm.onCombineFormatChange();
+            expect(vm.isCombineFormatManuallySelected).toBe(true);
+
+            // Add PNG image (it should be the majority, but should not override since manual flag is set)
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'image1.jpg', file: new File([], 'image1.jpg', { type: 'image/jpeg' }) },
+                { id: '2', type: 'local' as const, name: 'image2.png', file: new File([], 'image2.png', { type: 'image/png' }) },
+                { id: '3', type: 'local' as const, name: 'image3.png', file: new File([], 'image3.png', { type: 'image/png' }) }
+            ];
+            await wrapper.vm.$nextTick();
+
+            expect(vm.selectedCombineFormat).toBe('image/jpeg'); // Kept JPEG manual choice!
+        });
+
+        it('creates file with correct format and extension on handleConfirmCombine', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(200);
+
+            // Set combine queue and preview blob
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'image1.jpg', file: new File([], 'image1.jpg', { type: 'image/jpeg' }) },
+                { id: '2', type: 'local' as const, name: 'image2.jpg', file: new File([], 'image2.jpg', { type: 'image/jpeg' }) }
+            ];
+            vm.setPreviewObjUrlBlob(new Blob(['preview']));
+
+            // Choose WebP output format
+            vm.selectedCombineFormat = 'image/webp';
+
+            await vm.handleConfirmCombine();
+
+            // Verify call to addFile with correct file extension (.webp) and MIME (image/webp)
+            expect(fileStore.addFile).toHaveBeenCalled();
+            const addedFile = (fileStore.addFile as any).mock.calls[0][0] as File;
+            expect(addedFile.name).toContain('.webp');
+            expect(addedFile.type).toBe('image/webp');
+        });
+    });
 });
