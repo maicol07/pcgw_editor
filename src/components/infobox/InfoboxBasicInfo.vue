@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, inject } from 'vue';
-import { GameInfobox } from '../../models/GameData';
+import { ref, watch } from 'vue';
 import { pcgwApi } from '../../services/pcgwApi';
 import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import AutocompleteField from '../AutocompleteField.vue';
 import { Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, IdCard } from 'lucide-vue-next';
@@ -91,12 +89,12 @@ const openUploadPage = () => {
                             <Image class="text-lg w-5 h-5" />
                             <span class="font-medium">{{ cover }}</span>
                         </div>
-                        <a :href="coverImageUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                        <div class="relative max-w-[200px] border border-surface-200 dark:border-surface-700 rounded overflow-hidden shadow-md bg-surface-100 dark:bg-surface-900 transition-all duration-300 hover:scale-[1.02]">
+                            <img :src="coverImageUrl" :alt="cover" class="max-h-[250px] w-auto mx-auto object-contain block" />
+                        </div>
+                        <a :href="coverImageUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors w-fit">
                             <ExternalLink class="w-4 h-4" /> View Cover on PCGW
                         </a>
-                        <p class="text-xs text-surface-500 dark:text-surface-400 flex items-center gap-1">
-                            <Info class="w-3 h-3" /> Preview not available due to CORS policy. Click above to view.
-                        </p>
                     </div>
                     <div v-else class="text-sm text-red-500 dark:text-red-400 py-4 text-center flex flex-col items-center gap-2">
                         <TriangleAlert class="w-6 h-6" /> Image not found on PCGW

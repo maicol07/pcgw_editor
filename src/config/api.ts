@@ -11,6 +11,9 @@ export const API_CONFIG = {
     // New Smart Proxy for authenticated requests
     workerProxyUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/proxy',
 
+    // New Smart Proxy for images
+    workerImageUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/image',
+
     // Used for the initial logintoken request which often fails CORS on localhost
     proxyUrl: (import.meta.env.DEV && !PROXY_PREFIX) ? '/pcgw-api' : (PROXY_PREFIX + PCGW_API_URL),
     
@@ -22,8 +25,25 @@ export const API_CONFIG = {
 
 export const getWorkerLoginUrl = () => API_CONFIG.workerLoginUrl;
 export const getWorkerProxyUrl = () => API_CONFIG.workerProxyUrl;
+export const getWorkerImageUrl = () => API_CONFIG.workerImageUrl;
 export const getProxyApiUrl = () => API_CONFIG.proxyUrl;
 export const getDirectApiUrl = () => API_CONFIG.directUrl;
+
+/**
+ * Wraps a direct PCGW image URL to go through the smart image proxy
+ */
+export const getProxiedImageUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    // If it's already a proxied URL, local blob URL, or data URL, don't double-proxy it
+    if (url.startsWith('blob:') || url.startsWith('data:') || url.includes('/api/image')) {
+        return url;
+    }
+    // Only proxy pcgamingwiki.com images (including subdomains)
+    if (url.includes('pcgamingwiki.com')) {
+        return `${getWorkerImageUrl()}?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+};
 
 // Hook for adding required headers for certain proxies (like cors-anywhere)
 export const getApiHeaders = () => {

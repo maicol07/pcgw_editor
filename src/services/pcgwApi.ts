@@ -3,7 +3,7 @@
  * Provides search and autocomplete functionality using Cargo tables with caching
  */
 import { useStorage } from '@vueuse/core';
-import { getDirectApiUrl, getApiHeaders, apiFetch } from '../config/api';
+import { getDirectApiUrl, getApiHeaders, apiFetch, getProxiedImageUrl } from '../config/api';
 const CACHE_KEY = 'pcgw_api_cache_v2';
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -271,7 +271,7 @@ class PCGWApiService {
 
     async getImageUrl(filename: string): Promise<string | null> {
         const info = await this.getImageInfo(filename);
-        return info?.url || null;
+        return getProxiedImageUrl(info?.url || null);
     }
 
     async getImageInfo(filename: string): Promise<{ url: string; user: string; size: number; width: number; height: number; canonicalName: string } | null> {
@@ -291,7 +291,9 @@ class PCGWApiService {
             const cached = this.cache.value[cacheKey];
             if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
                 try {
-                    results[key] = JSON.parse(cached.data[0]);
+                    const info = JSON.parse(cached.data[0]);
+                    info.url = getProxiedImageUrl(info.url) || '';
+                    results[key] = info;
                 } catch (e) {
                     toFetch.push(filename);
                 }
@@ -334,7 +336,7 @@ class PCGWApiService {
                             const normalizedCanonicalName = normalizeFilename(canonicalName);
 
                             const info = {
-                                url: page.imageinfo[0].url,
+                                url: getProxiedImageUrl(page.imageinfo[0].url) || '',
                                 user: page.imageinfo[0].user,
                                 size: page.imageinfo[0].size,
                                 width: page.imageinfo[0].width,

@@ -6,6 +6,7 @@ import { useToast } from 'primevue/usetoast';
 import { pcgwAuth } from '../services/pcgwAuth';
 import { pcgwMedia } from '../services/pcgwMedia';
 import { pcgwApi } from '../services/pcgwApi';
+import { getProxiedImageUrl } from '../config/api';
 import type { GalleryImage } from '../models/GameData';
 import AutocompleteField from './AutocompleteField.vue';
 import Button from 'primevue/button';
@@ -1244,41 +1245,65 @@ const normalizeFilename = (name: string) => name.replace(/_/g, ' ').trim();
 // Resolved image info (url and uploader)
 const resolvedInfos = reactive<Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }>>({});
 
-// Fetch info for images
-watchEffect(() => {
-    props.modelValue?.forEach(async (img) => {
-        const currentName = typeof img === 'string' ? img : img.name;
-        const normalizedItemName = normalizeFilename(currentName);
-        if (!resolvedInfos[normalizedItemName]) {
-            const info = await pcgwApi.getImageInfo(currentName);
-            if (info) {
-                resolvedInfos[normalizedItemName] = info;
+// Fetch info for images in batches reactively
+watch(() => props.modelValue, async (newVal) => {
+    if (!newVal || newVal.length === 0) return;
+    
+    // 1. Gather all names to fetch
+    const namesMap = newVal.map(img => {
+        const name = typeof img === 'string' ? img : img.name;
+        return { original: name, normalized: normalizeFilename(name) };
+    });
 
-                // Sync model if it's a redirect
-                if (info.canonicalName !== normalizedItemName) {
-                    const newValue = [...(props.modelValue || [])];
-                    const idx = newValue.findIndex(item => (typeof item === 'string' ? item : item.name) === currentName);
-                    if (idx !== -1) {
-                        const item = newValue[idx];
-                        if (typeof item === 'string') {
-                            newValue[idx] = info.canonicalName;
-                        } else {
-                            newValue[idx] = { ...item, name: info.canonicalName };
-                        }
-                        emit('update:modelValue', newValue);
-                        
-                        toast.add({
-                            severity: 'info',
-                            summary: 'Filename Synchronized',
-                            detail: `"${currentName}" redirected to "${info.canonicalName}" on PCGW. Editor updated to current name.`,
-                            life: 5000
-                        });
+    const toFetch = namesMap
+        .filter(item => !resolvedInfos[item.normalized])
+        .map(item => item.original);
+
+    if (toFetch.length === 0) return;
+
+    try {
+        const infos = await pcgwApi.getImagesInfo(toFetch);
+        
+        // 2. Populate resolvedInfos
+        Object.keys(infos).forEach(key => {
+            const normKey = normalizeFilename(key);
+            resolvedInfos[normKey] = infos[key];
+        });
+
+        // 3. Sync model if any item is a redirect
+        let modelUpdated = false;
+        const newValue = [...newVal];
+
+        namesMap.forEach(item => {
+            const info = resolvedInfos[item.normalized];
+            if (info && info.canonicalName !== item.normalized) {
+                const idx = newValue.findIndex(img => (typeof img === 'string' ? img : img.name) === item.original);
+                if (idx !== -1) {
+                    const existing = newValue[idx];
+                    if (typeof existing === 'string') {
+                        newValue[idx] = info.canonicalName;
+                    } else {
+                        newValue[idx] = { ...existing, name: info.canonicalName };
                     }
+                    modelUpdated = true;
+                    
+                    toast.add({
+                        severity: 'info',
+                        summary: 'Filename Synchronized',
+                        detail: `"${item.original}" redirected to "${info.canonicalName}" on PCGW. Editor updated.`,
+                        life: 5000
+                    });
                 }
             }
+        });
+
+        if (modelUpdated) {
+            emit('update:modelValue', newValue);
         }
-    });
-});
+    } catch (e) {
+        console.error('Failed to load gallery images info:', e);
+    }
+}, { deep: true, immediate: true });
 
 const isAlsoOnPcgw = (element: GalleryImage) => {
     if (!element.localId) return false;
@@ -1288,7 +1313,7 @@ const isAlsoOnPcgw = (element: GalleryImage) => {
     return false;
 };
 
-const getImageUrl = (element: GalleryImage) => {
+const getImageUrl = (element: GalleryImage): string | undefined => {
     const pcgwUrl = resolvedInfos[normalizeFilename(element.name)]?.url;
     
     if (element.localId) {
@@ -1297,7 +1322,7 @@ const getImageUrl = (element: GalleryImage) => {
             if (file) return getFileUrl(file.blob);
         }
     }
-    return pcgwUrl;
+    return getProxiedImageUrl(pcgwUrl) || undefined;
 };
 
 const toggleSource = (index: number) => {
@@ -2056,13 +2081,20 @@ defineExpose({
                     <AutocompleteField v-model="newImage" dataSource="files" placeholder="Search by filename..."
                         :multiple="true" class="w-full" @suggestions-update="handleSuggestionsUpdate">
                         <template #option="{ option }">
-                            <div class="flex items-center justify-between w-full group/search-item">
-                                <div class="flex flex-col gap-0.5 overflow-hidden">
-                                    <span class="font-bold text-sm truncate">{{ option }}</span>
-                                    <div v-if="resolvedInfos[normalizeFilename(option)]"
-                                        class="flex items-center gap-1 text-[10px] text-surface-500">
-                                        <User class="w-3 h-3" />
-                                        <span>{{ resolvedInfos[normalizeFilename(option)].user }}</span>
+                            <div class="flex items-center justify-between w-full group/search-item gap-3 py-1">
+                                <div class="flex items-center gap-3 overflow-hidden">
+                                    <div class="w-10 h-10 rounded border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                                        <img v-if="resolvedInfos[normalizeFilename(option)]?.url" :src="resolvedInfos[normalizeFilename(option)].url" 
+                                            class="w-full h-full object-cover" />
+                                        <Image v-else class="w-4 h-4 text-surface-400" />
+                                    </div>
+                                    <div class="flex flex-col gap-0.5 overflow-hidden">
+                                        <span class="font-bold text-sm truncate">{{ option }}</span>
+                                        <div v-if="resolvedInfos[normalizeFilename(option)]"
+                                            class="flex items-center gap-1 text-[10px] text-surface-500">
+                                            <User class="w-3 h-3" />
+                                            <span>{{ resolvedInfos[normalizeFilename(option)].user }}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <a :href="`https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(option.replace(/ /g, '_'))}`"

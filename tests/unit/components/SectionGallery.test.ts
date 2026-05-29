@@ -214,6 +214,17 @@ describe('SectionGallery.vue', () => {
             expect(vm.getImageUrl(element)).toBe('blob:mock-url'); // mocked object url for local file
         });
 
+        it('proxies PCGW url when it belongs to pcgamingwiki.com', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            vm.resolvedInfos['pcgamingwiki image.jpg'] = { url: 'https://images.pcgamingwiki.com/w/images/a/ab/Cover.jpg' };
+            
+            const element: any = { name: 'pcgamingwiki image.jpg' };
+            const expected = `https://pcgw-proxy-login.maicol07.workers.dev/api/image?url=${encodeURIComponent('https://images.pcgamingwiki.com/w/images/a/ab/Cover.jpg')}`;
+            expect(vm.getImageUrl(element)).toBe(expected);
+        });
+
         it('toggles preferLocal on an item', async () => {
             const wrapper = createWrapper([
                 { name: 'local_test.jpg', localId: 1 }

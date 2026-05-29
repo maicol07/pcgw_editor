@@ -181,6 +181,112 @@ export default {
             }
         }
 
-        return new Response(JSON.stringify({ message: 'Worker Bridge Active. Endpoints: /api/login, /api/proxy' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        // ==========================================
+        // 3. ENDPOINT: IMAGE PROXY AND CACHE
+        // ==========================================
+        if (request.method === 'GET' && url.pathname === '/api/image') {
+            try {
+                const targetUrlStr = url.searchParams.get('url');
+                if (!targetUrlStr) {
+                    return new Response(JSON.stringify({ error: 'URL parameter is required' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                    });
+                }
+
+                let targetUrl;
+                try {
+                    targetUrl = new URL(targetUrlStr);
+                } catch {
+                    return new Response(JSON.stringify({ error: 'Invalid URL parameter' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                    });
+                }
+
+                // Security check: restrict proxying to pcgamingwiki.com domains only to prevent SSRF / open proxy abuse
+                const allowedHostnames = [
+                    'www.pcgamingwiki.com',
+                    'pcgamingwiki.com',
+                    'images.pcgamingwiki.com',
+                    'thumbnails.pcgamingwiki.com'
+                ];
+                if (!allowedHostnames.includes(targetUrl.hostname)) {
+                    return new Response(JSON.stringify({ error: 'Host not allowed' }), {
+                        status: 403,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                    });
+                }
+
+                // Caching strategy using Cache API
+                let cache = null;
+                try {
+                    cache = caches.default;
+                } catch (e) {
+                    console.warn('Cache API not available in this environment:', e);
+                }
+
+                // The request URL (with search params) uniquely identifies this image
+                const cacheKey = new Request(request.url, {
+                    method: 'GET',
+                    headers: { 'Accept': request.headers.get('Accept') || '*/*' }
+                });
+
+                if (cache) {
+                    const cachedResponse = await cache.match(cacheKey);
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                }
+
+                // Fetch from PCGW
+                const fetchHeaders = {
+                    'User-Agent': clientUserAgent,
+                    'Accept': request.headers.get('Accept') || '*/*'
+                };
+
+                const imageResponse = await fetch(targetUrl.toString(), {
+                    method: 'GET',
+                    headers: fetchHeaders
+                });
+
+                if (!imageResponse.ok) {
+                    return new Response(JSON.stringify({ error: `Failed to fetch image from PCGW: ${imageResponse.statusText}` }), {
+                        status: imageResponse.status,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                    });
+                }
+
+                // Clone headers and add CORS / Caching directives
+                const responseHeaders = new Headers(imageResponse.headers);
+                for (const [key, value] of Object.entries(corsHeaders)) {
+                    responseHeaders.set(key, value);
+                }
+
+                // Cache-Control: Cache for 10 minutes (600 seconds)
+                responseHeaders.set('Cache-Control', 'public, max-age=600, s-maxage=600');
+
+                const proxiedResponse = new Response(imageResponse.body, {
+                    status: imageResponse.status,
+                    statusText: imageResponse.statusText,
+                    headers: responseHeaders
+                });
+
+                // Save to cache asynchronously if the response is successful and cache is available
+                if (cache && imageResponse.ok) {
+                    ctx.waitUntil(cache.put(cacheKey, proxiedResponse.clone()));
+                }
+
+                return proxiedResponse;
+
+            } catch (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                });
+            }
+        }
+
+        return new Response(JSON.stringify({ message: 'Worker Bridge Active. Endpoints: /api/login, /api/proxy, /api/image' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 };

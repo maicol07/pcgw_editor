@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { getApiHeaders, API_CONFIG, apiFetch } from '../../../src/config/api';
+import { getApiHeaders, API_CONFIG, apiFetch, getProxiedImageUrl } from '../../../src/config/api';
 import pkg from '../../../package.json';
 
 describe('src/config/api.ts', () => {
@@ -27,6 +27,33 @@ describe('src/config/api.ts', () => {
         expect(headers).toHaveProperty('X-Requested-With', 'XMLHttpRequest');
         expect(headers).toHaveProperty('User-Agent', expectedUserAgent);
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
+    });
+
+    describe('getProxiedImageUrl', () => {
+        it('should return null for null input', () => {
+            expect(getProxiedImageUrl(null)).toBeNull();
+        });
+
+        it('should return untouched local blob and data URLs', () => {
+            expect(getProxiedImageUrl('blob:http://localhost:3000/1234')).toBe('blob:http://localhost:3000/1234');
+            expect(getProxiedImageUrl('data:image/png;base64,1234')).toBe('data:image/png;base64,1234');
+        });
+
+        it('should return untouched URLs that do not belong to pcgamingwiki.com', () => {
+            expect(getProxiedImageUrl('https://example.com/image.jpg')).toBe('https://example.com/image.jpg');
+        });
+
+        it('should proxy URLs that belong to pcgamingwiki.com', () => {
+            const originalUrl = 'https://www.pcgamingwiki.com/w/images/a/ab/Cover.jpg';
+            const expected = `https://pcgw-proxy-login.maicol07.workers.dev/api/image?url=${encodeURIComponent(originalUrl)}`;
+            expect(getProxiedImageUrl(originalUrl)).toBe(expected);
+        });
+
+        it('should proxy pcgamingwiki subdomain URLs', () => {
+            const subdomainUrl = 'https://images.pcgamingwiki.com/w/images/a/ab/Cover.jpg';
+            const expected = `https://pcgw-proxy-login.maicol07.workers.dev/api/image?url=${encodeURIComponent(subdomainUrl)}`;
+            expect(getProxiedImageUrl(subdomainUrl)).toBe(expected);
+        });
     });
 });
 

@@ -1,5 +1,71 @@
 import { ref, watch } from 'vue';
 import { renderWikitextToHtml } from '../utils/renderer';
+import { getProxiedImageUrl } from '../config/api';
+
+const proxyHtmlImages = (html: string): string => {
+    if (!html) return '';
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const imgs = doc.querySelectorAll('img');
+        let modified = false;
+        imgs.forEach(img => {
+            // A. Handle src attribute
+            const src = img.getAttribute('src');
+            if (src) {
+                let fullUrl = src;
+                if (src.startsWith('//')) {
+                    fullUrl = `https:${src}`;
+                } else if (src.startsWith('/')) {
+                    fullUrl = `https://www.pcgamingwiki.com${src}`;
+                }
+                
+                if (fullUrl.includes('pcgamingwiki.com')) {
+                    const proxied = getProxiedImageUrl(fullUrl);
+                    if (proxied) {
+                        img.setAttribute('src', proxied);
+                        modified = true;
+                    }
+                }
+            }
+            
+            // B. Handle srcset attribute (multi-resolution sources)
+            const srcset = img.getAttribute('srcset');
+            if (srcset) {
+                const proxiedSrcset = srcset.split(',').map(part => {
+                    const trimmed = part.trim();
+                    if (!trimmed) return part;
+                    
+                    const tokens = trimmed.split(/\s+/);
+                    const itemUrl = tokens[0];
+                    const descriptor = tokens.slice(1).join(' ');
+                    
+                    let fullUrl = itemUrl;
+                    if (itemUrl.startsWith('//')) {
+                        fullUrl = `https:${itemUrl}`;
+                    } else if (itemUrl.startsWith('/')) {
+                        fullUrl = `https://www.pcgamingwiki.com${itemUrl}`;
+                    }
+                    
+                    if (fullUrl.includes('pcgamingwiki.com')) {
+                        const proxied = getProxiedImageUrl(fullUrl);
+                        if (proxied) {
+                            return descriptor ? `${proxied} ${descriptor}` : proxied;
+                        }
+                    }
+                    return trimmed;
+                }).join(', ');
+                
+                img.setAttribute('srcset', proxiedSrcset);
+                modified = true;
+            }
+        });
+        return modified ? doc.body.innerHTML : html;
+    } catch (e) {
+        console.error('Failed to proxy HTML images:', e);
+        return html;
+    }
+};
 
 export type PreviewMode = 'Local' | 'API';
 
@@ -79,7 +145,7 @@ export function usePreview(
             if (data.error) {
                 throw new Error(data.error.info || 'API Error');
             }
-            renderedHtml.value = data.parse.text['*'];
+            renderedHtml.value = proxyHtmlImages(data.parse.text['*']);
         } catch (e: any) {
             if (e.name === 'AbortError') {
                 // Request cancelled intentionally
