@@ -14,7 +14,7 @@ export class GeminiService {
     /**
      * Generates text content based on a prompt.
      */
-    async generateContent(prompt: string, model: string = 'gemini-3-flash-preview'): Promise<string> {
+    async generateContent(prompt: string, model: string = 'gemini-3.5-flash'): Promise<string> {
         try {
             const response = await this.ai.models.generateContent({
                 model,
@@ -35,7 +35,7 @@ export class GeminiService {
      * Analyzes an image (Base64) with a prompt and returns the parsed JSON response.
      * Expects the prompt to request JSON output.
      */
-    async analyzeImageJSON<T>(imageBase64: string, prompt: string, model: string = 'gemini-3-flash-preview'): Promise<T> {
+    async analyzeImageJSON<T>(imageBase64: string, prompt: string, model: string = 'gemini-3.5-flash'): Promise<T> {
         try {
             // Remove header if present (e.g., "data:image/png;base64,") usually handled by the caller or the SDK if passed correctly?
             // The new @google/genai SDK v1+ handles Part objects.
@@ -72,7 +72,7 @@ export class GeminiService {
     /**
      * Generates a feature list summary for a game.
      */
-    async generateShareSummary(gameTitle: string, gameData: any, model: string = 'gemini-3-flash-preview'): Promise<string> {
+    async generateShareSummary(gameTitle: string, gameData: any, model: string = 'gemini-3.5-flash'): Promise<string> {
         const summaryData = {
             video: gameData.video,
             input: gameData.input,
@@ -123,7 +123,7 @@ export class GeminiService {
     /**
      * Generates a short Git-style commit message/edit summary by comparing old and new wikitext.
      */
-    async generateEditSummary(oldWikitext: string, newWikitext: string, model: string = 'gemini-3-flash-preview'): Promise<string> {
+    async generateEditSummary(oldWikitext: string, newWikitext: string, model: string = 'gemini-3.5-flash'): Promise<string> {
         const prompt = `
             You are a system generating a concise edit summary (commit message) for a wiki page update.
             Compare the old wikitext to the new wikitext below. 
