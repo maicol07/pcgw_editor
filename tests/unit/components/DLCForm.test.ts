@@ -17,17 +17,24 @@ const ButtonStub = {
 };
 
 const MultiSelectStub = {
-    template: '<div class="multiselect-stub"><div v-for="opt in options" :key="opt.value" @click="select(opt.value)">{{opt.name}}</div></div>',
+    template: `
+        <div class="multiselect-stub">
+            <input class="filter-input" @input="$emit('filter', { value: $event.target.value })" />
+            <slot name="footer" />
+            <div v-for="opt in options" :key="opt.value" @click="select(opt.value)">{{opt.name}}</div>
+        </div>
+    `,
     props: ['modelValue', 'options'],
-    emits: ['update:modelValue'],
+    emits: ['update:modelValue', 'filter'],
     methods: {
         select(val: string) {
-            const current = this.modelValue || [];
+            const self = this as any;
+            const current = self.modelValue || [];
             const isSelected = current.includes(val);
             const newValue = isSelected
                 ? current.filter((v: string) => v !== val)
                 : [...current, val];
-            this.$emit('update:modelValue', newValue);
+            self.$emit('update:modelValue', newValue);
         }
     }
 };
@@ -150,5 +157,26 @@ describe('DLCForm.vue', () => {
 
         const rows = wrapper.props('modelValue') as DLCRow[];
         expect(rows[0].name).toBe('New Name');
+    });
+
+    it('allows entering and adding a custom OS value', async () => {
+        const { wrapper } = setupWrapper(createRows());
+        const multiSelects = wrapper.findAllComponents(MultiSelectStub);
+        
+        const filterInput = multiSelects[0].find('.filter-input');
+        await filterInput.setValue('AmigaOS');
+        await filterInput.trigger('input');
+        
+        const buttons = wrapper.findAllComponents(ButtonStub);
+        const addCustomBtn = buttons.find(b => b.text().includes("+ Add 'AmigaOS'"));
+        expect(addCustomBtn).toBeTruthy();
+        
+        await addCustomBtn!.trigger('click');
+        
+        const emitted = wrapper.emitted('update:modelValue');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![emitted!.length - 1][0] as DLCRow[];
+        expect(newVal[0].os).toContain('Windows');
+        expect(newVal[0].os).toContain('AmigaOS');
     });
 });

@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import Select from 'primevue/select';
 import MultiSelect from 'primevue/multiselect';
 import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import NotesButton from './NotesButton.vue';
+import Button from 'primevue/button';
 import { Info } from 'lucide-vue-next';
-import { computed } from 'vue';
 
 import { getIconSrc } from '../utils/icons';
 import { getRatingOption } from '../utils/ratings';
@@ -30,7 +31,50 @@ const emit = defineEmits<{
 }>();
 
 const defaultOptions = ['true', 'false', 'unknown', 'hackable', 'limited', 'always on', 'n/a'];
-const ratingOptions = computed(() => props.options || defaultOptions);
+
+const dynamicRatingOptions = ref<string[]>([]);
+
+watch(() => [props.value, props.options], () => {
+  const currentOptions = props.options || defaultOptions;
+  const currentArr = [...currentOptions];
+  
+  const selectedValues = props.multiple
+    ? (props.value ? props.value.split(',').map(s => s.trim()).filter(Boolean) : [])
+    : (props.value ? [props.value.trim()] : []);
+    
+  selectedValues.forEach(val => {
+    if (val && !currentArr.includes(val)) {
+      currentArr.push(val);
+    }
+  });
+  
+  dynamicRatingOptions.value = currentArr;
+}, { immediate: true, deep: true });
+
+const filterText = ref('');
+function onRatingFilter(event: any) {
+  filterText.value = event.value || '';
+}
+
+function addCustomRatingValue() {
+  const newVal = filterText.value.trim();
+  if (!newVal) return;
+  
+  if (!dynamicRatingOptions.value.includes(newVal)) {
+    dynamicRatingOptions.value.push(newVal);
+  }
+  
+  if (props.multiple) {
+    const current = [...multiValue.value];
+    if (!current.includes(newVal)) {
+      current.push(newVal);
+      multiValue.value = current;
+    }
+  } else {
+    emit('update:value', newVal);
+  }
+  filterText.value = '';
+}
 
 // Handle multiple values (comma separated string <-> array)
 const multiValue = computed({
@@ -76,9 +120,9 @@ const localNotes = computed({
       <InputText v-if="freeText" :modelValue="value" @update:modelValue="emit('update:value', $event || '')"
         class="w-full rounded-none! border-l-0! border-r-0!" :placeholder="label + '...'" />
 
-      <MultiSelect v-else-if="multiple" v-model="multiValue" :options="ratingOptions"
+      <MultiSelect v-else-if="multiple" v-model="multiValue" :options="dynamicRatingOptions"
         class="w-full rounded-none! border-l-0! border-r-0! flex items-center" placeholder="Select..." display="chip"
-        :maxSelectedLabels="3">
+        :maxSelectedLabels="3" filter @filter="onRatingFilter">
         <template #value="slotProps">
           <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
             v-if="slotProps.value && slotProps.value.length">
@@ -103,10 +147,20 @@ const localNotes = computed({
             </div>
           </div>
         </template>
+        <template #footer>
+          <div v-if="filterText" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
+            <Button 
+              class="p-button-text p-button-sm text-xs text-primary-500"
+              @click="addCustomRatingValue"
+            >
+              + Add '{{ filterText }}'
+            </Button>
+          </div>
+        </template>
       </MultiSelect>
 
-      <Select v-else :modelValue="value" @update:modelValue="emit('update:value', $event)" :options="ratingOptions"
-        class="w-full rounded-none! border-l-0! border-r-0!" placeholder="Select...">
+      <Select v-else :modelValue="value" @update:modelValue="emit('update:value', $event)" :options="dynamicRatingOptions"
+        class="w-full rounded-none! border-l-0! border-r-0!" placeholder="Select..." editable>
         <template #value="slotProps">
           <div class="flex items-center gap-2" v-if="slotProps.value">
             <img v-if="getIconSrc(slotProps.value)" :src="getIconSrc(slotProps.value)" :alt="slotProps.value"

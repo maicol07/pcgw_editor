@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { FieldDefinition } from '../../types/schema';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import MultiSelect from 'primevue/multiselect';
+import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import RatingRow from '../RatingRow.vue';
 import GenericListForm from '../common/GenericListForm.vue';
@@ -136,16 +137,54 @@ const boundProps = computed(() => {
     }
 
     if (props.field.component === 'Select') {
+        const predefinedOptions = (props.field.componentProps as any)?.options || [];
+        const mergedOptions = [...predefinedOptions];
+        const val = props.modelValue;
+        if (val && typeof val === 'string') {
+            const exists = predefinedOptions.some((opt: any) => {
+                if (typeof opt === 'object' && opt !== null) {
+                    return opt.value === val || opt.label === val;
+                }
+                return opt === val;
+            });
+            if (!exists) {
+                mergedOptions.push({ label: val, value: val });
+            }
+        }
+
         return {
             placeholder: `Select ${props.field.label}`,
             optionLabel: 'label',
             optionValue: 'value',
             class: 'w-full',
+            editable: true,
             ...defaultProps,
+            options: mergedOptions,
         }
     }
 
     if (props.field.component === 'MultiSelect') {
+        const predefinedOptions = (props.field.componentProps as any)?.options || [];
+        const selected = computedModelValue.value;
+        const selectedArr = Array.isArray(selected)
+            ? selected
+            : (typeof selected === 'string' && selected
+                ? selected.split(', ').map((s: string) => s.trim()).filter(Boolean)
+                : []);
+        
+        const mergedOptions = [...predefinedOptions];
+        selectedArr.forEach((val: string) => {
+            const exists = predefinedOptions.some((opt: any) => {
+                if (typeof opt === 'object' && opt !== null) {
+                    return opt.value === val || opt.label === val;
+                }
+                return opt === val;
+            });
+            if (!exists) {
+                mergedOptions.push(val);
+            }
+        });
+
         return {
             placeholder: `Select ${props.field.label}`,
             class: 'w-full',
@@ -153,6 +192,7 @@ const boundProps = computed(() => {
             filter: true,
             optionLabel: undefined,
             ...defaultProps,
+            options: mergedOptions,
         }
     }
 
@@ -276,6 +316,30 @@ const isVisible = computed(() => {
     }
     return true;
 });
+
+const multiSelectFilterValue = ref('');
+
+const handleMultiSelectFilter = (event: any) => {
+    multiSelectFilterValue.value = event.value || '';
+};
+
+const addCustomMultiSelectValue = () => {
+    const valToAdd = multiSelectFilterValue.value.trim();
+    if (!valToAdd) return;
+
+    const current = computedModelValue.value;
+    const currentArr = Array.isArray(current)
+        ? [...current]
+        : (typeof current === 'string' && current
+            ? current.split(', ').map((s: string) => s.trim()).filter(Boolean)
+            : []);
+    
+    if (!currentArr.includes(valToAdd)) {
+        currentArr.push(valToAdd);
+        handleModelValueUpdate(currentArr);
+    }
+    multiSelectFilterValue.value = '';
+};
 </script>
 
 <template>
@@ -296,7 +360,9 @@ const isVisible = computed(() => {
 
         <component :is="resolvedComponent" v-bind="boundProps" :modelValue="computedModelValue"
             @update:modelValue="handleModelValueUpdate" @update:value="handleUpdateValue"
-            @update:notes="handleUpdateNotes" class="w-full" :class="{ '!w-auto': field.component === 'Checkbox' }">
+            @update:notes="handleUpdateNotes"
+            @filter="field.component === 'MultiSelect' ? handleMultiSelectFilter($event) : null"
+            class="w-full" :class="{ '!w-auto': field.component === 'Checkbox' }">
 
             <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
                 #value="slotProps">
@@ -311,21 +377,30 @@ const isVisible = computed(() => {
                 <!-- Default placeholder handling if needed, though PrimeVue usually handles it -->
                 <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
             </template>
-            <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
-                #option="slotProps">
-                <div class="flex items-center">
+
+            <!-- Pass children slots if any (e.g. for Select options) -->
+            <template #option="slotProps">
+                <div v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons" class="flex items-center">
                     <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
                         class="w-4 h-4 mr-2" />
                     <span class="text-sm">{{ slotProps.option }}</span>
                 </div>
-            </template>
-
-            <!-- Pass children slots if any (e.g. for Select options) -->
-            <template v-if="['Select'].includes(field.component)" #option="slotProps">
-                <div class="flex flex-col gap-1 py-1">
+                <div v-else-if="['Select'].includes(field.component)" class="flex flex-col gap-1 py-1">
                     <span class="font-medium">{{ slotProps.option.label || slotProps.option }}</span>
                     <span v-if="slotProps.option.description" class="text-xs text-surface-500 dark:text-surface-400">{{
                         slotProps.option.description }}</span>
+                </div>
+            </template>
+
+            <!-- Footer slot for MultiSelect custom values -->
+            <template v-if="field.component === 'MultiSelect'" #footer>
+                <div v-if="multiSelectFilterValue" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
+                    <Button 
+                        class="p-button-text p-button-sm text-xs text-primary-500"
+                        @click="addCustomMultiSelectValue"
+                    >
+                        + Add '{{ multiSelectFilterValue }}'
+                    </Button>
                 </div>
             </template>
         </component>

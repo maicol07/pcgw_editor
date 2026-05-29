@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import MultiSelect from 'primevue/multiselect';
 import AutoComplete from 'primevue/autocomplete';
+import Button from 'primevue/button';
 import { pcgwApi } from '../services/pcgwApi';
 
 export type DataSource = 'companies' | 'engines' | 'series' | 'genres' | 'themes' | 'perspectives' | 'files' | 'pacing' | 'controls' | 'sports' | 'vehicles' | 'artStyles' | 'monetization' | 'microtransactions' | 'modes' | 'pages';
@@ -26,13 +27,31 @@ const emit = defineEmits<{
     (e: 'suggestions-update', value: string[]): void;
 }>();
 
-const localValue = ref<any>(props.modelValue);
+const localValue = ref<any>(Array.isArray(props.modelValue) ? [...props.modelValue] : props.modelValue);
 
 // Initialize suggestions with current value to ensure they are displayed
-const initialSuggestions = Array.isArray(props.modelValue) ? props.modelValue : (props.modelValue ? [props.modelValue] : []);
+const initialSuggestions = Array.isArray(props.modelValue) ? [...props.modelValue] : (props.modelValue ? [props.modelValue] : []);
 const suggestions = ref<string[]>(initialSuggestions);
 const loading = ref(false);
 const searchTimeout = ref<number>();
+const filterText = ref('');
+
+const addCustomAutocompleteValue = () => {
+    const newVal = filterText.value.trim();
+    if (!newVal) return;
+    
+    if (!suggestions.value.includes(newVal)) {
+        suggestions.value.push(newVal);
+    }
+    
+    const current = Array.isArray(localValue.value) ? [...localValue.value] : [];
+    if (!current.includes(newVal)) {
+        current.push(newVal);
+        localValue.value = current;
+    }
+    
+    filterText.value = '';
+};
 
 watch(() => props.modelValue, (newVal) => {
     if (JSON.stringify(newVal) !== JSON.stringify(localValue.value)) {
@@ -51,6 +70,7 @@ watch(localValue, (newVal) => {
  */
 const onFilter = async (event: { value?: string, query?: string }) => {
     const query = (event.value || event.query || '').trim();
+    filterText.value = query;
 
     // Always include currently selected values in options for MultiSelect
     const selectedSet = new Set(Array.isArray(localValue.value) ? localValue.value : []);
@@ -155,6 +175,16 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                 <slot name="option" :option="slotProps.option" :index="slotProps.index">
                     {{ slotProps.option }}
                 </slot>
+            </template>
+            <template #footer>
+                <div v-if="filterText" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
+                    <Button 
+                        class="p-button-text p-button-sm text-xs text-primary-500"
+                        @click="addCustomAutocompleteValue"
+                    >
+                        + Add '{{ filterText }}'
+                    </Button>
+                </div>
             </template>
         </MultiSelect>
 

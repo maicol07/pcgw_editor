@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 import { DLCRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
@@ -24,6 +25,43 @@ const osOptions = [
   { name: 'Linux', value: 'Linux' },
   { name: 'PC booter', value: 'PC booter' }
 ];
+
+const dynamicOsOptions = ref([...osOptions]);
+
+watch(() => dragList.value, (newRows) => {
+  newRows.forEach(row => {
+    const osArray = getOsArray(row.os);
+    osArray.forEach(val => {
+      if (val && !dynamicOsOptions.value.some(o => o.value === val)) {
+        dynamicOsOptions.value.push({ name: val, value: val });
+      }
+    });
+  });
+}, { immediate: true, deep: true });
+
+const filterText = ref('');
+const activeRowIndex = ref<number | null>(null);
+
+function onOsFilter(event: any, index: number) {
+  filterText.value = event.value || '';
+  activeRowIndex.value = index;
+}
+
+function addCustomOs(index: number) {
+  const newOs = filterText.value.trim();
+  if (!newOs) return;
+  
+  if (!dynamicOsOptions.value.some(o => o.value === newOs)) {
+    dynamicOsOptions.value.push({ name: newOs, value: newOs });
+  }
+  
+  const current = getOsArray(dragList.value[index].os);
+  if (!current.includes(newOs)) {
+    current.push(newOs);
+    handleOsChange(index, current);
+  }
+  filterText.value = '';
+}
 
 function addRow() {
   dragList.value = [...dragList.value, { name: '', notes: '', os: '' }];
@@ -77,8 +115,19 @@ function getOsArray(osString: string): string[] {
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Operating Systems</label>
             <MultiSelect :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
-              :options="osOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
-              class="w-full text-sm" display="chip" />
+              :options="dynamicOsOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
+              class="w-full text-sm" display="chip" filter @filter="onOsFilter($event, index)">
+              <template #footer>
+                <div v-if="filterText && activeRowIndex === index" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
+                  <Button 
+                    class="p-button-text p-button-sm text-xs text-primary-500"
+                    @click="addCustomOs(index)"
+                  >
+                    + Add '{{ filterText }}'
+                  </Button>
+                </div>
+              </template>
+            </MultiSelect>
           </div>
         </div>
 
