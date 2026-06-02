@@ -8,12 +8,11 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { Calendar, Trash2, Plus } from 'lucide-vue-next';
+import { getIconSrc } from '../../utils/icons';
 
 // Platform options
 const platformOptions = [
-  'Windows', 'macOS', 'Linux', 'Android', 'iOS',
-  'Nintendo Switch', 'PlayStation 4', 'PlayStation 5',
-  'Xbox One', 'Xbox Series X|S'
+  'Windows', 'DOS', 'Windows 3.x', 'Mac OS', 'OS X', 'Linux', 'PC booter'
 ];
 
 const model = defineModel<ReleaseDate[]>({ default: () => [] });
@@ -35,7 +34,21 @@ const isMatch = (text: string) => false;
       <div v-for="(rd, index) in structuredDates" :key="index"
         class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
         <div class="flex items-center justify-between gap-3">
-          <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small" />
+          <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small">
+            <template #value="slotProps">
+              <div v-if="slotProps.value" class="flex items-center gap-2">
+                <img v-if="getIconSrc(slotProps.value)" :src="getIconSrc(slotProps.value)" :alt="slotProps.value" class="w-4 h-4 shrink-0" />
+                <span class="truncate">{{ slotProps.value }}</span>
+              </div>
+              <span v-else>{{ slotProps.placeholder }}</span>
+            </template>
+            <template #option="slotProps">
+              <div class="flex items-center gap-2">
+                <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option" class="w-4 h-4 shrink-0" />
+                <span>{{ slotProps.option }}</span>
+              </div>
+            </template>
+          </Select>
 
           <div class="flex-1 relative">
             <InputText v-model="rd.rawDate" placeholder="Select date or type custom (e.g. TBA)" class="w-full pr-10"

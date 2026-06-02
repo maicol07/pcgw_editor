@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import { X, Plus, Info, GripVertical } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
+import { getIconSrc } from '../utils/icons';
 
 const dragList = defineModel<DLCRow[]>({ default: () => [] });
 
@@ -78,7 +79,26 @@ function getOsArray(osString: string): string[] {
             <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Operating Systems</label>
             <MultiSelect :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
               :options="osOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
-              class="w-full text-sm" display="chip" />
+              class="w-full text-sm">
+              <template #value="slotProps">
+                <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
+                  v-if="slotProps.value && slotProps.value.length">
+                  <div v-for="option in slotProps.value" :key="option"
+                    class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                    <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+                    <span class="text-xs">{{ option }}</span>
+                  </div>
+                </div>
+                <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
+              </template>
+              <template #option="slotProps">
+                <div class="flex items-center">
+                  <img v-if="getIconSrc(slotProps.option.value)" :src="getIconSrc(slotProps.option.value)" :alt="slotProps.option.name"
+                    class="w-4 h-4 mr-2" />
+                  <span class="text-sm">{{ slotProps.option.name }}</span>
+                </div>
+              </template>
+            </MultiSelect>
           </div>
         </div>
 
