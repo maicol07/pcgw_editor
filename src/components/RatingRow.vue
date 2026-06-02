@@ -84,7 +84,7 @@ const localNotes = computed({
             v-if="slotProps.value && slotProps.value.length">
             <div v-for="option in slotProps.value" :key="option"
               class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
-              <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+              <img v-if="getIconSrc(option, 'tickcross')" :src="getIconSrc(option, 'tickcross')" :alt="option" class="w-3.5 h-3.5" />
               <span class="text-xs">{{ option }}</span>
             </div>
           </div>
@@ -93,7 +93,7 @@ const localNotes = computed({
         <template #option="slotProps">
           <div class="flex flex-col gap-1 py-1">
             <div class="flex items-center gap-2">
-              <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
+              <img v-if="getIconSrc(slotProps.option, 'tickcross')" :src="getIconSrc(slotProps.option, 'tickcross')" :alt="slotProps.option"
                 class="w-5 h-5 shrink-0 object-contain" />
               <span class="font-medium leading-none mt-0.5 text-sm">{{ getRatingOption(slotProps.option).label }}</span>
             </div>
@@ -104,12 +104,12 @@ const localNotes = computed({
           </div>
         </template>
       </MultiSelect>
-
+ 
       <Select v-else :modelValue="value" @update:modelValue="emit('update:value', $event)" :options="ratingOptions"
         class="w-full rounded-none! border-l-0! border-r-0!" placeholder="Select...">
         <template #value="slotProps">
           <div class="flex items-center gap-2" v-if="slotProps.value">
-            <img v-if="getIconSrc(slotProps.value)" :src="getIconSrc(slotProps.value)" :alt="slotProps.value"
+            <img v-if="getIconSrc(slotProps.value, 'tickcross')" :src="getIconSrc(slotProps.value, 'tickcross')" :alt="slotProps.value"
               class="w-5 h-5 shrink-0 object-contain" />
             <span class="text-sm leading-none mt-0.5">{{ getRatingOption(slotProps.value).label }}</span>
           </div>
@@ -118,7 +118,7 @@ const localNotes = computed({
         <template #option="slotProps">
           <div class="flex flex-col gap-1 py-1">
             <div class="flex items-center gap-2">
-              <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
+              <img v-if="getIconSrc(slotProps.option, 'tickcross')" :src="getIconSrc(slotProps.option, 'tickcross')" :alt="slotProps.option"
                 class="w-5 h-5 shrink-0 object-contain" />
               <span class="font-medium leading-none mt-0.5 text-sm">{{ getRatingOption(slotProps.option).label }}</span>
             </div>

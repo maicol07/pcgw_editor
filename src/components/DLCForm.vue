@@ -85,7 +85,7 @@ function getOsArray(osString: string): string[] {
                   v-if="slotProps.value && slotProps.value.length">
                   <div v-for="option in slotProps.value" :key="option"
                     class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
-                    <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+                    <img v-if="getIconSrc(option, 'os')" :src="getIconSrc(option, 'os')" :alt="option" class="w-3.5 h-3.5" />
                     <span class="text-xs">{{ option }}</span>
                   </div>
                 </div>
@@ -93,7 +93,7 @@ function getOsArray(osString: string): string[] {
               </template>
               <template #option="slotProps">
                 <div class="flex items-center">
-                  <img v-if="getIconSrc(slotProps.option.value)" :src="getIconSrc(slotProps.option.value)" :alt="slotProps.option.name"
+                  <img v-if="getIconSrc(slotProps.option.value, 'os')" :src="getIconSrc(slotProps.option.value, 'os')" :alt="slotProps.option.name"
                     class="w-4 h-4 mr-2" />
                   <span class="text-sm">{{ slotProps.option.name }}</span>
                 </div>

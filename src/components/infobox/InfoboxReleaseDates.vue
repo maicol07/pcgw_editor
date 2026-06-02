@@ -37,14 +37,14 @@ const isMatch = (text: string) => false;
           <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small">
             <template #value="slotProps">
               <div v-if="slotProps.value" class="flex items-center gap-2">
-                <img v-if="getIconSrc(slotProps.value)" :src="getIconSrc(slotProps.value)" :alt="slotProps.value" class="w-4 h-4 shrink-0" />
+                <img v-if="getIconSrc(slotProps.value, 'os')" :src="getIconSrc(slotProps.value, 'os')" :alt="slotProps.value" class="w-4 h-4 shrink-0" />
                 <span class="truncate">{{ slotProps.value }}</span>
               </div>
               <span v-else>{{ slotProps.placeholder }}</span>
             </template>
             <template #option="slotProps">
               <div class="flex items-center gap-2">
-                <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option" class="w-4 h-4 shrink-0" />
+                <img v-if="getIconSrc(slotProps.option, 'os')" :src="getIconSrc(slotProps.option, 'os')" :alt="slotProps.option" class="w-4 h-4 shrink-0" />
                 <span>{{ slotProps.option }}</span>
               </div>
             </template>
