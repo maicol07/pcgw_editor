@@ -127,6 +127,48 @@ function handleDrmChange(index: number, selectedValues: string[]) {
 function getDrmArray(drmString: string): string[] {
   return drmString ? drmString.split(',').map(s => s.trim()) : [];
 }
+
+const keyOptions = [
+  { name: 'Battle.net', value: 'battle.net' },
+  { name: 'Bethesda.net (obsolete)', value: 'bethesda.net (obsolete)' },
+  { name: 'EA App', value: 'ea app' },
+  { name: 'Epic Games Launcher', value: 'epic games launcher' },
+  { name: 'GamersGate', value: 'gamersgate' },
+  { name: 'GOG GALAXY', value: 'gog galaxy' },
+  { name: 'GMG', value: 'gmg' },
+  { name: 'Humble Store', value: 'humble store' },
+  { name: 'Microsoft Store', value: 'microsoft store' },
+  { name: 'Meta Store', value: 'meta store' },
+  { name: 'Steam', value: 'steam' },
+  { name: 'Ubisoft Connect', value: 'ubisoft connect' },
+  { name: 'Download', value: 'download' }
+];
+
+function normalizeKeyOption(val: string): string {
+  const v = val.toLowerCase().trim();
+  if (v === 'bethesda.net (obsolete)' || v === 'bethesda.net' || v === 'bethesda') return 'bethesda.net (obsolete)';
+  if (v === 'ea app' || v === 'origin' || v === 'ea desktop' || v === 'ea') return 'ea app';
+  if (v === 'epic games launcher' || v === 'epic games store' || v === 'epic') return 'epic games launcher';
+  if (v === 'gamersgate') return 'gamersgate';
+  if (v === 'gog galaxy' || v === 'goggalaxy' || v === 'gog.com' || v === 'galaxy' || v === 'gog') return 'gog galaxy';
+  if (v === 'gmg') return 'gmg';
+  if (v === 'humble store' || v === 'humble') return 'humble store';
+  if (v === 'microsoft store' || v === 'xbox') return 'microsoft store';
+  if (v === 'meta store' || v === 'oculus') return 'meta store';
+  if (v === 'steam') return 'steam';
+  if (v === 'ubisoft connect' || v === 'uplay' || v === 'ubisoft') return 'ubisoft connect';
+  if (v === 'download') return 'download';
+  return val;
+}
+
+function handleKeysChange(index: number, selectedValues: string[]) {
+  updateRow(index, 'keys', selectedValues.join(', '));
+}
+
+function getKeysArray(keysString: string): string[] {
+  if (!keysString) return [];
+  return keysString.split(',').map(s => normalizeKeyOption(s.trim()));
+}
 </script>
 
 <template>
@@ -255,9 +297,28 @@ function getDrmArray(drmString: string): string[] {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="flex flex-col gap-1">
                         <label class="text-[10px] font-bold uppercase text-surface-400">Extra Keys</label>
-                        <InputText :value="row.keys"
-                            @input="updateRow(index, 'keys', ($event.target as HTMLInputElement).value)"
-                            placeholder="e.g. Steam" class="w-full !text-xs !p-2" />
+                        <MultiSelect :modelValue="getKeysArray(row.keys)" @update:modelValue="(val) => handleKeysChange(index, val)"
+                            :options="keyOptions" optionLabel="name" optionValue="value" placeholder="Select Keys" :maxSelectedLabels="3"
+                            class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
+                            <template #value="slotProps">
+                                <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
+                                    v-if="slotProps.value && slotProps.value.length">
+                                    <div v-for="option in slotProps.value" :key="option"
+                                        class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                                        <img v-if="getIconSrc(option, ['drm', 'store'])" :src="getIconSrc(option, ['drm', 'store'])" :alt="option" class="w-3.5 h-3.5" />
+                                        <span class="text-xs">{{ keyOptions.find(o => o.value === option)?.name || option }}</span>
+                                    </div>
+                                </div>
+                                <span v-else class="text-surface-400 text-xs">{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex items-center">
+                                    <img v-if="getIconSrc(slotProps.option.value, ['drm', 'store'])" :src="getIconSrc(slotProps.option.value, ['drm', 'store'])" :alt="slotProps.option.name"
+                                        class="w-4 h-4 mr-2" />
+                                    <span class="text-xs">{{ slotProps.option.name }}</span>
+                                </div>
+                            </template>
+                        </MultiSelect>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[10px] font-bold uppercase text-surface-400">Notes</label>
