@@ -170,7 +170,7 @@ const onFilter = async (event: { value?: string, query?: string }) => {
         <!-- Multiple Selection Mode -->
         <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
             :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
-            class="w-full" :display="display" :showToggleAll="false" :inputClass="['!pl-10', inputClass]">
+            class="w-full" :display="display" :showToggleAll="false" :inputClass="inputClass">
             <template #option="slotProps">
                 <slot name="option" :option="slotProps.option" :index="slotProps.index">
                     {{ slotProps.option }}
@@ -191,7 +191,7 @@ const onFilter = async (event: { value?: string, query?: string }) => {
         <!-- Single Selection Mode -->
         <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading"
             :placeholder="placeholder" :dropdown="false" :forceSelection="false" completeOnFocus class="w-full"
-            @complete="onFilter" :inputClass="['!pl-10', inputClass]">
+            @complete="onFilter" :inputClass="['w-full', inputClass]">
             <template #item="slotProps">
                 <slot name="item" :item="slotProps.item" :index="slotProps.index">
                     {{ slotProps.item }}
@@ -213,6 +213,14 @@ const onFilter = async (event: { value?: string, query?: string }) => {
     /* Override fixed heights from global styles for this specific component to allow vertical expansion */
     height: auto !important;
     min-height: 2rem;
+}
+
+/* Ensure autocomplete and its input fill the container width */
+:deep(.p-autocomplete) {
+    width: 100%;
+}
+:deep(.p-autocomplete-input) {
+    width: 100%;
 }
 
 /* Allow chips to wrap onto new lines instead of expanding horizontally */
