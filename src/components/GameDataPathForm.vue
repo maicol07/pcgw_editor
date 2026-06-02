@@ -8,7 +8,7 @@ import Popover from 'primevue/popover';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
-import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search } from 'lucide-vue-next';
+import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 // Icons
@@ -21,6 +21,8 @@ import iconEpic from '../assets/icons/store-epicgames.svg';
 import iconUbisoft from '../assets/icons/store-ubisoft.svg';
 import iconOrigin from '../assets/icons/store-ea.svg'; // EA App uses Origin icon or new?
 import iconMs from '../assets/icons/store-microsoft.svg';
+import iconBooter from '../assets/icons/os-booter.svg';
+import iconDos from '../assets/icons/os-dos.svg';
 import iconGeneric from '../assets/icons/menu-icon.svg'; // Default
 
 const props = defineProps<{
@@ -50,9 +52,9 @@ const platformOptions = [
   { label: 'Ubisoft Connect', value: 'Ubisoft Connect', icon: iconUbisoft },
   { label: 'EA app', value: 'EA app', icon: iconOrigin }, // Using EA App icon
   { label: 'Microsoft Store', value: 'Microsoft Store', icon: iconMs },
-  { label: 'Amazon Games', value: 'Amazon Games', icon: iconGeneric },
-  { label: 'PC booter', value: 'PC booter', icon: iconGeneric },
-  { label: 'DOS', value: 'DOS', icon: iconGeneric },
+  { label: 'Amazon Games', value: 'Amazon Games', icon: ShoppingCart },
+  { label: 'PC booter', value: 'PC booter', icon: iconBooter },
+  { label: 'DOS', value: 'DOS', icon: iconDos },
 ];
 
 const emit = defineEmits<{
@@ -192,14 +194,16 @@ const selectQuickPath = (value: string) => {
               class="w-full">
               <template #value="slotProps">
                 <div v-if="slotProps.value" class="flex items-center gap-2">
-                  <img :src="getPlatformIcon(slotProps.value)" :alt="slotProps.value" class="w-5 h-5 shrink-0" />
+                  <img v-if="typeof getPlatformIcon(slotProps.value) === 'string'" :src="getPlatformIcon(slotProps.value) as string" :alt="slotProps.value" class="w-5 h-5 shrink-0 object-contain" />
+                  <component v-else :is="getPlatformIcon(slotProps.value)" class="w-4 h-4 text-surface-500" />
                   <span class="truncate">{{ slotProps.value }}</span>
                 </div>
                 <span v-else>{{ slotProps.placeholder }}</span>
               </template>
               <template #option="slotProps">
                 <div class="flex items-center gap-2">
-                  <img :src="slotProps.option.icon" :alt="slotProps.option.label" class="w-5 h-5 shrink-0" />
+                  <img v-if="typeof slotProps.option.icon === 'string'" :src="slotProps.option.icon" :alt="slotProps.option.label" class="w-5 h-5 shrink-0 object-contain" />
+                  <component v-else :is="slotProps.option.icon" class="w-4 h-4 text-surface-500" />
                   <span>{{ slotProps.option.label }}</span>
                 </div>
               </template>

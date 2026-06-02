@@ -48,7 +48,8 @@ vi.mock('lucide-vue-next', () => ({
     Folder: { template: '<span class="icon-folder"></span>' },
     Save: { template: '<span class="icon-save"></span>' },
     Gamepad2: { template: '<span class="icon-gamepad2"></span>' },
-    Search: { template: '<span class="icon-search"></span>' }
+    Search: { template: '<span class="icon-search"></span>' },
+    ShoppingCart: { template: '<span class="icon-shopping-cart"></span>' }
 }));
 
 // Mock imported icons (using strings or stubs)
@@ -63,6 +64,8 @@ vi.mock('../../../src/assets/icons/store-uplay.svg', () => ({ default: 'icon-upl
 vi.mock('../../../src/assets/icons/store-origin.svg', () => ({ default: 'icon-origin.svg' }));
 vi.mock('../../../src/assets/icons/store-microsoft.svg', () => ({ default: 'icon-ms.svg' }));
 vi.mock('../../../src/assets/icons/store-ws.svg', () => ({ default: 'icon-ws.svg' }));
+vi.mock('../../../src/assets/icons/os-booter.svg', () => ({ default: 'icon-booter.svg' }));
+vi.mock('../../../src/assets/icons/os-dos.svg', () => ({ default: 'icon-dos.svg' }));
 vi.mock('../../../src/assets/icons/menu-icon.svg', () => ({ default: 'icon-generic.svg' }));
 
 describe('GameDataPathForm.vue', () => {
