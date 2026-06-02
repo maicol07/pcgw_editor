@@ -57,10 +57,9 @@ function removeRow(index: number) {
     dragList.value = newVal;
 }
 
-function updateRow(index: number, field: keyof AvailabilityRow, val: string) {
-    const newVal = [...dragList.value];
-    newVal[index] = { ...newVal[index], [field]: val };
-    dragList.value = newVal;
+function updateRow(index: number, field: keyof AvailabilityRow, val: any) {
+    dragList.value[index][field] = val;
+    dragList.value = [...dragList.value];
 }
 
 const getProductIdHelp = (source: string) => {
