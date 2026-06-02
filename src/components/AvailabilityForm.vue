@@ -7,7 +7,7 @@ import SelectButton from 'primevue/selectbutton';
 import MultiSelect from 'primevue/multiselect';
 import { getIconSrc } from '../utils/icons';
 import {
-    Box, Code, Building2, Plus, Trash2, GripVertical
+    Box, Code, Building2, Plus, Trash2, GripVertical, ShoppingCart, Store, Globe
 } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 
@@ -21,18 +21,44 @@ function getRowId(row: AvailabilityRow) {
 }
 
 const storefrontOptions = [
+    { label: 'Amazon', value: 'amazon', icon: ShoppingCart },
+    { label: 'Amazon.com', value: 'amazon.com', icon: ShoppingCart },
+    { label: 'Amazon.co.uk', value: 'amazon.co.uk', icon: ShoppingCart },
+    { label: 'Amazon.co.jp', value: 'amazon.co.jp', icon: ShoppingCart },
+    { label: 'Amazon.es', value: 'amazon.es', icon: ShoppingCart },
+    { label: 'Amazon.fr', value: 'amazon.fr', icon: ShoppingCart },
+    { label: 'Amazon.de', value: 'amazon.de', icon: ShoppingCart },
+    { label: 'Amazon.it', value: 'amazon.it', icon: ShoppingCart },
     { label: 'Battle.net', value: 'battle.net' },
     { label: 'Bethesda.net (obsolete)', value: 'bethesda.net (obsolete)' },
+    { label: 'Discord', value: 'discord' },
     { label: 'EA App', value: 'ea app' },
+    { label: 'EA Desktop', value: 'ea desktop' },
     { label: 'Epic Games Launcher', value: 'epic games launcher' },
+    { label: 'Epic Games Store Subpage', value: 'epic games store subpage' },
     { label: 'GamersGate', value: 'gamersgate' },
+    { label: 'Games for Windows Marketplace', value: 'games for windows marketplace' },
+    { label: 'Gamesplanet', value: 'gamesplanet' },
+    { label: 'GFW Marketplace', value: 'gfw marketplace' },
+    { label: 'GFWL Marketplace', value: 'gfwl marketplace' },
     { label: 'GOG GALAXY', value: 'gog galaxy' },
     { label: 'GMG', value: 'gmg' },
     { label: 'Humble Store', value: 'humble store' },
-    { label: 'Microsoft Store', value: 'microsoft store' },
+    { label: 'itch.io', value: 'itch.io', icon: Store },
+    { label: 'MacApp', value: 'macapp' },
+    { label: 'Mac App Store', value: 'mac app store' },
     { label: 'Meta Store', value: 'meta store' },
+    { label: 'Microsoft Store', value: 'microsoft store' },
+    { label: 'Official Website', value: 'official', icon: Globe },
+    { label: 'Origin', value: 'origin' },
     { label: 'Steam', value: 'steam' },
+    { label: 'Steam Bundle', value: 'steam-bundle' },
+    { label: 'Steam Sub', value: 'steam-sub' },
+    { label: 'Twitch', value: 'twitch' },
     { label: 'Ubisoft Connect', value: 'ubisoft connect' },
+    { label: 'Viveport', value: 'viveport' },
+    { label: 'ZOOM Platform', value: 'zoom' },
+    { label: 'ZOOM Platform', value: 'zoom-platform' },
     { label: 'Download', value: 'download' },
     { label: 'Retail', value: 'retail', icon: Box },
     { label: 'Developer', value: 'developer', icon: Code },
@@ -42,21 +68,21 @@ const storefrontOptions = [
 function normalizeStoreOption(val: string): string {
     if (!val) return '';
     const v = val.toLowerCase().trim();
-    if (v === 'steam') return 'steam';
-    if (v === 'gog.com' || v === 'gog' || v === 'gog galaxy' || v === 'goggalaxy' || v === 'galaxy') return 'gog galaxy';
-    if (v === 'epic games store' || v === 'epic games launcher' || v === 'epic') return 'epic games launcher';
-    if (v === 'battle.net') return 'battle.net';
-    if (v === 'ea app' || v === 'origin' || v === 'ea desktop' || v === 'ea') return 'ea app';
-    if (v === 'humble store' || v === 'humble') return 'humble store';
-    if (v === 'macapp' || v === 'meta store' || v === 'oculus') return 'meta store';
-    if (v === 'microsoft store' || v === 'xbox') return 'microsoft store';
-    if (v === 'ubisoft store' || v === 'ubisoft connect' || v === 'uplay' || v === 'ubisoft') return 'ubisoft connect';
-    if (v === 'retail') return 'retail';
-    if (v === 'developer') return 'developer';
-    if (v === 'publisher') return 'publisher';
-    if (v === 'download') return 'download';
-    if (v === 'bethesda.net (obsolete)' || v === 'bethesda.net' || v === 'bethesda') return 'bethesda.net (obsolete)';
-    return v;
+    
+    // Find exact or case-insensitive match in our storefrontOptions array
+    const matched = storefrontOptions.find(o => o.value.toLowerCase() === v);
+    if (matched) return matched.value;
+    
+    // Fallbacks for common legacy names if not directly matched
+    if (v === 'gog.com') return 'gog galaxy';
+    if (v === 'epic games store') return 'epic games launcher';
+    if (v === 'uplay' || v === 'ubisoft store' || v === 'ubisoft') return 'ubisoft connect';
+    if (v === 'xbox') return 'microsoft store';
+    if (v === 'oculus') return 'meta store';
+    if (v === 'bethesda') return 'bethesda.net (obsolete)';
+    if (v === 'humble') return 'humble store';
+    
+    return val;
 }
 
 const stateOptions = [

@@ -64,7 +64,8 @@ vi.mock('lucide-vue-next', () => ({
     Building2: { template: '<span class="icon-building-2"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
     Trash2: { template: '<span class="icon-trash-2"></span>' },
-    GripVertical: { template: '<span class="icon-grip"></span>' }
+    GripVertical: { template: '<span class="icon-grip"></span>' },
+    Store: { template: '<span class="icon-store"></span>' }
 }));
 
 describe('AvailabilityForm.vue', () => {
