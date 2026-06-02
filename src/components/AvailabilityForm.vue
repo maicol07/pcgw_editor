@@ -7,9 +7,7 @@ import SelectButton from 'primevue/selectbutton';
 import MultiSelect from 'primevue/multiselect';
 import { getIconSrc } from '../utils/icons';
 import {
-    Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play,
-    Gift, Heart, Command, AppWindow, Globe, Box, Code,
-    Building2, Plus, Trash2, GripVertical
+    Box, Code, Building2, Plus, Trash2, GripVertical
 } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 
@@ -23,22 +21,43 @@ function getRowId(row: AvailabilityRow) {
 }
 
 const storefrontOptions = [
-    { label: 'Steam', value: 'Steam', icon: Monitor },
-    { label: 'GOG.com', value: 'GOG.com', icon: ShoppingBag },
-    { label: 'Epic Games Store', value: 'Epic Games Store', icon: Zap },
-    { label: 'Amazon.com', value: 'Amazon.com', icon: ShoppingCart },
-    { label: 'Amazon.co.uk', value: 'Amazon.co.uk', icon: ShoppingCart },
-    { label: 'Battle.net', value: 'Battle.net', icon: Shield },
-    { label: 'EA app', value: 'EA app', icon: Play },
-    { label: 'Humble Store', value: 'Humble Store', icon: Gift },
-    { label: 'itch.io', value: 'itch.io', icon: Heart },
-    { label: 'Mac App Store', value: 'MacApp', icon: Command },
-    { label: 'Microsoft Store', value: 'Microsoft Store', icon: AppWindow },
-    { label: 'Ubisoft Store', value: 'Ubisoft Store', icon: Globe },
-    { label: 'Retail', value: 'Retail', icon: Box },
-    { label: 'Developer', value: 'Developer', icon: Code },
-    { label: 'Publisher', value: 'Publisher', icon: Building2 },
+    { label: 'Battle.net', value: 'battle.net' },
+    { label: 'Bethesda.net (obsolete)', value: 'bethesda.net (obsolete)' },
+    { label: 'EA App', value: 'ea app' },
+    { label: 'Epic Games Launcher', value: 'epic games launcher' },
+    { label: 'GamersGate', value: 'gamersgate' },
+    { label: 'GOG GALAXY', value: 'gog galaxy' },
+    { label: 'GMG', value: 'gmg' },
+    { label: 'Humble Store', value: 'humble store' },
+    { label: 'Microsoft Store', value: 'microsoft store' },
+    { label: 'Meta Store', value: 'meta store' },
+    { label: 'Steam', value: 'steam' },
+    { label: 'Ubisoft Connect', value: 'ubisoft connect' },
+    { label: 'Download', value: 'download' },
+    { label: 'Retail', value: 'retail', icon: Box },
+    { label: 'Developer', value: 'developer', icon: Code },
+    { label: 'Publisher', value: 'publisher', icon: Building2 },
 ];
+
+function normalizeStoreOption(val: string): string {
+    if (!val) return '';
+    const v = val.toLowerCase().trim();
+    if (v === 'steam') return 'steam';
+    if (v === 'gog.com' || v === 'gog' || v === 'gog galaxy' || v === 'goggalaxy' || v === 'galaxy') return 'gog galaxy';
+    if (v === 'epic games store' || v === 'epic games launcher' || v === 'epic') return 'epic games launcher';
+    if (v === 'battle.net') return 'battle.net';
+    if (v === 'ea app' || v === 'origin' || v === 'ea desktop' || v === 'ea') return 'ea app';
+    if (v === 'humble store' || v === 'humble') return 'humble store';
+    if (v === 'macapp' || v === 'meta store' || v === 'oculus') return 'meta store';
+    if (v === 'microsoft store' || v === 'xbox') return 'microsoft store';
+    if (v === 'ubisoft store' || v === 'ubisoft connect' || v === 'uplay' || v === 'ubisoft') return 'ubisoft connect';
+    if (v === 'retail') return 'retail';
+    if (v === 'developer') return 'developer';
+    if (v === 'publisher') return 'publisher';
+    if (v === 'download') return 'download';
+    if (v === 'bethesda.net (obsolete)' || v === 'bethesda.net' || v === 'bethesda') return 'bethesda.net (obsolete)';
+    return v;
+}
 
 const stateOptions = [
     { label: 'Normal', value: 'normal' },
@@ -47,7 +66,7 @@ const stateOptions = [
 ];
 
 function addRow() {
-    const newRow: AvailabilityRow = { distribution: 'Steam', id: '', drm: 'Steam', notes: '', keys: '', os: 'Windows', state: 'normal' };
+    const newRow: AvailabilityRow = { distribution: 'steam', id: '', drm: 'steam', os: 'Windows', keys: '', notes: '', state: 'normal' };
     dragList.value = [...dragList.value, newRow];
 }
 
@@ -63,16 +82,13 @@ function updateRow(index: number, field: keyof AvailabilityRow, val: any) {
 }
 
 const getProductIdHelp = (source: string) => {
-    switch (source) {
-        case 'Steam': return 'AppID (e.g. 2310)';
-        case 'GOG.com': return 'Slug (e.g. system_shock_2)';
-        case 'Epic Games Store': return 'Namespace/Slug (e.g. darksiders3)';
-        case 'Amazon.com':
-        case 'Amazon.co.uk': return 'ASIN (e.g. B0002IBEJQ)';
-        case 'MacApp': return 'AppID (e.g. id468808410)';
-        case 'Microsoft Store': return 'ID (e.g. 9wzdncrfhwfh)';
-        default: return 'Store specific ID or full URL';
-    }
+    const s = source ? source.toLowerCase().trim() : '';
+    if (s === 'steam') return 'AppID (e.g. 2310)';
+    if (s === 'gog galaxy' || s === 'gog.com' || s === 'gog') return 'Slug (e.g. system_shock_2)';
+    if (s === 'epic games launcher' || s === 'epic games store' || s === 'epic') return 'Namespace/Slug (e.g. darksiders3)';
+    if (s === 'meta store' || s === 'macapp') return 'AppID (e.g. id468808410)';
+    if (s === 'microsoft store') return 'ID (e.g. 9wzdncrfhwfh)';
+    return 'Store specific ID or full URL';
 };
 
 const osOptions = [
@@ -197,12 +213,15 @@ function getKeysArray(keysString: string): string[] {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <Select :modelValue="row.distribution" @update:modelValue="v => updateRow(index, 'distribution', v)"
+                    <Select :modelValue="normalizeStoreOption(row.distribution)" @update:modelValue="v => updateRow(index, 'distribution', v)"
                         :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
                         class="w-full sm:w-44 text-xs! flex-none h-9! flex! items-center!" size="small">
                         <template #value="slotProps">
                             <div v-if="slotProps.value" class="flex items-center gap-2">
-                                <component :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon || Box"
+                                <img v-if="getIconSrc(slotProps.value, ['store', 'drm'])" 
+                                     :src="getIconSrc(slotProps.value, ['store', 'drm'])" 
+                                     :alt="slotProps.value" class="w-4 h-4 shrink-0 object-contain" />
+                                <component v-else :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon || Box"
                                     class="w-3.5 h-3.5"
                                     :class="{ 'text-surface-400': !storefrontOptions.find(o => o.value === slotProps.value) }" />
                                 <span class="text-xs truncate">{{storefrontOptions.find(o => o.value ===
@@ -212,7 +231,10 @@ function getKeysArray(keysString: string): string[] {
                         </template>
                         <template #option="slotProps">
                             <div class="flex items-center gap-2">
-                                <component :is="slotProps.option.icon" class="w-3.5 h-3.5" />
+                                <img v-if="getIconSrc(slotProps.option.value, ['store', 'drm'])" 
+                                     :src="getIconSrc(slotProps.option.value, ['store', 'drm'])" 
+                                     :alt="slotProps.option.label" class="w-4 h-4 shrink-0 object-contain" />
+                                <component v-else :is="slotProps.option.icon || Box" class="w-3.5 h-3.5 text-surface-400" />
                                 <span class="text-xs">{{ slotProps.option.label }}</span>
                             </div>
                         </template>

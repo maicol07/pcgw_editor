@@ -110,7 +110,7 @@ describe('AvailabilityForm.vue', () => {
         expect(emitted).toBeTruthy();
         const newVal = emitted![0][0] as AvailabilityRow[];
         expect(newVal.length).toBe(1);
-        expect(newVal[0].distribution).toBe('Steam'); // Default
+        expect(newVal[0].distribution).toBe('steam'); // Default
     });
 
     it('removes a row when Remove button is clicked', async () => {
@@ -128,7 +128,7 @@ describe('AvailabilityForm.vue', () => {
         expect(emitted).toBeTruthy();
         const newVal = emitted![0][0] as AvailabilityRow[];
         expect(newVal.length).toBe(1);
-        expect(newVal[0].distribution).not.toBe('Steam');
+        expect(newVal[0].distribution).not.toBe('steam');
     });
 
     it('updates row field', async () => {
