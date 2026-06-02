@@ -42,7 +42,9 @@ import iconDrmDownload from '../assets/icons/drm-download.svg';
 import iconStoreBattlenet from '../assets/icons/store-battlenet.svg';
 import iconStoreBethesda from '../assets/icons/store-bethesda.svg';
 import iconStoreEpicgames from '../assets/icons/store-epicgames.svg';
+import iconStoreGfwl from '../assets/icons/store-gfwl.svg';
 import iconStoreGogcom from '../assets/icons/store-gogcom.svg';
+import iconStoreMas from '../assets/icons/store-mas.svg';
 import iconStoreMeta from '../assets/icons/store-meta.svg';
 import iconStoreMicrosoft from '../assets/icons/store-microsoft.svg';
 import iconStoreRockstargames from '../assets/icons/store-rockstargames.svg';
@@ -125,6 +127,7 @@ export const iconMap = {
         'epic games store': iconStoreEpicgames,
         'epic': iconStoreEpicgames,
         'gamersgate': iconStoreGamersgate,
+        'gfwl': iconStoreGfwl,
         'gog': iconStoreGogcom,
         'gog galaxy': iconStoreGogcom,
         'goggalaxy': iconStoreGogcom,
@@ -132,6 +135,8 @@ export const iconMap = {
         'galaxy': iconStoreGogcom,
         'humble': iconStoreHumble,
         'humble store': iconStoreHumble,
+        'macapp': iconStoreMas,
+        'mac app store': iconStoreMas,
         'microsoft store': iconStoreMicrosoft,
         'xbox': iconStoreMicrosoft,
         'meta store': iconStoreMeta,
