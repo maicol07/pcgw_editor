@@ -18,10 +18,9 @@ import iconLinux from '../assets/icons/os-linux.svg';
 import iconSteam from '../assets/icons/store-steam.svg';
 import iconGog from '../assets/icons/store-gogcom.svg';
 import iconEpic from '../assets/icons/store-epicgames.svg';
-import iconUbisoft from '../assets/icons/store-uplay.svg';
-import iconOrigin from '../assets/icons/store-origin.svg'; // EA App uses Origin icon or new?
+import iconUbisoft from '../assets/icons/store-ubisoft.svg';
+import iconOrigin from '../assets/icons/store-ea.svg'; // EA App uses Origin icon or new?
 import iconMs from '../assets/icons/store-microsoft.svg';
-import iconAmazon from '../assets/icons/store-ws.svg'; // Placeholder or find Amazon
 import iconGeneric from '../assets/icons/menu-icon.svg'; // Default
 
 const props = defineProps<{
@@ -49,9 +48,9 @@ const platformOptions = [
   { label: 'GOG.com', value: 'GOG.com', icon: iconGog },
   { label: 'Epic Games Launcher', value: 'Epic Games Launcher', icon: iconEpic },
   { label: 'Ubisoft Connect', value: 'Ubisoft Connect', icon: iconUbisoft },
-  { label: 'EA app', value: 'EA app', icon: iconOrigin }, // Using Origin icon for now or generic
+  { label: 'EA app', value: 'EA app', icon: iconOrigin }, // Using EA App icon
   { label: 'Microsoft Store', value: 'Microsoft Store', icon: iconMs },
-  { label: 'Amazon Games', value: 'Amazon Games', icon: iconAmazon },
+  { label: 'Amazon Games', value: 'Amazon Games', icon: iconGeneric },
   { label: 'PC booter', value: 'PC booter', icon: iconGeneric },
   { label: 'DOS', value: 'DOS', icon: iconGeneric },
 ];

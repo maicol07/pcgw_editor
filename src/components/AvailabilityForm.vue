@@ -92,6 +92,41 @@ function handleOsChange(index: number, selectedValues: string[]) {
 function getOsArray(osString: string): string[] {
   return osString ? osString.split(',').map(s => s.trim()) : [];
 }
+
+const drmOptions = [
+  { name: 'DRM-free', value: 'drm-free' },
+  { name: 'Account', value: 'account' },
+  { name: 'Activation', value: 'activation' },
+  { name: 'Activation limit', value: 'actlimit' },
+  { name: 'Disc', value: 'disc' },
+  { name: 'Key', value: 'key' },
+  { name: 'Online', value: 'online' },
+  { name: 'Physical', value: 'physical' },
+  { name: 'Floppy', value: 'floppy' },
+  { name: 'Dongle', value: 'dongle' },
+  { name: 'Unknown', value: 'unknown' },
+  { name: 'Battle.net', value: 'battle.net' },
+  { name: 'Bethesda.net', value: 'bethesda' },
+  { name: 'EA App', value: 'ea app' },
+  { name: 'Epic Games Launcher', value: 'epic games launcher' },
+  { name: 'GFWL', value: 'gfwl' },
+  { name: 'GOG GALAXY', value: 'gog' },
+  { name: 'Mac App Store', value: 'macapp' },
+  { name: 'Meta Store', value: 'meta store' },
+  { name: 'Microsoft Store', value: 'microsoft store' },
+  { name: 'Rockstar Games Launcher', value: 'rockstar games launcher' },
+  { name: 'Steam', value: 'steam' },
+  { name: 'Twitch', value: 'twitch' },
+  { name: 'Ubisoft Connect', value: 'ubisoft connect' }
+];
+
+function handleDrmChange(index: number, selectedValues: string[]) {
+  updateRow(index, 'drm', selectedValues.join(', '));
+}
+
+function getDrmArray(drmString: string): string[] {
+  return drmString ? drmString.split(',').map(s => s.trim()) : [];
+}
 </script>
 
 <template>
@@ -167,9 +202,28 @@ function getOsArray(osString: string): string[] {
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[10px] font-bold uppercase text-surface-400">DRM Used</label>
-                        <InputText :value="row.drm"
-                            @input="updateRow(index, 'drm', ($event.target as HTMLInputElement).value)"
-                            placeholder="e.g. Steam, DRM-free" class="w-full !text-xs !p-2" />
+                        <MultiSelect :modelValue="getDrmArray(row.drm)" @update:modelValue="(val) => handleDrmChange(index, val)"
+                            :options="drmOptions" optionLabel="name" optionValue="value" placeholder="Select DRM" :maxSelectedLabels="3"
+                            class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
+                            <template #value="slotProps">
+                                <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
+                                    v-if="slotProps.value && slotProps.value.length">
+                                    <div v-for="option in slotProps.value" :key="option"
+                                        class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                                        <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+                                        <span class="text-xs">{{ drmOptions.find(o => o.value === option)?.name || option }}</span>
+                                    </div>
+                                </div>
+                                <span v-else class="text-surface-400 text-xs">{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex items-center">
+                                    <img v-if="getIconSrc(slotProps.option.value)" :src="getIconSrc(slotProps.option.value)" :alt="slotProps.option.name"
+                                        class="w-4 h-4 mr-2" />
+                                    <span class="text-xs">{{ slotProps.option.name }}</span>
+                                </div>
+                            </template>
+                        </MultiSelect>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[10px] font-bold uppercase text-surface-400">Supported OS</label>
