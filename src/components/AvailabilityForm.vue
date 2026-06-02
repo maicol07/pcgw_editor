@@ -4,6 +4,8 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
+import MultiSelect from 'primevue/multiselect';
+import { getIconSrc } from '../utils/icons';
 import {
     Monitor, ShoppingBag, Zap, ShoppingCart, Shield, Play,
     Gift, Heart, Command, AppWindow, Globe, Box, Code,
@@ -73,6 +75,24 @@ const getProductIdHelp = (source: string) => {
         default: return 'Store specific ID or full URL';
     }
 };
+
+const osOptions = [
+  { name: 'Windows', value: 'Windows' },
+  { name: 'DOS', value: 'DOS' },
+  { name: 'Windows 3.x', value: 'Windows 3.x' },
+  { name: 'Mac OS', value: 'Mac OS' },
+  { name: 'OS X', value: 'OS X' },
+  { name: 'Linux', value: 'Linux' },
+  { name: 'PC booter', value: 'PC booter' }
+];
+
+function handleOsChange(index: number, selectedValues: string[]) {
+  updateRow(index, 'os', selectedValues.join(', '));
+}
+
+function getOsArray(osString: string): string[] {
+  return osString ? osString.split(',').map(s => s.trim()) : [];
+}
 </script>
 
 <template>
@@ -154,9 +174,28 @@ const getProductIdHelp = (source: string) => {
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[10px] font-bold uppercase text-surface-400">Supported OS</label>
-                        <InputText :value="row.os"
-                            @input="updateRow(index, 'os', ($event.target as HTMLInputElement).value)"
-                            placeholder="e.g. Windows, OS X, Linux" class="w-full !text-xs !p-2" />
+                        <MultiSelect :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
+                            :options="osOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
+                            class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
+                            <template #value="slotProps">
+                                <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
+                                    v-if="slotProps.value && slotProps.value.length">
+                                    <div v-for="option in slotProps.value" :key="option"
+                                        class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                                        <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+                                        <span class="text-xs">{{ option }}</span>
+                                    </div>
+                                </div>
+                                <span v-else class="text-surface-400 text-xs">{{ slotProps.placeholder }}</span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex items-center">
+                                    <img v-if="getIconSrc(slotProps.option.value)" :src="getIconSrc(slotProps.option.value)" :alt="slotProps.option.name"
+                                        class="w-4 h-4 mr-2" />
+                                    <span class="text-xs">{{ slotProps.option.name }}</span>
+                                </div>
+                            </template>
+                        </MultiSelect>
                     </div>
                 </div>
 

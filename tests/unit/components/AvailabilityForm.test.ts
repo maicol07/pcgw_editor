@@ -29,6 +29,23 @@ const SelectButtonStub = {
     emits: ['update:modelValue']
 };
 
+const MultiSelectStub = {
+    template: '<div class="multiselect-stub"><div v-for="opt in options" :key="opt.value" @click="select(opt.value)">{{opt.name}}</div></div>',
+    props: ['modelValue', 'options'],
+    emits: ['update:modelValue'],
+    methods: {
+        select(val: string) {
+            const self = this as any;
+            const current = self.modelValue || [];
+            const isSelected = current.includes(val);
+            const newValue = isSelected
+                ? current.filter((v: string) => v !== val)
+                : [...current, val];
+            self.$emit('update:modelValue', newValue);
+        }
+    }
+};
+
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({
     Monitor: { template: '<span class="icon-monitor"></span>' },
@@ -66,6 +83,7 @@ describe('AvailabilityForm.vue', () => {
                         Button: ButtonStub,
                         Select: SelectStub,
                         SelectButton: SelectButtonStub,
+                        MultiSelect: MultiSelectStub,
                         TransitionGroup: { template: '<div><slot /></div>' }
                     }
                 }
