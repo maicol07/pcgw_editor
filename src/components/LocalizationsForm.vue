@@ -85,7 +85,7 @@ const getFlagCode = (lang: string) => {
                         <label class="text-xs font-bold text-surface-500">Language</label>
                         <div class="flex gap-2">
                             <Select v-model="row.language" :options="commonLanguages" optionLabel="label"
-                                optionValue="value" editable placeholder="Select or type..." class="w-full">
+                                optionValue="value" placeholder="Select or type..." class="w-full">
                                 <template #value="slotProps">
                                     <div class="flex items-center gap-2" v-if="slotProps.value">
                                         <FlagIcon :flag="getFlagCode(slotProps.value) as any"

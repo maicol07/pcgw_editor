@@ -103,7 +103,7 @@ const getProductIdHelp = (source: string) => {
                 <div class="flex flex-wrap items-center gap-2">
                     <Select :modelValue="row.distribution" @update:modelValue="v => updateRow(index, 'distribution', v)"
                         :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
-                        class="w-full sm:w-44 text-xs! flex-none h-9! flex! items-center!" size="small" editable>
+                        class="w-full sm:w-44 text-xs! flex-none h-9! flex! items-center!" size="small">
                         <template #value="slotProps">
                             <div v-if="slotProps.value" class="flex items-center gap-2">
                                 <component :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon || Box"
