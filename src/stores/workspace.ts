@@ -120,6 +120,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         return false;
     }
 
+    async function checkAllPagesForUpdates(): Promise<void> {
+        const linkedPages = pages.value.filter(p => p.pcgwPageTitle);
+        if (!linkedPages.length) return;
+
+        const titles = linkedPages.map(p => p.pcgwPageTitle as string);
+        const infoMap = await pcgwApi.getLatestRevisionsInfo(titles);
+
+        linkedPages.forEach(page => {
+            if (page.pcgwPageTitle && infoMap[page.pcgwPageTitle]) {
+                page.onlineRevisionId = infoMap[page.pcgwPageTitle].revid;
+            }
+        });
+    }
+
     // Actions
     function createPage(title: string = 'Untitled Page', initialWikitext?: string, template: 'blank' | 'singleplayer' | 'multiplayer' | 'unknown' = 'blank', pcgwPageTitle?: string, revid?: number) {
         let wikitext = initialWikitext;
@@ -331,6 +345,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         syncToWikitext,
         syncFromWikitext,
         checkForUpdates,
+        checkAllPagesForUpdates,
         publishPage
     };
 });

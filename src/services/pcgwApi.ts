@@ -473,6 +473,67 @@ class PCGWApiService {
         }
     }
 
+    async getLatestRevisionsInfo(titles: string[]): Promise<Record<string, { revid: number }>> {
+        const cleanTitles = Array.from(new Set(titles.filter(t => t.trim())));
+        if (!cleanTitles.length) return {};
+
+        const results: Record<string, { revid: number }> = {};
+
+        try {
+            // MediaWiki limits multi-title queries to 50 for standard users
+            const CHUNK_SIZE = 50;
+            for (let i = 0; i < cleanTitles.length; i += CHUNK_SIZE) {
+                const chunk = cleanTitles.slice(i, i + CHUNK_SIZE);
+                const response = await this.fetchApi<{ 
+                    query?: { 
+                        pages?: Record<string, { title: string; revisions?: { revid: number }[] }>,
+                        normalized?: { from: string; to: string }[],
+                        redirects?: { from: string; to: string }[]
+                    } 
+                }>({
+                    action: 'query',
+                    prop: 'revisions',
+                    titles: chunk.join('|'),
+                    rvprop: 'ids',
+                    redirects: '1'
+                });
+
+                if (response?.query?.pages) {
+                    const normalizedMap: Record<string, string> = {};
+                    response.query.normalized?.forEach(n => {
+                        normalizedMap[n.from] = n.to;
+                    });
+
+                    const redirectMap: Record<string, string> = {};
+                    response.query.redirects?.forEach(r => {
+                        redirectMap[r.from] = r.to;
+                    });
+
+                    const pagesByTitle: Record<string, { revid: number }> = {};
+                    Object.values(response.query.pages).forEach(page => {
+                        const revid = page.revisions?.[0]?.revid;
+                        if (revid !== undefined) {
+                            pagesByTitle[page.title] = { revid };
+                        }
+                    });
+
+                    chunk.forEach(title => {
+                        const normalized = normalizedMap[title] || title;
+                        const target = redirectMap[normalized] || normalized;
+                        const info = pagesByTitle[target];
+                        if (info) {
+                            results[title] = info;
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to get batch revision info:', error);
+        }
+
+        return results;
+    }
+
     extractTitleFromUrl(url: string): string | null {
         try {
             const parsedUrl = new URL(url);

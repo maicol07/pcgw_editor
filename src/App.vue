@@ -290,19 +290,11 @@ onMounted(() => {
     window.addEventListener('keydown', handleGlobalKeydown);
 
     // Initial check for updates for all pages
-    const updateChecks = workspaceStore.pages.map(p => {
-        if (p.pcgwPageTitle) return workspaceStore.checkForUpdates(p.id);
-        return Promise.resolve();
-    });
-    Promise.all(updateChecks).catch(console.warn);
+    workspaceStore.checkAllPagesForUpdates().catch(console.warn);
 
     // Periodic check every 5 minutes
     const interval = setInterval(() => {
-        const checks = workspaceStore.pages.map(p => {
-            if (p.pcgwPageTitle) return workspaceStore.checkForUpdates(p.id);
-            return Promise.resolve();
-        });
-        Promise.all(checks).catch(console.warn);
+        workspaceStore.checkAllPagesForUpdates().catch(console.warn);
     }, 5 * 60 * 1000);
 
     onUnmounted(() => {
