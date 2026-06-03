@@ -35,6 +35,89 @@ const suggestions = ref<string[]>(initialSuggestions);
 const loading = ref(false);
 const searchTimeout = ref<number>();
 const filterText = ref('');
+const initialSuggestionsCache = ref<string[]>([]);
+
+const loadInitialSuggestions = async () => {
+    if (initialSuggestionsCache.value.length > 0) {
+        return initialSuggestionsCache.value;
+    }
+    loading.value = true;
+    try {
+        let results: string[] = [];
+        switch (props.dataSource) {
+            case 'companies':
+                results = await pcgwApi.searchCompanies();
+                break;
+            case 'engines':
+                results = await pcgwApi.searchEngines();
+                break;
+            case 'series':
+                results = await pcgwApi.searchSeries();
+                break;
+            case 'genres':
+                results = await pcgwApi.searchGenres();
+                break;
+            case 'themes':
+                results = await pcgwApi.searchThemes();
+                break;
+            case 'perspectives':
+                results = await pcgwApi.searchPerspectives();
+                break;
+            case 'files':
+                results = await pcgwApi.searchFiles();
+                break;
+            case 'pacing':
+                results = await pcgwApi.searchPacing();
+                break;
+            case 'controls':
+                results = await pcgwApi.searchControls();
+                break;
+            case 'sports':
+                results = await pcgwApi.searchSports();
+                break;
+            case 'vehicles':
+                results = await pcgwApi.searchVehicles();
+                break;
+            case 'artStyles':
+                results = await pcgwApi.searchArtStyles();
+                break;
+            case 'monetization':
+                results = await pcgwApi.searchMonetizations();
+                break;
+            case 'microtransactions':
+                results = await pcgwApi.searchMicrotransactions();
+                break;
+            case 'modes':
+                results = await pcgwApi.searchModes();
+                break;
+            case 'pages':
+                results = await pcgwApi.searchPages();
+                break;
+        }
+        initialSuggestionsCache.value = results;
+        return results;
+    } catch (error) {
+        console.error('Error loading initial suggestions:', error);
+        return [];
+    } finally {
+        loading.value = false;
+    }
+};
+
+const onShow = async () => {
+    if (!filterText.value || filterText.value.length < 2) {
+        const initial = await loadInitialSuggestions();
+        const selectedSet = new Set(Array.isArray(localValue.value) ? localValue.value : []);
+        
+        let filtered = initial;
+        if (filterText.value) {
+            filtered = initial.filter(item => item.toLowerCase().includes(filterText.value.toLowerCase()));
+        }
+        
+        const mergedSet = new Set([...filtered, ...selectedSet]);
+        suggestions.value = Array.from(mergedSet);
+    }
+};
 
 const addCustomAutocompleteValue = () => {
     const newVal = filterText.value.trim();
@@ -76,10 +159,17 @@ const onFilter = async (event: { value?: string, query?: string }) => {
     const selectedSet = new Set(Array.isArray(localValue.value) ? localValue.value : []);
 
     if (!query || query.length < 2) {
+        const initial = await loadInitialSuggestions();
+        let filtered = initial;
+        if (query) {
+            filtered = initial.filter(item => item.toLowerCase().includes(query.toLowerCase()));
+        }
+
         if (props.multiple) {
-            suggestions.value = Array.from(selectedSet);
+            const mergedSet = new Set([...filtered, ...selectedSet]);
+            suggestions.value = Array.from(mergedSet);
         } else {
-            suggestions.value = [];
+            suggestions.value = filtered;
         }
         return;
     }
@@ -169,21 +259,41 @@ const onFilter = async (event: { value?: string, query?: string }) => {
     <div class="w-full relative">
         <!-- Multiple Selection Mode -->
         <MultiSelect v-if="multiple" v-model="localValue" :options="suggestions" :loading="loading"
-            :placeholder="placeholder" filter autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
+            :placeholder="placeholder" filter filterPlaceholder="Search..." autoFilterFocus :filterMatchMode="'contains'" @filter="onFilter"
+            @show="onShow"
             class="w-full" :display="display" :showToggleAll="false" :inputClass="inputClass">
+            <template #value="slotProps">
+                <div class="flex items-center gap-1 flex-wrap w-full overflow-hidden" v-if="slotProps.value && slotProps.value.length">
+                    <template v-if="display === 'chip'">
+                        <div v-for="option in slotProps.value" :key="option"
+                            class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                            <span class="text-xs">{{ option }}</span>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <span class="text-sm text-surface-900 dark:text-surface-0">{{ slotProps.value.join(', ') }}</span>
+                    </template>
+                </div>
+                <span v-else class="text-surface-400 dark:text-surface-500 text-sm">{{ placeholder }}</span>
+            </template>
             <template #option="slotProps">
                 <slot name="option" :option="slotProps.option" :index="slotProps.index">
                     {{ slotProps.option }}
                 </slot>
             </template>
             <template #footer>
-                <div v-if="filterText" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
-                    <Button 
-                        class="p-button-text p-button-sm text-xs text-primary-500"
-                        @click="addCustomAutocompleteValue"
-                    >
-                        + Add '{{ filterText }}'
-                    </Button>
+                <div>
+                    <div v-if="filterText && filterText.length >= 2" class="p-2 border-t border-surface-200 dark:border-surface-700 flex justify-end">
+                        <Button 
+                            class="p-button-text p-button-sm text-xs text-primary-500"
+                            @click="addCustomAutocompleteValue"
+                        >
+                            + Add '{{ filterText }}'
+                        </Button>
+                    </div>
+                    <div v-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
+                        Type at least 2 characters to search for more options
+                    </div>
                 </div>
             </template>
         </MultiSelect>
@@ -201,6 +311,11 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                 <slot name="option" :option="slotProps.option" :index="slotProps.index">
                     {{ slotProps.option }}
                 </slot>
+            </template>
+            <template #footer>
+                <div v-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
+                    Type at least 2 characters to search for more options
+                </div>
             </template>
         </AutoComplete>
     </div>

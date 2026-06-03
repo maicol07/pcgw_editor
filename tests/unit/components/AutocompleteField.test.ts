@@ -66,4 +66,41 @@ describe('AutocompleteField.vue - Custom Value support', () => {
     expect(emitted).toBeTruthy();
     expect(emitted![0][0]).toContain('Nintendo');
   });
+
+  it('loads initial suggestions on empty or short filter query and displays the help text', async () => {
+    const wrapper = mount(AutocompleteField, {
+      props: {
+        modelValue: [],
+        dataSource: 'companies',
+        multiple: true
+      },
+      global: {
+        stubs: {
+          MultiSelect: MultiSelectStub,
+          Button: ButtonStub,
+          AutoComplete: true
+        }
+      }
+    });
+
+    const multiselect = wrapper.findComponent(MultiSelectStub);
+    expect(multiselect.exists()).toBe(true);
+
+    // Trigger filter search with empty query
+    const filterInput = multiselect.find('.filter-input');
+    await filterInput.setValue('');
+    await filterInput.trigger('input');
+    await wrapper.vm.$nextTick();
+
+    // Verify pcgwApi.searchCompanies was called
+    const { pcgwApi } = await import('../../../src/services/pcgwApi');
+    expect(pcgwApi.searchCompanies).toHaveBeenCalled();
+
+    // suggestions should be updated with initial mock values
+    expect((wrapper.vm as any).suggestions).toContain('Epic Games');
+    expect((wrapper.vm as any).suggestions).toContain('Steam');
+
+    // Helper text should be visible in the footer
+    expect(wrapper.text()).toContain('Type at least 2 characters to search for more options');
+  });
 });

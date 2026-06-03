@@ -59,22 +59,31 @@ class PCGWApiService {
         };
     }
 
-    private async cargoQuery(field: string, searchTerm: string): Promise<string[]> {
-        if (!searchTerm || searchTerm.length < 2) return [];
+    private async cargoQuery(field: string, searchTerm?: string): Promise<string[]> {
+        const term = (searchTerm || '').trim();
+        if (term && term.length < 2) return [];
 
-        const cacheKey = `cargo:${field}:${searchTerm.toLowerCase()}`;
+        const cacheKey = term 
+            ? `cargo:${field}:${term.toLowerCase()}` 
+            : `cargo:${field}:__initial__`;
+            
         const cached = this.getFromCache(cacheKey);
         if (cached) return cached;
 
         try {
-            const result = await this.fetchApi<{ cargoquery?: CargoResult[] }>({
+            const queryParams: Record<string, string> = {
                 action: 'cargoquery',
                 tables: 'Infobox_game',
                 fields: `${field}=value`,
-                where: `${field} HOLDS LIKE "%${searchTerm}%"`,
                 group_by: field,
-                limit: '20',
-            });
+                limit: term ? '20' : '50',
+            };
+
+            if (term) {
+                queryParams.where = `${field} HOLDS LIKE "%${term}%"`;
+            }
+
+            const result = await this.fetchApi<{ cargoquery?: CargoResult[] }>(queryParams);
 
             if (!result?.cargoquery || !Array.isArray(result.cargoquery)) {
                 return [];
@@ -87,7 +96,13 @@ class PCGWApiService {
                     value.split(',').forEach(v => {
                         let trimmed = v.trim();
                         trimmed = trimmed.replace(/^(Company|Engine|Series):/i, '');
-                        if (trimmed && trimmed.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        
+                        const lower = trimmed.toLowerCase();
+                        if (lower === 'select...' || lower === 'select' || lower === 'search...' || !trimmed) {
+                            return;
+                        }
+
+                        if (term ? trimmed.toLowerCase().includes(term.toLowerCase()) : true) {
                             values.add(trimmed);
                         }
                     });
@@ -103,7 +118,7 @@ class PCGWApiService {
         }
     }
 
-    async searchCompanies(query: string): Promise<string[]> {
+    async searchCompanies(query?: string): Promise<string[]> {
         const [devs, pubs] = await Promise.all([
             this.cargoQuery('Infobox_game.Developers', query),
             this.cargoQuery('Infobox_game.Publishers', query),
@@ -111,55 +126,55 @@ class PCGWApiService {
         return Array.from(new Set([...devs, ...pubs])).slice(0, 10);
     }
 
-    async searchEngines(query: string): Promise<string[]> {
+    async searchEngines(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Engines', query);
     }
 
-    async searchSeries(query: string): Promise<string[]> {
+    async searchSeries(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Series', query);
     }
 
-    async searchGenres(query: string): Promise<string[]> {
+    async searchGenres(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Genres', query);
     }
 
-    async searchThemes(query: string): Promise<string[]> {
+    async searchThemes(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Themes', query);
     }
 
-    async searchPerspectives(query: string): Promise<string[]> {
+    async searchPerspectives(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Perspectives', query);
     }
 
-    async searchPacing(query: string): Promise<string[]> {
+    async searchPacing(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Pacing', query);
     }
 
-    async searchControls(query: string): Promise<string[]> {
+    async searchControls(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Controls', query);
     }
 
-    async searchSports(query: string): Promise<string[]> {
+    async searchSports(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Sports', query);
     }
 
-    async searchVehicles(query: string): Promise<string[]> {
+    async searchVehicles(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Vehicles', query);
     }
 
-    async searchArtStyles(query: string): Promise<string[]> {
+    async searchArtStyles(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Art_styles', query);
     }
 
-    async searchMonetizations(query: string): Promise<string[]> {
+    async searchMonetizations(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Monetizations', query);
     }
 
-    async searchMicrotransactions(query: string): Promise<string[]> {
+    async searchMicrotransactions(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Microtransactions', query);
     }
 
-    async searchModes(query: string): Promise<string[]> {
+    async searchModes(query?: string): Promise<string[]> {
         return this.cargoQuery('Infobox_game.Modes', query);
     }
 
@@ -190,22 +205,33 @@ class PCGWApiService {
         }
     }
 
-    async searchFiles(query: string): Promise<string[]> {
-        if (!query || query.length < 2) return [];
+    async searchFiles(query?: string): Promise<string[]> {
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
 
         try {
+            if (!term) {
+                const response = await this.fetchApi<{ query?: { allimages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allimages',
+                    ailimit: '20',
+                });
+                const prefixTitles = response?.query?.allimages?.map(item => item.title) || [];
+                return prefixTitles.map((title) => title.replace(/^File:/, ''));
+            }
+
             const [searchResult, prefixResult] = await Promise.all([
                 this.fetchApi<{ query?: { search?: { title: string }[] } }>({
                     action: 'query',
                     list: 'search',
-                    srsearch: query,
+                    srsearch: term,
                     srnamespace: '6',
                     srlimit: '20',
                 }),
                 this.fetchApi<{ query?: { allimages?: { title: string }[] } }>({
                     action: 'query',
                     list: 'allimages',
-                    aiprefix: query,
+                    aiprefix: term,
                     ailimit: '20',
                 })
             ]);
@@ -222,14 +248,25 @@ class PCGWApiService {
         }
     }
 
-    async searchPages(query: string): Promise<string[]> {
-        if (!query || query.length < 2) return [];
+    async searchPages(query?: string): Promise<string[]> {
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
 
         try {
+            if (!term) {
+                const response = await this.fetchApi<{ query?: { allpages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allpages',
+                    aplimit: '10',
+                });
+                const prefixTitles = response?.query?.allpages?.map(item => item.title) || [];
+                return prefixTitles;
+            }
+
             // opensearch returns [query, [titles], [descriptions], [urls]]
             const result = await this.fetchApi<[string, string[], string[], string[]]>({
                 action: 'opensearch',
-                search: query,
+                search: term,
                 namespace: '0',
                 limit: '10',
             });
@@ -243,20 +280,25 @@ class PCGWApiService {
     }
 
     // New: User search for NotesEditorDialog
-    async searchUsers(query: string): Promise<string[]> {
-        if (!query || query.length < 2) return [];
+    async searchUsers(query?: string): Promise<string[]> {
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
         try {
             // Cache user searches? Maybe not strictly necessary for such a quick lookup but consistent.
-            const cacheKey = `user:${query.toLowerCase()}`;
+            const cacheKey = term ? `user:${term.toLowerCase()}` : 'user:__initial__';
             const cached = this.getFromCache(cacheKey);
             if (cached) return cached;
 
-            const result = await this.fetchApi<{ query?: { allusers?: { name: string }[] } }>({
+            const params: Record<string, string> = {
                 action: 'query',
                 list: 'allusers',
-                auprefix: query,
                 aulimit: '10'
-            });
+            };
+            if (term) {
+                params.auprefix = term;
+            }
+
+            const result = await this.fetchApi<{ query?: { allusers?: { name: string }[] } }>(params);
 
             if (result?.query?.allusers) {
                 const users = result.query.allusers.map(u => u.name);
