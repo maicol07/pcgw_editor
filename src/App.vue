@@ -29,6 +29,7 @@ import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
 import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
 import ReloadPrompt from './components/common/ReloadPrompt.vue';
+import RateLimitNotice from './components/common/RateLimitNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { pcgwApi } from './services/pcgwApi';
@@ -322,6 +323,8 @@ onMounted(() => {
                     @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage)"
                     @publishPcgw="handleOpenPublishDialog"
                     @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
+
+                <RateLimitNotice />
 
                 <div
                     class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
