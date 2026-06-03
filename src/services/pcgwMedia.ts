@@ -10,7 +10,7 @@ export interface UploadOptions {
 
 class PCGWMediaService {
     async uploadFile(file: Blob, options: UploadOptions): Promise<any> {
-        if (!pcgwAuth.isLoggedIn) {
+        if (!pcgwAuth.isAuthReady) {
             throw new Error('User not authenticated with PCGW');
         }
 
@@ -52,7 +52,7 @@ class PCGWMediaService {
     }
 
     async editPage(title: string, text: string, summary: string, baserevid?: number, minor: boolean = false): Promise<any> {
-        if (!pcgwAuth.isLoggedIn) {
+        if (!pcgwAuth.isAuthReady) {
             throw new Error('User not authenticated with PCGW');
         }
 
@@ -83,7 +83,7 @@ class PCGWMediaService {
     }
     
     async moveFile(from: string, to: string, reason: string): Promise<any> {
-        if (!pcgwAuth.isLoggedIn) {
+        if (!pcgwAuth.isAuthReady) {
             throw new Error('User not authenticated with PCGW');
         }
 

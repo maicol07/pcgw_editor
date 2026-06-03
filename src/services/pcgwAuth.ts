@@ -28,6 +28,11 @@ class PCGWAuthService {
         return this.authData.value.isLoggedIn;
     }
 
+    get isAuthReady() {
+        const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
+        return this.authData.value.isLoggedIn || (autoReLogin && !!this.authData.value.username && !!this.authData.value.password);
+    }
+
     get username() {
         return this.authData.value.username;
     }
@@ -58,9 +63,15 @@ class PCGWAuthService {
         if (params instanceof FormData) {
             body = params;
             // Ensure cookies and assert are present in FormData
-            if (!body.has('cookies')) body.append('cookies', this.authData.value.sessionCookies);
+            // Always set/update cookies to ensure the latest cookies are sent
+            body.set('cookies', this.authData.value.sessionCookies);
             if (!body.has('assert')) body.append('assert', 'user');
             if (!body.has('method')) body.append('method', method);
+            
+            // If the FormData has a token, update it with the latest CSRF token
+            if (body.has('token') && this.authData.value.csrfToken) {
+                body.set('token', this.authData.value.csrfToken);
+            }
         } else {
             body = {
                 cookies: this.authData.value.sessionCookies,
@@ -70,6 +81,15 @@ class PCGWAuthService {
                     assert: 'user'
                 }
             };
+            // If the params object has a token, update it with the latest CSRF token
+            if (this.authData.value.csrfToken) {
+                if ('token' in body.params) {
+                    body.params.token = this.authData.value.csrfToken;
+                }
+                if ('token' in params) {
+                    params.token = this.authData.value.csrfToken;
+                }
+            }
         }
 
         const res = await apiFetch(getWorkerProxyUrl(), {
@@ -79,7 +99,7 @@ class PCGWAuthService {
         });
 
         // Handle MediaWiki auth errors reactively
-        if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed') {
+        if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed' || res?.error?.code === 'badtoken') {
             if (retry) {
                 const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
                 if (autoReLogin && this.authData.value.username && this.authData.value.password) {

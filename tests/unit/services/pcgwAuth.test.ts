@@ -306,4 +306,55 @@ describe('PCGWAuthService', () => {
         expect(pcgwAuth.sessionCookies).toBe('newcookie=1');
         expect(pcgwAuth.isLoggedIn).toBe(true);
     });
+
+    it('should trigger re-login and update token on badtoken if autoReLogin is true', async () => {
+        // @ts-ignore
+        pcgwAuth['authData'].value = {
+            username: 'testuser',
+            password: 'testpassword',
+            isLoggedIn: true,
+            sessionCookies: 'oldcookie=1',
+            csrfToken: 'oldtoken'
+        };
+        localStorage.setItem('autoReLogin', 'true');
+
+        // 1st mock: failure due to badtoken
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            error: { code: 'badtoken' }
+        });
+
+        // 2nd mock: successful login
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            success: true,
+            username: 'testuser',
+            sessionCookies: 'newcookie=1'
+        });
+
+        // 3rd mock: refreshCsrfToken after login
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            query: { tokens: { csrftoken: 'newtoken' } }
+        });
+
+        // 4th mock: retry of original request
+        vi.mocked(apiFetch).mockResolvedValueOnce({ success: true });
+
+        // Pass a FormData with old token
+        const formData = new FormData();
+        formData.append('token', 'oldtoken');
+
+        // @ts-ignore
+        await pcgwAuth.apiPost(formData);
+
+        expect(apiFetch).toHaveBeenCalledTimes(4);
+        expect(pcgwAuth.sessionCookies).toBe('newcookie=1');
+        expect(pcgwAuth.isLoggedIn).toBe(true);
+        // @ts-ignore
+        expect(pcgwAuth['authData'].value.csrfToken).toBe('newtoken');
+
+        // Check that the retry had the new cookie and updated token
+        const lastCallArgs = vi.mocked(apiFetch).mock.calls[3];
+        const lastBody = lastCallArgs[1]?.body as FormData;
+        expect(lastBody.get('cookies')).toBe('newcookie=1');
+        expect(lastBody.get('token')).toBe('newtoken');
+    });
 });

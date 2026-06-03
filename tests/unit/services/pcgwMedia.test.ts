@@ -16,6 +16,7 @@ vi.mock('../../../src/services/pcgwAuth', () => {
     return {
         pcgwAuth: {
             isLoggedIn: true,
+            isAuthReady: true,
             sessionCookies: 'testcookie=1',
             getCsrfToken: vi.fn().mockResolvedValue('testtoken'),
             apiPost: vi.fn()
