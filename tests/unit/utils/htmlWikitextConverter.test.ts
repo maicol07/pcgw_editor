@@ -52,6 +52,16 @@ describe('htmlWikitextConverter', () => {
             const htmlCollapsed = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodedWikitextCollapsed}"><table class="pcgwikitable fixbox mw-collapsible mw-collapsed mw-made-collapsible"><tbody><tr><th class="fixbox-title"><span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span><div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>Name<sup class="reference">Reference</sup></th></tr><tr style="display: none;"><td class="fixbox-body"><p>--instructions go here--</p></td></tr></tbody></table></div>`;
             expect(wikitextToHtml(wikitextCollapsed)).toBe(htmlCollapsed);
         });
+
+        it('should preserve and escape <ref> tags', async () => {
+            const wikitext = "This is some text<ref>{{Refcheck|user=User|date=2026-06-06}}</ref> and some other text";
+            expect(wikitextToHtml(wikitext)).toBe('<p>This is some text&lt;ref&gt;{{Refcheck|user=User|date=2026-06-06}}&lt;/ref&gt; and some other text</p>');
+        });
+
+        it('should preserve and escape named and self-closing <ref> tags', async () => {
+            const wikitext = "Some text<ref name=\"test\">{{Refurl|url=https://example.com}}</ref> and a reuse<ref name=\"test\" />.";
+            expect(wikitextToHtml(wikitext)).toBe('<p>Some text&lt;ref name="test"&gt;{{Refurl|url=https://example.com}}&lt;/ref&gt; and a reuse&lt;ref name="test" /&gt;.</p>');
+        });
     });
 
     describe('htmlToWikitext', () => {
@@ -122,6 +132,16 @@ describe('htmlWikitextConverter', () => {
             const htmlCollapsed = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodedWikitextCollapsed}">\n<table class="pcgwikitable fixbox mw-collapsible mw-collapsed mw-made-collapsible">\n  <tbody><tr>\n    <th class="fixbox-title"><span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>\n<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>Name<sup class="reference">Reference</sup>\n    </th>\n  </tr>\n<tr style="display: none;">\n    <td class="fixbox-body">\n<p>--instructions go here--\n</p>\n    </td>\n  </tr>\n</tbody></table>\n</div>`;
             const resultCollapsed = htmlToWikitext(htmlCollapsed);
             expect(resultCollapsed).toContain('{{Fixbox|description=Name|ref=<ref>Reference</ref>|collapsed=yes|fix=\n--instructions go here--\n}}');
+        });
+
+        it('should convert escaped <ref> tags back to wikitext', async () => {
+            const html = '<p>This is some text&lt;ref&gt;{{Refcheck|user=User|date=2026-06-06}}&lt;/ref&gt; and some other text</p>';
+            expect(htmlToWikitext(html)).toBe('This is some text<ref>{{Refcheck|user=User|date=2026-06-06}}</ref> and some other text');
+        });
+
+        it('should convert escaped named and self-closing <ref> tags back to wikitext', async () => {
+            const html = '<p>Some text&lt;ref name="test"&gt;{{Refurl|url=https://example.com}}&lt;/ref&gt; and a reuse&lt;ref name="test" /&gt;.</p>';
+            expect(htmlToWikitext(html)).toBe('Some text<ref name="test">{{Refurl|url=https://example.com}}</ref> and a reuse<ref name="test" />.');
         });
     });
 });

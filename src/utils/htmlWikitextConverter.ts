@@ -2,6 +2,11 @@ export const wikitextToHtml = (wikitext: string): string => {
     if (!wikitext) return '';
     let html = wikitext;
 
+    // Escape <ref> tags so Quill doesn't strip them
+    html = html.replace(/(<\/ref>|<ref\b(?:\s+[^>]+)?\/?>)/gi, (match) => {
+        return match.replace('<', '&lt;').replace('>', '&gt;');
+    });
+
     // Bold and Italic
     html = html.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
     html = html.replace(/''(.*?)''/g, '<em>$1</em>');
@@ -59,11 +64,12 @@ export const wikitextToHtml = (wikitext: string): string => {
             }
         }
 
-        let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(`{{Fixbox|${content}}}`)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
+        const rawContent = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(`{{Fixbox|${rawContent}}}`)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
         if (collapsed) {
             htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
         }
-        htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${description}${ref ? `<sup class="reference">${ref.replace(/^<ref>([\s\S]*)<\/ref>$/, '$1')}</sup>` : ''}</th></tr>`;
+        htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${description}${ref ? `<sup class="reference">${ref.replace(/^(?:<ref(?:\s+[^>]+)?>|&lt;ref(?:\s+[^&]+)?&gt;)([\s\S]*?)(?:<\/ref>|&lt;\/ref&gt;)$/i, '$1')}</sup>` : ''}</th></tr>`;
 
         if (fix && fix.trim() !== '') {
             htmlOut += `<tr${collapsed ? ' style="display: none;"' : ''}><td class="fixbox-body"><p>${fix.trim()}</p></td></tr>`;
