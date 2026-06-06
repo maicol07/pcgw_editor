@@ -1,6 +1,20 @@
 import { vi } from 'vitest';
 import { config } from '@vue/test-utils';
 
+// Mock the database globally to avoid IndexedDB missing API errors in test environment
+vi.mock('../src/db', () => ({
+    db: {
+        localFiles: {
+            toArray: vi.fn().mockResolvedValue([]),
+            add: vi.fn().mockResolvedValue(1),
+            delete: vi.fn().mockResolvedValue(undefined),
+            update: vi.fn().mockResolvedValue(undefined),
+            put: vi.fn().mockResolvedValue(1),
+            get: vi.fn().mockResolvedValue(undefined),
+        }
+    }
+}));
+
 // Define global constants that are injected by Vite
 (globalThis as any).__APP_VERSION__ = 'test-version';
 (globalThis as any).__COMMIT_HASH__ = 'test-hash';

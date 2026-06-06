@@ -2,7 +2,6 @@ import { mount } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WorkspaceSidebar from '../../../src/components/WorkspaceSidebar.vue';
 import { createPinia, setActivePinia } from 'pinia';
-import PrimeVue from 'primevue/config';
 
 vi.mock('../../../src/services/pcgwApi', () => ({
     pcgwApi: {
@@ -35,7 +34,7 @@ describe('WorkspaceSidebar.vue', () => {
         const wrapper = mount(WorkspaceSidebar, {
             props: { visible: true },
             global: {
-                plugins: [PrimeVue],
+                plugins: [],
                 stubs: {
                     Drawer: { template: '<div><slot></slot></div>' },
                     Dialog: { template: '<div><slot></slot><slot name="footer"></slot></div>' },

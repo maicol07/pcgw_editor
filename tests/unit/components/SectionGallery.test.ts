@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SectionGallery from '../../../src/components/SectionGallery.vue';
 import { createTestingPinia } from '@pinia/testing';
-import PrimeVue from 'primevue/config';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import type { GalleryImage } from '../../../src/models/GameData';
@@ -30,15 +29,6 @@ vi.mock('../../../src/services/pcgwApi', () => ({
 }));
 vi.mock('../../../src/services/pcgwMedia', () => ({
     pcgwMedia: {}
-}));
-
-// Mock Dexie
-vi.mock('dexie', () => ({
-    default: class Dexie {
-        constructor() {}
-        version() { return { stores: vi.fn() }; }
-        table() { return { toArray: vi.fn().mockResolvedValue([]) }; }
-    }
 }));
 
 // Mock URL API
@@ -93,7 +83,7 @@ describe('SectionGallery.vue', () => {
                 section: 'test-section'
             },
             global: {
-                plugins: [pinia, PrimeVue, ToastService],
+                plugins: [pinia, ToastService],
                 directives: {
                     tooltip: Tooltip
                 },
