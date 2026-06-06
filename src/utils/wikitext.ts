@@ -1546,12 +1546,7 @@ export class PCGWEditor {
 
                 // Alternatives
                 const buildAlt = (prefix: string, spec: any) => {
-                    let text = '';
-                    if (prefix === 'alt1') {
-                        text += `\n\n`;
-                    } else {
-                        text += `\n`;
-                    }
+                    let text = '\n';
                     text += `\n|${prefix}Title = ${s(spec?.title)}`;
                     text += `\n|${prefix}TGT   = ${s(spec?.target)}`;
                     text += `\n|${prefix}OS    = ${s(spec?.os)}`;

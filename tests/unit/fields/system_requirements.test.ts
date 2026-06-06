@@ -138,6 +138,19 @@ describe('Field Group: System Requirements', () => {
                 expect(ramIndex).toBeLessThan(gpuIndex);
                 expect(gpuIndex).toBeLessThan(otherIndex);
             });
+
+            it('should have exactly one empty line between recother and alt1Title', () => {
+                const data = { requirements: createEmptyReqs() };
+                setData(`requirements.windows.recommended.other`, data, 'Some other info');
+                setData(`requirements.windows.alt1.title`, data, 'Alt Title');
+
+                const editor = new PCGWEditor(`{{System requirements\n|OSfamily = Windows\n}}`);
+                editor.updateSystemRequirements(data.requirements);
+                const output = editor.getText();
+
+                expect(output).toContain('|recother = Some other info\n\n|alt1Title = Alt Title');
+                expect(output).not.toContain('|recother = Some other info\n\n\n|alt1Title = Alt Title');
+            });
         });
     });
 });
