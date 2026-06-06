@@ -1,19 +1,45 @@
 import { vi } from 'vitest';
 import { config } from '@vue/test-utils';
 
-// Mock the database globally to avoid IndexedDB missing API errors in test environment
-vi.mock('../src/db', () => ({
-    db: {
-        localFiles: {
-            toArray: vi.fn().mockResolvedValue([]),
-            add: vi.fn().mockResolvedValue(1),
-            delete: vi.fn().mockResolvedValue(undefined),
-            update: vi.fn().mockResolvedValue(undefined),
-            put: vi.fn().mockResolvedValue(1),
-            get: vi.fn().mockResolvedValue(undefined),
-        }
+// Suppress experimental localStorage warnings from Node.js
+const originalEmit = process.emit;
+process.emit = function (name: string, ...args: any[]) {
+    if (name === 'warning' && args[0]?.name === 'ExperimentalWarning' && args[0]?.message?.includes('localStorage')) {
+        return false;
     }
-}));
+    return originalEmit.apply(this, [name, ...args] as any);
+} as any;
+
+// Mock Dexie globally to avoid IndexedDB missing API errors in test environment
+vi.mock('dexie', () => {
+    return {
+        default: class MockDexie {
+            constructor() {
+                return new Proxy(this, {
+                    get(target, prop) {
+                        if (prop in target && (target as any)[prop] !== undefined) {
+                            return (target as any)[prop];
+                        }
+                        // Return mock table methods for any table property access
+                        return {
+                            toArray: vi.fn().mockResolvedValue([]),
+                            add: vi.fn().mockResolvedValue(1),
+                            delete: vi.fn().mockResolvedValue(undefined),
+                            update: vi.fn().mockResolvedValue(undefined),
+                            put: vi.fn().mockResolvedValue(1),
+                            get: vi.fn().mockResolvedValue(undefined),
+                        };
+                    }
+                });
+            }
+            version() {
+                return {
+                    stores: () => this
+                };
+            }
+        }
+    };
+});
 
 // Define global constants that are injected by Vite
 (globalThis as any).__APP_VERSION__ = 'test-version';
