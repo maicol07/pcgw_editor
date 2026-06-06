@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { FieldDefinition } from '../../types/schema';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -90,9 +90,39 @@ const resolvedComponent = computed(() => {
     return componentMap[props.field.component] || InputText;
 });
 
+const isIgdbField = computed(() => props.field.key === 'links.igdb');
+
+const igdbReceptionEntry = computed(() => {
+    if (!isIgdbField.value || !props.formModel || !props.formModel.reception) {
+        return null;
+    }
+    return props.formModel.reception.find((r: any) => r.aggregator === 'IGDB');
+});
+
+const isIgdbDisabled = computed(() => !!igdbReceptionEntry.value);
+
+const computedDescription = computed(() => {
+    if (isIgdbDisabled.value) {
+        return 'This field is automatically compiled from the IGDB entry in the Reception section.';
+    }
+    return props.field.description;
+});
+
+if (props.field.key === 'links.igdb') {
+    watch(() => igdbReceptionEntry.value ? igdbReceptionEntry.value.id : null, (newId) => {
+        if (newId !== null && props.modelValue !== newId) {
+            emit('update:modelValue', newId);
+        }
+    }, { immediate: true });
+}
+
 const computedModelValue = computed(() => {
     if (props.field.component === 'MultiSelect' && typeof props.modelValue === 'string') {
         return props.modelValue ? props.modelValue.split(', ').map((s: string) => s.trim()) : [];
+    }
+
+    if (isIgdbDisabled.value && igdbReceptionEntry.value) {
+        return igdbReceptionEntry.value.id || '';
     }
 
     return props.modelValue !== undefined ? props.modelValue : props.field.defaultValue;
@@ -166,10 +196,15 @@ const boundProps = computed(() => {
     }
 
     if (props.field.component === 'InputText' || props.field.component === 'InputChips' || props.field.component === 'Textarea') {
+        const extraProps: Record<string, any> = {};
+        if (isIgdbDisabled.value) {
+            extraProps.disabled = true;
+        }
         return {
             placeholder: props.field.label,
             class: 'w-full',
-            ...defaultProps
+            ...defaultProps,
+            ...extraProps
         };
     }
 
@@ -288,7 +323,7 @@ const isVisible = computed(() => {
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
             {{ field.label }}
-            <span v-if="field.description" v-tooltip.top="field.description"
+            <span v-if="computedDescription" v-tooltip.top="computedDescription"
                 class="ml-auto text-surface-400 hover:text-primary-500 cursor-help">
                 <Info class="w-3.5 h-3.5" />
             </span>
@@ -329,6 +364,11 @@ const isVisible = computed(() => {
                 </div>
             </template>
         </component>
+
+        <!-- Inline Helper Text for Disabled IGDB Field -->
+        <span v-if="isIgdbDisabled" class="text-xs text-surface-500 dark:text-surface-400 mt-1">
+            This field is automatically compiled from the IGDB entry in the Reception section.
+        </span>
 
         <!-- Inline Label for Checkbox -->
         <label v-if="field.component === 'Checkbox'"
