@@ -33,6 +33,7 @@ import RateLimitNotice from './components/common/RateLimitNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { pcgwApi } from './services/pcgwApi';
+import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.vue';
 
 // Icons
 import {
@@ -57,6 +58,19 @@ provide('uiBus', uiBus);
 // --- API Keys ---
 const geminiApiKey = ref(localStorage.getItem('gemini-api-key') || '');
 provide('geminiApiKey', geminiApiKey);
+
+const twitchClientId = ref(localStorage.getItem('twitch-client-id') || '');
+const twitchClientSecret = ref(localStorage.getItem('twitch-client-secret') || '');
+provide('twitchClientId', twitchClientId);
+provide('twitchClientSecret', twitchClientSecret);
+
+const rawgApiKey = ref(localStorage.getItem('rawg-api-key') || '');
+provide('rawgApiKey', rawgApiKey);
+
+const isAutofillDialogVisible = ref(false);
+provide('openAutofillDialog', () => {
+    isAutofillDialogVisible.value = true;
+});
 
 // --- Game Data & Sync ---
 // Use the store's game data directly as a shallow reference for the visual editor
@@ -365,8 +379,8 @@ onMounted(() => {
                                 v-show="panelVisibility.infobox">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Info class="text-blue-600 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Infobox</span>
+                                        <Info class="text-blue-600 w-4 h-4" />
+                                        <span class="font-semibold text-sm">Infobox</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="!uiStore.panelState.infobox && schemas.infobox.value"
@@ -610,6 +624,7 @@ onMounted(() => {
 
     <!-- Global Modals -->
     <AppSettings />
+    <MetadataAutofillDialog v-model:visible="isAutofillDialogVisible" />
     <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
         :onlineWikitext="diffMergerOnlineWikitext" :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
 

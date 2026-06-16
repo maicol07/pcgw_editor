@@ -146,4 +146,28 @@ export class GeminiService {
         // Clean up the output in case the AI adds quotes or newlines
         return response.replace(/^["']|["']$/g, '').replace(/\r?\n/g, ' ').trim();
     }
+
+    /**
+     * Generates a JSON response using search grounding if supported by the model.
+     */
+    async generateJSONWithSearch<T>(prompt: string, model: string = 'gemini-3.5-flash'): Promise<T> {
+        try {
+            const response = await this.ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    tools: [{ googleSearch: {} }]
+                }
+            });
+
+            const text = response.text;
+            if (!text) throw new Error('No response from AI');
+
+            return JSON.parse(text) as T;
+        } catch (error) {
+            console.error('Gemini generateJSONWithSearch error:', error);
+            throw error;
+        }
+    }
 }

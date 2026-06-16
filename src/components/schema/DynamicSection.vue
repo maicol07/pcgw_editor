@@ -34,14 +34,17 @@ const handleFieldUpdate = (key: string, value: any) => {
 };
 
 // Collapsible state
-import { ref } from 'vue';
-import { ChevronDown } from 'lucide-vue-next';
+import { ref, inject } from 'vue';
+import { ChevronDown, Sparkles } from 'lucide-vue-next';
+import Button from 'primevue/button';
 
 const collapsedGroups = ref<Record<number, boolean>>({});
 
 const toggleGroup = (idx: number) => {
     collapsedGroups.value[idx] = !collapsedGroups.value[idx];
 };
+
+const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog', undefined);
 
 </script>
 
@@ -79,9 +82,23 @@ const toggleGroup = (idx: number) => {
                                 :class="group.iconClass" v-if="group.icon" />
                             <span class="text-base font-semibold tracking-tight">{{ group.title }}</span>
                         </div>
-                        <ChevronDown
-                            class="w-5 h-5 text-surface-400 group-hover:text-surface-600 dark:text-surface-500 dark:group-hover:text-surface-300 transition-transform duration-200"
-                            :class="{ '-rotate-90': collapsedGroups[idx] }" />
+                        <div class="flex items-center gap-2">
+                            <Button 
+                                v-if="openAutofillDialog && ['Reception', 'External Links'].includes(group.title)"
+                                severity="secondary" 
+                                text 
+                                size="small" 
+                                class="h-7 py-0 px-2 text-xs font-semibold flex items-center gap-1.5 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors mr-1.5 text-surface-600 dark:text-surface-300 border border-surface-250 dark:border-surface-700 bg-surface-0/60 dark:bg-surface-900/40"
+                                @click.stop="openAutofillDialog()"
+                                v-tooltip.top="'Autofill links and scores using IGDB, Steam & Gemini AI'"
+                            >
+                                <Sparkles class="w-3 h-3 text-purple-500 animate-pulse shrink-0" />
+                                <span>Autofill</span>
+                            </Button>
+                            <ChevronDown
+                                class="w-5 h-5 text-surface-400 group-hover:text-surface-600 dark:text-surface-500 dark:group-hover:text-surface-300 transition-transform duration-200"
+                                :class="{ '-rotate-90': collapsedGroups[idx] }" />
+                        </div>
                     </div>
 
                     <div class="grid transition-all duration-300 ease-in-out"

@@ -18,6 +18,14 @@ const uiStore = useUiStore();
 const geminiApiKey = inject<Ref<string>>('geminiApiKey');
 const apiKeyValue = ref(geminiApiKey?.value || '');
 
+const twitchClientId = inject<Ref<string>>('twitchClientId');
+const twitchClientSecret = inject<Ref<string>>('twitchClientSecret');
+const tempTwitchClientId = ref(twitchClientId?.value || '');
+const tempTwitchClientSecret = ref(twitchClientSecret?.value || '');
+
+const rawgApiKey = inject<Ref<string>>('rawgApiKey');
+const tempRawgApiKey = ref(rawgApiKey?.value || '');
+
 const toast = useToast();
 const isLoginVisible = ref(false);
 
@@ -42,7 +50,12 @@ const handleLogout = async () => {
 };
 
 watch(() => uiStore.isSettingsOpen, (val) => {
-    if (val) apiKeyValue.value = geminiApiKey?.value || '';
+    if (val) {
+        apiKeyValue.value = geminiApiKey?.value || '';
+        tempTwitchClientId.value = twitchClientId?.value || '';
+        tempTwitchClientSecret.value = twitchClientSecret?.value || '';
+        tempRawgApiKey.value = rawgApiKey?.value || '';
+    }
 });
 
 const themeOptions = [
@@ -76,6 +89,16 @@ const saveSettings = () => {
     if (geminiApiKey) {
         geminiApiKey.value = apiKeyValue.value;
         localStorage.setItem('gemini-api-key', apiKeyValue.value);
+    }
+    if (twitchClientId && twitchClientSecret) {
+        twitchClientId.value = tempTwitchClientId.value;
+        twitchClientSecret.value = tempTwitchClientSecret.value;
+        localStorage.setItem('twitch-client-id', tempTwitchClientId.value);
+        localStorage.setItem('twitch-client-secret', tempTwitchClientSecret.value);
+    }
+    if (rawgApiKey) {
+        rawgApiKey.value = tempRawgApiKey.value;
+        localStorage.setItem('rawg-api-key', tempRawgApiKey.value);
     }
     uiStore.isSettingsOpen = false;
 };
@@ -194,6 +217,37 @@ const saveSettings = () => {
                         class="w-full" />
                     <small class="text-surface-500">Required for AI screenshot analysis and automatic summaries.</small>
                 </div>
+
+                <!-- Twitch Client ID -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <Key class="w-4 h-4" /> Twitch Client ID
+                    </label>
+                    <InputText v-model="tempTwitchClientId" placeholder="Enter your Twitch Client ID"
+                        class="w-full" />
+                </div>
+
+                <!-- Twitch Client Secret -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <Key class="w-4 h-4" /> Twitch Client Secret
+                    </label>
+                    <InputText v-model="tempTwitchClientSecret" type="password" placeholder="Enter your Twitch Client Secret"
+                        class="w-full" />
+                    <small class="text-surface-500">Required for fetching ratings and store links from the IGDB API.</small>
+                </div>
+
+                <!-- RAWG API Key -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <Key class="w-4 h-4" /> RAWG.io API Key
+                    </label>
+                    <InputText v-model="tempRawgApiKey" placeholder="Enter your RAWG API Key"
+                        class="w-full" />
+                    <small class="text-surface-500">Required for direct metadata and store links autofilling from the RAWG database.</small>
+                </div>
+
+
 
                 <!-- PCGW Login -->
                 <div class="flex flex-col gap-3 mt-2">
