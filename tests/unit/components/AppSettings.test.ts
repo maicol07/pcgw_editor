@@ -17,7 +17,7 @@ vi.mock('lucide-vue-next', () => {
         'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key', 
         'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn', 
         'Info', 'RotateCcw', 'ShieldAlert', 'Wrench', 'FileText', 'Puzzle', 'Keyboard',
-        'MessageSquareWarning', 'Link2', 'ListChecks'
+        'MessageSquareWarning', 'Link2', 'ListChecks', 'Eye', 'EyeOff'
     ];
     const mock: any = {};
     icons.forEach(icon => {
@@ -77,9 +77,13 @@ describe('AppSettings.vue', () => {
 
     it('updates uiStore when a theme is selected', async () => {
         const { wrapper, store } = setupWrapper();
-        const selectButton = wrapper.findComponent(SelectButton);
-
-        await selectButton.vm.$emit('update:modelValue', 'dark');
+        
+        // Find theme buttons/cards
+        const buttons = wrapper.findAll('button');
+        const darkButton = buttons.find(b => b.text().includes('Dark'));
+        if (!darkButton) throw new Error('Dark theme button not found');
+        
+        await darkButton.trigger('click');
         expect(store.theme).toBe('dark');
     });
 
@@ -95,8 +99,8 @@ describe('AppSettings.vue', () => {
         const { wrapper, store } = setupWrapper();
         store.densityMode = 'normal';
 
-        // Find the align-left button (Comfortable / index 1)
-        const buttons = wrapper.findAll('.flex-col.items-center');
+        // Find the comfortable density button by class
+        const buttons = wrapper.findAll('.density-btn');
         const middleButton = buttons[1]; // Index 1 is comfortable
 
         await middleButton.trigger('click');
@@ -106,8 +110,13 @@ describe('AppSettings.vue', () => {
     it('syncs gemini key and closes dialog on save', async () => {
         const { wrapper, store } = setupWrapper();
 
-        // Find input text
-        const inputText = wrapper.findComponent(InputText);
+        // Switch to integrations tab so the key input is active
+        const tabs = wrapper.findAll('button');
+        const integrationsTab = tabs.find(t => t.text().includes('Integrations'));
+        if (integrationsTab) await integrationsTab.trigger('click');
+
+        // Find input text by class
+        const inputText = wrapper.findComponent('.gemini-api-key-input');
         await inputText.setValue('new-test-key');
 
         // Find Done button specifically by searching for its text
@@ -122,9 +131,16 @@ describe('AppSettings.vue', () => {
 
     it('updates uiStore autoReLogin when toggle is clicked', async () => {
         const { wrapper, store } = setupWrapper();
-        const toggle = wrapper.findComponent({ name: 'ToggleSwitch' });
+
+        // Switch to account tab
+        const tabs = wrapper.findAll('button');
+        const accountTab = tabs.find(t => t.text().includes('Account'));
+        if (accountTab) await accountTab.trigger('click');
+
+        const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
+        const autoReLoginToggle = toggles[0];
         
-        await toggle.vm.$emit('update:modelValue', true);
+        await autoReLoginToggle.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);
     });
 });

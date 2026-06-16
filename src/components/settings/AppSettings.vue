@@ -2,13 +2,15 @@
 import { ref, inject, type Ref, watch } from 'vue';
 import { useUiStore } from '../../stores/ui';
 import Dialog from 'primevue/dialog';
-import SelectButton from 'primevue/selectbutton';
 import Select from 'primevue/select';
-import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import ToggleSwitch from 'primevue/toggleswitch';
-import { Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key, AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn, Info, RotateCcw } from 'lucide-vue-next';
+import { 
+    Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key, 
+    AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn, 
+    Info, RotateCcw, Eye, EyeOff 
+} from 'lucide-vue-next';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { pcgwApi } from '../../services/pcgwApi';
 import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
@@ -28,6 +30,13 @@ const tempRawgApiKey = ref(rawgApiKey?.value || '');
 
 const toast = useToast();
 const isLoginVisible = ref(false);
+
+const activeTab = ref('appearance');
+
+// Password visibility toggles
+const showGeminiKey = ref(false);
+const showTwitchSecret = ref(false);
+const showRawgKey = ref(false);
 
 const handleResetCache = () => {
     pcgwApi.resetCache();
@@ -58,11 +67,17 @@ watch(() => uiStore.isSettingsOpen, (val) => {
     }
 });
 
+const tabs = [
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'integrations', label: 'Integrations & APIs', icon: Bot },
+    { id: 'account', label: 'Account & Cache', icon: Globe }
+];
+
 const themeOptions = [
     { label: 'System', value: 'system', icon: Monitor },
     { label: 'Light', value: 'light', icon: Sun },
     { label: 'Dark', value: 'dark', icon: Moon }
-];
+] as const;
 
 const fontOptions = [
     { label: 'Google Sans (Default)', value: '"Google Sans"' },
@@ -80,8 +95,7 @@ const densityModes = ['normal', 'comfortable', 'compact'] as const;
 const densityLabels = ['Normal', 'Comfortable', 'Compact'];
 const densityValue = ref(densityModes.indexOf(uiStore.densityMode));
 
-const updateDensity = (val: number | number[]) => {
-    const index = Array.isArray(val) ? val[0] : val;
+const updateDensity = (index: number) => {
     uiStore.densityMode = densityModes[index];
 };
 
@@ -105,222 +119,343 @@ const saveSettings = () => {
 </script>
 
 <template>
-    <Dialog v-model:visible="uiStore.isSettingsOpen" modal header="App Settings" :style="{ width: '450px' }"
-        :draggable="false" class="p-fluid glass">
+    <Dialog v-model:visible="uiStore.isSettingsOpen" modal :draggable="false" class="p-fluid glass settings-dialog"
+        :style="{ width: '780px', maxWidth: '95vw' }">
         <template #header>
             <div class="flex items-center gap-2">
-                <Palette class="w-5 h-5 text-primary-500" />
+                <Palette class="w-5 h-5 text-primary-500 animate-pulse-soft" />
                 <span class="font-bold text-lg">App Settings</span>
             </div>
         </template>
 
-        <div class="flex flex-col gap-6 py-2">
-            <!-- Appearance Group -->
-            <div class="flex flex-col gap-4">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-surface-500 flex items-center gap-2">
-                    <Palette class="w-4 h-4" /> Appearance
-                </h3>
-
-                <!-- Theme -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Theme</label>
-                    <SelectButton v-model="uiStore.theme" :options="themeOptions" optionLabel="label"
-                        optionValue="value" dataKey="value" aria-labelledby="theme-select">
-                        <template #option="slotProps">
-                            <div class="flex items-center gap-2">
-                                <component :is="slotProps.option.icon" class="w-4 h-4" />
-                                <span class="hidden sm:inline">{{ slotProps.option.label }}</span>
-                            </div>
-                        </template>
-                    </SelectButton>
-                </div>
-
-                <!-- Font Family -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Type class="w-4 h-4" /> Font Family
-                    </label>
-                    <Select v-model="uiStore.fontFamily" :options="fontOptions" optionLabel="label" optionValue="value"
-                        class="w-full" :style="{ fontFamily: uiStore.fontFamily }">
-                        <template #value="slotProps">
-                            <span :style="{ fontFamily: slotProps.value }">
-                                {{fontOptions.find(o => o.value === slotProps.value)?.label || 'Select Font'}}
-                            </span>
-                        </template>
-                        <template #option="slotProps">
-                            <span :style="{ fontFamily: slotProps.option.value }">{{ slotProps.option.label }}</span>
-                        </template>
-                    </Select>
-                </div>
-
-                <!-- Density -->
-                <div class="flex flex-col gap-3">
-                    <div class="flex items-center justify-between">
-                        <label
-                            class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                            <Layout class="w-4 h-4" /> UI Density
-                        </label>
-                        <span
-                            class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">
-                            {{ densityLabels[densityValue] }}
-                        </span>
-                    </div>
-
-                    <div class="px-2 pb-6 pt-2">
-                        <Slider v-model="densityValue" :min="0" :max="2" :step="1" class="w-full"
-                            @update:modelValue="updateDensity" />
-
-                        <!-- Visual Segments & Icons -->
-                        <div class="flex justify-between items-center mt-3 text-surface-400 relative">
-                            <!-- Segment Markings -->
-                            <div class="absolute w-full flex justify-between top-[-14px] px-[2px] pointer-events-none">
-                                <div class="w-1 h-2 bg-surface-300 dark:bg-surface-600 rounded-full"></div>
-                                <div class="w-1 h-2 bg-surface-300 dark:bg-surface-600 rounded-full"></div>
-                                <div class="w-1 h-2 bg-surface-300 dark:bg-surface-600 rounded-full"></div>
-                            </div>
-
-                            <!-- Icons -->
-                            <button @click="updateDensity(0); densityValue = 0"
-                                class="flex flex-col items-center gap-1 hover:text-primary-500 transition-colors"
-                                :class="{ 'text-primary-500': densityValue === 0 }">
-                                <AlignJustify class="w-4 h-4" />
-                            </button>
-                            <button @click="updateDensity(1); densityValue = 1"
-                                class="flex flex-col items-center gap-1 hover:text-primary-500 transition-colors"
-                                :class="{ 'text-primary-500': densityValue === 1 }">
-                                <AlignLeft class="w-4 h-4" />
-                            </button>
-                            <button @click="updateDensity(2); densityValue = 2"
-                                class="flex flex-col items-center gap-1 hover:text-primary-500 transition-colors"
-                                :class="{ 'text-primary-500': densityValue === 2 }">
-                                <Menu class="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <div class="flex flex-col md:flex-row min-h-[480px]">
+            <!-- Sidebar / Topbar Navigation -->
+            <div class="w-full md:w-56 bg-surface-50/50 dark:bg-surface-900/40 border-b md:border-b-0 md:border-r border-surface-200 dark:border-surface-800/80 p-3 md:p-4 flex flex-row md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible custom-scrollbar">
+                <button v-for="tab in tabs" :key="tab.id"
+                    @click="activeTab = tab.id"
+                    class="flex items-center gap-2.5 px-3 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 text-left shrink-0 md:w-full group whitespace-nowrap cursor-pointer"
+                    :class="activeTab === tab.id 
+                        ? 'bg-primary-500 text-white shadow-soft shadow-primary-500/20' 
+                        : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100/70 dark:hover:bg-surface-800/70 hover:text-surface-900 dark:hover:text-surface-100'"
+                >
+                    <component :is="tab.icon" class="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                    <span>{{ tab.label }}</span>
+                </button>
             </div>
 
-            <hr class="border-surface-200 dark:border-surface-700" />
-
-            <!-- Integrations Group -->
-            <div class="flex flex-col gap-4">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-surface-500 flex items-center gap-2">
-                    <Bot class="w-4 h-4" /> Integrations
-                </h3>
-
-                <!-- Gemini API Key -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Key class="w-4 h-4" /> Gemini API Key
-                    </label>
-                    <InputText v-model="apiKeyValue" type="password" placeholder="Enter your Gemini API Key"
-                        class="w-full" />
-                    <small class="text-surface-500">Required for AI screenshot analysis and automatic summaries.</small>
+            <!-- Content Area -->
+            <div class="flex-1 p-5 md:p-6 overflow-y-auto max-h-[500px] md:max-h-[550px] relative bg-surface-0 dark:bg-surface-950/20">
+                <!-- Tab Header Info -->
+                <div class="mb-5">
+                    <h2 class="text-lg font-bold text-surface-900 dark:text-surface-0 leading-tight">
+                        {{ tabs.find(t => t.id === activeTab)?.label }}
+                    </h2>
+                    <p class="text-xs text-surface-500 mt-1 leading-relaxed">
+                        {{ activeTab === 'appearance' ? 'Customize the interface theme, fonts, and layout spacing.' : activeTab === 'integrations' ? 'Configure third-party API credentials to enable autofill and metadata assistance.' : 'Manage authentication credentials and local data cache settings.' }}
+                    </p>
                 </div>
 
-                <!-- Twitch Client ID -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Key class="w-4 h-4" /> Twitch Client ID
-                    </label>
-                    <InputText v-model="tempTwitchClientId" placeholder="Enter your Twitch Client ID"
-                        class="w-full" />
-                </div>
+                <!-- Appearance Tab -->
+                <div v-show="activeTab === 'appearance'" class="flex flex-col gap-6 animate-fade-in">
+                    <!-- Theme Selector -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Theme Preference</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button v-for="opt in themeOptions" :key="opt.value"
+                                @click="uiStore.theme = opt.value"
+                                class="flex flex-col items-center gap-2.5 p-3 rounded-xl border transition-all duration-250 text-left relative overflow-hidden cursor-pointer"
+                                :class="uiStore.theme === opt.value
+                                    ? 'border-primary-500 bg-primary-500/5 dark:bg-primary-500/10 ring-1 ring-primary-500'
+                                    : 'border-surface-200 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-800/80 hover:border-surface-300 dark:hover:border-surface-700'"
+                            >
+                                <!-- Simulated theme UI cards -->
+                                <div class="w-full h-14 rounded-lg relative overflow-hidden border border-surface-200/60 dark:border-surface-800/60 shadow-2xs"
+                                    :class="opt.value === 'light' ? 'bg-white' : opt.value === 'dark' ? 'bg-surface-900' : 'bg-linear-to-br from-white via-surface-100 to-surface-900'"
+                                >
+                                    <div class="absolute inset-x-2 top-2 h-2 rounded bg-surface-200 dark:bg-surface-750"></div>
+                                    <div class="absolute left-2 top-6 w-8 h-1.5 rounded bg-primary-400"></div>
+                                    <div class="absolute right-2 top-6 w-4 h-1.5 rounded bg-surface-300 dark:bg-surface-700"></div>
+                                    <div class="absolute inset-x-2 top-9 h-3 rounded bg-surface-100 dark:bg-surface-800"></div>
+                                </div>
+                                
+                                <span class="text-xs font-semibold flex items-center gap-1.5">
+                                    <component :is="opt.icon" class="w-3.5 h-3.5" :class="uiStore.theme === opt.value ? 'text-primary-500' : 'text-surface-500'" />
+                                    {{ opt.label }}
+                                </span>
 
-                <!-- Twitch Client Secret -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Key class="w-4 h-4" /> Twitch Client Secret
-                    </label>
-                    <InputText v-model="tempTwitchClientSecret" type="password" placeholder="Enter your Twitch Client Secret"
-                        class="w-full" />
-                    <small class="text-surface-500">Required for fetching ratings and store links from the IGDB API.</small>
-                </div>
+                                <div v-if="uiStore.theme === opt.value" class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary-500 flex items-center justify-center text-white scale-90 md:scale-100">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
 
-                <!-- RAWG API Key -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Key class="w-4 h-4" /> RAWG.io API Key
-                    </label>
-                    <InputText v-model="tempRawgApiKey" placeholder="Enter your RAWG API Key"
-                        class="w-full" />
-                    <small class="text-surface-500">Required for direct metadata and store links autofilling from the RAWG database.</small>
-                </div>
+                    <!-- Font Family Selector -->
+                    <div class="flex flex-col gap-2.5">
+                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Type class="w-4 h-4 text-primary-500" /> Font Family
+                        </label>
+                        <Select v-model="uiStore.fontFamily" :options="fontOptions" optionLabel="label" optionValue="value"
+                            class="w-full" :style="{ fontFamily: uiStore.fontFamily }">
+                            <template #value="slotProps">
+                                <span :style="{ fontFamily: slotProps.value }">
+                                    {{fontOptions.find(o => o.value === slotProps.value)?.label || 'Select Font'}}
+                                </span>
+                            </template>
+                            <template #option="slotProps">
+                                <span :style="{ fontFamily: slotProps.option.value }">{{ slotProps.option.label }}</span>
+                            </template>
+                        </Select>
 
-
-
-                <!-- PCGW Login -->
-                <div class="flex flex-col gap-3 mt-2">
-                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                        <Globe class="w-4 h-4" /> PCGamingWiki Account
-                    </label>
-                    
-                    <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-3 bg-surface-100 dark:bg-surface-800 rounded-xl">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                                <Globe class="w-4 h-4 text-green-500" />
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-xs font-bold text-surface-400 uppercase tracking-tighter">Authenticated as</span>
-                                <span class="font-bold text-sm">{{ pcgwAuth.username }}</span>
+                        <div class="flex flex-col gap-1.5 mt-1">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">Preview text</label>
+                            <div class="p-3.5 rounded-xl border border-surface-200/80 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 text-sm font-medium select-none"
+                                :style="{ fontFamily: uiStore.fontFamily }">
+                                The quick brown fox jumps over the lazy dog. 1234567890
                             </div>
                         </div>
-                        <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
-                            class="settings-logout-btn">
+                    </div>
+
+                    <!-- UI Density Cards -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Layout class="w-4 h-4 text-primary-500" /> Layout Spacing (UI Density)
+                        </label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button v-for="(mode, index) in densityModes" :key="mode"
+                                @click="updateDensity(index); densityValue = index"
+                                class="flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all duration-200 cursor-pointer density-btn"
+                                :class="densityValue === index
+                                    ? 'border-primary-500 bg-primary-500/5 dark:bg-primary-500/10 ring-1 ring-primary-500'
+                                    : 'border-surface-200 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-800/80'"
+                            >
+                                <component :is="index === 0 ? AlignJustify : index === 1 ? AlignLeft : Menu" 
+                                    class="w-4 h-4" :class="densityValue === index ? 'text-primary-500' : 'text-surface-400'" />
+                                <div class="text-xs font-bold">{{ densityLabels[index] }}</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integrations Tab -->
+                <div v-show="activeTab === 'integrations'" class="flex flex-col gap-5 animate-fade-in">
+                    <!-- Gemini Credentials Card -->
+                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3">
+                        <div class="flex items-center gap-2">
+                            <Bot class="w-4 h-4 text-primary-500" />
+                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">Gemini AI Assistant</span>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Gemini API Key</label>
+                            <div class="flex relative items-center">
+                                <InputText v-model="apiKeyValue" :type="showGeminiKey ? 'text' : 'password'" placeholder="AI api key..." class="w-full pr-10 gemini-api-key-input" />
+                                <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                    <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-surface-500 leading-normal">Required for AI-driven screenshot parsing, edit summary generation, and infobox mapping tools.</span>
+                        </div>
+                    </div>
+
+                    <!-- RAWG API Card -->
+                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3">
+                        <div class="flex items-center gap-2">
+                            <Key class="w-4 h-4 text-teal-500" />
+                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
+                            <div class="flex relative items-center">
+                                <InputText v-model="tempRawgApiKey" :type="showRawgKey ? 'text' : 'password'" placeholder="RAWG api key..." class="w-full pr-10" />
+                                <button type="button" @click="showRawgKey = !showRawgKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                    <component :is="showRawgKey ? EyeOff : Eye" class="w-4 h-4" />
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-surface-500 leading-normal">Used for populating release dates, developers, publishers, and store identifiers directly.</span>
+                        </div>
+                    </div>
+
+                    <!-- Twitch / IGDB API Credentials Card -->
+                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3.5">
+                        <div class="flex items-center gap-2">
+                            <Key class="w-4 h-4 text-purple-500" />
+                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client ID</label>
+                                <InputText v-model="tempTwitchClientId" placeholder="Twitch Client ID" class="w-full" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client Secret</label>
+                                <div class="flex relative items-center">
+                                    <InputText v-model="tempTwitchClientSecret" :type="showTwitchSecret ? 'text' : 'password'" placeholder="Twitch Secret" class="w-full pr-10" />
+                                    <button type="button" @click="showTwitchSecret = !showTwitchSecret" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                        <component :is="showTwitchSecret ? EyeOff : Eye" class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[11px] text-surface-500 leading-normal mt-0.5">Enables querying ratings, genres, and store platform URLs using the IGDB game database endpoints.</span>
+                    </div>
+                </div>
+
+                <!-- Account & Cache Tab -->
+                <div v-show="activeTab === 'account'" class="flex flex-col gap-5 animate-fade-in">
+                    <!-- PCGamingWiki Authentication Status -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Globe class="w-4 h-4 text-primary-500" /> PCGamingWiki Account
+                        </label>
+                        
+                        <!-- Logged In state card -->
+                        <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 relative">
+                                    <Globe class="w-5 h-5" />
+                                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-surface-950 rounded-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected Account</span>
+                                    <span class="font-bold text-surface-800 dark:text-surface-100 text-sm leading-tight">{{ pcgwAuth.username }}</span>
+                                </div>
+                            </div>
+                            <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
+                                class="p-2 rounded-lg hover:bg-red-500/10 text-red-500 border-none cursor-pointer">
+                                <LogOut class="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <!-- Logged Out state card -->
+                        <div v-else class="flex flex-col items-center gap-3 p-6 bg-surface-50 dark:bg-surface-900/40 border border-dashed border-surface-300 dark:border-surface-800 rounded-xl text-center">
+                            <div class="w-11 h-11 rounded-full bg-surface-100 dark:bg-surface-850 flex items-center justify-center text-surface-400">
+                                <Globe class="w-5 h-5" />
+                            </div>
+                            <div class="flex flex-col gap-1 max-w-xs">
+                                <span class="font-bold text-sm text-surface-800 dark:text-surface-200">Not connected to PCGamingWiki</span>
+                                <span class="text-xs text-surface-500 leading-relaxed">Connect to submit wiki page revisions directly, upload screenshots and set auto-descriptions.</span>
+                            </div>
+                            <Button label="Connect Account" severity="primary" size="small" class="mt-1 shadow-soft shadow-primary-500/10 cursor-pointer" @click="isLoginVisible = true">
+                                <template #icon>
+                                    <LogIn class="w-4 h-4 mr-2" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Preferences -->
+                    <div class="flex flex-col gap-3">
+                        <!-- Auto-relogin Switch -->
+                        <div class="flex items-start gap-3.5 p-3.5 bg-surface-50/60 dark:bg-surface-900/40 rounded-xl border border-surface-200 dark:border-surface-800/80">
+                            <div class="p-2 bg-primary-500/10 dark:bg-primary-500/15 rounded-lg text-primary-500 mt-0.5">
+                                <RotateCcw class="w-4 h-4" />
+                            </div>
+                            <div class="flex-1 flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Automatic Session Refresh</span>
+                                    <ToggleSwitch v-model="uiStore.autoReLogin" />
+                                </div>
+                                <p class="text-[11px] text-surface-500 leading-normal">
+                                    Automatically renews PCGW API credentials when the current session expires. Uses secure locally stored tokens.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Auto-description Switch -->
+                        <div class="flex items-start gap-3.5 p-3.5 bg-surface-50/60 dark:bg-surface-900/40 rounded-xl border border-surface-200 dark:border-surface-800/80">
+                            <div class="p-2 bg-primary-500/10 dark:bg-primary-500/15 rounded-lg text-primary-500 mt-0.5">
+                                <Info class="w-4 h-4" />
+                            </div>
+                            <div class="flex-1 flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Show Upload Attribution</span>
+                                    <ToggleSwitch v-model="uiStore.autoUploadDescription" />
+                                </div>
+                                <p class="text-[11px] text-surface-500 leading-normal">
+                                    Adds a descriptive tag linking back to this client app whenever you upload image media files to the wiki.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Local Storage System Operations -->
+                    <div class="flex items-center justify-between p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl mt-1">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-sm font-semibold text-surface-850 dark:text-surface-200">Cache Administration</span>
+                            <span class="text-xs text-surface-500">Purge offline copies of PCGW schemas and templates.</span>
+                        </div>
+                        <Button label="Reset Cache" severity="secondary" variant="outlined" size="small" @click="handleResetCache" class="cursor-pointer">
                             <template #icon>
-                                <LogOut class="text-red-500" />
+                                <RotateCcw class="w-3.5 h-3.5 mr-1.5" />
                             </template>
                         </Button>
                     </div>
-
-                    <Button v-else label="Login to PCGW" severity="secondary" variant="outlined" @click="isLoginVisible = true">
-                        <template #icon>
-                            <LogIn class="w-4 h-4 mr-2" />
-                        </template>
-                    </Button>
-
-                    <!-- Auto-relogin Toggle -->
-                    <div class="flex flex-col gap-2 mt-2 p-3 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-100 dark:border-surface-700/50">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                                <RotateCcw class="w-4 h-4 text-primary-500" /> Automatic Session Refresh
-                            </label>
-                            <ToggleSwitch v-model="uiStore.autoReLogin" />
-                        </div>
-                        <p class="text-[11px] text-surface-500 leading-tight m-0">
-                            Automatically renews the session when it expires. Requires storing the bot password locally.
-                        </p>
-                    </div>
-
-                    <!-- Auto-description Toggle -->
-                    <div class="flex flex-col gap-2 p-3 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-100 dark:border-surface-700/50">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                                <Info class="w-4 h-4 text-primary-500" /> Show Upload Attribution
-                            </label>
-                            <ToggleSwitch v-model="uiStore.autoUploadDescription" />
-                        </div>
-                        <p class="text-[11px] text-surface-500 leading-tight m-0">
-                            Automatically appends a link to the editor in your file upload comments on the wiki.
-                        </p>
-                    </div>
-
-                    <!-- Reset Cache Button -->
-                    <Button label="Reset PCGW Cache" severity="secondary" variant="outlined" size="small" class="mt-4 w-full" @click="handleResetCache">
-                        <template #icon>
-                            <RotateCcw class="w-4 h-4 mr-2" />
-                        </template>
-                    </Button>
                 </div>
             </div>
         </div>
 
         <template #footer>
             <div class="flex justify-end gap-2 w-full">
-                <Button label="Done" @click="saveSettings" icon="pi pi-check" />
+                <Button label="Done" @click="saveSettings" icon="pi pi-check" class="cursor-pointer" />
             </div>
         </template>
     </Dialog>
 
     <PcgwLoginDialog v-model:visible="isLoginVisible" />
 </template>
+
+<style scoped>
+/* Scoped overrides to enforce style without impacting other dialogs */
+.settings-dialog :deep(.p-dialog-content) {
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.settings-dialog :deep(.p-dialog-header) {
+    padding: 1.25rem 1.5rem !important;
+    border-bottom: 1px solid var(--color-surface-200);
+}
+
+.dark .settings-dialog :deep(.p-dialog-header) {
+    border-bottom: 1px solid var(--color-surface-800);
+}
+
+.settings-dialog :deep(.p-dialog-footer) {
+    padding: 1rem 1.5rem !important;
+    border-top: 1px solid var(--color-surface-200);
+}
+
+.dark .settings-dialog :deep(.p-dialog-footer) {
+    border-top: 1px solid var(--color-surface-800);
+}
+
+/* Scrollbar tweaks inside sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+    height: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-300);
+    border-radius: 9px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-700);
+}
+
+/* Animations */
+.animate-fade-in {
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
