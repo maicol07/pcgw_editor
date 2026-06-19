@@ -6,10 +6,10 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import ToggleSwitch from 'primevue/toggleswitch';
-import { 
-    Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key, 
-    AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn, 
-    Info, RotateCcw, Eye, EyeOff 
+import {
+    Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
+    AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
+    Info, RotateCcw, Eye, EyeOff
 } from 'lucide-vue-next';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { pcgwApi } from '../../services/pcgwApi';
@@ -129,19 +129,27 @@ const saveSettings = () => {
         </template>
 
         <div class="flex flex-col md:flex-row min-h-[480px]">
-            <!-- Sidebar / Topbar Navigation -->
-            <div class="w-full md:w-56 bg-surface-50/50 dark:bg-surface-900/40 border-b md:border-b-0 md:border-r border-surface-200 dark:border-surface-800/80 p-3 md:p-4 flex flex-row md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible custom-scrollbar">
-                <button v-for="tab in tabs" :key="tab.id"
-                    @click="activeTab = tab.id"
-                    class="flex items-center gap-2.5 px-3 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 text-left shrink-0 md:w-full group whitespace-nowrap cursor-pointer"
-                    :class="activeTab === tab.id 
-                        ? 'bg-primary-500 text-white shadow-soft shadow-primary-500/20' 
-                        : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100/70 dark:hover:bg-surface-800/70 hover:text-surface-900 dark:hover:text-surface-100'"
-                >
-                    <component :is="tab.icon" class="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                    <span>{{ tab.label }}</span>
-                </button>
-            </div>
+            <!-- Rail-style navigation (mirrors SectionNav) -->
+            <nav class="flex flex-row md:flex-col shrink-0 w-full md:w-52 border-b md:border-b-0 md:border-r border-surface-200/70 dark:border-surface-800/70 overflow-x-auto md:overflow-x-visible custom-scrollbar">
+                <div class="flex flex-row md:flex-col gap-1 px-2.5 py-3 md:py-4 md:pt-5">
+                    <span class="hidden md:block px-2.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500 select-none">
+                        Settings
+                    </span>
+                    <button v-for="tab in tabs" :key="tab.id" type="button"
+                        @click="activeTab = tab.id"
+                        class="group relative flex items-center gap-2.5 rounded-lg pl-3 pr-2 py-1.5 text-left shrink-0 whitespace-nowrap transition-colors duration-150 cursor-pointer"
+                        :class="activeTab === tab.id
+                            ? 'bg-primary-500/10 text-primary-600 dark:text-primary-300'
+                            : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200/60 dark:hover:bg-surface-800/50'"
+                    >
+                        <span class="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary-500 transition-opacity duration-150"
+                            :class="activeTab === tab.id ? 'opacity-100' : 'opacity-0'" />
+                        <component :is="tab.icon" class="w-4 h-4 shrink-0"
+                            :class="activeTab === tab.id ? 'text-primary-500' : 'text-surface-400 dark:text-surface-500 group-hover:text-surface-600 dark:group-hover:text-surface-300'" />
+                        <span class="text-[13px] font-medium">{{ tab.label }}</span>
+                    </button>
+                </div>
+            </nav>
 
             <!-- Content Area -->
             <div class="flex-1 p-5 md:p-6 overflow-y-auto max-h-[500px] md:max-h-[550px] relative bg-surface-0 dark:bg-surface-950/20">
@@ -240,14 +248,14 @@ const saveSettings = () => {
                 </div>
 
                 <!-- Integrations Tab -->
-                <div v-show="activeTab === 'integrations'" class="flex flex-col gap-5 animate-fade-in">
-                    <!-- Gemini Credentials Card -->
-                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3">
-                        <div class="flex items-center gap-2">
-                            <Bot class="w-4 h-4 text-primary-500" />
-                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">Gemini AI Assistant</span>
+                <div v-show="activeTab === 'integrations'" class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 animate-fade-in">
+                    <!-- Gemini -->
+                    <div class="flex flex-col gap-3 pb-5">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Bot class="w-4 h-4" /></span>
+                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">Gemini AI Assistant</span>
                         </div>
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-2 md:pl-9">
                             <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Gemini API Key</label>
                             <div class="flex relative items-center">
                                 <InputText v-model="apiKeyValue" :type="showGeminiKey ? 'text' : 'password'" placeholder="AI api key..." class="w-full pr-10 gemini-api-key-input" />
@@ -259,13 +267,13 @@ const saveSettings = () => {
                         </div>
                     </div>
 
-                    <!-- RAWG API Card -->
-                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3">
-                        <div class="flex items-center gap-2">
-                            <Key class="w-4 h-4 text-teal-500" />
-                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
+                    <!-- RAWG -->
+                    <div class="flex flex-col gap-3 py-5">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 text-teal-500 shrink-0"><Key class="w-4 h-4" /></span>
+                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
                         </div>
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-2 md:pl-9">
                             <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
                             <div class="flex relative items-center">
                                 <InputText v-model="tempRawgApiKey" :type="showRawgKey ? 'text' : 'password'" placeholder="RAWG api key..." class="w-full pr-10" />
@@ -277,28 +285,30 @@ const saveSettings = () => {
                         </div>
                     </div>
 
-                    <!-- Twitch / IGDB API Credentials Card -->
-                    <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3.5">
-                        <div class="flex items-center gap-2">
-                            <Key class="w-4 h-4 text-primary-500" />
-                            <span class="font-bold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
+                    <!-- Twitch / IGDB -->
+                    <div class="flex flex-col gap-3.5 pt-5">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Key class="w-4 h-4" /></span>
+                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div class="flex flex-col gap-1.5">
-                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client ID</label>
-                                <InputText v-model="tempTwitchClientId" placeholder="Twitch Client ID" class="w-full" />
-                            </div>
-                            <div class="flex flex-col gap-1.5">
-                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client Secret</label>
-                                <div class="flex relative items-center">
-                                    <InputText v-model="tempTwitchClientSecret" :type="showTwitchSecret ? 'text' : 'password'" placeholder="Twitch Secret" class="w-full pr-10" />
-                                    <button type="button" @click="showTwitchSecret = !showTwitchSecret" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
-                                        <component :is="showTwitchSecret ? EyeOff : Eye" class="w-4 h-4" />
-                                    </button>
+                        <div class="md:pl-9 flex flex-col gap-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client ID</label>
+                                    <InputText v-model="tempTwitchClientId" placeholder="Twitch Client ID" class="w-full" />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client Secret</label>
+                                    <div class="flex relative items-center">
+                                        <InputText v-model="tempTwitchClientSecret" :type="showTwitchSecret ? 'text' : 'password'" placeholder="Twitch Secret" class="w-full pr-10" />
+                                        <button type="button" @click="showTwitchSecret = !showTwitchSecret" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                            <component :is="showTwitchSecret ? EyeOff : Eye" class="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                            <span class="text-[11px] text-surface-500 leading-normal">Enables querying ratings, genres, and store platform URLs using the IGDB game database endpoints.</span>
                         </div>
-                        <span class="text-[11px] text-surface-500 leading-normal mt-0.5">Enables querying ratings, genres, and store platform URLs using the IGDB game database endpoints.</span>
                     </div>
                 </div>
 
@@ -345,13 +355,11 @@ const saveSettings = () => {
                         </div>
                     </div>
 
-                    <!-- Toggle Preferences -->
-                    <div class="flex flex-col gap-3">
+                    <!-- Preferences + cache (flat, divider-separated) -->
+                    <div class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70">
                         <!-- Auto-relogin Switch -->
-                        <div class="flex items-start gap-3.5 p-3.5 bg-surface-50/60 dark:bg-surface-900/40 rounded-xl border border-surface-200 dark:border-surface-800/80">
-                            <div class="p-2 bg-primary-500/10 dark:bg-primary-500/15 rounded-lg text-primary-500 mt-0.5">
-                                <RotateCcw class="w-4 h-4" />
-                            </div>
+                        <div class="flex items-start gap-3.5 py-3.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><RotateCcw class="w-4 h-4" /></span>
                             <div class="flex-1 flex flex-col gap-1">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Automatic Session Refresh</span>
@@ -364,10 +372,8 @@ const saveSettings = () => {
                         </div>
 
                         <!-- Auto-description Switch -->
-                        <div class="flex items-start gap-3.5 p-3.5 bg-surface-50/60 dark:bg-surface-900/40 rounded-xl border border-surface-200 dark:border-surface-800/80">
-                            <div class="p-2 bg-primary-500/10 dark:bg-primary-500/15 rounded-lg text-primary-500 mt-0.5">
-                                <Info class="w-4 h-4" />
-                            </div>
+                        <div class="flex items-start gap-3.5 py-3.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><Info class="w-4 h-4" /></span>
                             <div class="flex-1 flex flex-col gap-1">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Show Upload Attribution</span>
@@ -378,19 +384,22 @@ const saveSettings = () => {
                                 </p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Local Storage System Operations -->
-                    <div class="flex items-center justify-between p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl mt-1">
-                        <div class="flex flex-col gap-1">
-                            <span class="text-sm font-semibold text-surface-850 dark:text-surface-200">Cache Administration</span>
-                            <span class="text-xs text-surface-500">Purge offline copies of PCGW schemas and templates.</span>
+                        <!-- Cache Administration -->
+                        <div class="flex items-center justify-between gap-3 py-3.5">
+                            <div class="flex items-start gap-3.5">
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><RotateCcw class="w-4 h-4" /></span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Cache Administration</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Purge offline copies of PCGW schemas and templates.</span>
+                                </div>
+                            </div>
+                            <Button label="Reset Cache" severity="secondary" variant="outlined" size="small" @click="handleResetCache" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <RotateCcw class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
                         </div>
-                        <Button label="Reset Cache" severity="secondary" variant="outlined" size="small" @click="handleResetCache" class="cursor-pointer">
-                            <template #icon>
-                                <RotateCcw class="w-3.5 h-3.5 mr-1.5" />
-                            </template>
-                        </Button>
                     </div>
                 </div>
             </div>
