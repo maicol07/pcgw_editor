@@ -32,11 +32,11 @@ const MyPreset = definePreset(Aura, {
             950: '#18293d'
         },
         borderRadius: {
-            xs: '0.25rem',
-            sm: '0.5rem',
-            md: '0.625rem',
-            lg: '0.75rem',
-            xl: '1rem',
+            xs: '0.1875rem',
+            sm: '0.3125rem',
+            md: '0.4375rem',
+            lg: '0.5rem',
+            xl: '0.625rem',
         },
         transitionDuration: '0.15s',
         // Restyles every form control (input/select/multiselect/textarea/...) at once:
@@ -45,9 +45,9 @@ const MyPreset = definePreset(Aura, {
         formField: {
             borderRadius: '{border.radius.lg}',
             focusRing: {
-                width: '3px',
+                width: '2px',
                 style: 'solid',
-                color: 'color-mix(in srgb, {primary.color} 22%, transparent)',
+                color: 'color-mix(in srgb, {primary.color} 16%, transparent)',
                 offset: '0',
                 shadow: 'none'
             }
@@ -82,7 +82,7 @@ const MyPreset = definePreset(Aura, {
                 paddingX: '0.95rem',
                 paddingY: '0.5rem',
                 gap: '0.5rem',
-                label: { fontWeight: '600' }
+                label: { fontWeight: '500' }
             }
         }
     }
