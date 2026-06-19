@@ -44,28 +44,11 @@ export const useUiStore = defineStore('ui', () => {
         document.documentElement.style.setProperty('--app-font-family', val);
     });
 
-    const panelState = reactive({
-        articleState: true,
-        infobox: true,
-        introduction: true,
-        availability: true,
-        monetization: true,
-        dlc: true,
-        essentialImprovements: true,
-        gameData: true,
-        video: true,
-        input: true,
-        audio: true,
-        network: true,
-        vr: true,
-        other: true,
-        systemReq: true,
-        l10n: true,
-        issues: true,
-        general: true,
+    const navRailCollapsed = ref(localStorage.getItem('navRailCollapsed') === 'true');
+
+    watch(navRailCollapsed, (val: boolean) => {
+        localStorage.setItem('navRailCollapsed', val.toString());
     });
-
-
 
     const toggleSidebar = () => {
         sidebarVisible.value = !sidebarVisible.value;
@@ -73,18 +56,6 @@ export const useUiStore = defineStore('ui', () => {
 
     const setEditorMode = (mode: 'Visual' | 'Code') => {
         editorMode.value = mode;
-    };
-
-    const expandAll = () => {
-        Object.keys(panelState).forEach((k) => {
-            (panelState as any)[k] = false;
-        });
-    };
-
-    const collapseAll = () => {
-        Object.keys(panelState).forEach((k) => {
-            (panelState as any)[k] = true;
-        });
     };
 
     return {
@@ -97,12 +68,10 @@ export const useUiStore = defineStore('ui', () => {
         theme,
         autoUploadDescription,
         autoReLogin,
-        panelState,
+        navRailCollapsed,
         isSettingsOpen,
 
         toggleSidebar,
         setEditorMode,
-        expandAll,
-        collapseAll,
     };
 });

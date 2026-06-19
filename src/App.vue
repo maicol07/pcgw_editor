@@ -100,9 +100,7 @@ const {
     previewMode, renderedHtml, isLoading: isPreviewLoading, error: previewError
 } = usePreview(() => currentWikitext.value, () => pageTitle.value);
 
-const { searchQuery, panelVisibility } = useSearch(panelKeys, searchKeywords, (key) => {
-    uiStore.panelState[key as keyof typeof uiStore.panelState] = false;
-});
+const { searchQuery, panelVisibility } = useSearch(panelKeys, searchKeywords);
 provide('searchQuery', searchQuery);
 
 const {
@@ -286,7 +284,6 @@ const activeSection = ref(sectionKeysInOrder[0]);
 let suppressSpyUntil = 0;
 
 const navigateToSection = (key: string) => {
-    uiStore.panelState[key as keyof typeof uiStore.panelState] = false; // expand target
     activeSection.value = key;
     suppressSpyUntil = performance.now() + 800;
     requestAnimationFrame(() => {
@@ -383,6 +380,7 @@ onMounted(() => {
                 <div class="flex-1 flex overflow-hidden">
                     <!-- Section navigation rail (Visual mode only) -->
                     <SectionNav v-if="editorMode === 'Visual' && !uiStore.isInitialLoad"
+                        v-model:collapsed="uiStore.navRailCollapsed"
                         :activeKey="activeSection" :panelVisibility="panelVisibility"
                         @navigate="navigateToSection" />
 
@@ -404,42 +402,41 @@ onMounted(() => {
                         <EditorSkeleton v-if="editorMode === 'Visual' && uiStore.isInitialLoad" />
 
                         <div v-else-if="editorMode === 'Visual'"
-                            class="p-4 md:p-5 max-w-6xl mx-auto flex flex-col gap-4" key="visual">
-                            <QuickActions v-model:searchQuery="searchQuery" @expandAll="uiStore.expandAll()"
-                                @collapseAll="uiStore.collapseAll()" />
+                            class="p-4 md:p-6 max-w-6xl mx-auto flex flex-col gap-9" key="visual">
+                            <QuickActions v-model:searchQuery="searchQuery" />
 
                             <!-- Sections -->
-                            <ModernPanel id="sec-articleState" v-model:collapsed="uiStore.panelState.articleState"
+                            <ModernPanel id="sec-articleState"
                                 v-show="panelVisibility.articleState">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <File class="text-slate-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Article State</span>
+                                            class="font-semibold text-base tracking-tight">Article State</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.articleState && schemas.articleState.value"
+                                <DynamicSection v-if="schemas.articleState.value"
                                     :section="schemas.articleState.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-infobox" v-model:collapsed="uiStore.panelState.infobox"
+                            <ModernPanel id="sec-infobox"
                                 v-show="panelVisibility.infobox">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Info class="text-blue-600 w-4 h-4" />
-                                        <span class="font-semibold text-sm">Infobox</span>
+                                        <span class="font-semibold text-base tracking-tight">Infobox</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.infobox && schemas.infobox.value"
+                                <DynamicSection v-if="schemas.infobox.value"
                                     :section="schemas.infobox.value" :modelValue="gameData.infobox"
                                     @update:modelValue="val => updateGameData('infobox', val)" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-introduction" v-model:collapsed="uiStore.panelState.introduction"
+                            <ModernPanel id="sec-introduction"
                                 v-show="panelVisibility.introduction">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlignLeft class="text-orange-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Introduction</span>
+                                            class="font-semibold text-base tracking-tight">Introduction</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-4">
@@ -449,182 +446,182 @@ onMounted(() => {
                                             class="text-primary-600 dark:text-primary-400">'''''Title'''''</code>.
                                     </p>
                                     <DynamicSection
-                                        v-if="!uiStore.panelState.introduction && schemas.introduction.value"
+                                        v-if="schemas.introduction.value"
                                         :section="schemas.introduction.value" v-model="gameData" />
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-availability" v-model:collapsed="uiStore.panelState.availability"
+                            <ModernPanel id="sec-availability"
                                 v-show="panelVisibility.availability">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <ShoppingCart class="text-emerald-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Availability</span>
+                                            class="font-semibold text-base tracking-tight">Availability</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.availability && schemas.availability.value"
+                                <DynamicSection v-if="schemas.availability.value"
                                     :section="schemas.availability.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-monetization" v-model:collapsed="uiStore.panelState.monetization"
+                            <ModernPanel id="sec-monetization"
                                 v-show="panelVisibility.monetization">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <DollarSign class="text-amber-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Monetization & Microtransactions</span>
+                                            class="font-semibold text-base tracking-tight">Monetization & Microtransactions</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
                                     <DynamicSection
-                                        v-if="!uiStore.panelState.monetization && schemas.monetization.value"
+                                        v-if="schemas.monetization.value"
                                         :section="schemas.monetization.value" v-model="gameData" />
                                     <div class="border-t border-surface-200 dark:border-surface-700"></div>
                                     <DynamicSection
-                                        v-if="!uiStore.panelState.monetization && schemas.microtransactions.value"
+                                        v-if="schemas.microtransactions.value"
                                         :section="schemas.microtransactions.value" v-model="gameData" />
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-dlc" v-model:collapsed="uiStore.panelState.dlc" v-show="panelVisibility.dlc">
+                            <ModernPanel id="sec-dlc" v-show="panelVisibility.dlc">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-primary-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">DLC & Expansions</span>
+                                            class="font-semibold text-base tracking-tight">DLC & Expansions</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.dlc && schemas.dlc.value"
+                                <DynamicSection v-if="schemas.dlc.value"
                                     :section="schemas.dlc.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-essentialImprovements" v-model:collapsed="uiStore.panelState.essentialImprovements"
+                            <ModernPanel id="sec-essentialImprovements"
                                 v-show="panelVisibility.essentialImprovements">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Star class="text-yellow-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Essential Improvements</span>
+                                            class="font-semibold text-base tracking-tight">Essential Improvements</span>
                                     </div>
                                 </template>
                                 <DynamicSection
-                                    v-if="!uiStore.panelState.essentialImprovements && schemas.essentialImprovements.value"
+                                    v-if="schemas.essentialImprovements.value"
                                     :section="schemas.essentialImprovements.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-gameData" v-model:collapsed="uiStore.panelState.gameData"
+                            <ModernPanel id="sec-gameData"
                                 v-show="panelVisibility.gameData">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Save class="text-green-600 w-4 h-4" /><span class="font-semibold text-sm">Game
+                                        <Save class="text-green-600 w-4 h-4" /><span class="font-semibold text-base tracking-tight">Game
                                             Data (Config, Saves, Cloud)</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.gameData && schemas.gameData.value"
+                                <DynamicSection v-if="schemas.gameData.value"
                                     :section="schemas.gameData.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-video" v-model:collapsed="uiStore.panelState.video" v-show="panelVisibility.video">
+                            <ModernPanel id="sec-video" v-show="panelVisibility.video">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Video</span>
+                                            class="font-semibold text-base tracking-tight">Video</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.video && schemas.video.value"
+                                <DynamicSection v-if="schemas.video.value"
                                     :section="schemas.video.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-input" v-model:collapsed="uiStore.panelState.input" v-show="panelVisibility.input">
+                            <ModernPanel id="sec-input" v-show="panelVisibility.input">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Input</span>
+                                            class="font-semibold text-base tracking-tight">Input</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.input && schemas.input.value"
+                                <DynamicSection v-if="schemas.input.value"
                                     :section="schemas.input.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-audio" v-model:collapsed="uiStore.panelState.audio" v-show="panelVisibility.audio">
+                            <ModernPanel id="sec-audio" v-show="panelVisibility.audio">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-primary-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Audio</span>
+                                            class="font-semibold text-base tracking-tight">Audio</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.audio && schemas.audio.value"
+                                <DynamicSection v-if="schemas.audio.value"
                                     :section="schemas.audio.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-network" v-model:collapsed="uiStore.panelState.network"
+                            <ModernPanel id="sec-network"
                                 v-show="panelVisibility.network">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Wifi class="text-cyan-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Network</span>
+                                            class="font-semibold text-base tracking-tight">Network</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.network && schemas.network.value"
+                                <DynamicSection v-if="schemas.network.value"
                                     :section="schemas.network.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-vr" v-model:collapsed="uiStore.panelState.vr" v-show="panelVisibility.vr">
+                            <ModernPanel id="sec-vr" v-show="panelVisibility.vr">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Eye class="text-pink-500 w-4 h-4" /><span class="font-semibold text-sm">VR
+                                        <Eye class="text-pink-500 w-4 h-4" /><span class="font-semibold text-base tracking-tight">VR
                                             Support</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.vr && schemas.vr.value"
+                                <DynamicSection v-if="schemas.vr.value"
                                     :section="schemas.vr.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-issues" v-model:collapsed="uiStore.panelState.issues" v-show="panelVisibility.issues">
+                            <ModernPanel id="sec-issues" v-show="panelVisibility.issues">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlertCircle class="text-red-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Issues</span>
+                                            class="font-semibold text-base tracking-tight">Issues</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.issues && schemas.issues.value"
+                                <DynamicSection v-if="schemas.issues.value"
                                     :section="schemas.issues.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-other" v-model:collapsed="uiStore.panelState.other" v-show="panelVisibility.other">
+                            <ModernPanel id="sec-other" v-show="panelVisibility.other">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Other Information (API, Middleware)</span>
+                                            class="font-semibold text-base tracking-tight">Other Information (API, Middleware)</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <DynamicSection v-if="!uiStore.panelState.other && schemas.api.value"
+                                    <DynamicSection v-if="schemas.api.value"
                                         :section="schemas.api.value" v-model="gameData" />
-                                    <DynamicSection v-if="!uiStore.panelState.other && schemas.middleware.value"
+                                    <DynamicSection v-if="schemas.middleware.value"
                                         :section="schemas.middleware.value" v-model="gameData" />
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-systemReq" v-model:collapsed="uiStore.panelState.systemReq"
+                            <ModernPanel id="sec-systemReq"
                                 v-show="panelVisibility.systemReq">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Cpu class="text-lime-500 w-4 h-4" /><span class="font-semibold text-sm">System
+                                        <Cpu class="text-lime-500 w-4 h-4" /><span class="font-semibold text-base tracking-tight">System
                                             Requirements</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.systemReq && schemas.systemReq.value"
+                                <DynamicSection v-if="schemas.systemReq.value"
                                     :section="schemas.systemReq.value" v-model="gameData" />
                             </ModernPanel>
 
 
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.l10n" v-show="panelVisibility.l10n">
+                            <ModernPanel id="sec-l10n" v-show="panelVisibility.l10n">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Globe class="text-teal-400 w-4 h-4" /><span
-                                            class="font-semibold text-sm">Localizations</span>
+                                            class="font-semibold text-base tracking-tight">Localizations</span>
                                     </div>
                                 </template>
-                                <DynamicSection v-if="!uiStore.panelState.l10n && schemas.l10n.value"
+                                <DynamicSection v-if="schemas.l10n.value"
                                     :section="schemas.l10n.value" v-model="gameData" />
                             </ModernPanel>
                         </div>

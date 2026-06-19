@@ -1,23 +1,14 @@
 <script setup lang="ts">
-import Panel from 'primevue/panel';
-import { ChevronDown } from 'lucide-vue-next';
-
-// Use defineModel for seamless v-model support (Vue 3.4+)
-const collapsed = defineModel<boolean>('collapsed');
+// Flat section (no card). Sections are separated by a header rule + generous
+// spacing; navigation is handled by the section rail.
 </script>
 
 <template>
-    <Panel toggleable v-model:collapsed="collapsed" class="panel-modern shadow-soft rounded-xl overflow-hidden transition-shadow duration-200 hover:shadow-soft-lg">
-        <template #header>
+    <section class="scroll-mt-2">
+        <header
+            class="flex items-center gap-2.5 pb-2.5 mb-4 border-b border-surface-200/80 dark:border-surface-800/80">
             <slot name="header"></slot>
-        </template>
-
-        <template #togglericon="{ collapsed: isCollapsed }">
-            <ChevronDown
-                class="w-5 h-5 text-surface-400 group-hover:text-surface-600 dark:text-surface-500 dark:group-hover:text-surface-300 transition-transform duration-200"
-                :class="{ '-rotate-90': isCollapsed }" />
-        </template>
-
+        </header>
         <slot></slot>
-    </Panel>
+    </section>
 </template>

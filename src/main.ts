@@ -39,16 +39,29 @@ const MyPreset = definePreset(Aura, {
             xl: '1rem',
         },
         transitionDuration: '0.15s',
+        // Restyles every form control (input/select/multiselect/textarea/...) at once:
+        // rounded to match buttons (lg), airier padding, soft blue focus ring
+        // (Aura ships the ring disabled).
+        formField: {
+            borderRadius: '{border.radius.lg}',
+            focusRing: {
+                width: '3px',
+                style: 'solid',
+                color: 'color-mix(in srgb, {primary.color} 22%, transparent)',
+                offset: '0',
+                shadow: 'none'
+            }
+        },
         formSelect: {
             padding: {
-                x: '0.5rem',
-                y: '0.25rem'
+                x: '0.7rem',
+                y: '0.45rem'
             }
         },
         input: {
             padding: {
-                x: '0.5rem',
-                y: '0.25rem'
+                x: '0.7rem',
+                y: '0.45rem'
             }
         },
         small: {
@@ -60,6 +73,16 @@ const MyPreset = definePreset(Aura, {
             root: {
                 padding: '0.375rem 0.625rem',
                 gap: '0.5rem'
+            }
+        },
+        // Distinctive, clean control language: rounder buttons with a confident label.
+        button: {
+            root: {
+                borderRadius: '{border.radius.lg}',
+                paddingX: '0.95rem',
+                paddingY: '0.5rem',
+                gap: '0.5rem',
+                label: { fontWeight: '600' }
             }
         }
     }
