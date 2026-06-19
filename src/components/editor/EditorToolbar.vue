@@ -229,7 +229,7 @@ const pcgwMenuItems = computed(() => {
                                 </div>
 
                                 <!-- Standard Action -->
-                                <a v-else v-ripple class="flex items-center px-3 py-2 cursor-pointer group" v-bind="props.action">
+                                <a v-else class="flex items-center px-3 py-2 cursor-pointer group" v-bind="props.action">
                                     <component :is="item.icon" 
                                         class="w-4 h-4 mr-2" 
                                         :class="[item.disabled ? 'text-surface-400 dark:text-surface-600' : 'text-surface-600 dark:text-surface-400 group-hover:text-primary-500']" />

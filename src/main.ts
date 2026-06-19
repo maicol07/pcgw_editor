@@ -2,7 +2,6 @@ import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
-import Ripple from 'primevue/ripple';
 import ToastService from 'primevue/toastservice';
 import './style.css';
 import './styles/preview/index.scss';
@@ -68,7 +67,7 @@ const MyPreset = definePreset(Aura, {
 
 app.use(pinia);
 app.use(PrimeVue, {
-    ripple: true,
+    ripple: false,
     theme: {
         preset: MyPreset,
         options: {
@@ -84,6 +83,5 @@ app.component('Checkbox', Checkbox);
 app.component('Select', Select);
 
 app.directive('tooltip', Tooltip);
-app.directive('ripple', Ripple);
 
 app.mount('#app');
