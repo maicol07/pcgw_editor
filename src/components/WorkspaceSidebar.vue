@@ -15,6 +15,8 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import Message from 'primevue/message';
+import ConfirmPopup from 'primevue/confirmpopup';
+import { useConfirm } from 'primevue/useconfirm';
 import AutocompleteField from './AutocompleteField.vue';
 import { pcgwApi } from '../services/pcgwApi';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,6 +24,7 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 
 const store = useWorkspaceStore();
+const confirm = useConfirm();
 
 const props = defineProps<{
     visible: boolean;
@@ -178,12 +181,37 @@ const onImportSelect = (event: any) => {
 
 
 
-const customRename = (page: any) => {
-    const newName = prompt("Enter new name:", page.title);
-    if (newName && newName.trim() !== "") {
-        store.renamePage(page.id, newName);
+// Rename via small dialog (replaces native prompt)
+const isRenameVisible = ref(false);
+const renamePageId = ref('');
+const renameValue = ref('');
+
+const openRenameDialog = (page: any) => {
+    renamePageId.value = page.id;
+    renameValue.value = page.title;
+    isRenameVisible.value = true;
+};
+
+const submitRename = () => {
+    const name = renameValue.value.trim();
+    if (name) {
+        store.renamePage(renamePageId.value, name);
+        isRenameVisible.value = false;
     }
-}
+};
+
+const confirmDelete = (event: Event, page: any) => {
+    confirm.require({
+        target: event.currentTarget as HTMLElement,
+        message: `Delete "${page.title}"? This can't be undone.`,
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger p-button-sm',
+        rejectClass: 'p-button-text p-button-sm',
+        acceptLabel: 'Delete',
+        rejectLabel: 'Cancel',
+        accept: () => store.deletePage(page.id)
+    });
+};
 
 const isLinkDialogVisible = ref(false);
 const linkPageId = ref('');
@@ -279,9 +307,16 @@ defineExpose({ openLinkDialog });
             <div class="flex gap-2">
                 <Button label="New Page" class="flex-1" @click="openNewPageDialog">
                     <template #icon>
-                        <Plus class="w-4 h-4" />
+                        <Plus class="w-4 h-4 mr-2" />
                     </template>
                 </Button>
+                <FileUpload mode="basic" name="import[]" accept=".json" :maxFileSize="1000000" @select="onImportSelect"
+                    customUpload auto chooseLabel="Import" :chooseButtonProps="{ severity: 'secondary', outlined: true }"
+                    class="shrink-0" v-tooltip.bottom="'Import a page from JSON'">
+                    <template #chooseicon>
+                        <Download class="w-4 h-4 mr-2" />
+                    </template>
+                </FileUpload>
             </div>
 
             <!-- Search & Filters -->
@@ -332,29 +367,31 @@ defineExpose({ openLinkDialog });
                         </template>
                     </Select>
                 </div>
+                <div class="px-1 text-[10px] font-medium text-surface-400 dark:text-surface-500 select-none">
+                    {{ filteredPages.length }} {{ filteredPages.length === 1 ? 'page' : 'pages' }}<span v-if="searchQuery || filterTemplate !== 'all'"> shown</span>
+                </div>
             </div>
 
             <!-- Page List -->
-            <div
-                class="flex-1 border border-surface-200 dark:border-surface-700 rounded-lg overflow-y-auto overflow-x-hidden bg-surface-0 dark:bg-surface-950">
-                <TransitionGroup name="list" tag="div" class="w-full">
+            <div class="flex-1 overflow-y-auto overflow-x-hidden -mx-1 px-1">
+                <TransitionGroup name="list" tag="div" class="w-full flex flex-col gap-0.5">
                     <div v-for="page in filteredPages" :key="page.id"
-                        class="mx-2 mt-2 p-2 rounded-xl cursor-pointer transition-all duration-300 border group relative overflow-hidden"
+                        class="group relative overflow-hidden p-2 pl-3 rounded-lg cursor-pointer transition-colors duration-150"
                         :class="[
                             page.id === store.activePageId
-                                ? 'bg-primary-50/70 dark:bg-primary-950/30 border-primary-500/50 ring-1 ring-primary-500/20 shadow-[0_0_15px_-3px_rgba(51,122,190,0.2)] dark:shadow-[0_0_20px_-5px_rgba(51,122,190,0.3)] pl-4!'
-                                : 'bg-surface-0 dark:bg-surface-900 border-surface-200 dark:border-surface-800 hover:border-primary-400/50 dark:hover:border-primary-500/50 hover:bg-surface-50/50 dark:hover:bg-surface-800/50'
+                                ? 'bg-primary-500/10'
+                                : 'hover:bg-surface-200/60 dark:hover:bg-surface-800/50'
                         ]" @click="store.setActivePage(page.id)">
 
 
-                        <!-- Active Indicator -->
-                        <div v-if="page.id === store.activePageId"
-                            class="absolute top-1/2 -translate-y-1/2 left-0 w-1.5 h-8 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(51,122,190,0.5)]">
-                        </div>
+                        <!-- Active Indicator (rail-style left bar) -->
+                        <span class="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-0.5 rounded-full bg-primary-500 transition-opacity duration-150"
+                            :class="page.id === store.activePageId ? 'opacity-100' : 'opacity-0'" />
 
                         <div class="flex justify-between items-start">
                             <div class="flex-1 min-w-0 pr-10">
-                                <div class="font-bold text-sm truncate text-surface-900 dark:text-surface-0 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                                <div class="font-bold text-sm truncate transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+                                    :class="page.id === store.activePageId ? 'text-primary-600 dark:text-primary-300' : 'text-surface-900 dark:text-surface-0'"
                                     :title="page.title">
                                     {{ page.title }}
                                 </div>
@@ -368,16 +405,18 @@ defineExpose({ openLinkDialog });
                                         <Clock class="w-2.5 h-2.5 mr-1" />
                                         {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
                                     </div>
-                                    <div v-if="page.pcgwPageTitle" title="Linked to PCGW"
-                                        class="flex items-center text-[10px] text-primary-500 font-medium ml-1">
-                                        <Link class="w-3 h-3" />
+                                    <div v-if="page.pcgwPageTitle" :title="`Linked to ${page.pcgwPageTitle}`"
+                                        class="flex items-center gap-1 text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded">
+                                        <Link class="w-2.5 h-2.5" />
+                                        PCGW
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Floating Actions -->
+                            <!-- Floating Actions: always visible on touch, hover-reveal on desktop -->
+                            <!-- ponytail: md: == desktop, mobile drawer is full-width touch so actions stay visible -->
                             <div
-                                class="absolute top-2 right-2 flex gap-1 transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+                                class="absolute top-2 right-2 flex gap-1 transition-all duration-300 ease-out opacity-100 md:opacity-0 md:translate-x-4 md:group-hover:translate-x-0 md:group-hover:opacity-100">
                                 <template v-if="page.pcgwPageTitle">
 
                                     <Button severity="secondary" variant="text" size="small"
@@ -410,7 +449,7 @@ defineExpose({ openLinkDialog });
                                 <Button icon="pi pi-pencil" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Rename'"
                                     class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
-                                    @click.stop="customRename(page)">
+                                    @click.stop="openRenameDialog(page)">
                                     <template #icon>
                                         <Pencil class="w-4! h-4!" />
                                     </template>
@@ -418,7 +457,7 @@ defineExpose({ openLinkDialog });
                                 <Button icon="pi pi-trash" severity="danger" variant="text" size="small"
                                     v-tooltip.top="'Delete'"
                                     class="p-1.5! w-8! h-8! hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    @click.stop="store.deletePage(page.id)">
+                                    @click.stop="confirmDelete($event, page)">
                                     <template #icon>
                                         <Trash2 class="w-4! h-4!" />
                                     </template>
@@ -427,24 +466,33 @@ defineExpose({ openLinkDialog });
                         </div>
                     </div>
                 </TransitionGroup>
-            </div>
 
-            <!-- Import -->
-            <div class="border-t pt-4 border-surface-200 dark:border-surface-700">
-                <div class="text-sm font-bold mb-2">Import Page</div>
-                <FileUpload mode="basic" name="demo[]" accept=".json" :maxFileSize="1000000" @select="onImportSelect"
-                    customUpload auto chooseLabel="Import JSON" class="w-full" />
+                <!-- Empty state -->
+                <div v-if="filteredPages.length === 0"
+                    class="flex flex-col items-center justify-center text-center gap-2 py-12 px-4">
+                    <div class="w-11 h-11 rounded-full bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-surface-400">
+                        <component :is="store.pages.length === 0 ? File : Search" class="w-5 h-5" />
+                    </div>
+                    <template v-if="store.pages.length === 0">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200">No pages yet</span>
+                        <span class="text-xs text-surface-500 leading-relaxed">Create your first page or import one from JSON.</span>
+                    </template>
+                    <template v-else>
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200">No matches</span>
+                        <span class="text-xs text-surface-500 leading-relaxed">No pages match the current search or filter.</span>
+                    </template>
+                </div>
             </div>
 
             <!-- Footer Links -->
-            <div class="mt-auto border-t pt-4 border-surface-200 dark:border-surface-700 flex flex-col gap-1">
+            <div class="mt-auto border-t pt-4 border-surface-200/70 dark:border-surface-800/70 flex flex-col gap-1">
                 <a href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
-                    class="flex items-center w-full px-3 py-2 rounded-md text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors whitespace-nowrap no-underline">
+                    class="flex items-center w-full px-3 py-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors whitespace-nowrap no-underline">
                     <Github class="w-4 h-4 mr-3 shrink-0" />
                     <span class="text-xs font-medium">GitHub Repository</span>
                 </a>
                 <a href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
-                    class="flex items-center w-full px-3 py-2 rounded-md text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors whitespace-nowrap no-underline">
+                    class="flex items-center w-full px-3 py-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors whitespace-nowrap no-underline">
                     <AlertCircle class="w-4 h-4 mr-3 shrink-0" />
                     <span class="text-xs font-medium">Report an Issue</span>
                 </a>
@@ -465,6 +513,21 @@ defineExpose({ openLinkDialog });
             </div>
         </div>
     </Drawer>
+
+    <ConfirmPopup />
+
+    <!-- Rename Dialog -->
+    <Dialog v-model:visible="isRenameVisible" header="Rename Page" :style="{ width: '400px' }" modal :draggable="false">
+        <div class="flex flex-col gap-2 py-4">
+            <label for="renameInput" class="text-xs font-semibold text-surface-600 dark:text-surface-400">Page Title</label>
+            <InputText id="renameInput" v-model="renameValue" autofocus class="w-full"
+                @keyup.enter="submitRename" />
+        </div>
+        <template #footer>
+            <Button label="Cancel" text severity="secondary" @click="isRenameVisible = false" />
+            <Button label="Rename" @click="submitRename" :disabled="!renameValue.trim()" />
+        </template>
+    </Dialog>
 
     <Dialog v-model:visible="isLinkDialogVisible" header="Link to PCGW Page" :style="{ width: '400px' }" modal :draggable="false">
         <div class="flex flex-col gap-4 py-4">

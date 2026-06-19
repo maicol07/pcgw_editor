@@ -3,6 +3,7 @@ import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 import './style.css';
 import './styles/preview/index.scss';
 import './styles/preview/_icons.scss';
@@ -99,6 +100,7 @@ app.use(PrimeVue, {
     }
 });
 app.use(ToastService);
+app.use(ConfirmationService);
 
 import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
