@@ -280,7 +280,7 @@ const saveSettings = () => {
                     <!-- Twitch / IGDB API Credentials Card -->
                     <div class="p-4 bg-surface-50/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-800/80 rounded-xl flex flex-col gap-3.5">
                         <div class="flex items-center gap-2">
-                            <Key class="w-4 h-4 text-purple-500" />
+                            <Key class="w-4 h-4 text-primary-500" />
                             <span class="font-bold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -444,7 +444,7 @@ const handleApply = () => {
     <Dialog v-model:visible="visible" modal header="Autofill Ratings & Links" :style="{ width: '680px' }" :draggable="false" class="p-fluid glass">
         <template #header>
             <div class="flex items-center gap-2">
-                <Sparkles class="w-5 h-5 text-purple-500 animate-pulse" />
+                <Sparkles class="w-5 h-5 text-primary-500 animate-pulse" />
                 <span class="font-bold text-lg">Autofill Ratings & Links</span>
             </div>
         </template>
@@ -594,7 +594,7 @@ const handleApply = () => {
                         :label="selectedCandidates.length > 0 ? `Compare & Merge Selected (${selectedCandidates.length})` : 'Compare & Merge Selected'" 
                         icon="pi pi-clone" 
                         size="small" 
-                        class="w-auto! bg-purple-600 border-purple-600 hover:bg-purple-700 hover:border-purple-700 font-semibold"
+                        class="w-auto! bg-primary-600 border-primary-600 hover:bg-primary-700 hover:border-primary-700 font-semibold"
                         :disabled="selectedCandidates.length === 0"
                         @click="handleFetchDetailsForSelected" 
                     />
@@ -698,7 +698,7 @@ const handleApply = () => {
         <template #footer>
             <div class="flex justify-end gap-2 w-full">
                 <Button label="Cancel" severity="secondary" text @click="visible = false" />
-                <Button label="Apply Selected" icon="pi pi-check" @click="handleApply" :disabled="!hasChangesToApply || isFetchingDetails" class="bg-purple-600 border-purple-600 hover:bg-purple-700 hover:border-purple-700" />
+                <Button label="Apply Selected" icon="pi pi-check" @click="handleApply" :disabled="!hasChangesToApply || isFetchingDetails" class="bg-primary-600 border-primary-600 hover:bg-primary-700 hover:border-primary-700" />
             </div>
         </template>
     </Dialog>

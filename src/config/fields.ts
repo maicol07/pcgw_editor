@@ -131,7 +131,7 @@ export const fieldsConfig: SectionDefinition[] = [
                     f('links.steamAppIdSide', h.text('Steam Side Param', { placeholder: 'e.g. sub/123' }, { description: 'Optional side parameter' })),
                     f('links.officialSite', h.text('Official Site', { placeholder: 'https://...' }, { icon: Globe, iconClass: 'text-green-500', description: 'URL to official website' })),
 
-                    f('links.gogComId', h.text('GOG.com ID', { placeholder: 'e.g. game_title' }, { icon: ShoppingBag, iconClass: 'text-purple-500', description: 'Slug from URL' })),
+                    f('links.gogComId', h.text('GOG.com ID', { placeholder: 'e.g. game_title' }, { icon: ShoppingBag, iconClass: 'text-primary-500', description: 'Slug from URL' })),
                     f('links.gogComIdSide', h.text('GOG Side Param', { placeholder: '' }, { description: 'Optional side parameter' })),
                     f('links.hltb', h.text('HLTB ID', { placeholder: 'e.g. 12345' }, { description: 'HowLongToBeat ID' })),
 
@@ -442,7 +442,7 @@ export const fieldsConfig: SectionDefinition[] = [
         id: 'input',
         title: 'Input',
         icon: Keyboard, // Use Keyboard as generic input icon
-        iconClass: 'text-purple-500',
+        iconClass: 'text-primary-500',
         order: 9,
         fields: [
             h.gallery('Gallery', { section: 'Input' }, { key: 'galleries.input', wikitextParam: '' }) as FieldDefinition
@@ -636,7 +636,7 @@ export const fieldsConfig: SectionDefinition[] = [
         id: 'network',
         title: 'Network',
         icon: Wifi,
-        iconClass: 'text-purple-500', // Adjust color if needed
+        iconClass: 'text-primary-500', // Adjust color if needed
         order: 10, // Adjust order
         fields: [
             h.gallery('Gallery', { section: 'Network' }, { key: 'galleries.network', wikitextParam: '' }) as FieldDefinition

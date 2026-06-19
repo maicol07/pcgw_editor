@@ -19,17 +19,17 @@ import { definePreset } from '@primeuix/themes';
 const MyPreset = definePreset(Aura, {
     semantic: {
         primary: {
-            50: '{violet.50}',
-            100: '{violet.100}',
-            200: '{violet.200}',
-            300: '{violet.300}',
-            400: '{violet.400}',
-            500: '{violet.500}',
-            600: '{violet.600}',
-            700: '{violet.700}',
-            800: '{violet.800}',
-            900: '{violet.900}',
-            950: '{violet.950}'
+            50: '#f0f6fc',
+            100: '#dceafa',
+            200: '#bcd6f1',
+            300: '#8fbce5',
+            400: '#5b9ad4',
+            500: '#337abe',
+            600: '#2c66a3',
+            700: '#275788',
+            800: '#264a6f',
+            900: '#233e5c',
+            950: '#18293d'
         },
         borderRadius: {
             xs: '0.25rem',

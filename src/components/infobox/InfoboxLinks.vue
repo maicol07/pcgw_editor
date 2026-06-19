@@ -72,7 +72,7 @@ const highlightClass = (text: string) => isMatch(text) ? 'text-primary-600 dark:
         <div>
             <h4
                 class="text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500 mb-3 ml-1 flex items-center gap-2">
-                <Link class="w-3 h-3 text-purple-500" /> Databases & Wikis
+                <Link class="w-3 h-3 text-primary-500" /> Databases & Wikis
             </h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex flex-col gap-2">

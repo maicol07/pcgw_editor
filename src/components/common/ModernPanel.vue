@@ -7,7 +7,7 @@ const collapsed = defineModel<boolean>('collapsed');
 </script>
 
 <template>
-    <Panel toggleable v-model:collapsed="collapsed" class="panel-modern shadow-soft hover-lift">
+    <Panel toggleable v-model:collapsed="collapsed" class="panel-modern shadow-soft rounded-xl overflow-hidden transition-shadow duration-200 hover:shadow-soft-lg">
         <template #header>
             <slot name="header"></slot>
         </template>

@@ -72,9 +72,9 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
         <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-6">
                 <div v-for="(group, idx) in section.groups" :key="idx"
-                    class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+                    class="bg-surface-0 dark:bg-surface-900/70 border border-surface-200/70 dark:border-surface-700/55 rounded-xl shadow-soft overflow-hidden transition-all duration-200">
                     <div @click="toggleGroup(idx)"
-                        class="p-4 bg-surface-50/50 dark:bg-surface-800/30 border-b border-surface-200 dark:border-surface-700/50 flex items-center justify-between cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors select-none group"
+                        class="px-4 py-3 border-b border-surface-200/60 dark:border-surface-700/45 flex items-center justify-between cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800/40 transition-colors select-none group"
                         :class="{ 'border-b-0': collapsedGroups[idx] }">
                         <div class="flex items-center gap-3 text-surface-900 dark:text-surface-100">
                             <component :is="group.icon"
@@ -92,7 +92,7 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                                 @click.stop="openAutofillDialog()"
                                 v-tooltip.top="'Autofill links and scores using IGDB, Steam & Gemini AI'"
                             >
-                                <Sparkles class="w-3 h-3 text-purple-500 animate-pulse shrink-0" />
+                                <Sparkles class="w-3 h-3 text-primary-500 animate-pulse shrink-0" />
                                 <span>Autofill</span>
                             </Button>
                             <ChevronDown

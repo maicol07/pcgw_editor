@@ -18,18 +18,18 @@
   --color-surface-900: #0f172a;
   --color-surface-950: #020617;
 
-  /* Colors - Primary (Violet) */
-  --color-primary-50: #faf5ff;
-  --color-primary-100: #f3e8ff;
-  --color-primary-200: #e9d5ff;
-  --color-primary-300: #d8b4fe;
-  --color-primary-400: #c084fc;
-  --color-primary-500: #a855f7;
-  --color-primary-600: #9333ea;
-  --color-primary-700: #7e22ce;
-  --color-primary-800: #6b21a8;
-  --color-primary-900: #581c87;
-  --color-primary-950: #3b0764;
+  /* Colors - Primary (Blue #337abe) */
+  --color-primary-50: #f0f6fc;
+  --color-primary-100: #dceafa;
+  --color-primary-200: #bcd6f1;
+  --color-primary-300: #8fbce5;
+  --color-primary-400: #5b9ad4;
+  --color-primary-500: #337abe;
+  --color-primary-600: #2c66a3;
+  --color-primary-700: #275788;
+  --color-primary-800: #264a6f;
+  --color-primary-900: #233e5c;
+  --color-primary-950: #18293d;
 
   /* Colors - Accent - Teal */
   --color-accent-teal-50: #f0fdfa;
@@ -58,10 +58,10 @@
   --text-2xs--line-height: 1rem;
 
   /* Box Shadow */
-  --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-soft-lg: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
-  --shadow-glow: 0 0 20px -5px rgba(168, 85, 247, 0.4);
-  --shadow-glow-sm: 0 0 10px -3px rgba(168, 85, 247, 0.3);
+  --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-soft-lg: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
+  --shadow-glow: 0 0 20px -5px rgba(51, 122, 190, 0.4);
+  --shadow-glow-sm: 0 0 10px -3px rgba(51, 122, 190, 0.3);
 
   /* Animations & Keyframes */
   --animate-fade-in: fadeIn 0.2s ease-out;
@@ -127,17 +127,17 @@
   --action-icon-size: 18px;
   --action-button-padding: 0.4rem;
   /* PrimeVue Compatibility Colors */
-  --p-primary-50: #faf5ff;
-  --p-primary-100: #f3e8ff;
-  --p-primary-200: #e9d5ff;
-  --p-primary-300: #d8b4fe;
-  --p-primary-400: #c084fc;
-  --p-primary-500: #a855f7;
-  --p-primary-600: #9333ea;
-  --p-primary-700: #7e22ce;
-  --p-primary-800: #6b21a8;
-  --p-primary-900: #581c87;
-  --p-primary-950: #3b0764;
+  --p-primary-50: #f0f6fc;
+  --p-primary-100: #dceafa;
+  --p-primary-200: #bcd6f1;
+  --p-primary-300: #8fbce5;
+  --p-primary-400: #5b9ad4;
+  --p-primary-500: #337abe;
+  --p-primary-600: #2c66a3;
+  --p-primary-700: #275788;
+  --p-primary-800: #264a6f;
+  --p-primary-900: #233e5c;
+  --p-primary-950: #18293d;
 }
 
 * {
@@ -169,7 +169,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(168, 85, 247, 0.6);
+  background-color: rgba(51, 122, 190, 0.6);
 }
 
 .dark ::-webkit-scrollbar-thumb {
@@ -177,7 +177,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(168, 85, 247, 0.7);
+  background-color: rgba(51, 122, 190, 0.7);
 }
 
 /* Firefox scrollbar */
@@ -192,19 +192,52 @@ body {
 
 /* Focus States - Accessible */
 :focus-visible {
-  outline: 2px solid rgba(168, 85, 247, 0.6);
+  outline: 2px solid rgba(51, 122, 190, 0.6);
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
 
 /* Text Selection */
 ::selection {
-  background-color: rgba(168, 85, 247, 0.2);
+  background-color: rgba(51, 122, 190, 0.2);
   color: inherit;
 }
 
 .dark ::selection {
-  background-color: rgba(168, 85, 247, 0.3);
+  background-color: rgba(51, 122, 190, 0.3);
+}
+
+/* Modern editor panels (ModernPanel.vue) — flat, minimal, calm */
+.panel-modern.p-panel {
+  background-color: var(--color-surface-0);
+  border: 1px solid color-mix(in srgb, var(--color-surface-200) 70%, transparent);
+  border-radius: 0.875rem;
+}
+
+.dark .panel-modern.p-panel {
+  background-color: color-mix(in srgb, var(--color-surface-900) 70%, transparent);
+  border-color: color-mix(in srgb, var(--color-surface-700) 55%, transparent);
+}
+
+.panel-modern .p-panel-header {
+  background: transparent;
+  border: 0;
+  padding: 0.75rem 1rem;
+}
+
+.panel-modern .p-panel-content {
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 1rem 1rem;
+}
+
+/* Subtle divider between header and content — only rendered when expanded */
+.panel-modern .p-panel-content-wrapper {
+  border-top: 1px solid color-mix(in srgb, var(--color-surface-200) 60%, transparent);
+}
+
+.dark .panel-modern .p-panel-content-wrapper {
+  border-top-color: color-mix(in srgb, var(--color-surface-700) 45%, transparent);
 }
 
 /* Utility Classes */

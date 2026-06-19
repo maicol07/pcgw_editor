@@ -442,7 +442,7 @@ onMounted(() => {
                             <ModernPanel v-model:collapsed="uiStore.panelState.dlc" v-show="panelVisibility.dlc">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <PlusCircle class="text-purple-500 w-4 h-4" /><span
+                                        <PlusCircle class="text-primary-500 w-4 h-4" /><span
                                             class="font-semibold text-sm">DLC & Expansions</span>
                                     </div>
                                 </template>
@@ -500,7 +500,7 @@ onMounted(() => {
                             <ModernPanel v-model:collapsed="uiStore.panelState.audio" v-show="panelVisibility.audio">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Volume2 class="text-violet-500 w-4 h-4" /><span
+                                        <Volume2 class="text-primary-500 w-4 h-4" /><span
                                             class="font-semibold text-sm">Audio</span>
                                     </div>
                                 </template>
@@ -700,13 +700,13 @@ onMounted(() => {
 
 /* Splitter Modern Styling */
 .splitter-modern :deep(.p-splitter-gutter) {
-    background: linear-gradient(to right, transparent 0%, rgba(168, 85, 247, 0.1) 45%, rgba(168, 85, 247, 0.2) 50%, rgba(168, 85, 247, 0.1) 55%, transparent 100%);
+    background: linear-gradient(to right, transparent 0%, rgba(51, 122, 190, 0.1) 45%, rgba(51, 122, 190, 0.2) 50%, rgba(51, 122, 190, 0.1) 55%, transparent 100%);
     transition: all 0.2s ease;
     position: relative;
 }
 
 .splitter-modern :deep(.p-splitter-gutter):hover {
-    background: linear-gradient(to right, transparent 0%, rgba(168, 85, 247, 0.15) 40%, rgba(168, 85, 247, 0.3) 50%, rgba(168, 85, 247, 0.15) 60%, transparent 100%);
+    background: linear-gradient(to right, transparent 0%, rgba(51, 122, 190, 0.15) 40%, rgba(51, 122, 190, 0.3) 50%, rgba(51, 122, 190, 0.15) 60%, transparent 100%);
 }
 
 .splitter-modern :deep(.p-splitter-gutter)::after {
@@ -717,7 +717,7 @@ onMounted(() => {
     transform: translate(-50%, -50%);
     width: 2px;
     height: 32px;
-    background: rgba(168, 85, 247, 0.4);
+    background: rgba(51, 122, 190, 0.4);
     border-radius: 1px;
     opacity: 0;
     transition: opacity 0.2s ease;

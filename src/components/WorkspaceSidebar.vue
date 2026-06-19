@@ -342,14 +342,14 @@ defineExpose({ openLinkDialog });
                         class="mx-2 mt-2 p-2 rounded-xl cursor-pointer transition-all duration-300 border group relative overflow-hidden"
                         :class="[
                             page.id === store.activePageId
-                                ? 'bg-primary-50/70 dark:bg-primary-950/30 border-primary-500/50 ring-1 ring-primary-500/20 shadow-[0_0_15px_-3px_rgba(168,85,247,0.2)] dark:shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)] pl-4!'
+                                ? 'bg-primary-50/70 dark:bg-primary-950/30 border-primary-500/50 ring-1 ring-primary-500/20 shadow-[0_0_15px_-3px_rgba(51,122,190,0.2)] dark:shadow-[0_0_20px_-5px_rgba(51,122,190,0.3)] pl-4!'
                                 : 'bg-surface-0 dark:bg-surface-900 border-surface-200 dark:border-surface-800 hover:border-primary-400/50 dark:hover:border-primary-500/50 hover:bg-surface-50/50 dark:hover:bg-surface-800/50'
                         ]" @click="store.setActivePage(page.id)">
 
 
                         <!-- Active Indicator -->
                         <div v-if="page.id === store.activePageId"
-                            class="absolute top-1/2 -translate-y-1/2 left-0 w-1.5 h-8 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                            class="absolute top-1/2 -translate-y-1/2 left-0 w-1.5 h-8 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(51,122,190,0.5)]">
                         </div>
 
                         <div class="flex justify-between items-start">
