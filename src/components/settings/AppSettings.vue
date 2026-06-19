@@ -120,7 +120,7 @@ const saveSettings = () => {
 
 <template>
     <Dialog v-model:visible="uiStore.isSettingsOpen" modal :draggable="false" class="p-fluid glass settings-dialog"
-        :style="{ width: '780px', maxWidth: '95vw' }">
+        :style="{ width: '1040px', maxWidth: '95vw' }">
         <template #header>
             <div class="flex items-center gap-2">
                 <Palette class="w-5 h-5 text-primary-500 animate-pulse-soft" />
@@ -128,7 +128,7 @@ const saveSettings = () => {
             </div>
         </template>
 
-        <div class="flex flex-col md:flex-row min-h-[480px]">
+        <div class="flex flex-col md:flex-row min-h-[600px]">
             <!-- Rail-style navigation (mirrors SectionNav) -->
             <nav class="flex flex-row md:flex-col shrink-0 w-full md:w-52 border-b md:border-b-0 md:border-r border-surface-200/70 dark:border-surface-800/70 overflow-x-auto md:overflow-x-visible custom-scrollbar">
                 <div class="flex flex-row md:flex-col gap-1 px-2.5 py-3 md:py-4 md:pt-5">
@@ -152,7 +152,7 @@ const saveSettings = () => {
             </nav>
 
             <!-- Content Area -->
-            <div class="flex-1 p-5 md:p-6 overflow-y-auto max-h-[500px] md:max-h-[550px] relative bg-surface-0 dark:bg-surface-950/20">
+            <div class="flex-1 p-5 md:p-6 overflow-y-auto max-h-[60vh] md:max-h-[70vh] relative bg-surface-0 dark:bg-surface-950/20">
                 <!-- Tab Header Info -->
                 <div class="mb-5">
                     <h2 class="text-lg font-bold text-surface-900 dark:text-surface-0 leading-tight">
