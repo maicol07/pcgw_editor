@@ -25,6 +25,8 @@ import QuickActions from './components/layout/QuickActions.vue';
 import GeminiDialogs from './features/ai/GeminiDialogs.vue';
 import AppSettings from './components/settings/AppSettings.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
+import SectionNav from './components/layout/SectionNav.vue';
+import { sectionKeysInOrder } from './config/sections';
 import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
 import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
@@ -274,6 +276,44 @@ const schemas = {
     issues: getSchema('issues'),
 };
 
+// --- Section navigation rail + scroll-spy ---
+const scrollContainer = ref<HTMLElement>();
+const activeSection = ref(sectionKeysInOrder[0]);
+
+// While a click-driven scroll is animating, keep the clicked section active
+// instead of letting scroll-spy hijack it (the target may sit near the bottom
+// and never reach the top, which would otherwise highlight a higher section).
+let suppressSpyUntil = 0;
+
+const navigateToSection = (key: string) => {
+    uiStore.panelState[key as keyof typeof uiStore.panelState] = false; // expand target
+    activeSection.value = key;
+    suppressSpyUntil = performance.now() + 800;
+    requestAnimationFrame(() => {
+        const el = document.getElementById(`sec-${key}`);
+        if (el && scrollContainer.value) {
+            scrollContainer.value.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' });
+        }
+    });
+};
+
+let spyRaf = 0;
+const onScrollSpy = () => {
+    if (spyRaf || performance.now() < suppressSpyUntil) return;
+    spyRaf = requestAnimationFrame(() => {
+        spyRaf = 0;
+        const container = scrollContainer.value;
+        if (!container) return;
+        const top = container.scrollTop + 80; // small offset so the section feels "active" before its top
+        let current = sectionKeysInOrder[0];
+        for (const key of sectionKeysInOrder) {
+            const el = document.getElementById(`sec-${key}`);
+            if (el && el.offsetTop <= top) current = key;
+        }
+        activeSection.value = current;
+    });
+};
+
 const updateGameData = (path: string, value: any) => {
     const newData = { ...gameData.value };
     if (path === 'infobox') {
@@ -340,8 +380,14 @@ onMounted(() => {
 
                 <RateLimitNotice />
 
-                <div
-                    class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
+                <div class="flex-1 flex overflow-hidden">
+                    <!-- Section navigation rail (Visual mode only) -->
+                    <SectionNav v-if="editorMode === 'Visual' && !uiStore.isInitialLoad"
+                        :activeKey="activeSection" :panelVisibility="panelVisibility"
+                        @navigate="navigateToSection" />
+
+                    <div ref="scrollContainer" @scroll="onScrollSpy"
+                        class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
                     <!-- Loading Overlay for Mode Switching -->
                     <Transition name="fade-fast">
                         <div v-if="isModeSwitching"
@@ -363,7 +409,7 @@ onMounted(() => {
                                 @collapseAll="uiStore.collapseAll()" />
 
                             <!-- Sections -->
-                            <ModernPanel v-model:collapsed="uiStore.panelState.articleState"
+                            <ModernPanel id="sec-articleState" v-model:collapsed="uiStore.panelState.articleState"
                                 v-show="panelVisibility.articleState">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -375,7 +421,7 @@ onMounted(() => {
                                     :section="schemas.articleState.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.infobox"
+                            <ModernPanel id="sec-infobox" v-model:collapsed="uiStore.panelState.infobox"
                                 v-show="panelVisibility.infobox">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -388,7 +434,7 @@ onMounted(() => {
                                     @update:modelValue="val => updateGameData('infobox', val)" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.introduction"
+                            <ModernPanel id="sec-introduction" v-model:collapsed="uiStore.panelState.introduction"
                                 v-show="panelVisibility.introduction">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -408,7 +454,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.availability"
+                            <ModernPanel id="sec-availability" v-model:collapsed="uiStore.panelState.availability"
                                 v-show="panelVisibility.availability">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -420,7 +466,7 @@ onMounted(() => {
                                     :section="schemas.availability.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.monetization"
+                            <ModernPanel id="sec-monetization" v-model:collapsed="uiStore.panelState.monetization"
                                 v-show="panelVisibility.monetization">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -439,7 +485,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.dlc" v-show="panelVisibility.dlc">
+                            <ModernPanel id="sec-dlc" v-model:collapsed="uiStore.panelState.dlc" v-show="panelVisibility.dlc">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-primary-500 w-4 h-4" /><span
@@ -450,7 +496,7 @@ onMounted(() => {
                                     :section="schemas.dlc.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.essentialImprovements"
+                            <ModernPanel id="sec-essentialImprovements" v-model:collapsed="uiStore.panelState.essentialImprovements"
                                 v-show="panelVisibility.essentialImprovements">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -463,7 +509,7 @@ onMounted(() => {
                                     :section="schemas.essentialImprovements.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.gameData"
+                            <ModernPanel id="sec-gameData" v-model:collapsed="uiStore.panelState.gameData"
                                 v-show="panelVisibility.gameData">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -475,7 +521,7 @@ onMounted(() => {
                                     :section="schemas.gameData.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.video" v-show="panelVisibility.video">
+                            <ModernPanel id="sec-video" v-model:collapsed="uiStore.panelState.video" v-show="panelVisibility.video">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" /><span
@@ -486,7 +532,7 @@ onMounted(() => {
                                     :section="schemas.video.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.input" v-show="panelVisibility.input">
+                            <ModernPanel id="sec-input" v-model:collapsed="uiStore.panelState.input" v-show="panelVisibility.input">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" /><span
@@ -497,7 +543,7 @@ onMounted(() => {
                                     :section="schemas.input.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.audio" v-show="panelVisibility.audio">
+                            <ModernPanel id="sec-audio" v-model:collapsed="uiStore.panelState.audio" v-show="panelVisibility.audio">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-primary-500 w-4 h-4" /><span
@@ -508,7 +554,7 @@ onMounted(() => {
                                     :section="schemas.audio.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.network"
+                            <ModernPanel id="sec-network" v-model:collapsed="uiStore.panelState.network"
                                 v-show="panelVisibility.network">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -520,7 +566,7 @@ onMounted(() => {
                                     :section="schemas.network.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.vr" v-show="panelVisibility.vr">
+                            <ModernPanel id="sec-vr" v-model:collapsed="uiStore.panelState.vr" v-show="panelVisibility.vr">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Eye class="text-pink-500 w-4 h-4" /><span class="font-semibold text-sm">VR
@@ -531,7 +577,7 @@ onMounted(() => {
                                     :section="schemas.vr.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.issues" v-show="panelVisibility.issues">
+                            <ModernPanel id="sec-issues" v-model:collapsed="uiStore.panelState.issues" v-show="panelVisibility.issues">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlertCircle class="text-red-500 w-4 h-4" /><span
@@ -542,7 +588,7 @@ onMounted(() => {
                                     :section="schemas.issues.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.other" v-show="panelVisibility.other">
+                            <ModernPanel id="sec-other" v-model:collapsed="uiStore.panelState.other" v-show="panelVisibility.other">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
@@ -557,7 +603,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel v-model:collapsed="uiStore.panelState.systemReq"
+                            <ModernPanel id="sec-systemReq" v-model:collapsed="uiStore.panelState.systemReq"
                                 v-show="panelVisibility.systemReq">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -604,6 +650,7 @@ onMounted(() => {
                             </Suspense>
                         </div>
                     </Transition>
+                    </div>
                 </div>
             </SplitterPanel>
 
