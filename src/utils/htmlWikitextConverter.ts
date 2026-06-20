@@ -1,8 +1,101 @@
+import { renderInlineToken, renderMmList, renderInlineMarkup, splitArgs } from './wikiRender';
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Wrap rendered HTML in an atomic, editable-via-dialog inline chip carrying its source. */
+const chip = (wt: string, inner: string) =>
+    `<span class="wiki-token" contenteditable="false" data-wikitext="${encodeURIComponent(wt)}">${inner}</span>`;
+
+/**
+ * Replace every top-level `{{Name|…}}` whose name matches `nameRe`, using balanced brace
+ * scanning so nested templates (e.g. {{Refcheck|…{{Code|x}}…}}) stay intact.
+ */
+const replaceBalancedTemplates = (text: string, nameRe: RegExp, fn: (full: string) => string): string => {
+    let out = '';
+    let i = 0;
+    while (i < text.length) {
+        if (text[i] === '{' && text[i + 1] === '{') {
+            let depth = 0;
+            let j = i;
+            for (; j < text.length; j++) {
+                if (text[j] === '{' && text[j + 1] === '{') { depth++; j++; }
+                else if (text[j] === '}' && text[j + 1] === '}') { depth--; j++; if (depth === 0) { j++; break; } }
+            }
+            const full = text.slice(i, j);
+            const nameMatch = full.match(/^\{\{\s*([A-Za-z]+)/);
+            if (nameMatch && nameRe.test(nameMatch[1])) {
+                out += fn(full);
+                i = j;
+                continue;
+            }
+        }
+        out += text[i];
+        i++;
+    }
+    return out;
+};
+
+/** Render a single balanced `{{Fixbox|…}}` to its table, preserving the verbatim source. */
+const renderFixbox = (full: string): string => {
+    const inner = full.replace(/^\{\{\s*Fixbox\s*\|/i, '').replace(/\}\}$/, '');
+    let description = '';
+    let ref = '';
+    let fix = '';
+    let collapsed = false;
+    for (const part of splitArgs(inner)) {
+        const eq = part.indexOf('=');
+        if (eq > -1 && !/[{[]/.test(part.slice(0, eq))) {
+            const key = part.slice(0, eq).trim();
+            const val = part.slice(eq + 1).trim();
+            if (key === 'description') description = val;
+            else if (key === 'ref') ref = val;
+            else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
+            else if (key === 'fix') fix = val;
+        } else if (part.trim() && !description) {
+            description = part.trim();
+        }
+    }
+
+    let refHtml = '';
+    if (ref) {
+        const innerRef = ref.replace(/^(?:<ref(?:\s+[^>]+)?>|&lt;ref(?:\s+[^&]+)?&gt;)([\s\S]*?)(?:<\/ref>|&lt;\/ref&gt;)$/i, '$1').trim();
+        refHtml = `<sup class="reference">${renderInlineToken(innerRef) ?? esc(innerRef)}</sup>`;
+    }
+
+    let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(full)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
+    if (collapsed) {
+        htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
+    }
+    htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${renderInlineMarkup(description)}${refHtml}</th></tr>`;
+    if (fix && fix.trim() !== '') {
+        htmlOut += `<tr${collapsed ? ' style="display: none;"' : ''}><td class="fixbox-body"><p>${renderInlineMarkup(fix.trim())}</p></td></tr>`;
+    }
+    htmlOut += `</tbody></table></div>`;
+    return htmlOut;
+};
+
 export const wikitextToHtml = (wikitext: string): string => {
     if (!wikitext) return '';
     let html = wikitext;
 
-    // Escape <ref> tags so Quill doesn't strip them
+    // Fixboxes first (balanced) so an inner ref=<ref>…</ref> isn't chip-ified before the box renders
+    html = replaceBalancedTemplates(html, /^Fixbox$/i, renderFixbox);
+
+    // {{mm}} "more info" runs -> block embed (verbatim source preserved in data-wikitext)
+    html = html.replace(/(?:\{\{\s*mm\s*\}\}[^\n{]*)+/gi, (match) =>
+        `<div class="wiki-mm" contenteditable="false" data-wikitext="${encodeURIComponent(match.trim())}"><dl>${renderMmList(match)}</dl></div>`);
+
+    // <ref>…</ref> citations -> inline chip
+    html = html.replace(/<ref(?:\s+name="[^"]*")?>[\s\S]*?<\/ref>/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));
+
+    // Citation / formatting templates produced by the toolbar -> inline chips
+    html = replaceBalancedTemplates(html, /^(?:Refcheck|Refurl|cn|Key|u|t)$/i, (full) => chip(full, renderInlineToken(full) ?? esc(full)));
+
+    // Interwiki / Wikipedia links produced by the "Wiki Link" button -> inline chips
+    html = html.replace(/\[\[\s*w\s*\|\s*[^|\]]+?\s*\]\]/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));
+    html = html.replace(/\[\[\s*Wikipedia\s*:[^\]]+?\]\]/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));
+
+    // Escape any remaining <ref> tags so Quill doesn't strip them
     html = html.replace(/(<\/ref>|<ref\b(?:\s+[^>]+)?\/?>)/gi, (match) => {
         return match.replace('<', '&lt;').replace('>', '&gt;');
     });
@@ -39,43 +132,6 @@ export const wikitextToHtml = (wikitext: string): string => {
     // Internal links [[Page]] -> <a href="Page">Page</a>
     html = html.replace(/\[\[([^|\]]+)\|?([^\]]*)\]\]/g, (_match, page, title) => {
         return `<a href="${page}">${title || page}</a>`;
-    });
-
-    // Fixboxes
-    html = html.replace(/\{\{Fixbox\s*\|([^}]+)\}\}/gi, (_match, content) => {
-        let description = '';
-        let ref = '';
-        let fix = '';
-        let collapsed = false;
-
-        const parts = content.split(/\|(?=\w+=)/);
-        for (const part of parts) {
-            const eqIndex = part.indexOf('=');
-            if (eqIndex > -1) {
-                const key = part.substring(0, eqIndex).trim();
-                const val = part.substring(eqIndex + 1).trim();
-                if (key === 'description') description = val;
-                else if (key === 'ref') ref = val;
-                else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
-                else if (key === 'fix') fix = val;
-            } else if (part.trim() && !description) {
-                // simple unnamed parameter might be description if omitted key
-                description = part.trim();
-            }
-        }
-
-        const rawContent = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(`{{Fixbox|${rawContent}}}`)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
-        if (collapsed) {
-            htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
-        }
-        htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${description}${ref ? `<sup class="reference">${ref.replace(/^(?:<ref(?:\s+[^>]+)?>|&lt;ref(?:\s+[^&]+)?&gt;)([\s\S]*?)(?:<\/ref>|&lt;\/ref&gt;)$/i, '$1')}</sup>` : ''}</th></tr>`;
-
-        if (fix && fix.trim() !== '') {
-            htmlOut += `<tr${collapsed ? ' style="display: none;"' : ''}><td class="fixbox-body"><p>${fix.trim()}</p></td></tr>`;
-        }
-        htmlOut += `</tbody></table></div>`;
-        return htmlOut;
     });
 
     // Paragraphs and lists
@@ -121,6 +177,19 @@ export const wikitextToHtml = (wikitext: string): string => {
 
 export const htmlToWikitext = (html: string): string => {
     if (!html) return '';
+
+    // Decode editor embeds (chips, mm lists, fixboxes) back to their verbatim wikitext.
+    // Each carries its source in data-wikitext, so this is lossless and robust against the
+    // nested tags inside the rendered visual. Fixboxes without data-wikitext fall through
+    // to the table-parsing fallback below.
+    if (typeof DOMParser !== 'undefined' && /data-wikitext=/.test(html)) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('.wiki-token[data-wikitext], .wiki-mm[data-wikitext], .fixbox-wrapper[data-wikitext]').forEach((el) => {
+            const enc = el.getAttribute('data-wikitext');
+            if (enc) el.replaceWith(doc.createTextNode(decodeURIComponent(enc)));
+        });
+        html = doc.body.innerHTML;
+    }
 
     let wikitext = html;
 
