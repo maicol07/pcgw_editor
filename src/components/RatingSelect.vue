@@ -5,6 +5,7 @@ import { type RatingValue, ratingMetadata } from '../utils/ratings';
 
 interface Props {
     disableAlwaysOn?: boolean;
+    inputId?: string;
 }
 
 const props = defineProps<Props>();
@@ -28,7 +29,7 @@ const optionItems = computed(() => {
 
 <template>
     <div class="rating-select-wrapper">
-        <Select v-model="model" :options="optionItems" optionLabel="label" optionValue="value" class="min-w-32"
+        <Select v-model="model" :inputId="inputId" :options="optionItems" optionLabel="label" optionValue="value" class="min-w-32"
             size="small">
             <template #value="slotProps">
                 <div v-if="slotProps.value" class="flex items-center gap-2">

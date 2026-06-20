@@ -2,8 +2,10 @@
 import { inject, type Ref, toRefs } from 'vue';
 import { SettingsVideo } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
+import BulkRatingActions from './common/BulkRatingActions.vue';
 import Panel from 'primevue/panel';
 import InputText from 'primevue/inputtext';
+import type { RatingValue } from '../utils/ratings';
 import {
     Monitor, Grid2X2, Maximize, Star, Eye, Minimize, Image,
     ScanLine, LineChart, ArrowUpRight, FastForward, RefreshCcw,
@@ -18,6 +20,13 @@ const props = defineProps<{
 
 const { video } = toRefs(props);
 const geminiApiKey = inject<Ref<string>>('geminiApiKey');
+
+const setAll = (keys: (keyof SettingsVideo)[], value: RatingValue) => {
+    for (const key of keys) (props.video[key] as RatingValue) = value;
+};
+
+const resolutionKeys: (keyof SettingsVideo)[] = ['widescreenResolution', 'multiMonitor', 'ultraWidescreen', 'fourKUltraHd', 'fov', 'windowed', 'borderlessWindowed'];
+const graphicsKeys: (keyof SettingsVideo)[] = ['anisotropic', 'antiAliasing', 'upscaling', 'frameGen', 'vsync', 'fps60', 'fps120', 'hdr', 'rayTracing', 'colorBlind'];
 
 const {
     isAnalyzing, error, analysisSuccess, analyzeScreenshot
@@ -66,8 +75,15 @@ const handlePaste = async (event: ClipboardEvent) => {
             </div>
         </Panel>
 
-        <Panel header="Resolution & Display" toggleable>
-            <div class="flex flex-col gap-2">
+        <Panel toggleable>
+            <template #header>
+                <span class="font-bold">Resolution &amp; Display</span>
+                <span class="ml-2 text-xs text-surface-400 dark:text-surface-500">Keys: T/F/L/U</span>
+            </template>
+            <template #icons>
+                <BulkRatingActions @set="setAll(resolutionKeys, $event)" />
+            </template>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                 <RatingRow :icon="Monitor" label="Widescreen Resolution" v-model:value="video.widescreenResolution"
                     v-model:notes="video.widescreenResolutionNotes" v-model:reference="video.widescreenResolutionRef" />
                 <RatingRow :icon="Grid2X2" label="Multi-monitor" v-model:value="video.multiMonitor"
@@ -85,15 +101,21 @@ const handlePaste = async (event: ClipboardEvent) => {
             </div>
         </Panel>
 
-        <Panel header="Graphics Settings" toggleable>
-            <div class="flex flex-col gap-2">
+        <Panel toggleable>
+            <template #header>
+                <span class="font-bold">Graphics Settings</span>
+            </template>
+            <template #icons>
+                <BulkRatingActions @set="setAll(graphicsKeys, $event)" />
+            </template>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                 <RatingRow :icon="ScanLine" label="Anisotropic Filtering" v-model:value="video.anisotropic"
                     v-model:notes="video.anisotropicNotes" v-model:reference="video.anisotropicRef" />
                 <RatingRow :icon="LineChart" label="Anti-aliasing" v-model:value="video.antiAliasing"
                     v-model:notes="video.antiAliasingNotes" v-model:reference="video.antiAliasingRef" />
 
                 <div
-                    class="flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
+                    class="md:col-span-2 flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
                     <RatingRow :icon="ArrowUpRight" label="Upscaling" v-model:value="video.upscaling"
                         v-model:notes="video.upscalingNotes" v-model:reference="video.upscalingRef" />
                     <div class="pl-[160px] md:pl-[200px] pr-4 pb-1"
@@ -104,7 +126,7 @@ const handlePaste = async (event: ClipboardEvent) => {
                 </div>
 
                 <div
-                    class="flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
+                    class="md:col-span-2 flex flex-col gap-2 bg-surface-50 dark:bg-surface-900/50 p-2 rounded border border-surface-200 dark:border-surface-800">
                     <RatingRow :icon="FastForward" label="Frame Generation" v-model:value="video.frameGen"
                         v-model:notes="video.frameGenNotes" v-model:reference="video.frameGenRef" />
                     <div class="pl-[160px] md:pl-[200px] pr-4 pb-1"

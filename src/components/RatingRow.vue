@@ -10,6 +10,7 @@ import { computed } from 'vue';
 
 import { getIconSrc } from '../utils/icons';
 import { getRatingOption } from '../utils/ratings';
+import { ref } from 'vue';
 
 const props = defineProps<{
   label: string;
@@ -60,17 +61,57 @@ const localNotes = computed({
   get: () => props.notes || '',
   set: (val) => emit('update:notes', val)
 });
+
+const notesPreview = computed(() => {
+  const n = props.notes?.trim();
+  if (!n) return '';
+  return n.length > 20 ? n.slice(0, 20) + '…' : n;
+});
+
+const rootEl = ref<HTMLElement | null>(null);
+
+// Map single keystrokes to rating values per utils/ratings allowed values.
+const keyMap: Record<string, string> = {
+  t: 'true',
+  f: 'false',
+  l: 'limited',
+  u: 'unknown',
+  h: 'hackable',
+  n: 'n/a',
+};
+
+const focusNextRow = () => {
+  if (!rootEl.value) return;
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-rating-row]'));
+  const idx = rows.indexOf(rootEl.value);
+  if (idx === -1 || idx + 1 >= rows.length) return;
+  // Focus the next row's control (PrimeVue Select exposes a focusable element).
+  const next = rows[idx + 1].querySelector<HTMLElement>('[tabindex], input, .p-select');
+  next?.focus();
+};
+
+const handleKey = (e: KeyboardEvent) => {
+  // Only handle simple ratings (Select), not free text / multi-select inputs.
+  if (props.freeText || props.multiple) return;
+  const key = e.key.toLowerCase();
+  const value = keyMap[key];
+  if (!value) return;
+  if (props.options && !props.options.includes(value)) return;
+  e.preventDefault();
+  emit('update:value', value);
+  focusNextRow();
+};
 </script>
 
 <template>
-  <div>
-    <InputGroup class="h-8">
+  <div ref="rootEl" data-rating-row>
+    <InputGroup class="h-10" @keydown="handleKey">
       <InputGroupAddon class="justify-start! font-medium text-sm bg-surface-50 dark:bg-surface-800 transition-all gap-2"
-        :class="[statusColor, compact ? 'w-28 text-xs' : 'w-48']" :title="label">
+        :class="[statusColor, compact ? 'w-full sm:w-28 text-xs' : 'w-full sm:w-48']" :title="label">
         <component v-if="icon" :is="icon" class="w-4 h-4 text-surface-400 group-hover:text-primary-500" />
         <span class="truncate">{{ label }}</span>
-        <Info v-if="tooltip" class="w-3.5 h-3.5 text-surface-400 hover:text-primary-500 cursor-help shrink-0"
-          v-tooltip.top="tooltip" />
+        <Info v-if="tooltip" class="w-4 h-4 text-surface-400 hover:text-primary-500 cursor-help shrink-0"
+          :aria-label="`Help: ${label}`" v-tooltip.top="tooltip" />
       </InputGroupAddon>
 
       <InputText v-if="freeText" :modelValue="value" @update:modelValue="emit('update:value', $event || '')"
@@ -108,10 +149,12 @@ const localNotes = computed({
       <Select v-else :modelValue="value" @update:modelValue="emit('update:value', $event)" :options="ratingOptions"
         class="w-full rounded-none! border-l-0! border-r-0!" placeholder="Select...">
         <template #value="slotProps">
-          <div class="flex items-center gap-2" v-if="slotProps.value">
+          <div class="flex items-center gap-2 overflow-hidden" v-if="slotProps.value">
             <img v-if="getIconSrc(slotProps.value, 'tickcross')" :src="getIconSrc(slotProps.value, 'tickcross')" :alt="slotProps.value"
               class="w-5 h-5 shrink-0 object-contain" />
             <span class="text-sm leading-none mt-0.5">{{ getRatingOption(slotProps.value).label }}</span>
+            <span v-if="notesPreview" class="text-xs text-surface-400 dark:text-surface-500 italic truncate"
+              :title="notes">{{ notesPreview }}</span>
           </div>
           <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
         </template>

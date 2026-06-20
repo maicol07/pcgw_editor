@@ -1,20 +1,36 @@
 <script setup lang="ts">
 import { SettingsNetwork } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
+import BulkRatingActions from './common/BulkRatingActions.vue';
 import Panel from 'primevue/panel';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select'; // Assuming this is used for ratings manually if needed, or just use RatingRow for base.
+import type { RatingValue } from '../utils/ratings';
 
-defineProps<{
+const props = defineProps<{
   network: SettingsNetwork;
 }>();
 
 const ratingOptions = ['true', 'false', 'unknown', 'hackable', 'limited', 'always on', 'n/a'];
+
+const setAll = (keys: (keyof SettingsNetwork)[], value: RatingValue) => {
+  for (const key of keys) (props.network[key] as RatingValue) = value;
+};
+
+const multiplayerKeys: (keyof SettingsNetwork)[] = ['localPlay', 'lanPlay', 'onlinePlay', 'asynchronous', 'crossplay'];
+const connectionKeys: (keyof SettingsNetwork)[] = ['matchmaking', 'p2p', 'dedicated', 'selfHosting', 'directIp'];
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <Panel header="Multiplayer Types" toggleable>
+    <Panel toggleable>
+      <template #header>
+        <span class="font-bold">Multiplayer Types</span>
+        <span class="ml-2 text-xs text-surface-400 dark:text-surface-500">Keys: T/F/L/U</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(multiplayerKeys, $event)" />
+      </template>
       <div class="flex flex-col gap-4">
          <!-- Local Play -->
          <div class="p-2 border rounded border-surface-200 dark:border-surface-700">
@@ -63,8 +79,14 @@ const ratingOptions = ['true', 'false', 'unknown', 'hackable', 'limited', 'alway
       </div>
     </Panel>
 
-    <Panel header="Connection Types" toggleable>
-      <div class="flex flex-col gap-2">
+    <Panel toggleable>
+      <template #header>
+        <span class="font-bold">Connection Types</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(connectionKeys, $event)" />
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
         <RatingRow label="Matchmaking" v-model:value="network.matchmaking" v-model:notes="network.matchmakingNotes" v-model:reference="network.matchmakingRef" />
         <RatingRow label="Peer-to-peer" v-model:value="network.p2p" v-model:notes="network.p2pNotes" v-model:reference="network.p2pRef" />
         <RatingRow label="Dedicated" v-model:value="network.dedicated" v-model:notes="network.dedicatedNotes" v-model:reference="network.dedicatedRef" />

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { SettingsInput } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
+import BulkRatingActions from './common/BulkRatingActions.vue';
 import Panel from 'primevue/panel';
+import type { RatingValue } from '../utils/ratings';
 import {
   Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet,
   Gamepad2, CheckCircle, Settings, SlidersHorizontal, Plug,
@@ -11,17 +13,36 @@ import {
 import DynamicField from './schema/DynamicField.vue';
 import { useFields } from '../composables/useFields';
 
-defineProps<{
+const props = defineProps<{
   input: SettingsInput;
 }>();
 
 const { getField } = useFields();
+
+const setAll = (keys: (keyof SettingsInput)[], value: RatingValue) => {
+  for (const key of keys) (props.input[key] as RatingValue) = value;
+};
+
+const mouseKeys: (keyof SettingsInput)[] = ['keyRemap', 'keyboardMousePrompts', 'mouseSensitivity', 'mouseMenu', 'invertMouseY', 'touchscreen'];
+const generalControllerKeys: (keyof SettingsInput)[] = ['controllerSupport', 'fullController', 'controllerRemap', 'controllerSensitivity', 'invertControllerY', 'controllerHotplug', 'hapticFeedback', 'hapticFeedbackHd', 'simultaneousInput', 'accelerationOption'];
+const xinputKeys: (keyof SettingsInput)[] = ['xinputControllers', 'xboxPrompts', 'impulseTriggers', 'directInputControllers', 'directInputPrompts'];
+const playstationKeys: (keyof SettingsInput)[] = ['playstationControllers', 'playstationPrompts', 'playstationMotionSensors', 'glightBar', 'dualSenseAdaptiveTrigger', 'dualSenseHaptics'];
+const nintendoKeys: (keyof SettingsInput)[] = ['nintendoControllers', 'nintendoPrompts', 'nintendoButtonLayout', 'nintendoMotionSensors'];
+const steamKeys: (keyof SettingsInput)[] = ['steamInputApi', 'steamHookInput', 'steamInputPrompts', 'steamDeckPrompts', 'steamControllerPrompts', 'steamInputPresets', 'steamCursorDetection'];
+const otherKeys: (keyof SettingsInput)[] = ['trackedMotionControllers', 'trackedMotionPrompts', 'otherControllers', 'digitalMovementSupported', 'peripheralDevices', 'inputPromptOverride'];
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <Panel header="Mouse / Keyboard" toggleable>
-      <div class="flex flex-col gap-2">
+    <Panel toggleable>
+      <template #header>
+        <span class="font-bold">Mouse / Keyboard</span>
+        <span class="ml-2 text-xs text-surface-400 dark:text-surface-500">Keys: T/F/L/U</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(mouseKeys, $event)" />
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
         <RatingRow :icon="Keyboard" label="Key Remapping" v-model:value="input.keyRemap"
           v-model:notes="input.keyRemapNotes" v-model:reference="input.keyRemapRef" />
         <RatingRow :icon="Keyboard" label="Keyboard/Mouse Prompts" v-model:value="input.keyboardMousePrompts"
@@ -37,8 +58,14 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="General Controller" toggleable>
-      <div class="flex flex-col gap-2">
+    <Panel toggleable>
+      <template #header>
+        <span class="font-bold">General Controller</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(generalControllerKeys, $event)" />
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
         <RatingRow :icon="Gamepad2" label="Controller Support" v-model:value="input.controllerSupport"
           v-model:notes="input.controllerSupportNotes" v-model:reference="input.controllerSupportRef" />
         <RatingRow :icon="CheckCircle" label="Full Controller Support" v-model:value="input.fullController"
@@ -56,7 +83,7 @@ const { getField } = useFields();
         <RatingRow :icon="Smartphone" label="Haptic Feedback HD" v-model:value="input.hapticFeedbackHd"
           v-model:notes="input.hapticFeedbackHdNotes" v-model:reference="input.hapticFeedbackHdRef" />
 
-        <DynamicField v-if="getField('input.hapticFeedbackHdControllerModels')"
+        <DynamicField v-if="getField('input.hapticFeedbackHdControllerModels')" class="md:col-span-2"
           :field="getField('input.hapticFeedbackHdControllerModels')!"
           v-model="input.hapticFeedbackHdControllerModels" />
 
@@ -67,8 +94,14 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="XInput / DirectInput" toggleable collapsed>
-      <div class="flex flex-col gap-2">
+    <Panel toggleable collapsed>
+      <template #header>
+        <span class="font-bold">XInput / DirectInput</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(xinputKeys, $event)" />
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
         <RatingRow :icon="Gamepad2" label="XInput Controllers" v-model:value="input.xinputControllers"
           v-model:notes="input.xinputControllersNotes" v-model:reference="input.xinputControllersRef" />
         <RatingRow :icon="Box" label="Xbox Prompts" v-model:value="input.xboxPrompts"
@@ -82,7 +115,13 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="PlayStation" toggleable collapsed>
+    <Panel toggleable collapsed>
+      <template #header>
+        <span class="font-bold">PlayStation</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(playstationKeys, $event)" />
+      </template>
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Gamepad2" label="PlayStation Controllers" v-model:value="input.playstationControllers"
           v-model:notes="input.playstationControllersNotes" v-model:reference="input.playstationControllersRef" />
@@ -105,7 +144,13 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="Nintendo" toggleable collapsed>
+    <Panel toggleable collapsed>
+      <template #header>
+        <span class="font-bold">Nintendo</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(nintendoKeys, $event)" />
+      </template>
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Gamepad2" label="Nintendo Controllers" v-model:value="input.nintendoControllers"
           v-model:notes="input.nintendoControllersNotes" v-model:reference="input.nintendoControllersRef" />
@@ -124,7 +169,13 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="Steam Input" toggleable collapsed>
+    <Panel toggleable collapsed>
+      <template #header>
+        <span class="font-bold">Steam Input</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(steamKeys, $event)" />
+      </template>
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Box" label="Steam Input API" v-model:value="input.steamInputApi"
           v-model:notes="input.steamInputApiNotes" v-model:reference="input.steamInputApiRef" />
@@ -151,7 +202,13 @@ const { getField } = useFields();
       </div>
     </Panel>
 
-    <Panel header="Other / Misc" toggleable collapsed>
+    <Panel toggleable collapsed>
+      <template #header>
+        <span class="font-bold">Other / Misc</span>
+      </template>
+      <template #icons>
+        <BulkRatingActions @set="setAll(otherKeys, $event)" />
+      </template>
       <div class="flex flex-col gap-2">
         <RatingRow :icon="Hand" label="Tracked Motion" v-model:value="input.trackedMotionControllers"
           v-model:notes="input.trackedMotionControllersNotes" v-model:reference="input.trackedMotionControllersRef" />
