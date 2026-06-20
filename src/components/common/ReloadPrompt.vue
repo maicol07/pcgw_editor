@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import Button from 'primevue/button';
-import { RefreshCw, X, DownloadCloud } from 'lucide-vue-next';
+import { RefreshCw, DownloadCloud } from 'lucide-vue-next';
 
 const {
     offlineReady,
@@ -56,11 +56,6 @@ const close = () => {
                             class="text-xs! py-1.5! px-3!" />
                     </div>
                 </div>
-
-                <button @click="close" 
-                    class="p-1 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-lg transition-colors text-surface-400">
-                    <X class="w-4 h-4" />
-                </button>
             </div>
         </div>
     </Transition>

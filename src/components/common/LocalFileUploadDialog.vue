@@ -335,23 +335,23 @@ const openPcgwPage = (url: string) => {
 
                                 <div class="flex flex-col gap-1 overflow-hidden">
                                     <span class="font-bold text-sm truncate" :title="file.name">{{ file.name }}</span>
-                                    <span class="text-[10px] text-surface-500">{{ formatSize(file.size) }} • {{ new Date(file.lastModified).toLocaleDateString() }}</span>
+                                    <span class="text-xs text-surface-500">{{ formatSize(file.size) }} • {{ new Date(file.lastModified).toLocaleDateString() }}</span>
                                 </div>
 
                                 <div class="flex gap-2 mt-auto">
                                     <template v-if="selectionMode">
-                                        <Button v-if="file.status === 'uploaded'" label="Select" size="small" class="flex-1 text-[10px]!" severity="success" @click="selectFile(file)">
+                                        <Button v-if="file.status === 'uploaded'" label="Select" size="small" class="flex-1 text-xs!" severity="success" @click="selectFile(file)">
                                             <template #icon><CheckCircle2 class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
-                                        <Button v-else label="Upload to Select" size="small" class="flex-1 text-[10px]!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
+                                        <Button v-else label="Upload to Select" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
                                             <template #icon><Upload class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
                                     </template>
                                     <template v-else>
-                                        <Button v-if="file.status === 'uploaded'" label="View on PCGW" size="small" class="flex-1 text-[10px]!" severity="success" underlined @click="openPcgwPage(file.pcgwUrl!)">
+                                        <Button v-if="file.status === 'uploaded'" label="View on PCGW" size="small" class="flex-1 text-xs!" severity="success" underlined @click="openPcgwPage(file.pcgwUrl!)">
                                             <template #icon><Globe class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
-                                        <Button v-else label="Upload to PCGW" size="small" class="flex-1 text-[10px]!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
+                                        <Button v-else label="Upload to PCGW" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
                                             <template #icon><Upload class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
                                     </template>
@@ -368,7 +368,7 @@ const openPcgwPage = (url: string) => {
         </div>
 
         <!-- Confirm Upload Dialog -->
-        <Dialog v-model:visible="showConfirmUpload" modal header="Confirm Upload" :draggable="false" class="w-full max-w-md">
+        <Dialog v-model:visible="showConfirmUpload" modal header="Confirm Upload" :draggable="false" class="w-[min(100%-2rem,28rem)]">
             <div class="flex flex-col gap-5">
                 <div class="flex items-center gap-4 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20">
                     <div class="p-2.5 bg-primary-500 rounded-lg shadow-lg">
@@ -382,15 +382,15 @@ const openPcgwPage = (url: string) => {
 
                 <div class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <label for="editFilename" class="text-[10px] font-bold text-surface-500 uppercase flex items-center gap-1.5">
+                        <label for="editFilename" class="text-xs font-bold text-surface-500 uppercase flex items-center gap-1.5">
                             <PencilLine class="w-3 h-3" /> Target Filename
                         </label>
                         <InputText id="editFilename" v-model="editFilename" class="w-full text-sm!" />
-                        <p class="text-[10px] text-surface-400">Must include extension (e.g. .png, .jpg)</p>
+                        <p class="text-xs text-surface-400">Must include extension (e.g. .png, .jpg)</p>
                     </div>
 
                     <div class="flex flex-col gap-1.5">
-                        <label for="editDescription" class="text-[10px] font-bold text-surface-500 uppercase flex items-center gap-1.5">
+                        <label for="editDescription" class="text-xs font-bold text-surface-500 uppercase flex items-center gap-1.5">
                             <FileText class="w-3 h-3" /> Description / Comment
                         </label>
                         <Textarea id="editDescription" v-model="editDescription" rows="3" class="w-full text-sm! resize-none" placeholder="Enter a brief description for the wiki log..." />
@@ -409,7 +409,7 @@ const openPcgwPage = (url: string) => {
         </Dialog>
         
         <!-- Overwrite Confirmation Dialog -->
-        <Dialog v-model:visible="showOverwriteConfirm" modal header="File Already Exists" :draggable="false" class="w-full max-w-sm">
+        <Dialog v-model:visible="showOverwriteConfirm" modal header="File Already Exists" :draggable="false" class="w-[min(100%-2rem,24rem)]">
             <div class="flex flex-col gap-5">
                 <div class="flex flex-col items-center text-center gap-3">
                     <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-full">
@@ -426,7 +426,7 @@ const openPcgwPage = (url: string) => {
 
                 <div class="flex gap-2">
                     <Button label="Cancel" severity="secondary" text class="flex-1" @click="showOverwriteConfirm = false" />
-                    <Button label="Overwrite" severity="warning" class="flex-1" @click="processUpload(true)" />
+                    <Button label="Overwrite" severity="danger" class="flex-1" @click="processUpload(true)" />
                 </div>
             </div>
         </Dialog>

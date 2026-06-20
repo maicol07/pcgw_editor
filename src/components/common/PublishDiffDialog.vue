@@ -123,7 +123,7 @@ const shikiHighlighter = async (text: string) => {
                             </template>
                         </Button>
                     </div>
-                    <p class="text-[10px] text-surface-400">This summary will appear in the page history on PCGW.</p>
+                    <p class="text-xs text-surface-400">This summary will appear in the page history on PCGW.</p>
                 </div>
                 
                 <div class="flex items-center justify-between">
@@ -134,7 +134,7 @@ const shikiHighlighter = async (text: string) => {
 
                     <div class="flex items-center gap-2">
                         <Button label="Cancel" text @click="cancel" :disabled="isPublishing" />
-                        <Button label="Publish Changes" icon="lucide-upload-cloud" @click="publish" :loading="isPublishing" severity="primary">
+                        <Button label="Publish Changes" icon="lucide-upload-cloud" @click="publish" :loading="isPublishing" severity="warning">
                             <template #icon>
                                 <UploadCloud class="w-4 h-4 mr-2" />
                             </template>

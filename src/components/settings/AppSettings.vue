@@ -120,7 +120,7 @@ const saveSettings = () => {
 
 <template>
     <Dialog v-model:visible="uiStore.isSettingsOpen" modal :draggable="false" class="p-fluid glass settings-dialog"
-        :style="{ width: '1040px', maxWidth: '95vw' }">
+        :style="{ width: 'min(1040px, calc(100vw - 2rem))', maxWidth: '95vw' }">
         <template #header>
             <div class="flex items-center gap-2">
                 <Palette class="w-5 h-5 text-primary-500 animate-pulse-soft" />
@@ -132,7 +132,7 @@ const saveSettings = () => {
             <!-- Rail-style navigation (mirrors SectionNav) -->
             <nav class="flex flex-row md:flex-col shrink-0 w-full md:w-52 border-b md:border-b-0 md:border-r border-surface-200/70 dark:border-surface-800/70 overflow-x-auto md:overflow-x-visible custom-scrollbar">
                 <div class="flex flex-row md:flex-col gap-1 px-2.5 py-3 md:py-4 md:pt-5">
-                    <span class="hidden md:block px-2.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500 select-none">
+                    <span class="hidden md:block px-2.5 mb-1 text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500 select-none">
                         Settings
                     </span>
                     <button v-for="tab in tabs" :key="tab.id" type="button"
@@ -218,7 +218,7 @@ const saveSettings = () => {
                         </Select>
 
                         <div class="flex flex-col gap-1.5 mt-1">
-                            <label class="text-[10px] font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">Preview text</label>
+                            <label class="text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">Preview text</label>
                             <div class="p-3.5 rounded-xl border border-surface-200/80 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 text-sm font-medium select-none"
                                 :style="{ fontFamily: uiStore.fontFamily }">
                                 The quick brown fox jumps over the lazy dog. 1234567890
@@ -328,7 +328,7 @@ const saveSettings = () => {
                                     <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-surface-950 rounded-full animate-pulse"></div>
                                 </div>
                                 <div class="flex flex-col">
-                                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected Account</span>
+                                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected Account</span>
                                     <span class="font-bold text-surface-800 dark:text-surface-100 text-sm leading-tight">{{ pcgwAuth.username }}</span>
                                 </div>
                             </div>

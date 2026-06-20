@@ -64,8 +64,8 @@ const openBotPasswordHelp = () => {
         :visible="visible" 
         @update:visible="emit('update:visible', $event)"
         modal 
-        header="Login to PCGamingWiki" 
-        class="w-full max-w-md mx-4"
+        header="Login to PCGamingWiki"
+        class="w-[min(100%-2rem,28rem)]"
         :draggable="false"
     >
         <div class="flex flex-col gap-4 py-2">
@@ -78,8 +78,8 @@ const openBotPasswordHelp = () => {
                 instead of your main account password for extra security.
                 
                 <div class="mt-2 flex flex-col gap-1">
-                    <p class="font-bold text-[10px] uppercase">Required Permissions:</p>
-                    <ul class="list-disc list-inside text-[10px] opacity-80">
+                    <p class="font-bold text-xs uppercase">Required Permissions:</p>
+                    <ul class="list-disc list-inside text-xs opacity-80">
                         <li>Edit existing pages</li>
                         <li>Create, edit, and move pages</li>
                         <li>Upload new files</li>
@@ -142,7 +142,7 @@ const openBotPasswordHelp = () => {
         </div>
 
         <template #footer>
-            <div class="text-[10px] text-center text-surface-400 dark:text-surface-500 mt-2">
+            <div class="text-xs text-center text-surface-400 dark:text-surface-500 mt-2">
                 This app usually does not store your password. If "Automatic Session Refresh" is enabled in settings, your bot password will be stored locally to renew the session.
             </div>
         </template>

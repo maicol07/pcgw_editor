@@ -626,7 +626,7 @@ defineExpose({
                 <!-- Selection List -->
                 <div class="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-2">
                     <div v-for="group in KEYBOARD_GROUPS" :key="group.label" class="flex flex-col gap-2">
-                        <label class="text-[10px] font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
+                        <label class="text-xs font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
                         <div class="flex flex-wrap gap-1.5">
                             <Button v-for="item in group.items" :key="item.value"
                                 :label="item.label" size="small" severity="secondary" variant="outlined"
@@ -662,7 +662,7 @@ defineExpose({
                             </button>
                         </div>
                     </VueDraggable>
-                    <p class="text-[10px] text-surface-400 italic">Format: &#123;&#123;Key|{{ selectedKeys.join('|') }}&#125;&#125;</p>
+                    <p class="text-xs text-surface-400 italic">Format: &#123;&#123;Key|{{ selectedKeys.join('|') }}&#125;&#125;</p>
                 </div>
             </div>
             <div v-if="currentRefType === 'ilink' || currentRefType === 'wlink'" class="flex flex-col gap-2">
@@ -796,6 +796,11 @@ defineExpose({
 
 .dark .custom-action-btn {
     color: var(--p-surface-400) !important;
+}
+
+.custom-action-btn:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px var(--p-primary-500) !important;
 }
 
 .custom-action-btn:hover {
