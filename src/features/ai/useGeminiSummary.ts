@@ -1,10 +1,9 @@
-import { ref, inject, type Ref } from 'vue';
-import { GeminiService } from '../../services/GeminiService';
+import { ref, type Ref } from 'vue';
+import { generateShareSummary } from '../../services/ai/AIService';
+import { aiConfig, activeKey, hasActiveKey } from '../../services/ai/aiConfig';
 import { GameData } from '../../models/GameData';
 
-export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>, apiKey?: Ref<string>) {
-    const injectedApiKey = inject<Ref<string>>('geminiApiKey', ref(''));
-    const geminiApiKey = apiKey || injectedApiKey;
+export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>) {
     const isGeneratingSummary = ref(false);
     const shareSummaryVisible = ref(false);
     const shareSummaryText = ref('');
@@ -13,36 +12,36 @@ export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>
 
     const saveApiKey = () => {
         if (tempApiKey.value.trim()) {
-            if (geminiApiKey) geminiApiKey.value = tempApiKey.value.trim();
-            localStorage.setItem('gemini-api-key', tempApiKey.value.trim());
+            aiConfig.keys[aiConfig.provider] = tempApiKey.value.trim();
             showApiKeyDialog.value = false;
             tempApiKey.value = '';
         }
     };
 
     const clearApiKey = () => {
-        if (geminiApiKey) geminiApiKey.value = '';
-        localStorage.removeItem('gemini-api-key');
+        aiConfig.keys[aiConfig.provider] = '';
         tempApiKey.value = '';
     };
 
-    const generateShareSummary = async () => {
-        if (!geminiApiKey?.value) {
+    const generateSummary = async () => {
+        if (!hasActiveKey()) {
             showApiKeyDialog.value = true;
             return;
         }
 
         isGeneratingSummary.value = true;
         shareSummaryVisible.value = true;
+        shareSummaryText.value = '';
 
         try {
-            const geminiService = new GeminiService(geminiApiKey.value);
-            shareSummaryText.value = await geminiService.generateShareSummary(pageTitle.value, gameData.value);
+            // Stream so the summary fills in progressively.
+            await generateShareSummary(pageTitle.value, gameData.value, (full) => {
+                shareSummaryText.value = full;
+            });
         } catch (e: any) {
             shareSummaryText.value = 'Error generating summary: ' + e.message;
-            if (e.message.includes('API key')) {
-                localStorage.removeItem('gemini-api-key');
-                if (geminiApiKey) geminiApiKey.value = '';
+            if (e.message.includes('API key') || e.message.includes('API_KEY')) {
+                clearApiKey();
             }
         } finally {
             isGeneratingSummary.value = false;
@@ -62,9 +61,10 @@ export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>
         shareSummaryText,
         showApiKeyDialog,
         tempApiKey,
+        activeKey,
         saveApiKey,
         clearApiKey,
-        generateShareSummary,
+        generateShareSummary: generateSummary,
         copyShareSummary,
     };
 }

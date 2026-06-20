@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, inject, type Ref, watch } from 'vue';
+import { ref, inject, computed, type Ref, watch } from 'vue';
+import { aiConfig, MODELS, PROVIDERS, PROVIDER_LABELS, PROVIDER_KEY_LINKS, type AIProvider } from '../../services/ai/aiConfig';
 import { useUiStore } from '../../stores/ui';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
@@ -17,8 +18,13 @@ import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
 import { useToast } from 'primevue/usetoast';
 
 const uiStore = useUiStore();
-const geminiApiKey = inject<Ref<string>>('geminiApiKey');
-const apiKeyValue = ref(geminiApiKey?.value || '');
+
+// AI provider/model/key bind directly to the reactive aiConfig (auto-persisted).
+const providerOptions = PROVIDERS.map((p) => ({ label: PROVIDER_LABELS[p], value: p }));
+const modelOptions = computed(() => MODELS[aiConfig.provider]);
+const keyLink = computed(() => PROVIDER_KEY_LINKS[aiConfig.provider]);
+// On provider switch, default the model to that provider's first option.
+watch(() => aiConfig.provider, (p: AIProvider) => { aiConfig.model = MODELS[p][0].id; });
 
 const twitchClientId = inject<Ref<string>>('twitchClientId');
 const twitchClientSecret = inject<Ref<string>>('twitchClientSecret');
@@ -60,7 +66,6 @@ const handleLogout = async () => {
 
 watch(() => uiStore.isSettingsOpen, (val) => {
     if (val) {
-        apiKeyValue.value = geminiApiKey?.value || '';
         tempTwitchClientId.value = twitchClientId?.value || '';
         tempTwitchClientSecret.value = twitchClientSecret?.value || '';
         tempRawgApiKey.value = rawgApiKey?.value || '';
@@ -100,10 +105,7 @@ const updateDensity = (index: number) => {
 };
 
 const saveSettings = () => {
-    if (geminiApiKey) {
-        geminiApiKey.value = apiKeyValue.value;
-        localStorage.setItem('gemini-api-key', apiKeyValue.value);
-    }
+    // AI config persists itself via aiConfig watchers; only the legacy temp-bound keys need committing here.
     if (twitchClientId && twitchClientSecret) {
         twitchClientId.value = tempTwitchClientId.value;
         twitchClientSecret.value = tempTwitchClientSecret.value;
@@ -249,21 +251,36 @@ const saveSettings = () => {
 
                 <!-- Integrations Tab -->
                 <div v-show="activeTab === 'integrations'" class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 animate-fade-in">
-                    <!-- Gemini -->
+                    <!-- AI Assistant -->
                     <div class="flex flex-col gap-3 pb-5">
                         <div class="flex items-center gap-2.5">
                             <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Bot class="w-4 h-4" /></span>
-                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">Gemini AI Assistant</span>
+                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">AI Assistant</span>
                         </div>
-                        <div class="flex flex-col gap-2 md:pl-9">
-                            <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Gemini API Key</label>
-                            <div class="flex relative items-center">
-                                <InputText v-model="apiKeyValue" :type="showGeminiKey ? 'text' : 'password'" placeholder="AI api key..." class="w-full pr-10 gemini-api-key-input" />
-                                <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
-                                    <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
-                                </button>
+                        <div class="flex flex-col gap-3 md:pl-9">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Provider</label>
+                                    <Select v-model="aiConfig.provider" :options="providerOptions" optionLabel="label" optionValue="value" class="w-full" />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
+                                    <Select v-model="aiConfig.model" :options="modelOptions" optionLabel="label" optionValue="id" editable class="w-full" />
+                                </div>
                             </div>
-                            <span class="text-[11px] text-surface-500 leading-normal">Required for AI-driven screenshot parsing, edit summary generation, and infobox mapping tools.</span>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">{{ PROVIDER_LABELS[aiConfig.provider] }} API Key</label>
+                                <div class="flex relative items-center">
+                                    <InputText v-model="aiConfig.keys[aiConfig.provider]" :type="showGeminiKey ? 'text' : 'password'" placeholder="API key..." class="w-full pr-10 gemini-api-key-input" />
+                                    <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                        <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <span class="text-[11px] text-surface-500 leading-normal">
+                                    Powers screenshot parsing, edit-summary generation, and infobox mapping. Keys are stored per provider in your browser's local storage. Get a key from <a :href="keyLink" target="_blank" class="text-primary-500 hover:underline">{{ PROVIDER_LABELS[aiConfig.provider] }}</a>.
+                                    <br>Web-grounded metadata autofill (store IDs) requires a <strong>Google</strong> key specifically.
+                                </span>
+                            </div>
                         </div>
                     </div>
 

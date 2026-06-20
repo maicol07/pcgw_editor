@@ -1,4 +1,28 @@
-import { GeminiService } from './GeminiService';
+import { z } from 'zod';
+import { generateJSONWithSearch } from './ai/AIService';
+
+// Zod schema mirroring ExtractedMetadata (all optional strings), for grounded search.
+const metadataSchema = z.object({
+    steamAppId: z.string(),
+    gogComId: z.string(),
+    epic: z.string(),
+    microsoft: z.string(),
+    itch: z.string(),
+    zoom: z.string(),
+    officialSite: z.string(),
+    hltb: z.string(),
+    igdb: z.string(),
+    mobygames: z.string(),
+    wikipedia: z.string(),
+    vndb: z.string(),
+    lutris: z.string(),
+    wineHq: z.string(),
+    metacriticScore: z.string(),
+    metacriticId: z.string(),
+    opencriticScore: z.string(),
+    opencriticId: z.string(),
+    igdbScore: z.string(),
+}).partial();
 
 export interface ExtractedMetadata {
     steamAppId?: string;
@@ -509,7 +533,7 @@ class MetadataFillerService {
     /**
      * Leverages Gemini with Google Search grounding to retrieve metadata
      */
-    async fetchMetadataWithGemini(gameTitle: string, geminiService: GeminiService): Promise<ExtractedMetadata | null> {
+    async fetchMetadataWithGemini(gameTitle: string): Promise<ExtractedMetadata | null> {
         const prompt = `
 You are a video game database scraper. Search the web and gather the following metadata for the video game "${gameTitle}".
 Return the result strictly as a valid JSON object matching the following structure:
@@ -541,7 +565,7 @@ Rules:
 `;
 
         try {
-            const result = await geminiService.generateJSONWithSearch<ExtractedMetadata>(prompt);
+            const result = await generateJSONWithSearch(prompt, metadataSchema);
             // Clean empty strings to undefined
             const cleaned: ExtractedMetadata = {};
             Object.keys(result).forEach((key) => {

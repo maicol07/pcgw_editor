@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, inject, type Ref } from 'vue';
+import { ref } from 'vue';
 import { SettingsVideo } from '../../models/GameData';
 import Button from 'primevue/button';
 import { 
   Upload, Sparkles as SparklesIcon, X
 } from 'lucide-vue-next';
-import { GeminiService } from '../../services/GeminiService';
+import { analyzeImageJSON } from '../../services/ai/AIService';
+import { hasActiveKey } from '../../services/ai/aiConfig';
+import { videoAnalysisSchema } from '../../features/video/useVideoAnalysis';
 
 const props = defineProps<{
   modelValue: SettingsVideo;
@@ -15,7 +17,6 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: SettingsVideo): void;
 }>();
 
-const geminiApiKey = inject<Ref<string>>('geminiApiKey');
 const isAnalyzing = ref(false);
 const error = ref('');
 const analysisSuccess = ref(false);
@@ -52,8 +53,8 @@ const handlePaste = async (event: ClipboardEvent) => {
 };
 
 const analyzeScreenshot = async (file: File) => {
-    if (!geminiApiKey || !geminiApiKey.value) {
-        error.value = "Gemini API key not found. Please add it in the top bar settings.";
+    if (!hasActiveKey()) {
+        error.value = "AI API key not found. Please add it in Settings → Integrations.";
         return;
     }
 
@@ -71,8 +72,6 @@ const analyzeScreenshot = async (file: File) => {
             reader.readAsDataURL(file);
         });
 
-        const service = new GeminiService(geminiApiKey.value);
-        
         const prompt = `
             Analyze this game settings screenshot (video/graphics).
             Extract the following settings:
@@ -119,7 +118,7 @@ const analyzeScreenshot = async (file: File) => {
             Be conservative. If not visible, use 'unknown'.
         `;
 
-        const result = await service.analyzeImageJSON<any>(base64, prompt);
+        const result = await analyzeImageJSON(base64, videoAnalysisSchema, prompt) as any;
         
         const newVideo = { ...props.modelValue };
         const fields = [
@@ -167,7 +166,7 @@ const analyzeScreenshot = async (file: File) => {
   <div class="flex flex-col gap-6" @paste="handlePaste">
     
     <!-- AI Analysis Section -->
-    <div v-if="geminiApiKey" class="glass glass-border p-4 rounded-xl flex flex-col gap-4 relative overflow-hidden group transition-all duration-300">
+    <div v-if="hasActiveKey()" class="glass glass-border p-4 rounded-xl flex flex-col gap-4 relative overflow-hidden group transition-all duration-300">
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <SparklesIcon class="w-24 h-24 text-primary-500" />
         </div>

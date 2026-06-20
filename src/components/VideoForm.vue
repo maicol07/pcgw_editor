@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { inject, type Ref, toRefs } from 'vue';
+import { toRefs } from 'vue';
+import { hasActiveKey } from '../services/ai/aiConfig';
 import { SettingsVideo } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
 import BulkRatingActions from './common/BulkRatingActions.vue';
@@ -19,7 +20,6 @@ const props = defineProps<{
 }>();
 
 const { video } = toRefs(props);
-const geminiApiKey = inject<Ref<string>>('geminiApiKey');
 
 const setAll = (keys: (keyof SettingsVideo)[], value: RatingValue) => {
     for (const key of keys) (props.video[key] as RatingValue) = value;
@@ -48,7 +48,7 @@ const handlePaste = async (event: ClipboardEvent) => {
 <template>
     <div class="flex flex-col gap-6" @paste="handlePaste">
         <VideoAnalysis :is-analyzing="isAnalyzing" :error="error" :analysis-success="analysisSuccess"
-            :gemini-api-key="geminiApiKey?.value || null" @analyze="analyzeScreenshot" />
+            :gemini-api-key="hasActiveKey() ? 'set' : null" @analyze="analyzeScreenshot" />
 
         <Panel header="WSGF Awards & Links" toggleable collapsed>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-medium">

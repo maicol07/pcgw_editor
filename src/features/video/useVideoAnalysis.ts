@@ -1,17 +1,46 @@
-import { ref, inject, type Ref } from 'vue';
-import { GeminiService } from '../../services/GeminiService';
+import { ref, type Ref } from 'vue';
+import { z } from 'zod';
+import { analyzeImageJSON } from '../../services/ai/AIService';
+import { hasActiveKey } from '../../services/ai/aiConfig';
 import { SettingsVideo } from '../../models/GameData';
 
+const triState = z.enum(['true', 'false', 'unknown']);
+export const videoAnalysisSchema = z.object({
+    widescreenResolution: triState,
+    multiMonitor: triState,
+    ultraWidescreen: triState,
+    fourKUltraHd: triState,
+    fov: triState,
+    windowed: triState,
+    borderlessWindowed: triState,
+    anisotropic: triState,
+    antiAliasing: triState,
+    upscaling: triState,
+    upscalingTech: z.string(),
+    frameGen: triState,
+    frameGenTech: z.string(),
+    vsync: triState,
+    fps60: triState,
+    fps120: triState,
+    hdr: triState,
+    rayTracing: triState,
+    colorBlind: triState,
+    _notes: z.object({
+        antiAliasing: z.string(),
+        fov: z.string(),
+        upscaling: z.string(),
+    }).partial(),
+}).partial();
+
 export function useVideoAnalysis(video: Ref<SettingsVideo>) {
-    const geminiApiKey = inject<Ref<string>>('geminiApiKey');
     const isAnalyzing = ref(false);
     const error = ref('');
     const analysisSuccess = ref(false);
     const showAnalysis = ref(false);
 
     const analyzeScreenshot = async (file: File) => {
-        if (!geminiApiKey?.value) {
-            error.value = "Gemini API key not found. Please add it in the top bar settings.";
+        if (!hasActiveKey()) {
+            error.value = "AI API key not found. Please add it in Settings → Integrations.";
             return;
         }
 
@@ -27,8 +56,6 @@ export function useVideoAnalysis(video: Ref<SettingsVideo>) {
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
-
-            const service = new GeminiService(geminiApiKey.value);
 
             const prompt = `
           Analyze this game settings screenshot (video/graphics).
@@ -58,7 +85,7 @@ export function useVideoAnalysis(video: Ref<SettingsVideo>) {
               "_notes": { "antiAliasing": "...", "fov": "...", "upscaling": "..." }
           }`;
 
-            const result = await service.analyzeImageJSON<any>(base64, prompt);
+            const result = await analyzeImageJSON(base64, videoAnalysisSchema, prompt) as any;
 
             const fields = [
                 'widescreenResolution', 'multiMonitor', 'ultraWidescreen', 'fourKUltraHd',

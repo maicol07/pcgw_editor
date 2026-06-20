@@ -12,6 +12,8 @@ import { useSearch } from './composables/useSearch';
 import { usePreview } from './composables/usePreview';
 import { useEditor } from './features/editor/useEditor';
 import { useGeminiSummary } from './features/ai/useGeminiSummary';
+import { hasActiveKey } from './services/ai/aiConfig';
+import { generateEditSummary } from './services/ai/AIService';
 
 // Layout & UI
 import Splitter from 'primevue/splitter';
@@ -60,9 +62,6 @@ const uiBus = {
 provide('uiBus', uiBus);
 
 // --- API Keys ---
-const geminiApiKey = ref(localStorage.getItem('gemini-api-key') || '');
-provide('geminiApiKey', geminiApiKey);
-
 const twitchClientId = ref(localStorage.getItem('twitch-client-id') || '');
 const twitchClientSecret = ref(localStorage.getItem('twitch-client-secret') || '');
 provide('twitchClientId', twitchClientId);
@@ -107,9 +106,9 @@ provide('searchQuery', searchQuery);
 
 const {
     isGeneratingSummary, shareSummaryVisible, shareSummaryText,
-    showApiKeyDialog, tempApiKey, saveApiKey, clearApiKey,
+    showApiKeyDialog, tempApiKey, activeKey, saveApiKey, clearApiKey,
     generateShareSummary, copyShareSummary
-} = useGeminiSummary(pageTitle, gameData, geminiApiKey);
+} = useGeminiSummary(pageTitle, gameData);
 
 // --- Diff Merger Logic ---
 const isDiffMergerVisible = ref(false);
@@ -170,22 +169,23 @@ const handleOpenPublishDialog = async () => {
 };
 
 const handleGenerateEditSummary = async () => {
-    if (!geminiApiKey.value) {
+    if (!hasActiveKey()) {
         showApiKeyDialog.value = true;
         return;
     }
-    
+
     isGeneratingEditSummary.value = true;
+    suggestedEditSummary.value = '';
     try {
-        const { GeminiService } = await import('./services/GeminiService');
-        const geminiService = new GeminiService(geminiApiKey.value);
-        suggestedEditSummary.value = await geminiService.generateEditSummary(
+        // Stream so the summary fills in progressively.
+        suggestedEditSummary.value = await generateEditSummary(
             publishDiffOnlineWikitext.value,
-            publishDiffLocalWikitext.value
+            publishDiffLocalWikitext.value,
+            (full) => { suggestedEditSummary.value = full; }
         );
     } catch (e: any) {
         toast.add({ severity: 'error', summary: 'AI Error', detail: 'Error generating summary: ' + e.message, life: 5000 });
-        if (e.message.includes('API key')) {
+        if (e.message.includes('API key') || e.message.includes('API_KEY')) {
             clearApiKey();
         }
     } finally {
@@ -670,7 +670,7 @@ onMounted(() => {
         </Splitter>
 
         <GeminiDialogs v-model:showApiKeyDialog="showApiKeyDialog" v-model:shareSummaryVisible="shareSummaryVisible"
-            v-model:tempApiKey="tempApiKey" :isGeneratingSummary="isGeneratingSummary" :geminiApiKey="geminiApiKey"
+            v-model:tempApiKey="tempApiKey" :isGeneratingSummary="isGeneratingSummary" :geminiApiKey="activeKey()"
             :shareSummaryText="shareSummaryText" @saveApiKey="saveApiKey" @clearApiKey="clearApiKey"
             @copyShareSummary="copyShareSummary" @openApiKeyDialog="showApiKeyDialog = true" />
     </div>

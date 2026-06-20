@@ -2,7 +2,7 @@
 import { ref, inject, type Ref, computed, watch } from 'vue';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { useUiStore } from '../../stores/ui';
-import { GeminiService } from '../../services/GeminiService';
+import { hasGoogleKey } from '../../services/ai/aiConfig';
 import { metadataFillerService, ExtractedMetadata, IGDBGameCandidate } from '../../services/MetadataFillerService';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -18,7 +18,6 @@ const visible = defineModel<boolean>('visible', { default: false });
 
 const workspaceStore = useWorkspaceStore();
 const uiStore = useUiStore();
-const geminiApiKey = inject<Ref<string>>('geminiApiKey');
 const twitchClientId = inject<Ref<string>>('twitchClientId');
 const twitchClientSecret = inject<Ref<string>>('twitchClientSecret');
 const rawgApiKey = inject<Ref<string>>('rawgApiKey');
@@ -36,7 +35,8 @@ const useGemini = ref(localStorage.getItem('autofill_use_gemini') !== 'false');
 
 const hasTwitch = computed(() => !!(twitchClientId?.value && twitchClientSecret?.value));
 const hasRawg = computed(() => !!rawgApiKey?.value);
-const hasGemini = computed(() => !!geminiApiKey?.value);
+// Web-grounded autofill is Google-only — gate it on the Google key regardless of the chat provider.
+const hasGemini = computed(() => hasGoogleKey());
 
 watch(useIGDB, (newVal) => {
     localStorage.setItem('autofill_use_igdb', newVal.toString());
@@ -86,7 +86,7 @@ watch(visible, (val) => {
         comparisonRows.value = [];
         searchPerformed.value = false;
         
-        if (!geminiApiKey?.value) {
+        if (!hasGoogleKey()) {
             useGemini.value = false;
         } else {
             useGemini.value = localStorage.getItem('autofill_use_gemini') !== 'false';
@@ -243,13 +243,9 @@ const handleFetchDetailsForSelected = async () => {
         }
 
         // Fetch from Gemini Grounding if enabled
-        if (useGemini.value && geminiApiKey?.value) {
-            const geminiService = new GeminiService(geminiApiKey.value);
+        if (useGemini.value && hasGoogleKey()) {
             const queryName = selectedCandidates.value[0]?.name || searchTitle.value;
-            const geminiData = await metadataFillerService.fetchMetadataWithGemini(
-                queryName,
-                geminiService
-            );
+            const geminiData = await metadataFillerService.fetchMetadataWithGemini(queryName);
 
             if (geminiData) {
                 Object.keys(geminiData).forEach((key) => {

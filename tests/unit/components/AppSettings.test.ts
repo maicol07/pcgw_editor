@@ -119,13 +119,16 @@ describe('AppSettings.vue', () => {
         const inputText = wrapper.findComponent('.gemini-api-key-input');
         await inputText.setValue('new-test-key');
 
+        // Key now binds directly to aiConfig (auto-persisted), not the legacy injected ref.
+        const { aiConfig } = await import('../../../src/services/ai/aiConfig');
+        expect(aiConfig.keys[aiConfig.provider]).toBe('new-test-key');
+
         // Find Done button specifically by searching for its text
         const buttons = wrapper.findAllComponents(Button);
         const doneButton = buttons.find(b => b.text().includes('Done'));
         if (!doneButton) throw new Error('Done button not found');
         await doneButton.trigger('click');
 
-        expect(mockGeminiApiKey.value).toBe('new-test-key');
         expect(store.isSettingsOpen).toBe(false);
     });
 

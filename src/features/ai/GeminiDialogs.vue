@@ -36,16 +36,14 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
         <template #header>
             <div class="flex items-center gap-2">
                 <Key class="text-primary-500 w-5 h-5" />
-                <span class="font-bold text-lg">Gemini API Key</span>
+                <span class="font-bold text-lg">AI API Key</span>
             </div>
         </template>
 
         <div class="flex flex-col gap-4">
             <p class="text-surface-600 dark:text-surface-400 text-sm">
-                To generate AI-powered summaries, please provide your Gemini API key.
-                This feature uses the <strong>Gemini 3.5 Flash</strong> model, which is free to use.
-                Get one for free at <a href="https://aistudio.google.com/apikey" target="_blank"
-                    class="text-primary-500 hover:underline">Google AI Studio</a>.
+                To generate AI-powered summaries, please provide an API key for your selected provider.
+                Choose your provider and model in <strong>Settings → Integrations</strong>.
             </p>
 
             <div class="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
@@ -64,7 +62,7 @@ const handleApiKeyKeydown = (e: KeyboardEvent) => {
             <div class="flex flex-col gap-2">
                 <label class="font-medium text-sm">API Key</label>
                 <InputText :modelValue="tempApiKey" @update:modelValue="emit('update:tempApiKey', $event ?? '')"
-                    type="password" placeholder="Enter your Gemini API key..." class="w-full"
+                    type="password" placeholder="Enter your API key..." class="w-full"
                     @keydown="handleApiKeyKeydown" />
             </div>
 
