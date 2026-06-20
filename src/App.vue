@@ -32,6 +32,7 @@ import DynamicSection from './components/schema/DynamicSection.vue';
 import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
 import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
 import ReloadPrompt from './components/common/ReloadPrompt.vue';
+import ReleaseNotesDialog from './components/common/ReleaseNotesDialog.vue';
 import RateLimitNotice from './components/common/RateLimitNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
@@ -694,6 +695,8 @@ onMounted(() => {
     />
 
     <ReloadPrompt />
+
+    <ReleaseNotesDialog />
 
     <!-- Conflict Dialog -->
     <Dialog v-model:visible="isConflictDialogVisible" modal header="Conflict Detected" :style="{ width: '500px' }" :draggable="false">

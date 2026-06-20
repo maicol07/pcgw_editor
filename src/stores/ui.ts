@@ -7,6 +7,15 @@ export const useUiStore = defineStore('ui', () => {
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
     const isInitialLoad = ref(true);
+
+    // Release notes / "what's new" dialog
+    const releaseNotesOpen = ref(false);
+    const buildId = `${__APP_VERSION__}@${__COMMIT_HASH__}`;
+    // null = brand-new user: record the build but don't nag them with notes.
+    const isNewBuild = localStorage.getItem('lastSeenBuild') !== null
+        && localStorage.getItem('lastSeenBuild') !== buildId;
+    const openReleaseNotes = () => { releaseNotesOpen.value = true; };
+    const markBuildSeen = () => localStorage.setItem('lastSeenBuild', buildId);
     type DensityMode = 'normal' | 'comfortable' | 'compact';
     const densityMode = ref<DensityMode>((localStorage.getItem('densityMode') as DensityMode) || 'normal');
 
@@ -70,6 +79,11 @@ export const useUiStore = defineStore('ui', () => {
         autoReLogin,
         navRailCollapsed,
         isSettingsOpen,
+
+        releaseNotesOpen,
+        isNewBuild,
+        openReleaseNotes,
+        markBuildSeen,
 
         toggleSidebar,
         setEditorMode,

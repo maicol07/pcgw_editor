@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from '../stores/workspace';
+import { useUiStore } from '../stores/ui';
 import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
@@ -24,6 +25,7 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 
 const store = useWorkspaceStore();
+const ui = useUiStore();
 const confirm = useConfirm();
 
 const props = defineProps<{
@@ -501,11 +503,10 @@ defineExpose({ openLinkDialog });
             <!-- Version Info -->
             <div
                 class="flex items-center justify-between px-3 pb-2 text-xs text-surface-500 dark:text-surface-500 font-mono">
-                <a :href="appVersion === 'main' ? 'https://github.com/maicol07/pcgw_editor' : `https://github.com/maicol07/pcgw_editor/releases/tag/${appVersion}`"
-                    target="_blank" rel="noopener noreferrer"
-                    class="hover:text-primary-500 transition-colors no-underline">
+                <button type="button" @click="ui.openReleaseNotes()" title="What's new"
+                    class="bg-transparent border-0 p-0 cursor-pointer font-mono text-xs text-surface-500 hover:text-primary-500 transition-colors">
                     {{ appVersion === 'main' ? 'main' : (appVersion.startsWith('v') ? appVersion : `v${appVersion}`) }}
-                </a>
+                </button>
                 <a :href="`https://github.com/maicol07/pcgw_editor/commit/${commitHash}`" target="_blank"
                     rel="noopener noreferrer" class="hover:text-primary-500 transition-colors no-underline">
                     {{ commitHash }}
