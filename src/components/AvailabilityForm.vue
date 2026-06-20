@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { AvailabilityRow } from '../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
@@ -106,6 +107,49 @@ function updateRow(index: number, field: keyof AvailabilityRow, val: any) {
     dragList.value[index][field] = val;
     dragList.value = [...dragList.value];
 }
+
+// Sensible default DRM per storefront (feature 7).
+function getDefaultDrm(store: string): string {
+    const s = normalizeStoreOption(store).toLowerCase();
+    if (s === 'steam' || s === 'steam-sub' || s === 'steam-bundle') return 'steam';
+    if (s === 'gog galaxy') return 'drm-free';
+    if (s === 'epic games launcher' || s === 'epic games store subpage') return 'epic games launcher';
+    if (s === 'microsoft store' || s === 'gfw marketplace' || s === 'gfwl marketplace' || s === 'games for windows marketplace') return 'microsoft store';
+    if (s === 'ea app' || s === 'ea desktop' || s === 'origin') return 'ea app';
+    if (s === 'ubisoft connect') return 'ubisoft connect';
+    if (s === 'battle.net') return 'battle.net';
+    if (s === 'meta store') return 'meta store';
+    if (s === 'mac app store' || s === 'macapp') return 'macapp';
+    if (s === 'twitch') return 'twitch';
+    if (s === 'itch.io' || s === 'humble store' || s === 'zoom' || s === 'zoom-platform') return 'drm-free';
+    return '';
+}
+
+// When the store changes, prefill DRM only if currently empty (feature 7).
+function handleStoreChange(index: number, val: string) {
+    const row = dragList.value[index];
+    const drmEmpty = !row.drm || row.drm.trim() === '';
+    updateRow(index, 'distribution', val);
+    if (drmEmpty) {
+        const def = getDefaultDrm(val);
+        if (def) updateRow(index, 'drm', def);
+    }
+}
+
+// Duplicate-distribution detection (feature 6).
+const duplicateRowIds = computed(() => {
+    const counts: Record<string, number> = {};
+    dragList.value.forEach((row) => {
+        const d = normalizeStoreOption(row.distribution || '').toLowerCase();
+        if (d) counts[d] = (counts[d] || 0) + 1;
+    });
+    const set = new Set<number>();
+    dragList.value.forEach((row) => {
+        const d = normalizeStoreOption(row.distribution || '').toLowerCase();
+        if (d && counts[d] > 1) set.add(getRowId(row));
+    });
+    return set;
+});
 
 const getProductIdHelp = (source: string) => {
     const s = source ? source.toLowerCase().trim() : '';
@@ -227,7 +271,10 @@ function getKeysArray(keysString: string): string[] {
 
         <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-3">
             <div v-for="(row, index) in dragList" :key="getRowId(row)"
-                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex flex-col gap-3 transition-all group relative mt-2 ml-1">
+                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border flex flex-col gap-3 transition-all group relative mt-2 ml-1"
+                :class="duplicateRowIds.has(getRowId(row))
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-surface-200 dark:border-surface-700'">
 
                 <div class="absolute -left-3 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded
@@ -238,10 +285,13 @@ function getKeysArray(keysString: string): string[] {
                     </Button>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <Select :modelValue="normalizeStoreOption(row.distribution)" @update:modelValue="v => updateRow(index, 'distribution', v)"
+                <p v-if="duplicateRowIds.has(getRowId(row))" class="text-xs text-red-500 -mb-1">
+                    Duplicate store — this storefront is already listed.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-[minmax(140px,11rem)_minmax(0,1fr)_auto] items-center gap-2">
+                    <Select :modelValue="normalizeStoreOption(row.distribution)" @update:modelValue="v => handleStoreChange(index, v)"
                         :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
-                        class="w-full sm:w-44 text-xs! flex-none h-9! flex! items-center!" size="small">
+                        aria-label="Store" class="w-full text-xs! h-9! flex! items-center!" size="small">
                         <template #value="slotProps">
                             <div v-if="slotProps.value" class="flex items-center gap-2">
                                 <img v-if="getIconSrc(slotProps.value, ['store', 'drm'])" 
@@ -268,10 +318,10 @@ function getKeysArray(keysString: string): string[] {
 
                     <SelectButton :modelValue="row.state || 'normal'"
                         @update:modelValue="v => updateRow(index, 'state', v || 'normal')" :options="stateOptions"
-                        optionLabel="label" optionValue="value" size="small"
-                        class="flex-1 min-w-min whitespace-nowrap compact-select-button" :pt="{
+                        optionLabel="label" optionValue="value" size="small" aria-label="Availability state"
+                        class="w-full min-w-min whitespace-nowrap compact-select-button" :pt="{
                             root: { class: 'flex' },
-                            button: { class: '!px-2 !py-0.5 !text-[10px] flex-1' },
+                            button: { class: '!px-2 !py-0.5 !text-xs flex-1' },
                             label: { class: '!font-semibold' }
                         }" />
 
@@ -285,14 +335,18 @@ function getKeysArray(keysString: string): string[] {
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold uppercase text-surface-400">Product ID</label>
-                        <InputText :value="row.id"
+                        <label :for="`avail-id-${index}`" class="text-xs font-bold uppercase text-surface-400">Product ID</label>
+                        <InputText :id="`avail-id-${index}`" :value="row.id"
                             @input="updateRow(index, 'id', ($event.target as HTMLInputElement).value)"
-                            :placeholder="getProductIdHelp(row.distribution)" class="w-full !text-xs !p-2" />
+                            :placeholder="getProductIdHelp(row.distribution)"
+                            :aria-describedby="`avail-id-help-${index}`" class="w-full !text-xs !p-2" />
+                        <span :id="`avail-id-help-${index}`" class="text-[11px] text-surface-500 leading-tight">
+                            Expected: {{ getProductIdHelp(row.distribution) }}
+                        </span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold uppercase text-surface-400">DRM Used</label>
-                        <MultiSelect :modelValue="getDrmArray(row.drm)" @update:modelValue="(val) => handleDrmChange(index, val)"
+                        <label :for="`avail-drm-${index}`" class="text-xs font-bold uppercase text-surface-400">DRM Used</label>
+                        <MultiSelect :inputId="`avail-drm-${index}`" :modelValue="getDrmArray(row.drm)" @update:modelValue="(val) => handleDrmChange(index, val)"
                             :options="drmOptions" optionLabel="name" optionValue="value" placeholder="Select DRM" :maxSelectedLabels="3"
                             class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
                             <template #value="slotProps">
@@ -316,8 +370,8 @@ function getKeysArray(keysString: string): string[] {
                         </MultiSelect>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold uppercase text-surface-400">Supported OS</label>
-                        <MultiSelect :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
+                        <label :for="`avail-os-${index}`" class="text-xs font-bold uppercase text-surface-400">Supported OS</label>
+                        <MultiSelect :inputId="`avail-os-${index}`" :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
                             :options="osOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
                             class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
                             <template #value="slotProps">
@@ -344,8 +398,8 @@ function getKeysArray(keysString: string): string[] {
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold uppercase text-surface-400">Extra Keys</label>
-                        <MultiSelect :modelValue="getKeysArray(row.keys)" @update:modelValue="(val) => handleKeysChange(index, val)"
+                        <label :for="`avail-keys-${index}`" class="text-xs font-bold uppercase text-surface-400">Extra Keys</label>
+                        <MultiSelect :inputId="`avail-keys-${index}`" :modelValue="getKeysArray(row.keys)" @update:modelValue="(val) => handleKeysChange(index, val)"
                             :options="keyOptions" optionLabel="name" optionValue="value" placeholder="Select Keys" :maxSelectedLabels="3"
                             class="w-full text-xs" pt:root:class="!h-9 !flex !items-center">
                             <template #value="slotProps">
@@ -369,8 +423,8 @@ function getKeysArray(keysString: string): string[] {
                         </MultiSelect>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold uppercase text-surface-400">Notes</label>
-                        <InputText :value="row.notes"
+                        <label :for="`avail-notes-${index}`" class="text-xs font-bold uppercase text-surface-400">Notes</label>
+                        <InputText :id="`avail-notes-${index}`" :value="row.notes"
                             @input="updateRow(index, 'notes', ($event.target as HTMLInputElement).value)"
                             placeholder="e.g. Includes all DLC" class="w-full !text-xs !p-2" />
                     </div>

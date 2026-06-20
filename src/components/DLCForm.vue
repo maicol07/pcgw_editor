@@ -1,13 +1,54 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { DLCRow } from '../models/GameData';
+import { useWorkspaceStore } from '../stores/workspace';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
-import { X, Plus, Info, GripVertical } from 'lucide-vue-next';
+import { X, Plus, Info, GripVertical, MonitorCheck } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 import { getIconSrc } from '../utils/icons';
 
 const dragList = defineModel<DLCRow[]>({ default: () => [] });
+
+const workspaceStore = useWorkspaceStore();
+
+// Derive the game's platforms from availability + release dates (feature 10).
+const gamePlatforms = computed<string[]>(() => {
+  const data = workspaceStore.activeGameData;
+  const set = new Set<string>();
+  const known = osOptions.map(o => o.value.toLowerCase());
+  data?.availability?.forEach((a) => {
+    (a.os || '').split(',').map(s => s.trim()).filter(Boolean).forEach(p => set.add(p));
+  });
+  data?.infobox?.releaseDates?.forEach((rd) => {
+    if (rd.platform && rd.platform.trim()) set.add(rd.platform.trim());
+  });
+  // Keep only recognised OS values, mapped to their canonical casing.
+  return Array.from(set).filter(p => known.includes(p.toLowerCase()))
+    .map(p => osOptions.find(o => o.value.toLowerCase() === p.toLowerCase())!.value);
+});
+
+function applyGameOs(index: number) {
+  const newRows = [...dragList.value];
+  newRows[index].os = gamePlatforms.value.join(', ');
+  dragList.value = newRows;
+}
+
+// Duplicate DLC-name detection (feature 10).
+const duplicateRowIds = computed(() => {
+  const counts: Record<string, number> = {};
+  dragList.value.forEach((row) => {
+    const n = (row.name || '').trim().toLowerCase();
+    if (n) counts[n] = (counts[n] || 0) + 1;
+  });
+  const set = new Set<number>();
+  dragList.value.forEach((row) => {
+    const n = (row.name || '').trim().toLowerCase();
+    if (n && counts[n] > 1) set.add(getRowId(row));
+  });
+  return set;
+});
 
 const idMap = new WeakMap<DLCRow, number>();
 let nextId = 0;
@@ -50,7 +91,10 @@ function getOsArray(osString: string): string[] {
   <div class="flex flex-col gap-4">
     <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
       <div v-for="(row, index) in dragList" :key="getRowId(row)"
-        class="p-4 border border-surface-200 dark:border-surface-700 rounded-lg bg-surface-0 dark:bg-surface-900/50 flex flex-col gap-4 relative group transition-all hover:border-primary-300 dark:hover:border-primary-700">
+        class="p-4 border rounded-lg bg-surface-0 dark:bg-surface-900/50 flex flex-col gap-4 relative group transition-all"
+        :class="duplicateRowIds.has(getRowId(row))
+          ? 'border-red-400 dark:border-red-500'
+          : 'border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-700'">
 
         <div class="absolute -left-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
           <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded aria-label="Drag"
@@ -72,11 +116,20 @@ function getOsArray(osString: string): string[] {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">DLC/Expansion Name</label>
-            <InputText v-model="row.name" class="w-full text-sm" placeholder="e.g. Return to Na Pali" />
+            <InputText v-model="row.name" class="w-full text-sm" placeholder="e.g. Return to Na Pali"
+              :class="{ '!border-red-400': duplicateRowIds.has(getRowId(row)) }" />
+            <span v-if="duplicateRowIds.has(getRowId(row))" class="text-xs text-red-500">Duplicate DLC name.</span>
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Operating Systems</label>
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Operating Systems</label>
+              <Button v-if="gamePlatforms.length" label="OS same as game" severity="secondary" text size="small"
+                class="text-[11px] h-6 !py-0" @click="applyGameOs(index)"
+                v-tooltip.top="`Prefill: ${gamePlatforms.join(', ')}`">
+                <template #icon><MonitorCheck class="w-3.5 h-3.5" /></template>
+              </Button>
+            </div>
             <MultiSelect :modelValue="getOsArray(row.os)" @update:modelValue="(val) => handleOsChange(index, val)"
               :options="osOptions" optionLabel="name" optionValue="value" placeholder="Select OS" :maxSelectedLabels="3"
               class="w-full text-sm">

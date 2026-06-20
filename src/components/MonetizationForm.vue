@@ -18,51 +18,66 @@ defineProps<{
             <h3 class="text-base font-bold uppercase text-surface-700 dark:text-surface-200 tracking-wider">Monetization</h3>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">One-time Game Purchase</label>
-                <InputText v-model="monetization.oneTimePurchase" class="w-full text-sm" placeholder="Upfront purchase to access game" />
-                <span class="text-[11px] text-surface-500 leading-tight">Requires upfront purchase to access.</span>
+        <!-- Primary model: pick whichever best describes how the base game is sold. -->
+        <div class="flex flex-col gap-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400">Primary model
+                <span class="font-normal normal-case tracking-normal text-surface-400">— how the base game is sold</span>
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">One-time Game Purchase</label>
+                    <InputText v-model="monetization.oneTimePurchase" class="w-full text-sm" placeholder="Upfront purchase to access game" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Requires upfront purchase to access.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Free-to-play</label>
+                    <InputText v-model="monetization.freeToPlay" class="w-full text-sm" placeholder="Significant portion accessible for free" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Access significant portion without paying.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Freeware</label>
+                    <InputText v-model="monetization.freeware" class="w-full text-sm" placeholder="Completely free to own" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Completely free in its entirety.</span>
+                </div>
             </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Free-to-play</label>
-                <InputText v-model="monetization.freeToPlay" class="w-full text-sm" placeholder="Significant portion accessible for free" />
-                <span class="text-[11px] text-surface-500 leading-tight">Access significant portion without paying.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Freeware</label>
-                <InputText v-model="monetization.freeware" class="w-full text-sm" placeholder="Completely free to own" />
-                <span class="text-[11px] text-surface-500 leading-tight">Completely free in its entirety.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Ad-supported</label>
-                <InputText v-model="monetization.adSupported" class="w-full text-sm" placeholder="Monetized through advertisements" />
-                <span class="text-[11px] text-surface-500 leading-tight">Ads that are not part of gameplay.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Subscription</label>
-                <InputText v-model="monetization.subscription" class="w-full text-sm" placeholder="Requires continuous payment" />
-                <span class="text-[11px] text-surface-500 leading-tight">Game-specific periodic payment.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Subscription Gaming Service</label>
-                <InputText v-model="monetization.subscriptionGamingService" class="w-full text-sm" placeholder="Included in Game Pass, EA Play, etc." />
-                <span class="text-[11px] text-surface-500 leading-tight">Part of a collection/service (Game Pass).</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">DLC</label>
-                <InputText v-model="monetization.dlc" class="w-full text-sm" placeholder="Medium chunks of additional content" />
-                <span class="text-[11px] text-surface-500 leading-tight">Additional maps, levels, quests.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Expansion Pack</label>
-                <InputText v-model="monetization.expansionPack" class="w-full text-sm" placeholder="Substantially expands playtime" />
-                <span class="text-[11px] text-surface-500 leading-tight">Large campaigns, significant new content.</span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Cross-game Bonus</label>
-                <InputText v-model="monetization.crossGameBonus" class="w-full text-sm" placeholder="Unlocked by owning other games" />
-                <span class="text-[11px] text-surface-500 leading-tight">Bonuses for owning/playing other games.</span>
+        </div>
+
+        <!-- Also applies: secondary attributes that can co-exist with the primary model. -->
+        <div class="flex flex-col gap-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400">Also applies
+                <span class="font-normal normal-case tracking-normal text-surface-400">— secondary monetization that can co-exist</span>
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Ad-supported</label>
+                    <InputText v-model="monetization.adSupported" class="w-full text-sm" placeholder="Monetized through advertisements" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Ads that are not part of gameplay.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Subscription</label>
+                    <InputText v-model="monetization.subscription" class="w-full text-sm" placeholder="Requires continuous payment" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Game-specific periodic payment.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Subscription Gaming Service</label>
+                    <InputText v-model="monetization.subscriptionGamingService" class="w-full text-sm" placeholder="Included in Game Pass, EA Play, etc." />
+                    <span class="text-[11px] text-surface-500 leading-tight">Part of a collection/service (Game Pass).</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">DLC</label>
+                    <InputText v-model="monetization.dlc" class="w-full text-sm" placeholder="Medium chunks of additional content" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Additional maps, levels, quests.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Expansion Pack</label>
+                    <InputText v-model="monetization.expansionPack" class="w-full text-sm" placeholder="Substantially expands playtime" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Large campaigns, significant new content.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Cross-game Bonus</label>
+                    <InputText v-model="monetization.crossGameBonus" class="w-full text-sm" placeholder="Unlocked by owning other games" />
+                    <span class="text-[11px] text-surface-500 leading-tight">Bonuses for owning/playing other games.</span>
+                </div>
             </div>
         </div>
     </div>
