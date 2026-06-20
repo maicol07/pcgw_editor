@@ -39,6 +39,7 @@ import RateLimitNotice from './components/common/RateLimitNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { pcgwApi } from './services/pcgwApi';
+import { start as startSync } from './services/sync/syncService';
 import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.vue';
 
 // Icons
@@ -333,6 +334,7 @@ const updateGameData = (path: string, value: any) => {
 onMounted(() => {
     setTimeout(() => { uiStore.isInitialLoad = false; }, 100);
     pcgwApi.prewarmCache().catch(console.warn);
+    startSync().catch(console.warn);
 
     const handleGlobalKeydown = (e: KeyboardEvent) => {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||

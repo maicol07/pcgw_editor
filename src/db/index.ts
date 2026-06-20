@@ -13,13 +13,24 @@ export interface LocalFile {
     lastModified: number;
 }
 
+// Key/value store for cloud-sync per-device state (crypto key, salt, tombstones, ...).
+export interface SyncMeta {
+    key: string;
+    value: any;
+}
+
 export class AppDatabase extends Dexie {
     localFiles!: Table<LocalFile>;
+    syncMeta!: Table<SyncMeta, string>;
 
     constructor() {
         super('PCGWEditorDB');
         this.version(1).stores({
             localFiles: '++id, name, status, lastModified'
+        });
+        this.version(2).stores({
+            localFiles: '++id, name, status, lastModified',
+            syncMeta: 'key'
         });
     }
 }

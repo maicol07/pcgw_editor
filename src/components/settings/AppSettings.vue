@@ -10,9 +10,10 @@ import ToggleSwitch from 'primevue/toggleswitch';
 import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
-    Info, RotateCcw, Eye, EyeOff
+    Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle
 } from 'lucide-vue-next';
 import { pcgwAuth } from '../../services/pcgwAuth';
+import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync } from '../../services/sync/syncService';
 import { pcgwApi } from '../../services/pcgwApi';
 import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
 import { useToast } from 'primevue/usetoast';
@@ -54,6 +55,29 @@ const handleResetCache = () => {
     });
 };
 
+// --- Cloud Sync ---
+const syncPassphrase = ref('');
+
+const handleConnectSync = async () => {
+    if (!syncPassphrase.value) return;
+    try {
+        await connectAndUnlock(syncPassphrase.value);
+        syncPassphrase.value = '';
+        toast.add({ severity: 'success', summary: 'Sync enabled', detail: 'Connected to Google Drive.', life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Sync failed', detail: syncState.error || 'Could not enable sync.', life: 4000 });
+    }
+};
+
+const handleDisconnectSync = async () => {
+    await disconnectSync();
+    toast.add({ severity: 'info', summary: 'Sync disabled', detail: 'Disconnected on this device.', life: 3000 });
+};
+
+const lastSyncedLabel = computed(() =>
+    syncState.lastSyncedAt ? new Date(syncState.lastSyncedAt).toLocaleString() : 'never'
+);
+
 const handleLogout = async () => {
     await pcgwAuth.logout();
     toast.add({
@@ -75,8 +99,16 @@ watch(() => uiStore.isSettingsOpen, (val) => {
 const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'integrations', label: 'Integrations & APIs', icon: Bot },
-    { id: 'account', label: 'Account & Cache', icon: Globe }
+    { id: 'account', label: 'Account & Cache', icon: Globe },
+    { id: 'sync', label: 'Cloud Sync', icon: Cloud }
 ];
+
+const tabSubtitles: Record<string, string> = {
+    appearance: 'Customize the interface theme, fonts, and layout spacing.',
+    integrations: 'Configure third-party API credentials to enable autofill and metadata assistance.',
+    account: 'Manage authentication credentials and local data cache settings.',
+    sync: 'Sync workspaces and settings across your devices via your own Google Drive.'
+};
 
 const themeOptions = [
     { label: 'System', value: 'system', icon: Monitor },
@@ -161,7 +193,7 @@ const saveSettings = () => {
                         {{ tabs.find(t => t.id === activeTab)?.label }}
                     </h2>
                     <p class="text-xs text-surface-500 mt-1 leading-relaxed">
-                        {{ activeTab === 'appearance' ? 'Customize the interface theme, fonts, and layout spacing.' : activeTab === 'integrations' ? 'Configure third-party API credentials to enable autofill and metadata assistance.' : 'Manage authentication credentials and local data cache settings.' }}
+                        {{ tabSubtitles[activeTab] }}
                     </p>
                 </div>
 
@@ -418,6 +450,72 @@ const saveSettings = () => {
                             </Button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Cloud Sync Tab -->
+                <div v-show="activeTab === 'sync'" class="flex flex-col gap-5 animate-fade-in">
+                    <!-- Not configured in this build -->
+                    <div v-if="!syncState.available" class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-surface-300 dark:border-surface-800 bg-surface-50 dark:bg-surface-900/40">
+                        <AlertCircle class="w-4 h-4 text-surface-400 mt-0.5 shrink-0" />
+                        <p class="text-xs text-surface-500 leading-relaxed">Cloud sync isn't configured in this build (missing Google client ID).</p>
+                    </div>
+
+                    <template v-else>
+                        <!-- Setup state -->
+                        <div v-if="!syncState.unlocked" class="flex flex-col gap-3">
+                            <div class="flex items-start gap-3.5">
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><Cloud class="w-4 h-4" /></span>
+                                <p class="text-xs text-surface-500 leading-relaxed flex-1">
+                                    Stores an <strong>encrypted</strong> copy of your workspaces, settings and API keys in your own Google Drive (a hidden app folder). Drive syncs it to your other devices. Choose a sync passphrase &mdash; you'll enter the same one on each device. It never leaves your browser and can't be recovered if lost.
+                                </p>
+                            </div>
+                            <div class="flex flex-col gap-2 md:pl-9">
+                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Sync passphrase</label>
+                                <InputText v-model="syncPassphrase" type="password" placeholder="Choose a passphrase..." class="w-full" @keyup.enter="handleConnectSync" />
+                                <Button label="Connect Google Drive" :disabled="!syncPassphrase || syncState.status === 'syncing'" @click="handleConnectSync" class="self-start mt-1 cursor-pointer">
+                                    <template #icon>
+                                        <component :is="syncState.status === 'syncing' ? Loader2 : Cloud" class="w-4 h-4 mr-2" :class="{ 'animate-spin': syncState.status === 'syncing' }" />
+                                    </template>
+                                </Button>
+                            </div>
+                        </div>
+
+                        <!-- Connected state -->
+                        <div v-else class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between p-4 rounded-xl border"
+                                :class="syncState.status === 'error'
+                                    ? 'bg-red-500/5 border-red-500/20'
+                                    : 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20'">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                        :class="syncState.status === 'error' ? 'bg-red-500/15 text-red-500' : 'bg-emerald-500/15 text-emerald-500'">
+                                        <component :is="syncState.status === 'error' ? AlertCircle : Cloud" class="w-5 h-5" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold uppercase tracking-wider"
+                                            :class="syncState.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
+                                            {{ syncState.status === 'error' ? 'Sync error' : syncState.connected ? 'Sync active' : 'Reconnect needed' }}
+                                        </span>
+                                        <span class="text-sm text-surface-700 dark:text-surface-200 leading-tight">
+                                            {{ syncState.status === 'error' ? syncState.error : `Last synced: ${lastSyncedLabel}` }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <component :is="Loader2" v-if="syncState.status === 'syncing'" class="w-4 h-4 text-primary-500 animate-spin" />
+                            </div>
+                            <div class="flex gap-2">
+                                <Button label="Sync now" severity="secondary" variant="outlined" size="small" :disabled="syncState.status === 'syncing'" @click="syncNow" class="cursor-pointer">
+                                    <template #icon><RefreshCw class="w-3.5 h-3.5 mr-1.5" :class="{ 'animate-spin': syncState.status === 'syncing' }" /></template>
+                                </Button>
+                                <Button label="Disconnect" severity="danger" variant="outlined" size="small" @click="handleDisconnectSync" class="cursor-pointer">
+                                    <template #icon><LogOut class="w-3.5 h-3.5 mr-1.5" /></template>
+                                </Button>
+                            </div>
+                            <p class="text-[11px] text-surface-500 leading-normal">
+                                Changes are pushed a few seconds after you edit and pulled when you focus this tab. Same page edited on two devices: the most recent change wins. PCGamingWiki login applies after a reload on a new device.
+                            </p>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>

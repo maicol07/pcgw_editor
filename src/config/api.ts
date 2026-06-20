@@ -12,6 +12,10 @@ export const rateLimitState = ref({
 const PROXY_PREFIX = ''; // Optional, e.g. 'https://cors-anywhere.herokuapp.com/'
 const PCGW_API_URL = 'https://www.pcgamingwiki.com/w/api.php';
 
+// Public OAuth client ID for the optional Google Drive cloud-sync feature.
+// Set VITE_GOOGLE_CLIENT_ID at build time (or hardcode here). Empty = sync hidden.
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1034798646876-9pfp06so088l98gs477njt3fdgca97o9.apps.googleusercontent.com';
+
 export const API_CONFIG = {
     // New Worker-based login endpoint
     workerLoginUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/login',
