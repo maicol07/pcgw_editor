@@ -50,3 +50,45 @@ export const specialPaths: SpecialPath[] = [
 export function getSpecialPathByValue(value: string): SpecialPath | undefined {
     return specialPaths.find(p => p.value.toLowerCase() === value.toLowerCase());
 }
+
+// Helper to look up a special path by id (e.g. 'appdata')
+export function getSpecialPathById(id: string): SpecialPath | undefined {
+    return specialPaths.find(p => p.id === id);
+}
+
+// Most common starting locations, used for quick-add empty states.
+export const commonPathTokens: { id: string; label: string; value: string }[] = [
+    { id: 'appdata', label: '%APPDATA%', value: '{{p|appdata}}' },
+    { id: 'localappdata', label: '%LOCALAPPDATA%', value: '{{p|localappdata}}' },
+    { id: 'documents', label: 'Documents', value: '{{p|userprofile\\documents}}' },
+    { id: 'steam', label: 'Steam userdata', value: '{{p|steam}}\\userdata\\{{p|uid}}\\' },
+    { id: 'game', label: 'Install folder', value: '{{p|game}}' },
+    { id: 'hkcu', label: 'Registry (HKCU)', value: '{{p|hkcu}}' },
+];
+
+// Lightweight map of common raw environment variables to their wiki template token.
+// Used to nudge users away from typing %ENVVAR% literally.
+export const rawEnvVarTokenMap: Record<string, string> = {
+    '%APPDATA%': '{{p|appdata}}',
+    '%LOCALAPPDATA%': '{{p|localappdata}}',
+    '%PROGRAMDATA%': '{{p|programdata}}',
+    '%ALLUSERSPROFILE%': '{{p|allusersprofile}}',
+    '%PROGRAMFILES%': '{{p|programfiles}}',
+    '%USERPROFILE%': '{{p|userprofile}}',
+    '%USERNAME%': '{{p|username}}',
+    '%PUBLIC%': '{{p|public}}',
+    '%TEMP%': '{{p|temp}}',
+    '%WINDIR%': '{{p|windir}}',
+};
+
+// Returns a suggested token if the given string contains a known raw env var, else null.
+export function suggestTokenForRawEnvVar(str: string): { raw: string; token: string } | null {
+    if (!str) return null;
+    const upper = str.toUpperCase();
+    for (const raw of Object.keys(rawEnvVarTokenMap)) {
+        if (upper.includes(raw)) {
+            return { raw, token: rawEnvVarTokenMap[raw] };
+        }
+    }
+    return null;
+}

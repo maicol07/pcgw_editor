@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { Issue } from '../../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import { X, Plus, Info, GripVertical } from 'lucide-vue-next';
+import Select from 'primevue/select';
+import { X, Plus, Info, GripVertical, ChevronDown, Wand2 } from 'lucide-vue-next';
 import WysiwygEditor from '../common/WysiwygEditor.vue';
 import { VueDraggable } from 'vue-draggable-plus';
 
@@ -16,13 +17,44 @@ function getRowId(row: Issue) {
   return idMap.get(row)!;
 }
 
+// Status maps to the `fixed` boolean (source of truth for wikitext serialization).
+// "Open" => fixed=false, anything else => fixed=true.
+const STATUS_OPTIONS = [
+  { label: 'Open', value: 'open' },
+  { label: 'Workaround available', value: 'workaround' },
+  { label: 'Fixed in patch', value: 'patch' },
+  { label: 'Abandoned', value: 'abandoned' },
+];
+
+function getStatus(row: Issue): string {
+  return row.fixed ? 'patch' : 'open';
+}
+
+function setStatus(row: Issue, value: string) {
+  row.fixed = value !== 'open';
+}
+
+// Common issue templates: prefill title + description starters.
+const ISSUE_TEMPLATES = [
+  { label: 'Crash on launch', title: 'Game crashes on launch', body: '<p>The game fails to start or crashes immediately on launch.</p>' },
+  { label: 'Audio desync', title: 'Audio is out of sync', body: '<p>Audio drifts out of sync with video/cutscenes.</p>' },
+  { label: 'Performance drops', title: 'Performance drops / stuttering', body: '<p>Frame rate drops or stuttering occurs during gameplay.</p>' },
+  { label: 'Save corruption', title: 'Save data corruption', body: '<p>Save files become corrupted or fail to load.</p>' },
+];
+
 function addRow() {
   dragList.value = [...dragList.value, { title: '', fixed: false, body: '' }];
+}
+
+function addTemplate(tpl: { title: string; body: string }) {
+  dragList.value = [...dragList.value, { title: tpl.title, fixed: false, body: tpl.body }];
 }
 
 function removeRow(index: number) {
   dragList.value = dragList.value.filter((_, i) => i !== index);
 }
+
+const guidelinesOpen = ref(false);
 </script>
 
 <template>
@@ -50,14 +82,18 @@ function removeRow(index: number) {
 
         <div class="flex flex-col md:flex-row gap-4 items-end">
           <div class="flex flex-col gap-1.5 flex-1 w-full">
-            <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">Issue Title</label>
-            <InputText v-model="row.title" class="w-full text-sm" placeholder="e.g. Game crashes on startup" />
+            <label :for="`issue-title-${index}`"
+              class="text-xs font-bold uppercase text-surface-500 tracking-wider">Issue Title</label>
+            <InputText :id="`issue-title-${index}`" v-model="row.title" class="w-full text-sm"
+              placeholder="e.g. Game crashes on startup" />
           </div>
 
-          <div class="flex items-center gap-2 mb-2">
-            <Checkbox v-model="row.fixed" :binary="true" :inputId="`fixed-${index}`" />
-            <label :for="`fixed-${index}`"
-              class="text-sm font-medium text-surface-700 dark:text-surface-300 cursor-pointer">Fixed</label>
+          <div class="flex flex-col gap-1.5 w-full md:w-56">
+            <label :for="`issue-status-${index}`"
+              class="text-xs font-bold uppercase text-surface-500 tracking-wider">Status</label>
+            <Select :inputId="`issue-status-${index}`" :modelValue="getStatus(row)"
+              @update:modelValue="setStatus(row, $event)" :options="STATUS_OPTIONS" optionLabel="label"
+              optionValue="value" class="w-full text-sm" />
           </div>
         </div>
 
@@ -69,22 +105,35 @@ function removeRow(index: number) {
       </div>
     </VueDraggable>
 
-    <Button label="Add Issue" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
-      <template #icon>
-        <Plus class="w-4 h-4" />
-      </template>
-    </Button>
+    <div class="flex flex-col sm:flex-row gap-2">
+      <Button label="Add Issue" severity="secondary" outlined class="flex-1 border-dashed" @click="addRow">
+        <template #icon>
+          <Plus class="w-4 h-4" />
+        </template>
+      </Button>
 
-    <div
-      class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800 flex gap-3 text-xs text-blue-700 dark:text-blue-300">
-      <Info class="w-4 h-4 mt-0.5 shrink-0" />
-      <div>
-        <p class="font-bold mb-1">Issue Guidelines:</p>
+      <div class="flex-1">
+        <Select :options="ISSUE_TEMPLATES" optionLabel="label" placeholder="Common issue templates"
+          class="w-full" @update:modelValue="addTemplate">
+          <template #dropdownicon>
+            <Wand2 class="w-4 h-4" />
+          </template>
+        </Select>
+      </div>
+    </div>
+
+    <div class="mt-2 rounded border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+      <button type="button" @click="guidelinesOpen = !guidelinesOpen"
+        class="w-full flex items-center gap-2 p-3 text-xs font-bold text-left">
+        <Info class="w-4 h-4 shrink-0" />
+        <span class="flex-1">Issue Guidelines</span>
+        <ChevronDown class="w-4 h-4 shrink-0 transition-transform" :class="{ 'rotate-180': guidelinesOpen }" />
+      </button>
+      <div v-if="guidelinesOpen" class="px-3 pb-3 pl-9 text-xs">
         <ul class="list-disc pl-4 flex flex-col gap-1">
           <li>Titles should be clear and concise.</li>
-          <li>Check the "Fixed" box if the issue has been resolved in a later patch or has a confirmed user workaround
-            that
-            completely fixes it.</li>
+          <li>Set the status to anything other than "Open" once the issue has been resolved in a later patch or has a
+            confirmed user workaround that completely fixes it.</li>
           <li>Provide detailed steps for any workarounds in the description.</li>
         </ul>
       </div>

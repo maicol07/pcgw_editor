@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import Chip from 'primevue/chip';
-import { getSpecialPathByValue } from '../../utils/specialPaths';
+import { getSpecialPathByValue, suggestTokenForRawEnvVar } from '../../utils/specialPaths';
 
 const props = defineProps<{
     modelValue: string;
@@ -167,6 +167,19 @@ const insertAtCaret = (text: string) => {
 
 defineExpose({ insertAtCaret });
 
+// Lightweight validation: nudge users away from raw env vars (e.g. %APPDATA%) towards wiki tokens
+const tokenSuggestion = computed(() => suggestTokenForRawEnvVar(props.modelValue));
+
+const applyTokenSuggestion = () => {
+    const s = tokenSuggestion.value;
+    if (!s) return;
+    const idx = props.modelValue.toUpperCase().indexOf(s.raw);
+    if (idx < 0) return;
+    const newStr = props.modelValue.slice(0, idx) + s.token + props.modelValue.slice(idx + s.raw.length);
+    segments.value = parseSegments(newStr);
+    emit('update:modelValue', newStr);
+};
+
 const containerRef = ref<HTMLElement | null>(null);
 
 const focusContainer = (e: MouseEvent) => {
@@ -212,6 +225,14 @@ const focusContainer = (e: MouseEvent) => {
         :placeholder="idx === segments.length - 1 && segments.length === 1 ? placeholder : ''"
       />
     </template>
+  </div>
+  <div v-if="tokenSuggestion" class="flex items-center gap-1.5 mt-1 text-xs text-amber-600 dark:text-amber-400">
+    <span>Use the wiki token</span>
+    <button type="button" @click="applyTokenSuggestion"
+      class="font-mono font-medium underline decoration-dotted hover:text-amber-700 dark:hover:text-amber-300">
+      {{ tokenSuggestion.token }}
+    </button>
+    <span>instead of <span class="font-mono">{{ tokenSuggestion.raw }}</span></span>
   </div>
 </template>
 

@@ -20,6 +20,16 @@
                     <TabPanel v-for="os in supportedOS" :key="os.key" :value="os.key">
                         <div class="flex flex-col gap-6" v-if="localModel[os.key] && localModel[os.key].minimum">
 
+                            <!-- Copy from first OS (non-primary tabs) -->
+                            <div v-if="os.key !== supportedOS[0].key" class="flex justify-end -mb-2">
+                                <Button :label="`Copy from ${supportedOS[0].label}`" size="small" text severity="secondary"
+                                    @click="copyFromFirstOS(os.key)" v-tooltip.left="`Prefill from ${supportedOS[0].label} data`">
+                                    <template #icon>
+                                        <Copy class="w-3.5 h-3.5" />
+                                    </template>
+                                </Button>
+                            </div>
+
                             <!-- Specs Grid -->
                             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 <!-- Minimum Specs -->
@@ -35,30 +45,30 @@
 
                                     <div class="space-y-4">
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">OS
+                                            <label :for="`sysreq-${os.key}-min-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
                                                 Version</label>
-                                            <InputText v-model="localModel[os.key].minimum.os"
+                                            <InputText :id="`sysreq-${os.key}-min-os`" v-model="localModel[os.key].minimum.os"
                                                 placeholder="e.g. Windows 10 64-bit" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
-                                            <InputText v-model="localModel[os.key].minimum.cpu"
+                                            <label :for="`sysreq-${os.key}-min-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
+                                            <InputText :id="`sysreq-${os.key}-min-cpu`" v-model="localModel[os.key].minimum.cpu"
                                                 placeholder="e.g. Intel Core i5-4460" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
-                                            <InputText v-model="localModel[os.key].minimum.ram" placeholder="e.g. 8 GB"
+                                            <label :for="`sysreq-${os.key}-min-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
+                                            <InputText :id="`sysreq-${os.key}-min-ram`" v-model="localModel[os.key].minimum.ram" placeholder="e.g. 8 GB"
                                                 size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label
+                                            <label :for="`sysreq-${os.key}-min-hdd`"
                                                 class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
-                                            <InputText v-model="localModel[os.key].minimum.hdd" placeholder="e.g. 50 GB"
+                                            <InputText :id="`sysreq-${os.key}-min-hdd`" v-model="localModel[os.key].minimum.hdd" placeholder="e.g. 50 GB"
                                                 size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
-                                            <InputText v-model="localModel[os.key].minimum.gpu"
+                                            <label :for="`sysreq-${os.key}-min-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
+                                            <InputText :id="`sysreq-${os.key}-min-gpu`" v-model="localModel[os.key].minimum.gpu"
                                                 placeholder="e.g. NVIDIA GTX 960" size="small" />
                                         </div>
                                     </div>
@@ -73,34 +83,41 @@
                                         <h4
                                             class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
                                             Recommended</h4>
+                                        <Button label="Copy from Minimum" size="small" text severity="secondary"
+                                            class="ml-auto px-2! py-1! text-xs!" @click="copyFromMinimum(os.key)"
+                                            v-tooltip.top="'Copy all Minimum spec fields into Recommended'">
+                                            <template #icon>
+                                                <Copy class="w-3.5 h-3.5" />
+                                            </template>
+                                        </Button>
                                     </div>
 
                                     <div class="space-y-4">
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">OS
+                                            <label :for="`sysreq-${os.key}-rec-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
                                                 Version</label>
-                                            <InputText v-model="localModel[os.key].recommended.os"
+                                            <InputText :id="`sysreq-${os.key}-rec-os`" v-model="localModel[os.key].recommended.os"
                                                 placeholder="e.g. Windows 11" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
-                                            <InputText v-model="localModel[os.key].recommended.cpu"
+                                            <label :for="`sysreq-${os.key}-rec-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
+                                            <InputText :id="`sysreq-${os.key}-rec-cpu`" v-model="localModel[os.key].recommended.cpu"
                                                 placeholder="e.g. Intel Core i7-8700" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
-                                            <InputText v-model="localModel[os.key].recommended.ram"
+                                            <label :for="`sysreq-${os.key}-rec-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
+                                            <InputText :id="`sysreq-${os.key}-rec-ram`" v-model="localModel[os.key].recommended.ram"
                                                 placeholder="e.g. 16 GB" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label
+                                            <label :for="`sysreq-${os.key}-rec-hdd`"
                                                 class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
-                                            <InputText v-model="localModel[os.key].recommended.hdd"
+                                            <InputText :id="`sysreq-${os.key}-rec-hdd`" v-model="localModel[os.key].recommended.hdd"
                                                 placeholder="e.g. 50 GB" size="small" />
                                         </div>
                                         <div class="grid gap-1.5">
-                                            <label class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
-                                            <InputText v-model="localModel[os.key].recommended.gpu"
+                                            <label :for="`sysreq-${os.key}-rec-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
+                                            <InputText :id="`sysreq-${os.key}-rec-gpu`" v-model="localModel[os.key].recommended.gpu"
                                                 placeholder="e.g. NVIDIA RTX 2060" size="small" />
                                         </div>
                                     </div>
@@ -109,11 +126,11 @@
 
                             <!-- Notes -->
                             <div class="flex flex-col gap-2 pt-2 border-t border-surface-100 dark:border-surface-800">
-                                <label class="text-sm font-semibold flex items-center gap-2">
+                                <label :for="`sysreq-${os.key}-notes`" class="text-sm font-semibold flex items-center gap-2">
                                     <FileText class="w-4 h-4 text-primary-500" />
                                     Additional Notes
                                 </label>
-                                <Textarea v-model="localModel[os.key].notes" rows="2"
+                                <Textarea :id="`sysreq-${os.key}-notes`" v-model="localModel[os.key].notes" rows="2"
                                     placeholder="e.g. AVX support required, constant internet connection..."
                                     class="w-full" autoResize />
                             </div>
@@ -128,8 +145,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
-import { SystemRequirements, SystemRequirementsOS } from '../models/GameData';
+import { SystemRequirements, SystemRequirementsOS, SystemSpecs } from '../models/GameData';
 import Message from 'primevue/message';
+import Button from 'primevue/button';
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
@@ -137,7 +155,7 @@ import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import { MinusCircle, PlusCircle, FileText } from 'lucide-vue-next';
+import { MinusCircle, PlusCircle, FileText, Copy } from 'lucide-vue-next';
 import { useVModel } from '@vueuse/core';
 
 // Icons
@@ -193,6 +211,27 @@ const initialize = () => {
     if (!localModel.value.windows || !localModel.value.windows.minimum) localModel.value.windows = createEmptyOSReqs();
     if (!localModel.value.mac || !localModel.value.mac.minimum) localModel.value.mac = createEmptyOSReqs();
     if (!localModel.value.linux || !localModel.value.linux.minimum) localModel.value.linux = createEmptyOSReqs();
+};
+
+type OSKey = 'windows' | 'mac' | 'linux';
+
+// Copy all Minimum spec fields into Recommended for the given OS
+const copyFromMinimum = (osKey: OSKey) => {
+    const osReqs = localModel.value[osKey];
+    if (!osReqs || !osReqs.minimum) return;
+    osReqs.recommended = { ...osReqs.minimum } as SystemSpecs;
+};
+
+// Prefill an OS section from the first (primary) OS's data
+const copyFromFirstOS = (osKey: OSKey) => {
+    const sourceKey = supportedOS[0].key;
+    if (osKey === sourceKey) return;
+    const source = localModel.value[sourceKey];
+    const target = localModel.value[osKey];
+    if (!source || !target) return;
+    target.minimum = { ...source.minimum } as SystemSpecs;
+    target.recommended = { ...source.recommended } as SystemSpecs;
+    if (source.notes !== undefined) target.notes = source.notes;
 };
 
 onMounted(() => {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AutocompleteField, { DataSource } from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
-import { Info } from 'lucide-vue-next';
+import Button from 'primevue/button';
+import { Info, Copy } from 'lucide-vue-next';
 
 export interface ListItem {
     name: string;
@@ -40,6 +41,22 @@ const updateItem = (index: number, field: string, value: any) => {
     emit('update:modelValue', newList);
 };
 
+const duplicateItem = (index: number) => {
+    const source = props.modelValue[index];
+    if (!source) return;
+    // Items are keyed by `name`, so disambiguate the clone's name to avoid collisions.
+    const existingNames = new Set(props.modelValue.map(i => i.name));
+    let newName = `${source.name} (copy)`;
+    let n = 2;
+    while (existingNames.has(newName)) {
+        newName = `${source.name} (copy ${n++})`;
+    }
+    const clone = { ...source, name: newName };
+    const newList = [...props.modelValue];
+    newList.splice(index + 1, 0, clone);
+    emit('update:modelValue', newList);
+};
+
 // We don't have explicit remove button for items in Autocomplete list mode, 
 // the AutocompleteField handles adding/removing names. 
 // But we might want specific controls for the items in the list below.
@@ -49,11 +66,15 @@ const updateItem = (index: number, field: string, value: any) => {
 <template>
     <div class="flex flex-col gap-3">
         <div class="flex items-center gap-2" v-if="!hideLabel">
-            <label class="text-sm font-semibold text-surface-700 dark:text-surface-200"
+            <span class="text-sm font-semibold text-surface-700 dark:text-surface-200"
                 :class="{ 'text-primary-600 dark:text-primary-400': highlight }">
                 {{ label }}
-            </label>
-            <Info v-if="tooltip" class="text-surface-400 w-3.5 h-3.5" v-tooltip.top="tooltip" />
+            </span>
+            <Info v-if="tooltip" class="text-surface-400 w-4 h-4" :aria-label="`Help: ${label}`" v-tooltip.top="tooltip" />
+            <span v-if="modelValue.length > 0"
+                class="ml-auto text-xs font-medium text-surface-500 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-full">
+                {{ modelValue.length }} {{ modelValue.length === 1 ? 'item' : 'items' }}
+            </span>
         </div>
 
         <AutocompleteField :modelValue="modelValue.map(i => i.name)" @update:modelValue="updateList"
@@ -73,6 +94,12 @@ const updateItem = (index: number, field: string, value: any) => {
                         <slot name="actions" :item="item" :index="index" :update="updateItem">
                             <!-- Default actions if needed -->
                         </slot>
+                        <Button type="button" text rounded severity="secondary" size="small" class="w-7 h-7"
+                            aria-label="Duplicate row" v-tooltip.top="'Duplicate row'" @click="duplicateItem(index)">
+                            <template #icon>
+                                <Copy class="w-3.5 h-3.5" />
+                            </template>
+                        </Button>
                         <NotesButton :modelValue="item.note" @update:modelValue="v => updateItem(index, 'note', v)"
                             type="note" class="w-7 h-7" />
                     </div>

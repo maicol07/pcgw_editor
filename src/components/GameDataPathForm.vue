@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GameDataPathRow } from '../models/GameData';
 import PathInputField from './ui/PathInputField.vue';
-import { specialPaths, SpecialPath } from '../utils/specialPaths';
+import { specialPaths, SpecialPath, commonPathTokens } from '../utils/specialPaths';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Popover from 'primevue/popover';
@@ -63,6 +63,12 @@ const emit = defineEmits<{
 
 const addRow = () => {
   const newRows = [...props.rows, { platform: 'Windows', paths: [''] }];
+  emit('update:rows', newRows);
+};
+
+// Quick-add a Windows row prefilled with a common token (used in empty state)
+const quickAddRow = (value: string) => {
+  const newRows = [...props.rows, { platform: 'Windows', paths: [value] }];
   emit('update:rows', newRows);
 };
 
@@ -179,6 +185,19 @@ const selectQuickPath = (value: string) => {
           <Plus class="w-3.5 h-3.5" />
         </template>
       </Button>
+    </div>
+
+    <!-- Empty state: quick-add common locations -->
+    <div v-if="!rows.length" class="flex flex-col items-center gap-3 py-8 text-center">
+      <p class="text-sm text-surface-500 dark:text-surface-400">No locations yet. Add a common one to get started:</p>
+      <div class="flex flex-wrap justify-center gap-2 max-w-lg">
+        <Button v-for="t in commonPathTokens" :key="t.id" :label="t.label" size="small" severity="secondary" outlined
+          @click="quickAddRow(t.value)">
+          <template #icon>
+            <Plus class="w-3.5 h-3.5" />
+          </template>
+        </Button>
+      </div>
     </div>
 
     <div class="flex flex-col">

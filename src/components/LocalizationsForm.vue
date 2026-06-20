@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { LocalizationRow } from '../models/GameData';
+import { ref } from 'vue';
+import { LocalizationRow, RatingValue } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import { Trash2, Plus, GripVertical } from 'lucide-vue-next';
+import Select from 'primevue/select';
+import MultiSelect from 'primevue/multiselect';
+import Popover from 'primevue/popover';
+import { Trash2, Plus, GripVertical, Languages } from 'lucide-vue-next';
 import { FlagIcon } from '@placetopay/flagicons-vue';
 import { VueDraggable } from 'vue-draggable-plus';
 
@@ -62,15 +66,82 @@ const getFlagCode = (lang: string) => {
     const found = commonLanguages.find(l => l.value === lang);
     return found ? found.code : undefined;
 };
+
+// Add common languages multi-select
+const addLangPopover = ref();
+const selectedLanguages = ref<string[]>([]);
+
+const openAddLanguages = (event: Event) => {
+    selectedLanguages.value = [];
+    addLangPopover.value.toggle(event);
+};
+
+const addSelectedLanguages = () => {
+    const existing = new Set(localizations.value.map(r => r.language));
+    const newRows = selectedLanguages.value
+        .filter(lang => !existing.has(lang))
+        .map((lang): LocalizationRow => ({
+            language: lang,
+            interface: 'false',
+            audio: 'unknown',
+            subtitles: 'unknown',
+            notes: '',
+            fan: false,
+            ref: ''
+        }));
+    if (newRows.length) {
+        localizations.value = [...localizations.value, ...newRows];
+    }
+    addLangPopover.value.hide();
+};
+
+// "Set all" column toggles
+const setAllColumn = (column: 'interface' | 'audio' | 'subtitles', value: RatingValue) => {
+    localizations.value = localizations.value.map(r => ({ ...r, [column]: value }));
+};
+
+const ratingOptions: { label: string; value: RatingValue }[] = [
+    { label: 'True', value: 'true' },
+    { label: 'Limited', value: 'limited' },
+    { label: 'Always on', value: 'always on' },
+    { label: 'False', value: 'false' },
+    { label: 'Hackable', value: 'hackable' },
+    { label: 'N/A', value: 'n/a' },
+    { label: 'Unknown', value: 'unknown' },
+];
 </script>
 
 <template>
     <div class="flex flex-col gap-2">
+        <!-- Bulk actions -->
+        <div v-if="localizations.length"
+            class="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 rounded-lg bg-surface-50 dark:bg-surface-800/40 border border-surface-200 dark:border-surface-700">
+            <span class="text-xs font-bold text-surface-500 uppercase tracking-wider">Set all</span>
+            <div class="flex items-center gap-1.5">
+                <label class="text-xs font-semibold text-surface-500">UI</label>
+                <Select :modelValue="null" :options="ratingOptions" optionLabel="label" optionValue="value"
+                    placeholder="—" size="small" class="w-28"
+                    @update:modelValue="(v: RatingValue) => v && setAllColumn('interface', v)" />
+            </div>
+            <div class="flex items-center gap-1.5">
+                <label class="text-xs font-semibold text-surface-500">Audio</label>
+                <Select :modelValue="null" :options="ratingOptions" optionLabel="label" optionValue="value"
+                    placeholder="—" size="small" class="w-28"
+                    @update:modelValue="(v: RatingValue) => v && setAllColumn('audio', v)" />
+            </div>
+            <div class="flex items-center gap-1.5">
+                <label class="text-xs font-semibold text-surface-500">Subtitles</label>
+                <Select :modelValue="null" :options="ratingOptions" optionLabel="label" optionValue="value"
+                    placeholder="—" size="small" class="w-28"
+                    @update:modelValue="(v: RatingValue) => v && setAllColumn('subtitles', v)" />
+            </div>
+        </div>
+
         <VueDraggable v-model="localizations" :animation="150" handle=".drag-handle" class="flex flex-col gap-2">
             <div v-for="(row, index) in localizations" :key="getRowId(row)"
                 class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group mt-1 ml-1">
 
-                <div class="absolute -left-3 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div class="absolute -left-3 -top-3 opacity-40 group-hover:opacity-100 transition-opacity z-10">
                     <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded
                         aria-label="Drag" size="small">
                         <template #icon>
@@ -82,9 +153,9 @@ const getFlagCode = (lang: string) => {
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
                     <!-- Language -->
                     <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
-                        <label class="text-xs font-bold text-surface-500">Language</label>
+                        <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Language</label>
                         <div class="flex gap-2">
-                            <Select v-model="row.language" :options="commonLanguages" optionLabel="label"
+                            <Select v-model="row.language" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
                                 optionValue="value" placeholder="Select or type..." class="w-full">
                                 <template #value="slotProps">
                                     <div class="flex items-center gap-2" v-if="slotProps.value">
@@ -107,34 +178,34 @@ const getFlagCode = (lang: string) => {
 
                     <!-- Interface -->
                     <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
-                        <label class="text-xs font-bold text-surface-500">UI</label>
+                        <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold text-surface-500">UI</label>
                         <div
                             class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
-                            <Checkbox v-model="row.interface" true-value="true" false-value="false" binary />
+                            <Checkbox :inputId="`loc-ui-${getRowId(row)}`" v-model="row.interface" true-value="true" false-value="false" binary />
                         </div>
                     </div>
 
                     <!-- Audio -->
                     <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                        <label class="text-xs font-bold text-surface-500">Audio</label>
-                        <RatingSelect v-model="row.audio" />
+                        <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Audio</label>
+                        <RatingSelect v-model="row.audio" :inputId="`loc-audio-${getRowId(row)}`" />
                     </div>
 
                     <!-- Subtitles -->
                     <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                        <label class="text-xs font-bold text-surface-500">Subtitles</label>
-                        <RatingSelect v-model="row.subtitles" />
+                        <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Subtitles</label>
+                        <RatingSelect v-model="row.subtitles" :inputId="`loc-subs-${getRowId(row)}`" />
                     </div>
 
                     <!-- Notes & Fan -->
                     <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
                         <div class="flex-1 flex flex-col gap-1">
-                            <label class="text-xs font-bold text-surface-500">Notes</label>
-                            <InputText v-model="row.notes" class="w-full" placeholder="Notes..." />
+                            <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Notes</label>
+                            <InputText :id="`loc-notes-${getRowId(row)}`" v-model="row.notes" class="w-full" placeholder="Notes..." />
                         </div>
                         <div class="flex flex-col gap-1 items-center pb-2" title="Fan Translation">
-                            <label class="text-[10px] font-bold text-surface-400">FAN</label>
-                            <Checkbox v-model="row.fan" binary />
+                            <label :for="`loc-fan-${getRowId(row)}`" class="text-xs font-bold text-surface-400">FAN</label>
+                            <Checkbox :inputId="`loc-fan-${getRowId(row)}`" v-model="row.fan" binary />
                         </div>
                     </div>
 
@@ -150,10 +221,34 @@ const getFlagCode = (lang: string) => {
             </div>
         </VueDraggable>
 
-        <Button label="Add Language" @click="addRow" outlined class="w-full border-dashed mt-2">
-            <template #icon>
-                <Plus class="w-4 h-4" />
-            </template>
-        </Button>
+        <div class="flex flex-col sm:flex-row gap-2 mt-2">
+            <Button label="Add Language" @click="addRow" outlined class="flex-1 border-dashed">
+                <template #icon>
+                    <Plus class="w-4 h-4" />
+                </template>
+            </Button>
+            <Button label="Add common languages" @click="openAddLanguages" outlined severity="secondary" class="flex-1">
+                <template #icon>
+                    <Languages class="w-4 h-4" />
+                </template>
+            </Button>
+        </div>
+
+        <Popover ref="addLangPopover">
+            <div class="flex flex-col gap-3 w-72">
+                <span class="text-sm font-semibold text-surface-700 dark:text-surface-200">Pick languages to add</span>
+                <MultiSelect v-model="selectedLanguages" :options="commonLanguages" optionLabel="label"
+                    optionValue="value" filter placeholder="Select languages..." class="w-full" :maxSelectedLabels="3">
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
+                            <span>{{ slotProps.option.label }}</span>
+                        </div>
+                    </template>
+                </MultiSelect>
+                <Button label="Add selected" size="small" :disabled="!selectedLanguages.length"
+                    @click="addSelectedLanguages" />
+            </div>
+        </Popover>
     </div>
 </template>
