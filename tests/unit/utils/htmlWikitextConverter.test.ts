@@ -43,7 +43,9 @@ describe('htmlWikitextConverter', () => {
             expect(wikitextToHtml(wikitextStandard)).toBe(htmlStandard);
 
             const wikitextOneLine = `{{Fixbox|description=Use windowed mode, see [[#Video|Video]].|ref=<ref>Reference</ref>}}`;
-            const encodedWikitextOneLine = encodeURIComponent(`{{Fixbox|description=Use windowed mode, see <a href="#Video">Video</a>.|ref=<ref>Reference</ref>}}`);
+            // data-wikitext now stores the verbatim source (raw [[#Video|Video]]), while the
+            // displayed description still renders the link as <a href="#Video">Video</a>
+            const encodedWikitextOneLine = encodeURIComponent(`{{Fixbox|description=Use windowed mode, see [[#Video|Video]].|ref=<ref>Reference</ref>}}`);
             const htmlOneLine = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodedWikitextOneLine}"><table class="pcgwikitable fixbox"><tbody><tr><th class="fixbox-title"><div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>Use windowed mode, see <a href="#Video">Video</a>.<sup class="reference">Reference</sup></th></tr></tbody></table></div>`;
             expect(wikitextToHtml(wikitextOneLine)).toBe(htmlOneLine);
 
@@ -53,14 +55,22 @@ describe('htmlWikitextConverter', () => {
             expect(wikitextToHtml(wikitextCollapsed)).toBe(htmlCollapsed);
         });
 
-        it('should preserve and escape <ref> tags', async () => {
+        it('should render <ref> citations as an inline token chip that round-trips', async () => {
             const wikitext = "This is some text<ref>{{Refcheck|user=User|date=2026-06-06}}</ref> and some other text";
-            expect(wikitextToHtml(wikitext)).toBe('<p>This is some text&lt;ref&gt;{{Refcheck|user=User|date=2026-06-06}}&lt;/ref&gt; and some other text</p>');
+            const html = wikitextToHtml(wikitext);
+            expect(html).toContain('class="wiki-token"');
+            expect(html).toContain(`data-wikitext="${encodeURIComponent('<ref>{{Refcheck|user=User|date=2026-06-06}}</ref>')}"`);
+            expect(html).toContain('Verified by'); // the citation is rendered, not raw
+            expect(htmlToWikitext(html)).toBe(wikitext);
         });
 
-        it('should preserve and escape named and self-closing <ref> tags', async () => {
+        it('escapes self-closing <ref> tags (no closing tag to render) and chips full citations', async () => {
             const wikitext = "Some text<ref name=\"test\">{{Refurl|url=https://example.com}}</ref> and a reuse<ref name=\"test\" />.";
-            expect(wikitextToHtml(wikitext)).toBe('<p>Some text&lt;ref name="test"&gt;{{Refurl|url=https://example.com}}&lt;/ref&gt; and a reuse&lt;ref name="test" /&gt;.</p>');
+            const html = wikitextToHtml(wikitext);
+            // the full <ref>…</ref> becomes a chip; the self-closing reuse stays escaped text
+            expect(html).toContain('class="wiki-token"');
+            expect(html).toContain('&lt;ref name="test" /&gt;');
+            expect(htmlToWikitext(html)).toBe(wikitext);
         });
     });
 
