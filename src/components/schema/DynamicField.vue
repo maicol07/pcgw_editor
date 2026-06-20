@@ -90,6 +90,9 @@ const resolvedComponent = computed(() => {
     return componentMap[props.field.component] || InputText;
 });
 
+// Stable id derived from the field key for label/input association
+const fieldId = computed(() => `field-${props.field.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`);
+
 const isIgdbField = computed(() => props.field.key === 'links.igdb');
 
 const igdbReceptionEntry = computed(() => {
@@ -319,17 +322,18 @@ const isVisible = computed(() => {
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
             v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm'].includes(field.component)"
+            :for="fieldId"
             class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
             {{ field.label }}
             <span v-if="computedDescription" v-tooltip.top="computedDescription"
                 class="ml-auto text-surface-400 hover:text-primary-500 cursor-help">
-                <Info class="w-3.5 h-3.5" />
+                <Info class="w-4 h-4" />
             </span>
         </label>
 
-        <component :is="resolvedComponent" v-bind="boundProps" :modelValue="computedModelValue"
+        <component :is="resolvedComponent" v-bind="boundProps" :inputId="fieldId" :id="fieldId" :modelValue="computedModelValue"
             @update:modelValue="handleModelValueUpdate" @update:value="handleUpdateValue"
             @update:notes="handleUpdateNotes" class="w-full" :class="{ '!w-auto': field.component === 'Checkbox' }">
 
@@ -379,7 +383,7 @@ const isVisible = computed(() => {
             {{ field.label }}
             <span v-if="field.description" v-tooltip.top="field.description"
                 class="text-surface-400 hover:text-primary-500 cursor-help ml-1">
-                <Info class="w-3.5 h-3.5" />
+                <Info class="w-4 h-4" />
             </span>
         </label>
     </div>

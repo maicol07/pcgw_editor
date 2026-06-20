@@ -367,7 +367,7 @@ defineExpose({ openLinkDialog });
                         </template>
                     </Select>
                 </div>
-                <div class="px-1 text-[10px] font-medium text-surface-400 dark:text-surface-500 select-none">
+                <div class="px-1 text-xs font-medium text-surface-400 dark:text-surface-500 select-none">
                     {{ filteredPages.length }} {{ filteredPages.length === 1 ? 'page' : 'pages' }}<span v-if="searchQuery || filterTemplate !== 'all'"> shown</span>
                 </div>
             </div>
@@ -389,24 +389,24 @@ defineExpose({ openLinkDialog });
                             :class="page.id === store.activePageId ? 'opacity-100' : 'opacity-0'" />
 
                         <div class="flex justify-between items-start">
-                            <div class="flex-1 min-w-0 pr-10">
+                            <div class="flex-1 min-w-0 pr-2 md:pr-10">
                                 <div class="font-bold text-sm truncate transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
                                     :class="page.id === store.activePageId ? 'text-primary-600 dark:text-primary-300' : 'text-surface-900 dark:text-surface-0'"
                                     :title="page.title">
                                     {{ page.title }}
                                 </div>
-                                <div class="flex items-center gap-2 mt-0.5">
+                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                     <div
-                                        class="flex items-center text-[10px] text-surface-500 bg-surface-200/50 dark:bg-surface-800 px-1.5 py-0.5 rounded capitalize">
+                                        class="flex items-center min-h-6 text-xs text-surface-500 bg-surface-200/50 dark:bg-surface-800 px-2 py-0.5 rounded capitalize">
                                         <Hash class="w-2.5 h-2.5 mr-1" />
                                         {{ page.template || 'blank' }}
                                     </div>
-                                    <div class="flex items-center text-[10px] text-surface-500 font-medium">
+                                    <div class="flex items-center min-h-6 text-xs text-surface-500 font-medium px-1 py-0.5">
                                         <Clock class="w-2.5 h-2.5 mr-1" />
                                         {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
                                     </div>
                                     <div v-if="page.pcgwPageTitle" :title="`Linked to ${page.pcgwPageTitle}`"
-                                        class="flex items-center gap-1 text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded">
+                                        class="flex items-center min-h-6 gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-2 py-0.5 rounded">
                                         <Link class="w-2.5 h-2.5" />
                                         PCGW
                                     </div>
@@ -500,7 +500,7 @@ defineExpose({ openLinkDialog });
 
             <!-- Version Info -->
             <div
-                class="flex items-center justify-between px-3 pb-2 text-[10px] text-surface-500 dark:text-surface-500 font-mono">
+                class="flex items-center justify-between px-3 pb-2 text-xs text-surface-500 dark:text-surface-500 font-mono">
                 <a :href="appVersion === 'main' ? 'https://github.com/maicol07/pcgw_editor' : `https://github.com/maicol07/pcgw_editor/releases/tag/${appVersion}`"
                     target="_blank" rel="noopener noreferrer"
                     class="hover:text-primary-500 transition-colors no-underline">

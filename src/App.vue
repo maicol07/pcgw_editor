@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent } from 'vue';
+import { useWindowSize } from '@vueuse/core';
 import { useWorkspaceStore } from './stores/workspace';
 import { useUiStore } from './stores/ui';
 import { fieldsConfig } from './config/fields';
@@ -249,6 +250,12 @@ const handleDiffMerge = async (mergedText: string) => {
     await workspaceStore.syncFromWikitext(mergedText, diffMergerOnlineRevid.value);
 };
 
+// --- Responsive Splitter Layout ---
+// Stack editor/preview vertically below the `lg` breakpoint (1024px) so the
+// two panes aren't cramped on tablet/mobile; horizontal on larger screens.
+const { width: windowWidth } = useWindowSize();
+const splitterLayout = computed(() => (windowWidth.value < 1024 ? 'vertical' : 'horizontal'));
+
 // --- Schema Helpers ---
 const getSchema = (id: string) => computed(() => fieldsConfig.find(s => s.id === id));
 
@@ -365,7 +372,8 @@ onMounted(() => {
         <Toast />
         <WorkspaceSidebar ref="workspaceSidebarRef" v-model:visible="uiStore.sidebarVisible" />
 
-        <Splitter style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern">
+        <Splitter style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern"
+            :layout="splitterLayout" stateKey="editor-splitter" stateStorage="local">
             <!-- Left Panel: Editor -->
             <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
                 <EditorToolbar :title="pageTitle" @update:title="pageTitle = $event" :editorMode="editorMode"
@@ -402,7 +410,7 @@ onMounted(() => {
                         <EditorSkeleton v-if="editorMode === 'Visual' && uiStore.isInitialLoad" />
 
                         <div v-else-if="editorMode === 'Visual'"
-                            class="p-4 md:p-6 max-w-6xl mx-auto flex flex-col gap-9" key="visual">
+                            class="p-4 md:p-6 max-w-6xl xl:max-w-7xl 2xl:max-w-none mx-auto flex flex-col gap-9" key="visual">
                             <QuickActions v-model:searchQuery="searchQuery" />
 
                             <!-- Sections -->
@@ -704,7 +712,7 @@ onMounted(() => {
 
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1 p-3 bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700">
-                    <div class="text-[10px] font-bold text-surface-500 uppercase flex items-center gap-1.5">
+                    <div class="text-xs font-bold text-surface-500 uppercase flex items-center gap-1.5">
                         <FileClock class="w-3 h-3" /> Recommended Action
                     </div>
                     <div class="text-sm font-medium">Use the Merge Tool to integrate online changes with your own.</div>
@@ -720,12 +728,12 @@ onMounted(() => {
                 
                 <div class="flex items-center gap-2 py-2">
                     <div class="h-px flex-1 bg-surface-200 dark:bg-surface-700"></div>
-                    <span class="text-[10px] font-bold text-surface-400 dark:text-surface-600 uppercase">Or proceed anyway</span>
+                    <span class="text-xs font-bold text-surface-400 dark:text-surface-600 uppercase">Or proceed anyway</span>
                     <div class="h-px flex-1 bg-surface-200 dark:bg-surface-700"></div>
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <div class="flex items-start gap-2 text-[10px] text-red-500/80 dark:text-red-400/60 italic leading-tight bg-red-500/5 p-2 rounded border border-red-500/10">
+                    <div class="flex items-start gap-2 text-xs text-red-500/80 dark:text-red-400/60 italic leading-tight bg-red-500/5 p-2 rounded border border-red-500/10">
                         <AlertCircle class="w-3 h-3 shrink-0" />
                         Force pushing will discard the online changes. Use this only if you are sure your version is correct.
                     </div>

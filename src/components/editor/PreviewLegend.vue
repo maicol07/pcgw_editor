@@ -30,7 +30,7 @@ const handleHeadingClick = (id: string) => {
 </script>
 
 <template>
-    <div class="absolute top-4 right-4 z-50 flex flex-col items-end gap-2 pointer-events-none">
+    <div class="absolute top-4 right-4 z-50 hidden md:flex flex-col items-end gap-2 pointer-events-none">
 
         <!-- FAB -->
         <button @click="toggleLegend"
@@ -46,7 +46,7 @@ const handleHeadingClick = (id: string) => {
             leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100"
             leave-to-class="opacity-0 translate-y-2 scale-95">
             <div v-if="isOpen"
-                class="pointer-events-auto w-64 max-h-[60vh] overflow-y-auto custom-scrollbar bg-surface-0/95 dark:bg-surface-900/95 backdrop-blur shadow-xl rounded-xl border border-surface-200 dark:border-surface-700 p-2 flex flex-col gap-0.5">
+                class="pointer-events-auto w-64 max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar bg-surface-0/95 dark:bg-surface-900/95 backdrop-blur shadow-xl rounded-xl border border-surface-200 dark:border-surface-700 p-2 flex flex-col gap-0.5">
                 <div v-if="headings.length === 0" class="p-4 text-center text-xs text-surface-500 italic">
                     No sections found
                 </div>

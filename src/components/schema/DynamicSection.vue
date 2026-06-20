@@ -51,19 +51,19 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
 <template>
     <div class="dynamic-section flex flex-col gap-6">
         <!-- Top-level Fields -->
-        <div v-if="section.fields && section.fields.length > 0" class="gap-6" :class="{
+        <div v-if="section.fields && section.fields.length > 0" class="p-5 gap-6" :class="{
             'flex flex-col': !section.gridCols,
             'grid grid-cols-1': !!section.gridCols,
-            'md:grid-cols-2': section.gridCols === 2,
-            'md:grid-cols-3': section.gridCols === 3
+            'sm:grid-cols-2': section.gridCols === 2,
+            'sm:grid-cols-2 lg:grid-cols-3': section.gridCols === 3
         }">
             <template v-for="field in section.fields" :key="field.key">
                 <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
                     :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                     @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                         'col-span-1': true,
-                        'md:col-span-2': field.colSpan === 2,
-                        'md:col-span-3': field.colSpan === 3
+                        'sm:col-span-2': field.colSpan === 2,
+                        'lg:col-span-3': field.colSpan === 3
                     }" />
             </template>
         </div>
@@ -74,6 +74,12 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                 <div v-for="(group, idx) in section.groups" :key="idx"
                     class="bg-surface-0 dark:bg-surface-900/70 border border-surface-200/70 dark:border-surface-700/55 rounded-xl shadow-soft overflow-hidden transition-all duration-200">
                     <div @click="toggleGroup(idx)"
+                        role="button"
+                        tabindex="0"
+                        @keydown.enter.prevent="toggleGroup(idx)"
+                        @keydown.space.prevent="toggleGroup(idx)"
+                        :aria-expanded="!collapsedGroups[idx]"
+                        :aria-controls="`group-panel-${idx}`"
                         class="px-4 py-3 border-b border-surface-200/60 dark:border-surface-700/45 flex items-center justify-between cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800/40 transition-colors select-none group"
                         :class="{ 'border-b-0': collapsedGroups[idx] }">
                         <div class="flex items-center gap-3 text-surface-900 dark:text-surface-100">
@@ -101,14 +107,14 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                         </div>
                     </div>
 
-                    <div class="grid transition-all duration-300 ease-in-out"
+                    <div :id="`group-panel-${idx}`" class="grid transition-all duration-300 ease-in-out"
                         :class="collapsedGroups[idx] ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'">
                         <div class="overflow-hidden">
                             <div class="p-5" :class="{
                                 'flex flex-col gap-5': !group.gridCols,
                                 'grid grid-cols-1 gap-5': !!group.gridCols && typeof group.gridCols === 'number',
-                                'md:grid-cols-2': group.gridCols === 2,
-                                'md:grid-cols-3': group.gridCols === 3,
+                                'sm:grid-cols-2': group.gridCols === 2,
+                                'sm:grid-cols-2 lg:grid-cols-3': group.gridCols === 3,
                                 'grid gap-5': typeof group.gridCols === 'string'
                             }"
                                 :style="typeof group.gridCols === 'string' ? { gridTemplateColumns: group.gridCols } : {}">
@@ -117,8 +123,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                                         :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                                         @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                                             'col-span-1': true,
-                                            'md:col-span-2': field.colSpan === 2,
-                                            'md:col-span-3': field.colSpan === 3
+                                            'sm:col-span-2': field.colSpan === 2,
+                                            'lg:col-span-3': field.colSpan === 3
                                         }" />
                                 </template>
                             </div>

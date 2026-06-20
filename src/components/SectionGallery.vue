@@ -1983,7 +1983,7 @@ defineExpose({
             </label>
             <div v-if="pcgwAuth.isLoggedIn" class="flex items-center gap-2">
                 <span
-                    class="text-[10px] text-surface-500 bg-surface-100 dark:bg-surface-900 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    class="text-xs text-surface-500 bg-surface-100 dark:bg-surface-900 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <CheckCircle2 class="w-3 h-3 text-green-500" />
                     {{ pcgwAuth.username }}
                 </span>
@@ -2057,7 +2057,7 @@ defineExpose({
                             <Upload class="w-4 h-4" /> From your computer
                         </label>
                         <div class="flex items-center gap-2">
-                            <label for="cropOnUpload" class="text-[10px] text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
+                            <label for="cropOnUpload" class="text-xs text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
                             <ToggleSwitch v-model="cropOnUpload" inputId="cropOnUpload" class="scale-75 origin-right" />
                         </div>
                     </div>
@@ -2071,7 +2071,7 @@ defineExpose({
 
                 <div class="border-t border-surface-100 dark:border-surface-700 relative flex justify-center">
                     <span
-                        class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-[10px] text-surface-400 uppercase tracking-widest font-bold">Or</span>
+                        class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-xs text-surface-400 uppercase tracking-widest font-bold">Or</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
@@ -2091,7 +2091,7 @@ defineExpose({
                                     <div class="flex flex-col gap-0.5 overflow-hidden">
                                         <span class="font-bold text-sm truncate">{{ option }}</span>
                                         <div v-if="resolvedInfos[normalizeFilename(option)]"
-                                            class="flex items-center gap-1 text-[10px] text-surface-500">
+                                            class="flex items-center gap-1 text-xs text-surface-500">
                                             <User class="w-3 h-3" />
                                             <span>{{ resolvedInfos[normalizeFilename(option)].user }}</span>
                                         </div>
@@ -2110,7 +2110,7 @@ defineExpose({
                 </div>
 
                 <div class="border-t border-surface-100 dark:border-surface-700 relative flex justify-center mt-4">
-                    <span class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-[10px] text-surface-400 uppercase tracking-widest font-bold">Advanced Tools</span>
+                    <span class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-xs text-surface-400 uppercase tracking-widest font-bold">Advanced Tools</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
@@ -2155,22 +2155,22 @@ defineExpose({
                         <!-- Status Badges -->
                         <div class="absolute top-2 left-2 flex flex-col gap-1">
                             <div v-if="element.localId"
-                                class="bg-surface-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/20 flex items-center gap-1 uppercase tracking-tight">
+                                class="bg-surface-900/80 backdrop-blur-sm text-white text-xs font-bold px-2 py-0.5 rounded border border-white/20 flex items-center gap-1 uppercase tracking-tight">
                                 <HardDrive class="w-3 h-3" /> Local
                             </div>
                             <div v-if="element.localId && isAlsoOnPcgw(element)"
-                                class="bg-surface-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-1 py-0.5 rounded border border-white/20 flex items-center gap-1">
+                                class="bg-surface-900/80 backdrop-blur-sm text-white text-xs font-bold px-1 py-0.5 rounded border border-white/20 flex items-center gap-1">
                                 <Button size="small" text rounded class="p-0! w-4 h-4 text-white" @click.stop="toggleSource(index)" v-tooltip="element.preferLocal ? 'Switch to PCGW version' : 'Switch to Local version'">
                                     <ArrowRightLeft class="w-3 h-3" />
                                 </Button>
                                 <span class="uppercase tracking-tight">{{ element.preferLocal ? 'Local' : 'PCGW' }}</span>
                             </div>
                             <div v-if="element.localId && getLocalFile(element.localId)?.status === 'uploading'"
-                                class="bg-primary-500 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-tight">
+                                class="bg-primary-500 text-white text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-tight">
                                 <Loader2 class="w-3 h-3 animate-spin" /> Uploading
                             </div>
                             <div v-if="element.localId && getLocalFile(element.localId)?.status === 'error'"
-                                class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-tight"
+                                class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-tight"
                                 v-tooltip="getLocalFile(element.localId)?.error">
                                 <AlertCircle class="w-3 h-3" /> Error
                             </div>
@@ -2206,7 +2206,7 @@ defineExpose({
                             <TriangleAlert class="w-4 h-4 shrink-0 text-amber-500" />
                             <span>Exceeds 12.5 MP ({{ largeImages[element.localId].mp }} MP)</span>
                         </div>
-                        <Button label="Resize Image" severity="warning" size="small" class="w-full text-[10px]! py-1!" @click.stop="triggerResizeForLocalItem(element.localId)" />
+                        <Button label="Resize Image" severity="warning" size="small" class="w-full text-xs! py-1!" @click.stop="triggerResizeForLocalItem(element.localId)" />
                     </div>
 
                     <!-- Actions -->
@@ -2311,7 +2311,7 @@ defineExpose({
                 <div v-if="pcgwEditingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
                         <label
-                            class="text-[10px] font-bold text-surface-500 uppercase flex items-center justify-between gap-1.5">
+                            class="text-xs font-bold text-surface-500 uppercase flex items-center justify-between gap-1.5">
                             <span>Target Filename</span>
                             <div v-if="isFetchingContent"
                                 class="flex items-center gap-1.5 text-primary-500 font-normal italic lowercase tracking-normal">
@@ -2327,7 +2327,7 @@ defineExpose({
 
                     <div class="flex flex-col gap-1.5 min-h-[300px]">
                         <label for="pcgwEditDescription"
-                            class="text-[10px] font-bold text-surface-500 uppercase flex items-center gap-1.5 px-1">
+                            class="text-xs font-bold text-surface-500 uppercase flex items-center gap-1.5 px-1">
                             Description / Comment
                         </label>
                         <WysiwygEditor id="pcgwEditDescription" v-model="pcgwEditingImage.description"
@@ -2368,7 +2368,7 @@ defineExpose({
                 </div>
 
                 <div v-if="isCheckingExistingDelete"
-                    class="flex items-center justify-center py-2 gap-2 text-[10px] text-surface-500 italic">
+                    class="flex items-center justify-center py-2 gap-2 text-xs text-surface-500 italic">
                     <Loader2 class="w-3 h-3 animate-spin" />
                     Checking for existing requests...
                 </div>
@@ -2378,12 +2378,12 @@ defineExpose({
                     <div class="flex items-start gap-2 text-amber-700 dark:text-amber-400">
                         <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
                         <div class="flex flex-col gap-1">
-                            <span class="text-[10px] font-bold uppercase">Existing Request Found</span>
+                            <span class="text-xs font-bold uppercase">Existing Request Found</span>
                             <p class="text-[11px] leading-tight">This file already has a deletion tag. Sending this
                                 request will
                                 <strong>replace</strong> the previous one.
                             </p>
-                            <div class="mt-1 p-1.5 bg-amber-100/50 dark:bg-amber-900/40 rounded text-[10px] italic">
+                            <div class="mt-1 p-1.5 bg-amber-100/50 dark:bg-amber-900/40 rounded text-xs italic">
                                 Original reason: "{{ existingDeletionReason }}"
                             </div>
                         </div>
@@ -2392,7 +2392,7 @@ defineExpose({
 
                 <div v-if="pcgwDeletingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-surface-500 uppercase">Target Filename</label>
+                        <label class="text-xs font-bold text-surface-500 uppercase">Target Filename</label>
                         <div
                             class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-xs text-surface-600 truncate border border-surface-200 dark:border-surface-700">
                             {{ pcgwDeletingImage.name }}
@@ -2401,7 +2401,7 @@ defineExpose({
 
                     <div class="flex flex-col gap-1.5">
                         <label for="deletionReason"
-                            class="text-[10px] font-bold text-surface-500 uppercase flex items-center justify-between">
+                            class="text-xs font-bold text-surface-500 uppercase flex items-center justify-between">
                             <span>Reason (Optional)</span>
                             <span class="font-normal text-[9px] lowercase opacity-60">Shown in the template</span>
                         </label>
@@ -2441,7 +2441,7 @@ defineExpose({
 
                 <div v-if="renamingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-surface-500 uppercase">Current Filename</label>
+                        <label class="text-xs font-bold text-surface-500 uppercase">Current Filename</label>
                         <div
                             class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-xs text-surface-400 truncate border border-surface-200 dark:border-surface-700 italic">
                             {{ renamingImage.name }}
@@ -2449,7 +2449,7 @@ defineExpose({
                     </div>
 
                     <div class="flex flex-col gap-1.5">
-                        <label for="newRenameName" class="text-[10px] font-bold text-surface-500 uppercase">New
+                        <label for="newRenameName" class="text-xs font-bold text-surface-500 uppercase">New
                             Filename</label>
                         <InputText id="newRenameName" v-model="newRenameName" placeholder="New-filename.png"
                             class="w-full text-sm!" @keyup.enter="handleConfirmRename" />
@@ -2488,7 +2488,7 @@ defineExpose({
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-surface-500 uppercase">PCGW Filename</label>
                     <InputText v-model="editFilename" class="w-full" placeholder="Existing-filename.png" />
-                    <span class="text-[10px] text-surface-400 italic">This will be the final name on the wiki.</span>
+                    <span class="text-xs text-surface-400 italic">This will be the final name on the wiki.</span>
                 </div>
 
                 <div class="flex flex-col gap-2">
@@ -2500,7 +2500,7 @@ defineExpose({
                 <div v-if="isUploading" class="mt-2">
                     <ProgressBar :value="uploadProgress" class="h-1.5" />
                     <div
-                        class="text-[10px] text-center mt-1 text-primary-500 font-bold animate-pulse uppercase tracking-widest">
+                        class="text-xs text-center mt-1 text-primary-500 font-bold animate-pulse uppercase tracking-widest">
                         Uploading to PCGamingWiki...
                     </div>
                 </div>
@@ -2564,7 +2564,7 @@ defineExpose({
                     <span class="text-xs text-surface-600 dark:text-surface-300">
                         Resize to: <strong>{{ mpWarningData?.newWidth }}x{{ mpWarningData?.newHeight }} (~12.5 MP)</strong>
                     </span>
-                    <span class="text-[10px] text-surface-400 italic">Original aspect ratio will be preserved exactly.</span>
+                    <span class="text-xs text-surface-400 italic">Original aspect ratio will be preserved exactly.</span>
                 </div>
 
                 <div class="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-surface-100 dark:border-surface-700">
@@ -2650,7 +2650,7 @@ defineExpose({
                         </label>
                         <div class="flex items-center gap-4">
                             <div class="flex items-center gap-2">
-                                <label for="combineCropOnUpload" class="text-[10px] text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
+                                <label for="combineCropOnUpload" class="text-xs text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
                                 <ToggleSwitch v-model="cropOnUpload" inputId="combineCropOnUpload" class="scale-75 origin-right" />
                             </div>
                             <MultiSelect v-model="combineTempGallerySelection" :options="displayImages" optionLabel="name" 

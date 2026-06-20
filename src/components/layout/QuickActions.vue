@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
     <div
-        class="flex items-center gap-2 glass glass-border p-2 rounded-xl shadow-soft sticky top-0 z-20 animate-slide-in-down">
+        class="flex items-center gap-2 glass glass-border p-2 rounded-xl shadow-soft sticky top-0 z-20 animate-slide-in-down backdrop-blur-md border-b border-surface-200/70 dark:border-surface-700/60 shadow-md">
         <IconField iconPosition="left" class="flex-1">
             <InputIcon>
                 <Search class="w-4 h-4 text-surface-400" />

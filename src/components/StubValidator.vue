@@ -26,35 +26,53 @@ const props = defineProps<{
     // DynamicField passes it as `formModel`
 }>();
 
-const missingElements = computed(() => {
+interface ChecklistItem {
+    label: string;
+    sectionKey: string; // DOM anchor `sec-<key>`
+    complete: boolean;
+}
+
+const checklist = computed<ChecklistItem[]>(() => {
     const data = props.formModel;
-    const missing: string[] = [];
-    if (!data) return missing;
+    if (!data) return [];
 
-    // Check Cover
-    if (!data.infobox.cover || data.infobox.cover === 'GAME TITLE cover.jpg') {
-        missing.push('Cover Image');
-    }
-
-    // Check Screenshots (Galleries)
     const totalImages = Object.values(data.galleries || {}).reduce((acc, gallery) => acc + gallery.length, 0);
-    if (totalImages === 0) {
-        missing.push('Screenshots');
-    }
-
-    // Check Availability
     const hasAvailability = data.availability?.some(a => a.id || (a.distribution && a.distribution !== 'Steam' && a.distribution !== 'Other'));
-    if (!hasAvailability) {
-        missing.push('Availability info');
-    }
 
-    // Check Developers
-    if (data.infobox.developers?.length === 0) {
-        missing.push('Developers');
-    }
-
-    return missing;
+    return [
+        {
+            label: 'Cover Image',
+            sectionKey: 'infobox',
+            complete: !!data.infobox.cover && data.infobox.cover !== 'GAME TITLE cover.jpg',
+        },
+        {
+            label: 'Screenshots',
+            sectionKey: 'video',
+            complete: totalImages > 0,
+        },
+        {
+            label: 'Availability info',
+            sectionKey: 'availability',
+            complete: !!hasAvailability,
+        },
+        {
+            label: 'Developers',
+            sectionKey: 'infobox',
+            complete: (data.infobox.developers?.length ?? 0) > 0,
+        },
+    ];
 });
+
+const missingElements = computed(() => checklist.value.filter(i => !i.complete));
+const completedCount = computed(() => checklist.value.filter(i => i.complete).length);
+
+const scrollToSection = (key: string) => {
+    const el = document.getElementById(`sec-${key}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.add('stub-highlight');
+    window.setTimeout(() => el.classList.remove('stub-highlight'), 1600);
+};
 </script>
 
 <template>
@@ -62,8 +80,20 @@ const missingElements = computed(() => {
         <Message severity="warn" class="text-sm shadow-sm">
             <template #icon><TriangleAlert class="w-5 h-5 mr-2" /></template>
             <div class="flex flex-col gap-2">
-                <div v-if="missingElements.length > 0">
-                    <span class="font-bold">Detected Missing:</span> {{ missingElements.join(', ') }}
+                <div class="flex items-center gap-2">
+                    <span class="font-bold">Required elements</span>
+                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded bg-surface-200/70 dark:bg-surface-700/70 text-surface-600 dark:text-surface-200">
+                        {{ completedCount }}/{{ checklist.length }} complete
+                    </span>
+                </div>
+                <div v-if="missingElements.length > 0" class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span class="font-bold">Detected Missing:</span>
+                    <template v-for="(item, i) in missingElements" :key="item.label">
+                        <button type="button" @click="scrollToSection(item.sectionKey)"
+                            class="text-primary-600 dark:text-primary-400 underline underline-offset-2 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">
+                            {{ item.label }}
+                        </button><span v-if="i < missingElements.length - 1" class="text-surface-400">,</span>
+                    </template>
                 </div>
                 <div v-else class="text-green-600 dark:text-green-400 font-medium">
                     No obvious missing elements detected. Verify manual data.
@@ -74,3 +104,16 @@ const missingElements = computed(() => {
         </Message>
     </div>
 </template>
+
+<style>
+.stub-highlight {
+    animation: stub-highlight-pulse 1.6s ease-out;
+    border-radius: 0.5rem;
+}
+
+@keyframes stub-highlight-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(51, 122, 190, 0); }
+    20% { box-shadow: 0 0 0 4px rgba(51, 122, 190, 0.45); }
+    100% { box-shadow: 0 0 0 0 rgba(51, 122, 190, 0); }
+}
+</style>

@@ -190,13 +190,13 @@ const pcgwMenuItems = computed(() => {
                             <template #item="{ item, props }">
                                 <!-- Section Header -->
                                 <div v-if="item.type === 'section-header'"
-                                    class="px-3 py-2 text-[10px] font-bold tracking-wider text-surface-400 dark:text-surface-500 uppercase select-none pointer-events-none">
+                                    class="px-3 py-2 text-xs font-bold tracking-wider text-surface-400 dark:text-surface-500 uppercase select-none pointer-events-none">
                                     {{ item.label }}
                                 </div>
 
                                 <!-- Compact Revision Info -->
                                 <div v-else-if="item.type === 'info'" 
-                                    class="flex items-center px-3 py-1 text-[10px] text-surface-500 dark:text-surface-400 hover:text-primary-500 transition-colors cursor-pointer"
+                                    class="flex items-center px-3 py-1 text-xs text-surface-500 dark:text-surface-400 hover:text-primary-500 transition-colors cursor-pointer"
                                     @click="openUrl(item.url)">
                                     <component :is="item.icon" class="w-3 h-3 mr-1.5 shrink-0" />
                                     <span class="truncate font-mono">{{ item.label }}</span>
@@ -241,7 +241,7 @@ const pcgwMenuItems = computed(() => {
                 </div>
 
                 <Button text size="small" @click="emit('generateSummary')" severity="secondary"
-                    class="text-xs! px-2! py-1! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
+                    class="h-8! w-8! p-0! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
                     :disabled="isGeneratingSummary">
                     <template #icon>
                         <Loader2 v-if="isGeneratingSummary" class="w-4 h-4 animate-spin text-primary-500" />
