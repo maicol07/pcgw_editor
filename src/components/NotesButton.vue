@@ -32,7 +32,7 @@ const tooltipText = computed(() => {
     <Button :severity="hasContent ? 'primary' : 'secondary'" :variant="hasContent ? 'filled' : 'outlined'" rounded text
       size="small" class="w-full h-full !p-0 flex items-center justify-center" v-tooltip.top="tooltipText"
       @click="visible = true">
-      <component :is="icon" class="!w-[17px] !h-[17px]" />
+      <component :is="icon" class="!w-[17px] !h-[17px] !m-0" />
     </Button>
 
     <NotesEditorDialog v-model:visible="visible" :modelValue="modelValue"

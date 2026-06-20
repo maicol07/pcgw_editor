@@ -39,11 +39,11 @@ const updateNote = (note: string) => {
 
 <template>
     <div class="flex flex-col gap-2">
-        <div class="flex items-center w-full">
+        <div class="flex items-stretch w-full">
             <AutocompleteField :modelValue="arrayValue" @update:modelValue="updateArray"
                 :data-source="(dataSource as any)" :placeholder="placeholder" class="flex-1 min-w-0 taxonomy-input" />
             <NotesButton :modelValue="model?.note" @update:modelValue="updateNote" type="note"
-                class="border border-surface-300 dark:border-surface-600 rounded-r-md bg-surface-50 dark:bg-surface-800 flex items-center justify-center w-10 h-10 shrink-0 shadow-sm hover:border-surface-400 dark:hover:border-surface-500 transition-colors -ml-px z-0" />
+                class="border border-surface-300 dark:border-surface-600 rounded-r-md bg-surface-50 dark:bg-surface-800 flex items-center justify-center w-10 shrink-0 shadow-sm hover:border-surface-400 dark:hover:border-surface-500 transition-colors -ml-px z-0" />
         </div>
     </div>
 </template>
