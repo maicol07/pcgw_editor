@@ -30,7 +30,7 @@ import TaxonomyField from '../infobox/TaxonomyField.vue';
 import CompoundRatingField from './CompoundRatingField.vue';
 import Textarea from 'primevue/textarea';
 import { Info } from 'lucide-vue-next';
-import InputChips from 'primevue/inputchips';
+import AutoComplete from 'primevue/autocomplete';
 import StubValidator from '../StubValidator.vue';
 // (AvailabilityForm moved to async above)
 import VideoAnalysis from '../video/VideoAnalysis.vue';
@@ -57,7 +57,7 @@ const componentMap: Record<string, any> = {
     'Select': Select,
     'MultiSelect': MultiSelect,
     'Checkbox': Checkbox,
-    'InputChips': InputChips,
+    'InputChips': AutoComplete,
     'RatingRow': RatingRow,
     'InfoboxListEditor': GenericListForm,
     'CoverImageField': CoverImageField,
@@ -198,7 +198,7 @@ const boundProps = computed(() => {
         }
     }
 
-    if (props.field.component === 'InputText' || props.field.component === 'InputChips' || props.field.component === 'Textarea') {
+    if (props.field.component === 'InputText' || props.field.component === 'Textarea') {
         const extraProps: Record<string, any> = {};
         if (isIgdbDisabled.value) {
             extraProps.disabled = true;
@@ -208,6 +208,18 @@ const boundProps = computed(() => {
             class: 'w-full',
             ...defaultProps,
             ...extraProps
+        };
+    }
+
+    if (props.field.component === 'InputChips') {
+        // InputChips deprecated in PrimeVue v4 → AutoComplete in multiple + typeahead-off mode (same string[] v-model)
+        return {
+            multiple: true,
+            typeahead: false,
+            placeholder: props.field.label,
+            class: 'w-full',
+            ...(isIgdbDisabled.value ? { disabled: true } : {}),
+            ...defaultProps
         };
     }
 
