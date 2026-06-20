@@ -12,8 +12,9 @@ import { VueDraggable } from 'vue-draggable-plus';
 import {
     Check, Link, CircleHelp,
     CheckCircle, AlignLeft, X,
-    Globe, Keyboard, GripVertical, Plus
+    Globe, Keyboard, GripVertical, Plus, Copy
 } from 'lucide-vue-next';
+import { useToast } from 'primevue/usetoast';
 
 import { useReferences } from '../../composables/useReferences';
 import WysiwygEditor from './WysiwygEditor.vue';
@@ -33,6 +34,18 @@ const emit = defineEmits<{
 
 // Composables
 const { parseReferences, serializeReferences, cleanParams } = useReferences();
+const toast = useToast();
+
+// Copy a single serialized reference template to the clipboard so it can be pasted elsewhere.
+const copyReference = async (refItem: ReferenceItem) => {
+    const text = serializeReferences([{ ...refItem, params: cleanParams(refItem.params) }]);
+    try {
+        await navigator.clipboard.writeText(text);
+        toast.add({ severity: 'success', summary: 'Copied', detail: 'Citation copied to clipboard', life: 2000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Copy failed', detail: 'Could not access clipboard', life: 2500 });
+    }
+};
 
 // State
 const localValue = ref('');
@@ -70,7 +83,9 @@ const addReference = (type: 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wl
     // In 'ref' mode we add to the list. In 'note' mode we insert raw text.
     if (props.type === 'ref') {
         const today = new Date().toISOString().split('T')[0];
-        const params: Record<string, string> = { date: today };
+        const params: Record<string, string> = {};
+        // Auto-fill today's date (interaction time) for date-bearing citations; user can override.
+        if (['Refcheck', 'Refurl', 'cn'].includes(type)) params.date = today;
         if (type === 'Refcheck') params.user = 'User';
         if (type === 'Refurl') { params.url = ''; params.title = ''; }
 
@@ -157,7 +172,7 @@ const removeKey = (refItem: any, index: number) => {
 <template>
     <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)"
         :header="title || (type === 'ref' ? 'References' : 'Edit Notes')" modal :draggable="false"
-        :class="type === 'note' ? 'w-full max-w-6xl' : 'w-full max-w-2xl'">
+        :class="type === 'note' ? 'w-[min(100%-2rem,72rem)]' : 'w-[min(100%-2rem,42rem)]'">
         <div class="flex flex-col gap-4">
 
             <!-- Reference Mode UI -->
@@ -165,7 +180,7 @@ const removeKey = (refItem: any, index: number) => {
                 <div class="flex flex-col gap-3">
                     <!-- Citations Group -->
                     <div class="flex flex-col gap-1.5 p-2 border border-surface-200 dark:border-surface-700 rounded-lg">
-                        <span class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Citations</span>
+                        <span class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Citations</span>
                         <div class="flex flex-wrap gap-2">
                             <Button label="Refcheck" size="small" severity="secondary" variant="outlined"
                                 @click="addReference('Refcheck')">
@@ -190,7 +205,7 @@ const removeKey = (refItem: any, index: number) => {
 
                     <!-- Links & Formatting Group -->
                     <div class="flex flex-col gap-1.5 p-2 border border-surface-200 dark:border-surface-700 rounded-lg">
-                        <span class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Links & Formatting</span>
+                        <span class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider ml-1">Links & Formatting</span>
                         <div class="flex flex-wrap gap-2">
                             <Button label="Page Link" size="small" severity="secondary" variant="text"
                                 @click="addReference('ilink')">
@@ -236,11 +251,21 @@ const removeKey = (refItem: any, index: number) => {
                                     {{ ref.type }}
                                 </span>
                             </div>
-                            <Button text rounded severity="danger" size="small" @click="removeReference(index)">
-                                <template #icon>
-                                    <X class="w-4 h-4" />
-                                </template>
-                            </Button>
+                            <div class="flex items-center">
+                                <Button v-if="['Refcheck', 'Refurl', 'cn'].includes(ref.type)" text rounded
+                                    severity="secondary" size="small" aria-label="Copy citation"
+                                    v-tooltip.top="'Copy citation'" @click="copyReference(ref)">
+                                    <template #icon>
+                                        <Copy class="w-4 h-4" />
+                                    </template>
+                                </Button>
+                                <Button text rounded severity="danger" size="small" aria-label="Remove"
+                                    @click="removeReference(index)">
+                                    <template #icon>
+                                        <X class="w-4 h-4" />
+                                    </template>
+                                </Button>
+                            </div>
                         </div>
 
                         <!-- Wrap in <ref> toggle for Citations -->
@@ -250,7 +275,7 @@ const removeKey = (refItem: any, index: number) => {
                                 <Checkbox v-model="ref.wrapInRef" :binary="true" :inputId="'wrapRef' + index" />
                                 <label :for="'wrapRef' + index" class="text-xs font-bold cursor-pointer select-none">Wrap in &lt;ref&gt; tags</label>
                             </div>
-                            <p class="text-[10px] text-surface-500 pl-6 leading-none">Places citation in the <strong>References</strong> section at bottom of page.</p>
+                            <p class="text-xs text-surface-500 pl-6 leading-none">Places citation in the <strong>References</strong> section at bottom of page.</p>
                         </div>
 
                         <!-- Refcheck Fields -->
@@ -314,7 +339,7 @@ const removeKey = (refItem: any, index: number) => {
                             <!-- Selection List -->
                             <div class="flex flex-col gap-4 max-h-[250px] overflow-y-auto pr-2">
                                 <div v-for="group in KEYBOARD_GROUPS" :key="group.label" class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
+                                    <label class="text-xs font-bold uppercase text-surface-400 dark:text-surface-500 tracking-wider ml-1">{{ group.label }}</label>
                                     <div class="flex flex-wrap gap-1.5">
                                         <Button v-for="item in group.items" :key="item.value"
                                             :label="item.label" size="small" severity="secondary" variant="outlined"
