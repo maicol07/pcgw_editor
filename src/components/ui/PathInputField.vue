@@ -3,6 +3,9 @@ import { ref, watch, computed } from 'vue';
 import Chip from 'primevue/chip';
 import { getSpecialPathByValue, suggestTokenForRawEnvVar } from '../../utils/specialPaths';
 
+// Two root nodes (input container + suggestion) make a fragment; route inherited attrs (class) to the container.
+defineOptions({ inheritAttrs: false });
+
 const props = defineProps<{
     modelValue: string;
     id?: string;
@@ -194,9 +197,10 @@ const focusContainer = (e: MouseEvent) => {
 </script>
 
 <template>
-  <div 
+  <div
     ref="containerRef"
-    class="flex flex-nowrap items-center p-inputtext h-auto! w-full cursor-text px-2! py-0! transition-colors duration-200 overflow-x-auto no-scrollbar" 
+    v-bind="$attrs"
+    class="flex flex-nowrap items-center p-inputtext h-auto! w-full cursor-text px-2! py-0! transition-colors duration-200 overflow-x-auto no-scrollbar"
     :id="id"
     @click="focusContainer"
   >
