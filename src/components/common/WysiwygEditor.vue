@@ -26,9 +26,20 @@ import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
 import CodeEditor from '../CodeEditor.vue';
 import Quill from 'quill';
+import { renderInlineToken, renderMmList, splitArgs } from '../../utils/wikiRender';
 import { KEYBOARD_GROUPS } from '../../constants/keyboardKeys';
 
 const BlockEmbed = Quill.import('blots/block/embed') as any;
+const InlineEmbed = Quill.import('blots/embed') as any;
+
+// Extract the inner markup of the first wrapper <div class="cls" ...>…</div> from rendered HTML
+const innerOfWrapper = (html: string, cls: string): string => {
+    const m = html.match(new RegExp(`<div class="${cls}"[^>]*>([\\s\\S]*)</div>`, 'i'));
+    return m ? m[1] : html;
+};
+
+// All three embeds store their verbatim wikitext in data-wikitext and render their visual
+// from it, so they round-trip losslessly (see htmlToWikitext) and stay editable via dialog.
 
 class FixboxBlot extends BlockEmbed {
     static blotName = 'fixbox';
@@ -37,29 +48,67 @@ class FixboxBlot extends BlockEmbed {
 
     static create(value: any) {
         const node = super.create() as HTMLElement;
-        if (typeof value === 'string') {
-            node.innerHTML = value;
-        } else if (value && value.html) {
+        const wt = typeof value === 'string' ? value : (value?.wikitext ?? '');
+        if (wt) {
+            node.innerHTML = innerOfWrapper(wikitextToHtml(wt), 'fixbox-wrapper');
+            node.setAttribute('data-wikitext', encodeURIComponent(wt));
+        } else if (value?.html) {
+            // Back-compat with previously pre-rendered html payloads
             node.innerHTML = value.html;
+            const m = node.innerHTML.match(/data-wikitext="([^"]+)"/);
+            if (m) node.setAttribute('data-wikitext', m[1]);
         }
         node.setAttribute('contenteditable', 'false');
-
-        // Extract data-wikitext to preserve it in the node if passed
-        const match = node.innerHTML.match(/data-wikitext="([^"]+)"/);
-        if (match) {
-            node.setAttribute('data-wikitext', match[1]);
-        }
         return node;
     }
 
     static value(node: HTMLElement) {
-        return {
-            html: node.innerHTML
-        };
+        const dw = node.getAttribute('data-wikitext');
+        return dw ? { wikitext: decodeURIComponent(dw) } : { html: node.innerHTML };
+    }
+}
+
+class MmListBlot extends BlockEmbed {
+    static blotName = 'wikimm';
+    static tagName = 'div';
+    static className = 'wiki-mm';
+
+    static create(value: any) {
+        const node = super.create() as HTMLElement;
+        const wt = typeof value === 'string' ? value : (value?.wikitext ?? '');
+        node.innerHTML = `<dl>${renderMmList(wt)}</dl>`;
+        node.setAttribute('data-wikitext', encodeURIComponent(wt));
+        node.setAttribute('contenteditable', 'false');
+        return node;
+    }
+
+    static value(node: HTMLElement) {
+        return { wikitext: decodeURIComponent(node.getAttribute('data-wikitext') || '') };
+    }
+}
+
+class WikiTokenBlot extends InlineEmbed {
+    static blotName = 'wikitoken';
+    static tagName = 'span';
+    static className = 'wiki-token';
+
+    static create(value: any) {
+        const node = super.create() as HTMLElement;
+        const wt = typeof value === 'string' ? value : (value?.wikitext ?? '');
+        node.innerHTML = renderInlineToken(wt) ?? wt;
+        node.setAttribute('data-wikitext', encodeURIComponent(wt));
+        node.setAttribute('contenteditable', 'false');
+        return node;
+    }
+
+    static value(node: HTMLElement) {
+        return { wikitext: decodeURIComponent(node.getAttribute('data-wikitext') || '') };
     }
 }
 
 Quill.register(FixboxBlot, true);
+Quill.register(MmListBlot, true);
+Quill.register(WikiTokenBlot, true);
 
 const props = defineProps<{
     modelValue: string;
@@ -152,6 +201,65 @@ const oldFixboxParams = ref({
     fix: ''
 });
 const editingFixboxWikitext = ref<string | null>(null);
+// When set, the reference dialog is editing this existing inline-token embed in place.
+const editingTokenNode = ref<HTMLElement | null>(null);
+// When true, the reference dialog is editing a Fixbox's existing reference (not the editor).
+const editingExistingFixboxRef = ref(false);
+
+type RefFields = { type: ReferenceType; params?: Record<string, string>; keys?: string[]; wrap: boolean };
+
+// Parse a reference/link/token wikitext back into the matching dialog field values.
+const parseRefToFields = (wt: string): RefFields | null => {
+    let body = wt.trim();
+    let wrap = false;
+    const refM = body.match(/^<ref(?:\s+name="[^"]*")?>([\s\S]*?)<\/ref>$/i);
+    if (refM) { wrap = true; body = refM[1].trim(); }
+
+    let m = body.match(/^\[\[\s*w\s*\|\s*([^|\]]+?)\s*\]\]$/i);
+    if (m) return { type: 'wlink', params: { page: m[1].trim(), text: '' }, wrap: false };
+    m = body.match(/^\[\[\s*Wikipedia\s*:\s*([^|\]]+?)\s*(?:\|\s*([^\]]*?))?\s*\]\]$/i);
+    if (m) return { type: 'wlink', params: { page: m[1].trim(), text: (m[2] || '').trim() }, wrap: false };
+
+    const tplM = body.match(/^\{\{\s*([A-Za-z]+)\s*(?:\|([\s\S]*))?\}\}$/);
+    if (!tplM) return null;
+    const name = tplM[1].toLowerCase();
+    const params: Record<string, string> = {};
+    const positional: string[] = [];
+    for (const a of splitArgs(tplM[2] || '')) {
+        const eq = a.indexOf('=');
+        if (eq > -1 && !/[{[]/.test(a.slice(0, eq))) params[a.slice(0, eq).trim().toLowerCase()] = a.slice(eq + 1).trim();
+        else if (a.trim()) positional.push(a.trim());
+    }
+
+    if (name === 'key') return { type: 'key', keys: positional, wrap };
+    if (name === 'u') return { type: 'ulink', params: { user: positional[0] || '', id: positional[1] || '' }, wrap };
+    if (name === 't') return { type: 'tlink', params: { template: positional[0] || '' }, wrap };
+    if (name === 'refcheck') return { type: 'Refcheck', params: { user: params.user || '', date: params.date || '', comment: params.comment || '' }, wrap };
+    if (name === 'refurl') return { type: 'Refurl', params: { url: params.url || '', title: params.title || '', date: params.date || '', snippet: params.snippet || '' }, wrap };
+    if (name === 'cn') return { type: 'cn', params: { date: params.date || '', reason: params.reason || '' }, wrap };
+    return null;
+};
+
+const applyRefFields = (f: RefFields) => {
+    currentRefType.value = f.type;
+    wrapInRef.value = f.wrap;
+    if (f.type === 'key') selectedKeys.value = f.keys || [];
+    else tempRefParams.value = { ...(f.params || {}) };
+};
+
+// Parse a clicked inline-token's wikitext back into the matching dialog fields.
+const openTokenForEdit = (wt: string, node: HTMLElement) => {
+    const f = parseRefToFields(wt);
+    if (!f) return;
+    editingExistingFixboxRef.value = false;
+    editingTokenNode.value = node;
+    applyRefFields(f);
+    showRefParamDialog.value = true;
+};
+
+const refDialogHeader = computed(() =>
+    ((editingTokenNode.value || editingExistingFixboxRef.value) ? 'Edit ' : 'Insert ') + currentRefType.value);
+const fixboxDialogHeader = computed(() => editingFixboxWikitext.value ? 'Edit Fixbox' : 'Insert Fixbox');
 
 const openFixboxDialog = () => {
     tempFixboxParams.value = { description: '', ref: '', collapsed: false, fix: '' };
@@ -204,14 +312,7 @@ const insertFixbox = () => {
         const quill = editorRef.value?.quill;
         if (quill) {
             const range = quill.getSelection(true) || { index: quill.getLength() };
-            const renderedHtml = wikitextToHtml(template);
-
-            // To properly insert our custom block embed, extract its innerHTML minus the enclosing div
-            const divRegex = /<div class="fixbox-wrapper"[^>]*>([\s\S]*?)<\/div>/i;
-            const contentMatch = renderedHtml.match(divRegex);
-            const innerContent = contentMatch ? contentMatch[1] : renderedHtml;
-
-            quill.insertEmbed(range.index, 'fixbox', { html: innerContent }, 'user');
+            quill.insertEmbed(range.index, 'fixbox', { wikitext: template }, 'user');
             // Insert newline after to escape the block
             quill.insertText(range.index + 1, '\n', 'user');
             quill.setSelection(range.index + 2);
@@ -228,11 +329,25 @@ const insertFixbox = () => {
 const onEditorContentClick = (event: MouseEvent) => {
     if (showSource.value) return;
     const target = event.target as HTMLElement;
+
+    // Clicks on rendered embeds open their editor / are inert — never follow inner links
+    if (target.closest('.wiki-token, .wiki-mm, .fixbox-wrapper')) {
+        event.preventDefault();
+    }
+
+    const token = target.closest('.wiki-token') as HTMLElement;
+    if (token) {
+        const wt = decodeURIComponent(token.getAttribute('data-wikitext') || '');
+        if (wt) openTokenForEdit(wt, token);
+        return;
+    }
+
     const fixbox = target.closest('.fixbox-wrapper') as HTMLElement;
 
     if (fixbox) {
-        // Compute the wikitext corresponding to exactly this HTML node
-        const wikitext = htmlToWikitext(fixbox.outerHTML).trim();
+        // The wikitext is stored verbatim on the embed; fall back to re-parsing the table HTML
+        const dw = fixbox.getAttribute('data-wikitext');
+        const wikitext = (dw ? decodeURIComponent(dw) : htmlToWikitext(fixbox.outerHTML)).trim();
         if (!wikitext) return;
 
         editingFixboxWikitext.value = wikitext;
@@ -242,25 +357,19 @@ const onEditorContentClick = (event: MouseEvent) => {
         let fix = '';
         let collapsed = false;
 
-        const contentMatch = wikitext.match(/\{\{Fixbox\s*\|([\s\S]+)\}\}/i);
-        if (contentMatch) {
-            const parts = contentMatch[1].split(/\|(?=\w+=)/);
-            for (const part of parts) {
-                const eqIndex = part.indexOf('=');
-                if (eqIndex > -1) {
-                    const key = part.substring(0, eqIndex).trim();
-                    const val = part.substring(eqIndex + 1).trim();
-                    if (key === 'description') description = val;
-                    else if (key === 'ref') {
-                        // Extract inner text cleanly if it's wrapped in <ref>
-                        const innerRefMatch = val.match(/^<ref>([\s\S]*)<\/ref>$/i);
-                        refStr = innerRefMatch ? innerRefMatch[1] : val;
-                    }
-                    else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
-                    else if (key === 'fix') fix = val;
-                } else if (part.trim() && !description) {
-                    description = part.trim();
-                }
+        // Balanced split so a nested ref template ({{Refcheck|user=…|date=…}}) isn't torn apart
+        const inner = wikitext.replace(/^\{\{\s*Fixbox\s*\|/i, '').replace(/\}\}$/, '');
+        for (const part of splitArgs(inner)) {
+            const eq = part.indexOf('=');
+            if (eq > -1 && !/[{[]/.test(part.slice(0, eq))) {
+                const key = part.slice(0, eq).trim();
+                const val = part.slice(eq + 1).trim();
+                if (key === 'description') description = val;
+                else if (key === 'ref') refStr = val; // keep <ref> wrapper so type/wrap parse correctly
+                else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
+                else if (key === 'fix') fix = val;
+            } else if (part.trim() && !description) {
+                description = part.trim();
             }
         }
 
@@ -284,9 +393,11 @@ const searchUser = useDebounceFn(async (event: { query: string }) => {
 const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = 'editor') => {
     currentRefType.value = type;
     citationTarget.value = target;
+    editingTokenNode.value = null;
+    editingExistingFixboxRef.value = false;
     const today = new Date().toISOString().split('T')[0];
     const params: Record<string, string> = {};
-    
+
     // Default wrapInRef to true for citation types
     wrapInRef.value = ['Refcheck', 'Refurl', 'cn'].includes(type);
 
@@ -301,8 +412,18 @@ const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = '
     if (type === 'key') {
         selectedKeys.value = [];
     }
-    
+
     tempRefParams.value = params;
+
+    // Editing a Fixbox that already has a reference of this type: pre-fill from it
+    if (target === 'fixbox' && tempFixboxParams.value.ref) {
+        const f = parseRefToFields(tempFixboxParams.value.ref);
+        if (f && f.type === type) {
+            applyRefFields(f);
+            editingExistingFixboxRef.value = true;
+        }
+    }
+
     showRefParamDialog.value = true;
 };
 
@@ -348,22 +469,54 @@ const insertReference = () => {
         tempFixboxParams.value.ref = template;
         showRefParamDialog.value = false;
         citationTarget.value = 'editor';
+        editingExistingFixboxRef.value = false;
         return;
     }
 
-    if (!showSource.value) {
-        const quill = editorRef.value?.quill;
-        if (quill) {
-            const range = quill.getSelection(true);
-            quill.insertText(range.index, " " + template, 'user');
-            quill.setSelection(range.index + template.length + 1);
-        } else {
-            htmlValue.value += " " + template;
-            localWikitext.value = htmlToWikitext(htmlValue.value);
-        }
-    } else {
+    if (showSource.value) {
         localWikitext.value = localWikitext.value + (localWikitext.value ? ' ' : '') + template;
+        editingTokenNode.value = null;
+        showRefParamDialog.value = false;
+        return;
     }
+
+    const quill = editorRef.value?.quill;
+    if (!quill) {
+        htmlValue.value += " " + template;
+        localWikitext.value = htmlToWikitext(htmlValue.value);
+        editingTokenNode.value = null;
+        showRefParamDialog.value = false;
+        return;
+    }
+
+    // ilink stays a normal editable link; everything else is an atomic rendered chip
+    const insertAt = (index: number) => {
+        if (currentRefType.value === 'ilink') {
+            const text = params.text || params.page;
+            quill.insertText(index, text, { link: params.page }, 'user');
+            quill.setSelection(index + text.length, 0);
+        } else {
+            quill.insertEmbed(index, 'wikitoken', { wikitext: template }, 'user');
+            quill.setSelection(index + 1, 0);
+        }
+    };
+
+    // Editing an existing chip: replace it in place
+    const node = editingTokenNode.value;
+    editingTokenNode.value = null;
+    if (node) {
+        const blot = Quill.find(node);
+        if (blot) {
+            const index = quill.getIndex(blot as any);
+            quill.deleteText(index, 1, 'user');
+            insertAt(index);
+            showRefParamDialog.value = false;
+            return;
+        }
+    }
+
+    const range = quill.getSelection(true) || { index: quill.getLength() };
+    insertAt(range.index);
     showRefParamDialog.value = false;
 };
 
@@ -394,7 +547,7 @@ defineExpose({
                     :placeholder="placeholder" :readonly="readonly" @text-change="onTextChange" @load="onEditorLoad">
                     <template #toolbar>
                         <div
-                            class="flex flex-col sm:flex-row w-full justify-between gap-2 overflow-hidden items-start sm:items-center">
+                            class="flex flex-col sm:flex-row w-full justify-between gap-2 items-start sm:items-center">
                             <div class="flex flex-wrap items-center">
                                 <span class="ql-formats">
                                     <button class="ql-bold" v-tooltip.bottom="'Bold'"></button>
@@ -559,7 +712,7 @@ defineExpose({
     </div>
 
     <!-- Sub-dialog for Notes References insertion -->
-    <Dialog v-model:visible="showRefParamDialog" :header="'Insert ' + currentRefType" modal class="w-full max-w-md" :draggable="false">
+    <Dialog v-model:visible="showRefParamDialog" :header="refDialogHeader" modal class="w-full max-w-md" :draggable="false">
         <div class="flex flex-col gap-3">
             <!-- Wrap in <ref> Option for citations -->
             <div v-if="['Refcheck', 'Refurl', 'cn'].includes(currentRefType)" 
@@ -699,7 +852,7 @@ defineExpose({
     </Dialog>
 
     <!-- Sub-dialog for Fixbox insertion -->
-    <Dialog v-model:visible="showFixboxDialog" header="Insert Fixbox" modal class="w-full max-w-md" :draggable="false">
+    <Dialog v-model:visible="showFixboxDialog" :header="fixboxDialogHeader" modal class="w-full max-w-md" :draggable="false">
         <div class="flex flex-col gap-4">
             <InputGroup>
                 <InputGroupAddon>Name/Description</InputGroupAddon>
@@ -833,5 +986,56 @@ defineExpose({
 
 .ql-editor ol li[data-list='bullet']::before {
     content: '\2022';
+}
+
+/* Inline rendered wiki tokens (citations, keys, wiki links) inserted via the toolbar */
+.wiki-token {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 1px;
+}
+
+.wiki-token:hover {
+    background-color: var(--p-primary-50);
+    outline: 1px solid var(--p-primary-200);
+}
+
+.dark .wiki-token:hover {
+    background-color: color-mix(in srgb, var(--p-primary-500) 15%, transparent);
+    outline-color: var(--p-primary-800);
+}
+
+.wiki-token .keypress {
+    display: inline-block;
+    min-width: 1.2em;
+    padding: 0 5px;
+    border: 1px solid var(--p-surface-300);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--p-surface-100);
+    font-family: ui-monospace, monospace;
+    font-size: 0.85em;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.dark .wiki-token .keypress {
+    border-color: var(--p-surface-600);
+    background: var(--p-surface-800);
+}
+
+.wiki-token .reference-text {
+    font-size: 0.85em;
+    color: var(--p-surface-500);
+}
+
+/* {{mm}} "more info" definition list */
+.wiki-mm dl {
+    margin: 0;
+    padding: 0;
+}
+
+.wiki-mm dd {
+    margin: 0 0 2px 0;
 }
 </style>
