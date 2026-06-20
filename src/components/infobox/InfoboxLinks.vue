@@ -140,7 +140,7 @@ const highlightClass = (text: string) => isMatch(text) ? 'text-primary-600 dark:
                     <InputText v-model=\"model.wineHq\"
                         placeholder="e.g. half-life" class="w-full" />
                     <div class="flex flex-col gap-0.5 ml-1 border-l-2 border-surface-200 dark:border-surface-700 pl-2">
-                        <label class="text-[10px] font-bold text-surface-400 uppercase">Side Parameter</label>
+                        <label class="text-xs font-bold text-surface-400 uppercase">Side Parameter</label>
                         <InputText :modelValue="(modelValue.wineHqSide as string)"
                             @update:modelValue="v => updateLink('wineHqSide', v || '')" placeholder="e.g. Windows"
                             class="w-full h-7 text-sm" />

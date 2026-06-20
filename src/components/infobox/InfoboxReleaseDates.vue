@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useInfoboxDates, ReleaseDate } from '../../composables/useInfoboxDates';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -25,6 +25,21 @@ const { structuredDates, addReleaseDate, removeReleaseDate } = useInfoboxDates(m
 // Search highlight check
 const searchQuery = inject('searchQuery', ref(''));
 const isMatch = (text: string) => false;
+
+// Duplicate-platform detection: flag rows whose platform appears more than once.
+const duplicatePlatformIndexes = computed(() => {
+  const counts: Record<string, number> = {};
+  structuredDates.value.forEach((rd) => {
+    const p = (rd.platform || '').trim();
+    if (p) counts[p] = (counts[p] || 0) + 1;
+  });
+  const set = new Set<number>();
+  structuredDates.value.forEach((rd, i) => {
+    const p = (rd.platform || '').trim();
+    if (p && counts[p] > 1) set.add(i);
+  });
+  return set;
+});
 </script>
 
 <template>
@@ -32,9 +47,15 @@ const isMatch = (text: string) => false;
     <div
       class="flex flex-col gap-3 p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50">
       <div v-for="(rd, index) in structuredDates" :key="index"
-        class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3">
-          <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-32" size="small">
+        class="px-3 py-2 border rounded bg-surface-50/50 dark:bg-surface-800/50 flex flex-col gap-2"
+        :class="duplicatePlatformIndexes.has(index)
+          ? 'border-red-400 dark:border-red-500'
+          : 'border-surface-200 dark:border-surface-700'">
+        <p v-if="duplicatePlatformIndexes.has(index)" class="text-xs text-red-500 -mb-1">
+          Duplicate platform — only the last entry for a platform is used.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-[minmax(120px,0.6fr)_minmax(160px,1fr)_auto] gap-3 items-center">
+          <Select v-model="rd.platform" :options="platformOptions" placeholder="Platform" class="w-full" size="small">
             <template #value="slotProps">
               <div v-if="slotProps.value" class="flex items-center gap-2">
                 <img v-if="getIconSrc(slotProps.value, 'os')" :src="getIconSrc(slotProps.value, 'os')" :alt="slotProps.value" class="w-4 h-4 shrink-0" />
@@ -50,7 +71,7 @@ const isMatch = (text: string) => false;
             </template>
           </Select>
 
-          <div class="flex-1 relative">
+          <div class="w-full relative">
             <InputText v-model="rd.rawDate" placeholder="Select date or type custom (e.g. TBA)" class="w-full pr-10"
               size="small" @update:model-value="rd.date = null" />
             <div class="absolute right-1 top-1/2 -translate-y-1/2">
@@ -72,7 +93,7 @@ const isMatch = (text: string) => false;
         </div>
         <div class="flex flex-col gap-1.5 pt-1 border-t border-surface-100 dark:border-surface-700/50">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] uppercase font-bold text-surface-400 whitespace-nowrap">Special:</span>
+            <span class="text-xs uppercase font-bold text-surface-400 whitespace-nowrap">Special:</span>
             <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
               <Button v-for="s in ['TBA', 'EA', 'Unknown', 'LC', 'Cancelled']" :key="s" :label="s"
                 class="text-[9px] !px-2 !py-0.5" :variant="rd.rawDate === s ? 'filled' : 'outlined'"

@@ -24,7 +24,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
 </script>
 
 <template>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Developers -->
         <GenericListForm 
             :modelValue="developers" 
@@ -37,7 +37,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
             <!-- Custom Extra Fields for Developer (Porter) -->
             <template #extra="{ item, update, index }">
                  <div class="flex items-center gap-2 mt-1 px-1">
-                     <span class="text-[10px] uppercase font-bold text-surface-500">{{ item.type === 'porter' ? 'OS' : 'Subtitle' }}</span>
+                     <span class="text-xs uppercase font-bold text-surface-500">{{ item.type === 'porter' ? 'OS' : 'Subtitle' }}</span>
                      <InputText 
                         :modelValue="item.extra || ''" 
                         @update:modelValue="v => update(index, 'extra', v)" 
@@ -49,7 +49,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
              <template #actions="{ item, update, index }">
                  <div class="flex items-center gap-1 mx-1">
                      <div class="h-4 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                     <label class="text-[10px] uppercase font-bold text-surface-400 cursor-pointer select-none" :for="'porter-'+index">Porter</label>
+                     <label class="text-xs uppercase font-bold text-surface-400 cursor-pointer select-none" :for="'porter-'+index">Porter</label>
                      <Checkbox 
                         :inputId="'porter-'+index"
                         :modelValue="item.type === 'porter'" 
@@ -72,7 +72,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
         >
              <template #extra="{ item, update, index }">
                  <div class="flex items-center gap-2 mt-1 px-1">
-                     <span class="text-[10px] uppercase font-bold text-surface-500">Subtitle</span>
+                     <span class="text-xs uppercase font-bold text-surface-500">Subtitle</span>
                      <InputText 
                         :modelValue="item.extra || ''" 
                         @update:modelValue="v => update(index, 'extra', v)" 
@@ -84,7 +84,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
         </GenericListForm>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <!-- Engines -->
          <GenericListForm 
             :modelValue="engines" 
@@ -97,7 +97,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
              <template #extra="{ item, update, index }">
                  <div class="grid grid-cols-2 gap-2 mt-1">
                      <div class="flex flex-col gap-0.5">
-                        <span class="text-[10px] uppercase font-bold text-surface-500">Display Name</span>
+                        <span class="text-xs uppercase font-bold text-surface-500">Display Name</span>
                         <InputText 
                             :modelValue="item.displayName || ''" 
                             @update:modelValue="v => update(index, 'displayName', v)" 
@@ -106,7 +106,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
                         />
                      </div>
                      <div class="flex flex-col gap-0.5">
-                        <span class="text-[10px] uppercase font-bold text-surface-500">Build/Version</span>
+                        <span class="text-xs uppercase font-bold text-surface-500">Build/Version</span>
                          <InputText 
                             :modelValue="item.build || ''" 
                             @update:modelValue="v => update(index, 'build', v)" 
@@ -116,7 +116,7 @@ const isMatch = (text: string) => searchQuery.value && text.toLowerCase().includ
                      </div>
                  </div>
                  <div class="flex flex-col gap-0.5 mt-1">
-                     <span class="text-[10px] uppercase font-bold text-surface-500">Used For</span>
+                     <span class="text-xs uppercase font-bold text-surface-500">Used For</span>
                      <InputText 
                         :modelValue="item.extra || ''" 
                         @update:modelValue="v => update(index, 'extra', v)" 

@@ -57,7 +57,7 @@ const openUploadPage = () => {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- Cover Image Field -->
             <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-1">

@@ -472,7 +472,7 @@ const handleApply = () => {
                             </span>
                         </template>
                         <template v-else>
-                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-[10px] font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
+                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-xs font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
                         </template>
                     </div>
                 </div>
@@ -498,7 +498,7 @@ const handleApply = () => {
                             </span>
                         </template>
                         <template v-else>
-                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-[10px] font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
+                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-xs font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
                         </template>
                     </div>
                 </div>
@@ -547,7 +547,7 @@ const handleApply = () => {
                             </span>
                         </template>
                         <template v-else>
-                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-[10px] font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
+                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-xs font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
                         </template>
                     </div>
                 </div>
@@ -564,7 +564,7 @@ const handleApply = () => {
 
             <!-- Candidates Results List -->
             <div v-if="candidates.length > 0 && comparisonRows.length === 0" class="flex flex-col gap-2 max-h-68 overflow-y-auto custom-scrollbar border rounded-lg border-surface-200 dark:border-surface-800 bg-surface-50/20 dark:bg-surface-900/10">
-                <div class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase px-3 pt-2">Matches Found</div>
+                <div class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase px-3 pt-2">Matches Found</div>
                 
                 <div v-for="cand in candidates" :key="cand.id" 
                     @click="toggleCandidateSelection(cand)"
@@ -608,15 +608,24 @@ const handleApply = () => {
             </div>
 
             <!-- No Results Message -->
-            <div v-if="searchPerformed && candidates.length === 0 && !isSearching" 
-                class="flex items-center gap-2 p-3 bg-amber-500/5 text-amber-500 border border-amber-500/10 rounded-lg text-xs leading-normal">
-                <AlertCircle class="w-4 h-4 shrink-0" />
-                No matching games found. Check the title spelling, or enable services if configured.
+            <div v-if="searchPerformed && candidates.length === 0 && !isSearching"
+                class="flex items-start gap-2 p-3 bg-amber-500/5 text-amber-500 border border-amber-500/10 rounded-lg text-xs leading-normal">
+                <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
+                <div class="flex flex-col gap-1.5">
+                    <span class="font-semibold">No matching games found.</span>
+                    <ul class="list-disc pl-4 flex flex-col gap-0.5 text-amber-500/90">
+                        <li>Try a shorter title (e.g. just the main name).</li>
+                        <li>Remove articles like "The", "A", or "An".</li>
+                        <li>Check alternate or regional names.</li>
+                        <li>Enable more services in settings if available.</li>
+                        <li>Otherwise, enter the IDs manually.</li>
+                    </ul>
+                </div>
             </div>
 
             <!-- Comparison Table -->
             <div v-if="comparisonRows.length > 0 && !isFetchingDetails" class="flex flex-col gap-3">
-                <div class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">Review proposed changes</div>
+                <div class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">Review proposed changes</div>
 
                 <div class="border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden max-h-80 overflow-y-auto custom-scrollbar">
                     <table class="w-full text-left border-collapse text-xs">
@@ -632,7 +641,7 @@ const handleApply = () => {
                         <tbody>
                             <template v-for="group in groupedRows" :key="group.name">
                                 <!-- Group Header Row -->
-                                <tr class="bg-surface-100/50 dark:bg-surface-900/30 text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <tr class="bg-surface-100/50 dark:bg-surface-900/30 text-xs font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider">
                                     <td colspan="5" class="p-2.5 px-3 border-y border-surface-150 dark:border-surface-800/80">
                                         <div class="flex items-center gap-1.5">
                                             <span class="w-1.5 h-1.5 rounded-full"
@@ -660,7 +669,7 @@ const handleApply = () => {
                                     <td class="p-3 font-medium text-surface-900 dark:text-surface-100">{{ row.fieldName }}</td>
                                     <td class="p-3 text-surface-500 italic truncate max-w-[120px]">{{ row.currentVal || 'Empty' }}</td>
                                     <td class="p-3 truncate max-w-[180px]">
-                                        <span v-if="row.found" class="font-semibold text-green-600 dark:text-green-400" v-tooltip="row.proposedVal">
+                                        <span v-if="row.found" class="font-semibold text-green-600 dark:text-green-400" v-tooltip="row.proposedVal" :title="row.proposedVal">
                                             {{ row.proposedVal }}
                                         </span>
                                         <span v-else class="text-surface-400 dark:text-surface-600 italic">
@@ -668,7 +677,7 @@ const handleApply = () => {
                                         </span>
                                     </td>
                                     <td class="p-3 text-right">
-                                        <span v-if="row.found && row.source" class="text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded-sm"
+                                        <span v-if="row.found && row.source" class="text-xs font-bold uppercase tracking-tight px-2 py-0.5 rounded-sm"
                                             :class="{
                                                 'bg-purple-500/10 text-purple-500 border border-purple-500/20': row.source === 'IGDB',
                                                 'bg-rose-500/10 text-rose-500 border border-rose-500/20': row.source === 'RAWG',
@@ -688,7 +697,7 @@ const handleApply = () => {
                     </table>
                 </div>
 
-                <div class="text-[10px] text-surface-400 dark:text-surface-500 flex items-center gap-1 ml-1 bg-surface-50 dark:bg-surface-900/30 p-2 rounded border border-surface-100 dark:bg-surface-800">
+                <div class="text-xs text-surface-400 dark:text-surface-500 flex items-center gap-1 ml-1 bg-surface-50 dark:bg-surface-900/30 p-2 rounded border border-surface-100 dark:bg-surface-800">
                     <Info class="w-3.5 h-3.5 shrink-0" />
                     Checking fields will overwrite their current values with proposed ones. Uncheck fields to skip updates.
                 </div>

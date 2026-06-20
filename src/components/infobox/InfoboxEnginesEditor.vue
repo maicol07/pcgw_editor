@@ -3,8 +3,15 @@ import { InfoboxListItem } from '../../models/GameData';
 import AutocompleteField from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
 import InputText from 'primevue/inputtext';
+import Button from 'primevue/button';
+import { ArrowDownAZ } from 'lucide-vue-next';
 
 const model = defineModel<InfoboxListItem[]>({ default: () => [] });
+
+const sortAZ = () => {
+  model.value = [...model.value].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+};
 
 const updateList = (names: string[]) => {
   const existing = model.value;
@@ -26,6 +33,11 @@ const updateParam = (index: number, param: keyof InfoboxListItem, value: any) =>
   <div class="flex flex-col gap-2">
     <AutocompleteField :modelValue="model.map(e => e.name)" @update:modelValue="updateList" data-source="engines"
       placeholder="Search engines..." />
+    <div v-if="model.length > 1" class="flex justify-end">
+      <Button label="Sort A–Z" severity="secondary" text size="small" class="text-xs h-7" @click="sortAZ">
+        <template #icon><ArrowDownAZ class="w-3.5 h-3.5" /></template>
+      </Button>
+    </div>
     <div v-if="model.length > 0" class="flex flex-col gap-2 mt-2">
       <div v-for="(eng, index) in model" :key="eng.name"
         class="p-3 border border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-800/50 flex flex-col gap-3">
@@ -38,19 +50,19 @@ const updateParam = (index: number, param: keyof InfoboxListItem, value: any) =>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div class="flex flex-col gap-1">
-            <span class="text-[10px] uppercase font-bold text-surface-500">Display Name</span>
+            <span class="text-xs uppercase font-bold text-surface-500">Display Name</span>
             <InputText :modelValue="eng.displayName || ''"
               @update:modelValue="v => updateParam(index, 'displayName', v)" placeholder="e.g. Unity 2017"
               class="text-xs p-1" />
           </div>
           <div class="flex flex-col gap-1">
-            <span class="text-[10px] uppercase font-bold text-surface-500">Build/Version</span>
+            <span class="text-xs uppercase font-bold text-surface-500">Build/Version</span>
             <InputText :modelValue="eng.build || ''" @update:modelValue="v => updateParam(index, 'build', v)"
               placeholder="e.g. 2017.4.19f1" class="text-xs p-1" />
           </div>
         </div>
         <div class="flex flex-col gap-1">
-          <span class="text-[10px] uppercase font-bold text-surface-500">Used For</span>
+          <span class="text-xs uppercase font-bold text-surface-500">Used For</span>
           <InputText :modelValue="eng.extra || ''" @update:modelValue="v => updateParam(index, 'extra', v)"
             placeholder="e.g. Original release" class="text-xs p-1" />
         </div>
