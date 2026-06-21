@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { PreviewMode } from '../../composables/usePreview';
 import SelectButton from 'primevue/selectbutton';
-import { Monitor, AlertTriangle } from 'lucide-vue-next';
+import { Monitor, AlertTriangle, Globe } from 'lucide-vue-next';
 import PreviewLegend from './PreviewLegend.vue';
 
 // This component accepts the logic from usePreview as props or we can bind v-models?
@@ -18,7 +18,10 @@ const emit = defineEmits<{
     (e: 'update:previewMode', value: PreviewMode): void;
 }>();
 
-const previewOptions = ['Local', 'API'];
+const previewOptions = [
+    { label: 'Local', value: 'Local', icon: Monitor },
+    { label: 'API', value: 'API', icon: Globe },
+];
 
 // Legend Logic
 const scrollContainer = ref<HTMLElement | null>(null);
@@ -107,8 +110,14 @@ const scrollToHeading = (id: string) => {
             </div>
 
             <SelectButton :modelValue="previewMode" @update:modelValue="emit('update:previewMode', $event)"
-                :options="previewOptions" :allowEmpty="false" size="small"
-                class="scale-90 origin-right transition-fast" />
+                :options="previewOptions" optionLabel="label" optionValue="value" dataKey="value"
+                :allowEmpty="false" size="small" class="scale-90 origin-right transition-fast">
+                <template #option="{ option }">
+                    <span v-tooltip.bottom="option.label" class="flex items-center justify-center -m-2 p-2">
+                        <component :is="option.icon" class="w-4 h-4" />
+                    </span>
+                </template>
+            </SelectButton>
         </div>
 
         <!-- Content -->

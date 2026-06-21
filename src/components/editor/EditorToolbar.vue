@@ -5,7 +5,7 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, CloudSync } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, CloudSync, Eye, Code2 } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -34,7 +34,10 @@ import { useToast } from 'primevue/usetoast';
 const uiStore = useUiStore();
 const workspaceStore = useWorkspaceStore();
 const toast = useToast();
-const editorModeOptions = ['Visual', 'Code'];
+const editorModeOptions = [
+    { label: 'Visual', value: 'Visual', icon: Eye },
+    { label: 'Code', value: 'Code', icon: Code2 },
+];
 
 const pcgwMenu = ref<any>(null);
 const isCheckingUpdates = ref(false);
@@ -263,7 +266,14 @@ const pcgwMenuItems = computed(() => {
                 <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
 
                 <SelectButton :modelValue="editorMode" @update:modelValue="emit('update:editorMode', $event)"
-                    :options="editorModeOptions" :allowEmpty="false" size="small" class="transition-fast" />
+                    :options="editorModeOptions" optionLabel="label" optionValue="value" dataKey="value"
+                    :allowEmpty="false" size="small" class="transition-fast">
+                    <template #option="{ option }">
+                        <span v-tooltip.bottom="option.label" class="flex items-center justify-center -m-2 p-2">
+                            <component :is="option.icon" class="w-4 h-4" />
+                        </span>
+                    </template>
+                </SelectButton>
             </div>
         </template>
     </Toolbar>
