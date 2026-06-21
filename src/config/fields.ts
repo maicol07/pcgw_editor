@@ -214,20 +214,21 @@ export const fieldsConfig: SectionDefinition[] = [
             f('introduction.introduction', h.wysiwyg('Introduction', {
                 placeholder: "'''''Title''''' is a..."
             }, {
+                icon: AlignLeft,
                 description: "The first instance of the game title in introduction should be written as '''''Title'''''",
                 colSpan: 2
             })),
             f('introduction.generalInfo', h.wysiwyg('General information', {
                 placeholder: "Links and other general details."
             }, {
-                description: "General informational links like official forums, etc.",
-                colSpan: 2
+                icon: Info,
+                description: "General informational links like official forums, etc."
             })),
             f('introduction.releaseHistory', h.wysiwyg('Release History', {
                 placeholder: "'''Title''' was released on..."
             }, {
-                description: "Notes about the original release, re-releases, and ports.",
-                colSpan: 2
+                icon: Calendar,
+                description: "Notes about the original release, re-releases, and ports."
             }))
         ]
     },
@@ -304,7 +305,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-yellow-500',
         order: 7,
         fields: [
-            f('essentialImprovements', h.wysiwyg('Essential Improvements', { editorStyle: 'height: 250px' }, {
+            f('essentialImprovements', h.wysiwyg('Essential Improvements', { editorStyle: 'height: 320px' }, {
                 description: 'Patches, intro skip methods, major community mods, game-specific utilities.'
             }))
         ]

@@ -487,13 +487,23 @@ onMounted(() => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <DynamicSection
-                                        v-if="schemas.monetization.value"
-                                        :section="schemas.monetization.value" v-model="gameData" />
+                                    <div class="flex flex-col gap-4">
+                                        <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                            <DollarSign class="w-4 h-4 text-amber-500" /> Monetization
+                                        </h3>
+                                        <DynamicSection
+                                            v-if="schemas.monetization.value"
+                                            :section="schemas.monetization.value" v-model="gameData" />
+                                    </div>
                                     <div class="border-t border-surface-200 dark:border-surface-700"></div>
-                                    <DynamicSection
-                                        v-if="schemas.microtransactions.value"
-                                        :section="schemas.microtransactions.value" v-model="gameData" />
+                                    <div class="flex flex-col gap-4">
+                                        <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                            <ShoppingCart class="w-4 h-4 text-primary-500" /> Microtransactions
+                                        </h3>
+                                        <DynamicSection
+                                            v-if="schemas.microtransactions.value"
+                                            :section="schemas.microtransactions.value" v-model="gameData" />
+                                    </div>
                                 </div>
                             </ModernPanel>
 
@@ -516,9 +526,18 @@ onMounted(() => {
                                             class="font-semibold text-base tracking-tight">Essential Improvements</span>
                                     </div>
                                 </template>
-                                <DynamicSection
-                                    v-if="schemas.essentialImprovements.value"
-                                    :section="schemas.essentialImprovements.value" v-model="gameData" />
+                                <div class="flex flex-col gap-4">
+                                    <p
+                                        class="text-2xs text-surface-500 dark:text-surface-400 italic bg-surface-100 dark:bg-surface-800/50 p-2 rounded">
+                                        Document official patches, intro-skip methods, major community mods, and
+                                        game-specific utilities. Wrap downloads or fixes in a
+                                        <code class="text-primary-600 dark:text-primary-400">Fixbox</code> (source mode
+                                        <code class="text-primary-600 dark:text-primary-400">&lt;/&gt;</code>).
+                                    </p>
+                                    <DynamicSection
+                                        v-if="schemas.essentialImprovements.value"
+                                        :section="schemas.essentialImprovements.value" v-model="gameData" />
+                                </div>
                             </ModernPanel>
 
                             <ModernPanel id="sec-gameData"
