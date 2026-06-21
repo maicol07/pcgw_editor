@@ -8,7 +8,8 @@ import Popover from 'primevue/popover';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
-import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart } from 'lucide-vue-next';
+import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical } from 'lucide-vue-next';
+import { VueDraggable } from 'vue-draggable-plus';
 import { ref, computed } from 'vue';
 
 // Icons
@@ -60,6 +61,12 @@ const platformOptions = [
 const emit = defineEmits<{
   (e: 'update:rows', value: GameDataPathRow[]): void;
 }>();
+
+// Writable view for VueDraggable reordering (rows is a prop → emit on change).
+const localRows = computed<GameDataPathRow[]>({
+  get: () => props.rows,
+  set: (v) => emit('update:rows', v),
+});
 
 const addRow = () => {
   const newRows = [...props.rows, { platform: 'Windows', paths: [''] }];
@@ -179,12 +186,6 @@ const selectQuickPath = (value: string) => {
           <p v-if="description" class="text-xs text-surface-500 dark:text-surface-400">{{ description }}</p>
         </div>
       </div>
-      <Button label="Add Platform" size="small" text @click="addRow"
-        class="px-3! py-1.5! bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-700 dark:text-surface-200 text-xs! font-medium rounded-md transition-colors">
-        <template #icon>
-          <Plus class="w-3.5 h-3.5" />
-        </template>
-      </Button>
     </div>
 
     <!-- Empty state: quick-add common locations -->
@@ -200,45 +201,47 @@ const selectQuickPath = (value: string) => {
       </div>
     </div>
 
-    <div class="flex flex-col">
+    <VueDraggable v-model="localRows" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
       <div v-for="(row, rowIndex) in rows" :key="rowIndex"
-        class="group relative flex flex-col gap-4 py-6 first:pt-0 border-b border-surface-200 dark:border-surface-700 last:border-0">
+        class="@container rounded-lg border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-700 transition-colors bg-surface-0 dark:bg-surface-900/50 overflow-hidden flex flex-col group">
 
-        <!-- Row Header / Platform Selector -->
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1 max-w-md">
-            <label
-              class="block text-xs font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-1.5">Platform</label>
-            <Select v-model="row.platform" :options="platformOptions" optionLabel="label" optionValue="value"
-              class="w-full">
-              <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center gap-2">
-                  <img v-if="typeof getPlatformIcon(slotProps.value) === 'string'" :src="getPlatformIcon(slotProps.value) as string" :alt="slotProps.value" class="w-5 h-5 shrink-0 object-contain" />
-                  <component v-else :is="getPlatformIcon(slotProps.value)" class="w-4 h-4 text-surface-500" />
-                  <span class="truncate">{{ slotProps.value }}</span>
-                </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-              </template>
-              <template #option="slotProps">
-                <div class="flex items-center gap-2">
-                  <img v-if="typeof slotProps.option.icon === 'string'" :src="slotProps.option.icon" :alt="slotProps.option.label" class="w-5 h-5 shrink-0 object-contain" />
-                  <component v-else :is="slotProps.option.icon" class="w-4 h-4 text-surface-500" />
-                  <span>{{ slotProps.option.label }}</span>
-                </div>
-              </template>
-            </Select>
-          </div>
+        <!-- Header: drag · platform · delete -->
+        <div class="flex items-center gap-2 px-2.5 py-2 bg-surface-50 dark:bg-surface-800/60 border-b border-surface-200 dark:border-surface-700">
+          <button type="button"
+            class="drag-handle cursor-grab active:cursor-grabbing text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 shrink-0 p-1 -ml-1 rounded transition-colors"
+            aria-label="Drag to reorder">
+            <GripVertical class="w-4 h-4" />
+          </button>
 
-          <Button icon="pi" text rounded severity="danger" v-tooltip.left="'Remove Platform'"
-            class="mt-6 opacity-0 group-hover:opacity-100 transition-opacity" @click="removeRow(rowIndex)">
+          <Select v-model="row.platform" :options="platformOptions" optionLabel="label" optionValue="value"
+            aria-label="Platform" class="flex-1 min-w-0">
+            <template #value="slotProps">
+              <div v-if="slotProps.value" class="flex items-center gap-2">
+                <img v-if="typeof getPlatformIcon(slotProps.value) === 'string'" :src="getPlatformIcon(slotProps.value) as string" :alt="slotProps.value" class="w-5 h-5 shrink-0 object-contain" />
+                <component v-else :is="getPlatformIcon(slotProps.value)" class="w-4 h-4 text-surface-500" />
+                <span class="truncate font-medium">{{ slotProps.value }}</span>
+              </div>
+              <span v-else>{{ slotProps.placeholder }}</span>
+            </template>
+            <template #option="slotProps">
+              <div class="flex items-center gap-2">
+                <img v-if="typeof slotProps.option.icon === 'string'" :src="slotProps.option.icon" :alt="slotProps.option.label" class="w-5 h-5 shrink-0 object-contain" />
+                <component v-else :is="slotProps.option.icon" class="w-4 h-4 text-surface-500" />
+                <span>{{ slotProps.option.label }}</span>
+              </div>
+            </template>
+          </Select>
+
+          <Button text severity="danger" size="small" v-tooltip.top="'Remove Platform'" aria-label="Remove Platform"
+            class="shrink-0 !p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md" @click="removeRow(rowIndex)">
             <template #icon>
-              <Trash class="w-4 h-4" />
+              <Trash class="w-4 h-4 text-red-500" />
             </template>
           </Button>
         </div>
 
-        <!-- Paths -->
-        <div class="flex flex-col gap-3 pl-4 border-l-2 border-surface-100 dark:border-surface-800 ml-1">
+        <!-- Body: file paths -->
+        <div class="p-3 flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <label class="text-xs font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">File
               Paths</label>
@@ -250,12 +253,12 @@ const selectQuickPath = (value: string) => {
             </Button>
           </div>
 
-          <div class="grid grid-cols-1 gap-3">
+          <div class="grid grid-cols-1 gap-2">
             <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-center group/path">
               <div class="flex-1">
                 <InputGroup class="min-h-8">
-                  <PathInputField 
-                    :id="`path-input-${rowIndex}-${pathIndex}`" 
+                  <PathInputField
+                    :id="`path-input-${rowIndex}-${pathIndex}`"
                     :ref="(el) => setPathInputRef(el, rowIndex, pathIndex)"
                     v-model="row.paths[pathIndex]"
                     placeholder="e.g. {{p|appdata}}\GameName\" class="w-full border-r-0! rounded-r-none" />
@@ -281,7 +284,13 @@ const selectQuickPath = (value: string) => {
           </div>
         </div>
       </div>
-    </div>
+    </VueDraggable>
+
+    <Button label="Add Platform" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
+      <template #icon>
+        <Plus class="w-4 h-4" />
+      </template>
+    </Button>
 
     <Popover ref="op" @hide="searchQuery = ''">
       <div class="flex flex-col w-80">
