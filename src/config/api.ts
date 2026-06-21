@@ -16,15 +16,22 @@ const PCGW_API_URL = 'https://www.pcgamingwiki.com/w/api.php';
 // Set VITE_GOOGLE_CLIENT_ID at build time (or hardcode here). Empty = sync hidden.
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1034798646876-9pfp06so088l98gs477njt3fdgca97o9.apps.googleusercontent.com';
 
+// httpOnly-cookie auth (#6). Must match the worker's ALLOWED_ORIGINS being set: both flip together.
+// Default false keeps the legacy flow (session cookie in localStorage + sent in the request body).
+export const HTTPONLY_AUTH = import.meta.env.VITE_HTTPONLY_AUTH === 'true';
+
 export const API_CONFIG = {
     // New Worker-based login endpoint
     workerLoginUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/login',
-    
+
     // New Smart Proxy for authenticated requests
     workerProxyUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/proxy',
 
     // New Smart Proxy for images
     workerImageUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/image',
+
+    // Allowlisted external proxy for third-party metadata APIs (replaces public corsproxy.io)
+    workerExtUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/ext',
 
     // Used for the initial logintoken request which often fails CORS on localhost
     proxyUrl: (import.meta.env.DEV && !PROXY_PREFIX) ? '/pcgw-api' : (PROXY_PREFIX + PCGW_API_URL),
@@ -38,6 +45,7 @@ export const API_CONFIG = {
 export const getWorkerLoginUrl = () => API_CONFIG.workerLoginUrl;
 export const getWorkerProxyUrl = () => API_CONFIG.workerProxyUrl;
 export const getWorkerImageUrl = () => API_CONFIG.workerImageUrl;
+export const getExtProxyUrl = () => API_CONFIG.workerExtUrl;
 export const getProxyApiUrl = () => API_CONFIG.proxyUrl;
 export const getDirectApiUrl = () => API_CONFIG.directUrl;
 
@@ -154,6 +162,9 @@ const queue = new RequestQueue();
 
 // Global custom ofetch instance that respects the queue and handles 429 retries
 export const apiFetch = ofetch.create({
+    // In httpOnly mode the browser must attach the worker's httpOnly session cookie.
+    // 'same-origin' otherwise, so legacy CORS '*' responses aren't blocked as credentialed.
+    credentials: HTTPONLY_AUTH ? 'include' : 'same-origin',
     retry: 3,
     retryDelay: (ctx) => {
         let delay = 3000;

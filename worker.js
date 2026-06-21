@@ -12,11 +12,25 @@ export default {
      * @returns {Promise<Response>}
      */
     async fetch(request, env, ctx) {
-        const corsHeaders = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, api-user-agent, User-Agent, X-Requested-With',
-        };
+        // httpOnly-cookie mode (#6) is opt-in: set ALLOWED_ORIGINS (comma-separated) to the app's
+        // production origin(s). Credentialed CORS forbids '*', so we reflect a single allowlisted
+        // origin. When unset, the worker stays in legacy mode (session cookies travel in the body).
+        const allowedOrigins = (env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
+        const reqOrigin = request.headers.get('Origin') || '';
+        const credentialed = allowedOrigins.includes(reqOrigin);
+        const corsHeaders = credentialed
+            ? {
+                'Access-Control-Allow-Origin': reqOrigin,
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, api-user-agent, User-Agent, X-Requested-With, Authorization, Client-ID',
+                'Vary': 'Origin',
+            }
+            : {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, api-user-agent, User-Agent, X-Requested-With, Authorization, Client-ID',
+            };
 
         const clientUserAgent = request.headers.get('api-user-agent') || request.headers.get('user-agent') || 'PCGW-WorkerBridge/1.0';
 
@@ -26,6 +40,14 @@ export default {
 
         const url = new URL(request.url);
         const PCGW_API = 'https://www.pcgamingwiki.com/w/api.php';
+
+        // Reads the MediaWiki session cookies, preferring the httpOnly `mw` cookie (#6 mode) and
+        // falling back to the legacy body-supplied value.
+        const cookieFromHeader = () => {
+            const raw = request.headers.get('Cookie') || '';
+            const m = raw.match(/(?:^|;\s*)mw=([^;]+)/);
+            return m ? decodeURIComponent(m[1]) : '';
+        };
 
         // ==========================================
         // 1. LOGIN ENDPOINT (Unchanged and working)
@@ -63,7 +85,15 @@ export default {
                 const authCookies = loginResponse.headers.get('set-cookie') || initialCookies;
 
                 if (loginResult?.login?.result === 'Success') {
-                    return new Response(JSON.stringify({ success: true, username: loginResult.login.lgusername, sessionCookies: authCookies }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+                    const headers = { 'Content-Type': 'application/json', ...corsHeaders };
+                    const respBody = { success: true, username: loginResult.login.lgusername, httpOnly: credentialed };
+                    if (credentialed) {
+                        // #6: keep the MediaWiki session server-side in an httpOnly cookie the page JS can't read.
+                        headers['Set-Cookie'] = `mw=${encodeURIComponent(authCookies)}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=2592000`;
+                    } else {
+                        respBody.sessionCookies = authCookies; // legacy mode
+                    }
+                    return new Response(JSON.stringify(respBody), { headers });
                 } else {
                     return new Response(JSON.stringify({ success: false, data: loginResult }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
                 }
@@ -106,6 +136,8 @@ export default {
                     if (!params.format) params.format = 'json';
                 }
 
+                // #6: in httpOnly mode the client sends no body cookies — read them from the httpOnly cookie.
+                cookies = cookies || cookieFromHeader();
                 if (!cookies) return new Response(JSON.stringify({ error: 'No cookies provided' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
                 let mwResponse;
@@ -178,6 +210,49 @@ export default {
 
             } catch (error) {
                 return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            }
+        }
+
+        // ==========================================
+        // 2b. ENDPOINT: ALLOWLISTED EXTERNAL PROXY (replaces the public corsproxy.io)
+        // Adds CORS to third-party metadata APIs without leaking the caller's (user-supplied)
+        // Twitch/RAWG credentials to an anonymous proxy. Host allowlist prevents open-proxy abuse.
+        // ==========================================
+        if (url.pathname === '/api/ext') {
+            const targetStr = url.searchParams.get('url');
+            if (!targetStr) {
+                return new Response(JSON.stringify({ error: 'url parameter is required' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            }
+            let target;
+            try {
+                target = new URL(targetStr);
+            } catch {
+                return new Response(JSON.stringify({ error: 'Invalid url parameter' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            }
+
+            const allowedHosts = ['api.rawg.io', 'api.vndb.org', 'id.twitch.tv', 'api.igdb.com', 'store.steampowered.com'];
+            if (target.protocol !== 'https:' || !allowedHosts.includes(target.hostname)) {
+                return new Response(JSON.stringify({ error: 'Host not allowed' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            }
+
+            try {
+                // Forward only the headers these APIs need (e.g. IGDB's Client-ID / Authorization).
+                const fwdHeaders = { 'User-Agent': clientUserAgent };
+                for (const h of ['content-type', 'authorization', 'client-id']) {
+                    const v = request.headers.get(h);
+                    if (v) fwdHeaders[h] = v;
+                }
+
+                const upstream = await fetch(target.toString(), {
+                    method: request.method,
+                    headers: fwdHeaders,
+                    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text(),
+                });
+
+                const respHeaders = { 'Content-Type': upstream.headers.get('content-type') || 'application/json', ...corsHeaders };
+                return new Response(upstream.body, { status: upstream.status, headers: respHeaders });
+            } catch (error) {
+                return new Response(JSON.stringify({ error: error.message }), { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
             }
         }
 

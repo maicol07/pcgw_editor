@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { generateJSONWithSearch } from './ai/AIService';
+import { getExtProxyUrl } from '../config/api';
 
 // Zod schema mirroring ExtractedMetadata (all optional strings), for grounded search.
 const metadataSchema = z.object({
@@ -97,7 +98,7 @@ class MetadataFillerService {
     async searchRAWG(query: string, apiKey: string): Promise<IGDBGameCandidate[]> {
         if (!apiKey) return [];
         try {
-            const url = `https://corsproxy.io/?${encodeURIComponent(
+            const url = `${getExtProxyUrl()}?url=${encodeURIComponent(
                 `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(query)}&page_size=10`
             )}`;
             const response = await fetch(url);
@@ -128,7 +129,7 @@ class MetadataFillerService {
     async fetchRAWGGameDetails(gameId: number, apiKey: string): Promise<ExtractedMetadata | null> {
         if (!apiKey) return null;
         try {
-            const url = `https://corsproxy.io/?${encodeURIComponent(
+            const url = `${getExtProxyUrl()}?url=${encodeURIComponent(
                 `https://api.rawg.io/api/games/${gameId}?key=${apiKey}`
             )}`;
             const response = await fetch(url);
@@ -189,7 +190,7 @@ class MetadataFillerService {
      */
     async fetchVNDBMetadata(gameTitle: string): Promise<ExtractedMetadata | null> {
         try {
-            const url = `https://corsproxy.io/?${encodeURIComponent('https://api.vndb.org/kana/vn')}`;
+            const url = `${getExtProxyUrl()}?url=${encodeURIComponent('https://api.vndb.org/kana/vn')}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -239,7 +240,7 @@ class MetadataFillerService {
         try {
             // Twitch client-credentials POST via CORS proxy
             // We pass parameters in query string to be safe with corsproxy.io POST behavior
-            const tokenUrl = `https://corsproxy.io/?${encodeURIComponent(
+            const tokenUrl = `${getExtProxyUrl()}?url=${encodeURIComponent(
                 `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`
             )}`;
             
@@ -275,7 +276,7 @@ class MetadataFillerService {
         }
 
         try {
-            const searchUrl = `https://corsproxy.io/?${encodeURIComponent('https://api.igdb.com/v4/games')}`;
+            const searchUrl = `${getExtProxyUrl()}?url=${encodeURIComponent('https://api.igdb.com/v4/games')}`;
             const bodyQuery = `search "${query.replace(/"/g, '\\"')}"; fields name, slug, first_release_date, rating, cover.url; limit 10;`;
 
             const response = await fetch(searchUrl, {
@@ -324,7 +325,7 @@ class MetadataFillerService {
         if (!token) return null;
 
         try {
-            const detailsUrl = `https://corsproxy.io/?${encodeURIComponent('https://api.igdb.com/v4/games')}`;
+            const detailsUrl = `${getExtProxyUrl()}?url=${encodeURIComponent('https://api.igdb.com/v4/games')}`;
             const bodyQuery = `where id = ${gameId}; fields name, slug, aggregated_rating, rating, websites.url, websites.category, external_games.uid, external_games.url, external_games.external_game_source;`;
 
             const response = await fetch(detailsUrl, {
@@ -466,7 +467,7 @@ class MetadataFillerService {
     async searchGeneralStoreFallback(gameTitle: string): Promise<ExtractedMetadata | null> {
         try {
             // Search Steam store
-            const searchRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(
+            const searchRes = await fetch(`${getExtProxyUrl()}?url=${encodeURIComponent(
                 `https://store.steampowered.com/api/storesearch/?term=${gameTitle}&l=english&cc=US`
             )}`);
             if (!searchRes.ok) return null;
@@ -493,7 +494,7 @@ class MetadataFillerService {
      */
     async fetchSteamDetails(appId: string): Promise<Partial<ExtractedMetadata>> {
         try {
-            const detailsUrl = `https://corsproxy.io/?${encodeURIComponent(
+            const detailsUrl = `${getExtProxyUrl()}?url=${encodeURIComponent(
                 `https://store.steampowered.com/api/appdetails?appids=${appId}`
             )}`;
             
