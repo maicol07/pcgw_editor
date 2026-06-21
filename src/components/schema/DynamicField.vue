@@ -329,8 +329,27 @@ const isVisible = computed(() => {
 </script>
 
 <template>
-    <div class="dynamic-field flex w-full"
-        :class="field.component === 'Checkbox' ? 'flex-row items-center gap-3' : 'flex-col gap-1'" v-if="isVisible">
+    <div class="dynamic-field flex flex-col gap-1 w-full" v-if="isVisible">
+        <!-- Checkbox rendered as a self-contained toggle card (icon + label + description) -->
+        <label v-if="field.component === 'Checkbox'"
+            class="flex items-start gap-3 w-full h-full p-3 rounded-lg border cursor-pointer transition-colors select-none"
+            :class="computedModelValue
+                ? 'border-primary-300 bg-primary-50/60 dark:border-primary-500/40 dark:bg-primary-500/10'
+                : 'border-surface-200/70 dark:border-surface-700/55 hover:bg-surface-50 dark:hover:bg-surface-800/40'">
+            <Checkbox :inputId="fieldId" binary :modelValue="computedModelValue"
+                @update:modelValue="handleModelValueUpdate" class="mt-0.5 shrink-0" />
+            <span class="flex flex-col gap-0.5 min-w-0">
+                <span class="flex items-center gap-2 text-sm font-semibold text-surface-800 dark:text-surface-100">
+                    <component :is="field.icon" class="w-4 h-4 shrink-0" :class="field.iconClass || 'text-primary-500'"
+                        v-if="field.icon" />
+                    {{ field.label }}
+                </span>
+                <span v-if="field.description" class="text-xs text-surface-500 dark:text-surface-400 leading-snug">
+                    {{ field.description }}
+                </span>
+            </span>
+        </label>
+
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
             v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm'].includes(field.component)"
@@ -345,9 +364,9 @@ const isVisible = computed(() => {
             </span>
         </label>
 
-        <component :is="resolvedComponent" v-bind="boundProps" :inputId="fieldId" :id="fieldId" :modelValue="computedModelValue"
+        <component v-if="field.component !== 'Checkbox'" :is="resolvedComponent" v-bind="boundProps" :inputId="fieldId" :id="fieldId" :modelValue="computedModelValue"
             @update:modelValue="handleModelValueUpdate" @update:value="handleUpdateValue"
-            @update:notes="handleUpdateNotes" class="w-full" :class="{ '!w-auto': field.component === 'Checkbox' }">
+            @update:notes="handleUpdateNotes" class="w-full">
 
             <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
                 #value="slotProps">
@@ -386,17 +405,5 @@ const isVisible = computed(() => {
             This field is automatically compiled from the IGDB entry in the Reception section.
         </span>
 
-        <!-- Inline Label for Checkbox -->
-        <label v-if="field.component === 'Checkbox'"
-            class="text-sm font-medium text-surface-700 dark:text-surface-200 flex items-center gap-2 cursor-pointer"
-            @click="handleModelValueUpdate(!modelValue)">
-            <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
-                v-if="field.icon" />
-            {{ field.label }}
-            <span v-if="field.description" v-tooltip.top="field.description"
-                class="text-surface-400 hover:text-primary-500 cursor-help ml-1">
-                <Info class="w-4 h-4" />
-            </span>
-        </label>
     </div>
 </template>
