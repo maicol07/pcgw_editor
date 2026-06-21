@@ -1,6 +1,6 @@
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
-import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders, apiFetch } from '../config/api';
+import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders, apiFetch, HTTPONLY_AUTH } from '../config/api';
 
 const AUTH_STORAGE_KEY = 'pcgw_auth_data_v2';
 
@@ -9,7 +9,7 @@ export interface AuthData {
     isLoggedIn: boolean;
     csrfToken?: string;
     sessionCookies?: string;
-    password?: string;
+    password?: string; // legacy on-disk field; migrated to in-memory and stripped on init
 }
 
 class PCGWAuthService {
@@ -18,10 +18,18 @@ class PCGWAuthService {
         isLoggedIn: false
     });
 
+    // Password is kept in memory only (never written to disk). Survives session-cookie
+    // expiry within a tab session for auto-relogin, but a full reload requires logging in again.
+    private sessionPassword = ref<string | undefined>();
+
     private _isInitializing = ref(false);
 
     constructor() {
-        // No more timer-based logout
+        // Migrate away any password persisted by older versions: keep it for this session, wipe from storage.
+        if (this.authData.value.password) {
+            this.sessionPassword.value = this.authData.value.password;
+            delete this.authData.value.password;
+        }
     }
 
     get isLoggedIn() {
@@ -30,7 +38,7 @@ class PCGWAuthService {
 
     get isAuthReady() {
         const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
-        return this.authData.value.isLoggedIn || (autoReLogin && !!this.authData.value.username && !!this.authData.value.password);
+        return this.authData.value.isLoggedIn || (autoReLogin && !!this.authData.value.username && !!this.sessionPassword.value);
     }
 
     get username() {
@@ -42,15 +50,16 @@ class PCGWAuthService {
     }
 
     get password() {
-        return this.authData.value.password || '';
+        return this.sessionPassword.value || '';
     }
 
     async apiPost(params: Record<string, any> | FormData, method: 'GET' | 'POST' = 'POST', retry = true): Promise<any> {
-        if (!this.authData.value.sessionCookies) {
+        // In httpOnly mode the session lives in a cookie the worker reads itself; no body cookie to check.
+        if (!HTTPONLY_AUTH && !this.authData.value.sessionCookies) {
             const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
-            if (autoReLogin && this.authData.value.username && this.authData.value.password) {
+            if (autoReLogin && this.authData.value.username && this.sessionPassword.value) {
                 console.log('No session cookies, but autoReLogin is active. Attempting login...');
-                const success = await this.login(this.authData.value.username, this.authData.value.password);
+                const success = await this.login(this.authData.value.username, this.sessionPassword.value);
                 if (!success) {
                     throw new Error('No session cookies available and automatic re-login failed');
                 }
@@ -64,7 +73,8 @@ class PCGWAuthService {
             body = params;
             // Ensure cookies and assert are present in FormData
             // Always set/update cookies to ensure the latest cookies are sent
-            body.set('cookies', this.authData.value.sessionCookies);
+            // (httpOnly mode: worker reads the session from its own cookie, so send none)
+            if (!HTTPONLY_AUTH) body.set('cookies', this.authData.value.sessionCookies);
             if (!body.has('assert')) body.append('assert', 'user');
             if (!body.has('method')) body.append('method', method);
             
@@ -102,9 +112,9 @@ class PCGWAuthService {
         if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed' || res?.error?.code === 'badtoken') {
             if (retry) {
                 const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
-                if (autoReLogin && this.authData.value.username && this.authData.value.password) {
+                if (autoReLogin && this.authData.value.username && this.sessionPassword.value) {
                     console.log(`PCGW session expired for user ${this.authData.value.username}. Attempting automatic re-login...`);
-                    const success = await this.login(this.authData.value.username, this.authData.value.password);
+                    const success = await this.login(this.authData.value.username, this.sessionPassword.value);
                     if (success) {
                         console.log('Re-login successful, retrying original request...');
                         return this.apiPost(params, method, false);
@@ -126,7 +136,7 @@ class PCGWAuthService {
     async login(username: string, password: string): Promise<boolean> {
         this._isInitializing.value = true;
         try {
-            const loginRes = await apiFetch<{ success: boolean; username: string; sessionCookies?: string; data?: any }>(getWorkerLoginUrl(), {
+            const loginRes = await apiFetch<{ success: boolean; username: string; sessionCookies?: string; httpOnly?: boolean; data?: any }>(getWorkerLoginUrl(), {
                 method: 'POST',
                 body: {
                     username,
@@ -135,12 +145,13 @@ class PCGWAuthService {
                 headers: getApiHeaders()
             });
 
-            if (loginRes.success && loginRes.sessionCookies) {
+            // In httpOnly mode the session is in a cookie, so no sessionCookies in the body.
+            if (loginRes.success && (loginRes.sessionCookies || HTTPONLY_AUTH)) {
                 // IMPORTANT: Use the username provided (which contains @Bot suffix if applicable)
                 // mediawiki might return just the base username in loginRes.username
                 this.authData.value.username = username;
                 this.authData.value.sessionCookies = loginRes.sessionCookies;
-                this.authData.value.password = password;
+                this.sessionPassword.value = password;
                 this.authData.value.isLoggedIn = true;
                 
                 // Get CSRF token for future edits/uploads
@@ -187,13 +198,13 @@ class PCGWAuthService {
         
         const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
         const preservedUsername = autoReLogin ? this.authData.value.username : '';
-        const preservedPassword = autoReLogin ? this.authData.value.password : undefined;
+        const preservedPassword = autoReLogin ? this.sessionPassword.value : undefined;
 
         this.authData.value.username = preservedUsername;
         this.authData.value.isLoggedIn = false;
         this.authData.value.csrfToken = undefined;
         this.authData.value.sessionCookies = undefined;
-        this.authData.value.password = preservedPassword;
+        this.sessionPassword.value = preservedPassword;
     }
 
     async getCsrfToken(): Promise<string | null> {
