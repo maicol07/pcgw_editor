@@ -486,31 +486,34 @@ defineExpose({ openLinkDialog });
                 </div>
             </div>
 
-            <!-- Footer Links -->
-            <div class="mt-auto border-t pt-4 border-surface-200/70 dark:border-surface-800/70 flex flex-col gap-1">
-                <a href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
-                    class="flex items-center w-full px-3 py-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors whitespace-nowrap no-underline">
-                    <Github class="w-4 h-4 mr-3 shrink-0" />
-                    <span class="text-xs font-medium">GitHub Repository</span>
-                </a>
-                <a href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
-                    class="flex items-center w-full px-3 py-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors whitespace-nowrap no-underline">
-                    <AlertCircle class="w-4 h-4 mr-3 shrink-0" />
-                    <span class="text-xs font-medium">Report an Issue</span>
-                </a>
-            </div>
+            <!-- Footer -->
+            <div class="mt-auto border-t pt-3 border-surface-200/70 dark:border-surface-800/70 flex items-center justify-between gap-2 px-1">
+                <!-- Version Info -->
+                <div class="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-500 font-mono min-w-0">
+                    <button type="button" @click="ui.openReleaseNotes()" title="What's new"
+                        class="bg-transparent border-0 p-0 cursor-pointer font-mono text-xs text-surface-500 hover:text-primary-500 transition-colors">
+                        {{ appVersion === 'main' ? 'main' : (appVersion.startsWith('v') ? appVersion : `v${appVersion}`) }}
+                    </button>
+                    <span class="text-surface-300 dark:text-surface-700">·</span>
+                    <a :href="`https://github.com/maicol07/pcgw_editor/commit/${commitHash}`" target="_blank"
+                        rel="noopener noreferrer" class="hover:text-primary-500 transition-colors no-underline truncate">
+                        {{ commitHash }}
+                    </a>
+                </div>
 
-            <!-- Version Info -->
-            <div
-                class="flex items-center justify-between px-3 pb-2 text-xs text-surface-500 dark:text-surface-500 font-mono">
-                <button type="button" @click="ui.openReleaseNotes()" title="What's new"
-                    class="bg-transparent border-0 p-0 cursor-pointer font-mono text-xs text-surface-500 hover:text-primary-500 transition-colors">
-                    {{ appVersion === 'main' ? 'main' : (appVersion.startsWith('v') ? appVersion : `v${appVersion}`) }}
-                </button>
-                <a :href="`https://github.com/maicol07/pcgw_editor/commit/${commitHash}`" target="_blank"
-                    rel="noopener noreferrer" class="hover:text-primary-500 transition-colors no-underline">
-                    {{ commitHash }}
-                </a>
+                <!-- Links -->
+                <div class="flex items-center gap-1 shrink-0">
+                    <a href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
+                        v-tooltip.top="'GitHub Repository'"
+                        class="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors no-underline">
+                        <Github class="w-4 h-4" />
+                    </a>
+                    <a href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
+                        v-tooltip.top="'Report an Issue'"
+                        class="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors no-underline">
+                        <AlertCircle class="w-4 h-4" />
+                    </a>
+                </div>
             </div>
         </div>
     </Drawer>
