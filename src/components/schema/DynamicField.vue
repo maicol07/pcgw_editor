@@ -204,7 +204,8 @@ const boundProps = computed(() => {
             extraProps.disabled = true;
         }
         return {
-            placeholder: props.field.label,
+            // Empty inputs hint their purpose via the description; explicit componentProps.placeholder still wins.
+            placeholder: props.field.description || props.field.label,
             class: 'w-full',
             ...defaultProps,
             ...extraProps
@@ -235,6 +236,8 @@ const boundProps = computed(() => {
     if (props.field.component === 'WysiwygEditor') {
         return {
             label: props.field.label,
+            description: props.field.description,
+            icon: props.field.icon,
             placeholder: props.field.componentProps?.placeholder,
             editorStyle: props.field.componentProps?.editorStyle,
             readonly: props.field.componentProps?.readonly,
@@ -352,7 +355,7 @@ const isVisible = computed(() => {
 
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
-            v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm'].includes(field.component)"
+            v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm', 'WysiwygEditor'].includes(field.component)"
             :for="fieldId"
             class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"

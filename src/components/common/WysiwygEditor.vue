@@ -17,14 +17,15 @@ import { VueDraggable } from 'vue-draggable-plus';
 
 import {
     ListChecks, Link2, MessageSquareWarning,
-    Keyboard, FileText, Globe, Code, X, Wrench,
-    BookOpen, GripVertical, Plus
+    Code, X,
+    BookOpen, GripVertical, Plus, Info
 } from 'lucide-vue-next';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
 import { useReferences } from '../../composables/useReferences';
 import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
 import CodeEditor from '../CodeEditor.vue';
+import EditorSnippetTools, { type SnippetAction } from './EditorSnippetTools.vue';
 import Quill from 'quill';
 import { renderInlineToken, renderMmList, splitArgs } from '../../utils/wikiRender';
 import { KEYBOARD_GROUPS } from '../../constants/keyboardKeys';
@@ -115,6 +116,9 @@ const props = defineProps<{
     placeholder?: string;
     editorStyle?: string;
     readonly?: boolean;
+    label?: string;
+    description?: string;
+    icon?: any;
 }>();
 
 const emit = defineEmits<{
@@ -126,6 +130,15 @@ const previousWikitext = ref('');
 const editorRef = ref<any>(null);
 
 const showSource = ref(false);
+
+// Live word/char count from the active source (plain text in WYSIWYG, raw wikitext in Source).
+const stats = computed(() => {
+    const text = showSource.value
+        ? (props.modelValue || '')
+        : (htmlValue.value || '').replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ');
+    const words = (text.trim().match(/\S+/g) || []).length;
+    return { words, chars: text.trim().length };
+});
 
 const localWikitext = computed({
     get: () => props.modelValue || '',
@@ -427,6 +440,11 @@ const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = '
     showRefParamDialog.value = true;
 };
 
+const onSnippetAction = (p: SnippetAction) => {
+    if (p.kind === 'fixbox') openFixboxDialog();
+    else openRefParamDialog(p.type as ReferenceType);
+};
+
 const onEditorLoad = (e: any) => {
     // PrimeVue's Editor instance
     const quill = e.instance;
@@ -540,7 +558,25 @@ defineExpose({
 </script>
 
 <template>
-    <div class="wysiwyg-editor-container flex flex-col gap-2 relative" v-bind="$attrs">
+    <div class="wysiwyg-editor-container flex flex-col relative border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden bg-surface-0 dark:bg-surface-900" v-bind="$attrs">
+        <!-- Header: title · description · source toggle -->
+        <div class="wysiwyg-header sticky top-0 z-20 flex items-center justify-between gap-2 px-3 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50/90 dark:bg-surface-800/80 backdrop-blur">
+            <div class="flex items-center gap-2 min-w-0">
+                <component :is="icon" class="w-4 h-4 text-primary-500 shrink-0" v-if="icon" />
+                <span v-if="label" class="text-sm font-semibold text-surface-700 dark:text-surface-200 truncate">{{ label }}</span>
+                <span v-if="description" v-tooltip.top="description"
+                    class="text-surface-400 hover:text-primary-500 cursor-help shrink-0">
+                    <Info class="w-4 h-4" />
+                </span>
+            </div>
+            <button type="button" v-tooltip.top="showSource ? 'Exit source mode' : 'Source mode'"
+                class="custom-action-btn shrink-0"
+                :class="showSource ? 'text-primary-600! bg-primary-100! dark:bg-primary-900/30!' : 'text-primary-500! hover:bg-primary-50! dark:hover:bg-primary-900/20!'"
+                @click="showSource = !showSource">
+                <Code class="w-4 h-4" />
+            </button>
+        </div>
+
         <Transition name="fade" mode="out-in">
             <div v-if="!showSource" class="w-full">
                 <Editor ref="editorRef" v-model="htmlValue" :editorStyle="editorStyle || 'height: 250px'"
@@ -578,66 +614,10 @@ defineExpose({
                                 <!-- Snippet Tools -->
                                 <span
                                     class="ql-formats lg:ml-2 lg:pl-2 lg:border-l border-surface-200 dark:border-surface-700 mt-2 sm:mt-0">
-                                    <!-- Citations Group -->
-                                    <div class="flex items-center gap-0.5 px-0.5 mr-2">
-                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5 px-1 border-r border-surface-200 dark:border-surface-700">Citations</span>
-                                        <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
-                                            @click="openRefParamDialog('Refcheck')">
-                                            <ListChecks class="w-4 h-4" />
-                                        </button>
-                                        <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
-                                            @click="openRefParamDialog('Refurl')">
-                                            <Link2 class="w-4 h-4" />
-                                        </button>
-                                        <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
-                                            @click="openRefParamDialog('cn')">
-                                            <MessageSquareWarning class="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <!-- Links Group -->
-                                    <div class="flex items-center gap-0.5 px-1 mr-2 border-r border-surface-200 dark:border-surface-750">
-                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Links</span>
-                                        <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
-                                            @click="openRefParamDialog('ilink')">
-                                            <FileText class="w-4 h-4" />
-                                        </button>
-                                        <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
-                                            @click="openRefParamDialog('wlink')">
-                                            <Globe class="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <!-- Formatting/Other Group -->
-                                    <div class="flex items-center gap-0.5 px-1">
-                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Formatting</span>
-                                        <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
-                                            @click="openRefParamDialog('key')">
-                                            <Keyboard class="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
-                                    
-                                    <div class="flex items-center gap-1 pl-1">
-                                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none">Tools</span>
-                                        <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
-                                            @click="openFixboxDialog()">
-                                            <Wrench class="w-4 h-4 text-orange-500" />
-                                        </button>
-                                    </div>
+                                    <EditorSnippetTools @action="onSnippetAction" />
                                 </span>
                                 <!-- Custom extra toolbar items -->
                                 <slot name="custom-toolbar"></slot>
-                            </div>
-
-                            <div
-                                class="flex items-center lg:border-l border-surface-200 dark:border-surface-700 lg:pl-2 ml-auto">
-                                <button type="button" v-tooltip.top="'Source Mode'"
-                                    class="custom-action-btn text-primary-500! hover:bg-primary-50! dark:hover:bg-primary-900/20!"
-                                    @click="showSource = !showSource">
-                                    <Code class="w-4 h-4" />
-                                </button>
                             </div>
                         </div>
                     </template>
@@ -645,70 +625,22 @@ defineExpose({
             </div>
 
             <!-- Advanced Source Editor -->
-            <div v-else
-                class="flex flex-col border border-surface-200 dark:border-surface-700 rounded overflow-hidden w-full">
-                <div
-                    class="flex items-center justify-between bg-surface-50 dark:bg-surface-800 p-2 border-b border-surface-200 dark:border-surface-700">
-                    <span class="text-xs font-semibold text-surface-600 dark:text-surface-300 ml-2">Wikitext Source
-                        Editor</span>
-                    <button type="button" v-tooltip.left="'Exit Source Mode'" class="custom-action-btn ml-auto!"
-                        @click="showSource = false">
-                        <X class="w-4 h-4" />
-                    </button>
-                </div>
-
+            <div v-else class="flex flex-col w-full">
                 <!-- Keep snippet tools accessible in Source Mode too! -->
                 <div
                     class="flex flex-wrap items-center gap-1 bg-surface-50 dark:bg-surface-800 p-2 border-b border-surface-200 dark:border-surface-700">
-                    <!-- Same Grouping for Consistency -->
-                    <div class="flex items-center gap-0.5 px-0.5">
-                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5 px-1 border-r border-surface-200 dark:border-surface-600">Citations</span>
-                        <button type="button" v-tooltip.top="'Refcheck'" class="custom-action-btn"
-                            @click="openRefParamDialog('Refcheck')">
-                            <ListChecks class="w-4 h-4" />
-                        </button>
-                        <button type="button" v-tooltip.top="'Refurl'" class="custom-action-btn"
-                            @click="openRefParamDialog('Refurl')">
-                            <Link2 class="w-4 h-4" />
-                        </button>
-                        <button type="button" v-tooltip.top="'Citation'" class="custom-action-btn"
-                            @click="openRefParamDialog('cn')">
-                            <MessageSquareWarning class="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                    <div class="flex items-center gap-0.5 px-1">
-                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Links</span>
-                        <button type="button" v-tooltip.top="'Page Link'" class="custom-action-btn"
-                            @click="openRefParamDialog('ilink')">
-                            <FileText class="w-4 h-4" />
-                        </button>
-                        <button type="button" v-tooltip.top="'Wiki Link'" class="custom-action-btn"
-                            @click="openRefParamDialog('wlink')">
-                            <Globe class="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                    <div class="flex items-center gap-0.5 px-1">
-                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none mr-1.5">Formatting</span>
-                        <button type="button" v-tooltip.top="'Key'" class="custom-action-btn"
-                            @click="openRefParamDialog('key')">
-                            <Keyboard class="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div class="w-px h-4 bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                    <div class="flex items-center gap-1">
-                        <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 uppercase leading-none">Tools</span>
-                        <button type="button" v-tooltip.top="'Fixbox'" class="custom-action-btn"
-                            @click="openFixboxDialog()">
-                            <Wrench class="w-4 h-4 text-orange-500" />
-                        </button>
-                    </div>
+                    <EditorSnippetTools @action="onSnippetAction" />
                 </div>
                 <!-- The actual CodeMirror Editor -->
                 <CodeEditor v-model="localWikitext" :style="editorStyle || 'height: 250px'" />
             </div>
         </Transition>
+
+        <!-- Footer: live stats -->
+        <div class="wysiwyg-footer flex items-center justify-between gap-2 px-3 py-1.5 border-t border-surface-200 dark:border-surface-700 bg-surface-50/60 dark:bg-surface-800/40 text-2xs text-surface-500 dark:text-surface-400">
+            <span>{{ stats.words }} {{ stats.words === 1 ? 'word' : 'words' }} · {{ stats.chars }} chars</span>
+            <span v-if="showSource" class="font-semibold uppercase tracking-wide text-primary-500">Wikitext source</span>
+        </div>
     </div>
 
     <!-- Sub-dialog for Notes References insertion -->
@@ -921,6 +853,20 @@ defineExpose({
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+    border: none !important;
+    border-bottom: 1px solid var(--p-surface-200) !important;
+    border-radius: 0 !important;
+}
+
+.dark .wysiwyg-editor-container .p-editor-toolbar {
+    border-bottom-color: var(--p-surface-700) !important;
+}
+
+/* Card owns the frame — drop the editor's own borders/radius */
+.wysiwyg-editor-container .p-editor-container,
+.wysiwyg-editor-container .p-editor-content {
+    border: none !important;
+    border-radius: 0 !important;
 }
 
 /* Ensure ql-formats wrap correctly without awkward gaps */
