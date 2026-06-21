@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import { renderWikitextToHtml } from '../utils/renderer';
+import { sanitizeHtml } from '../utils/sanitize';
 import { getProxiedImageUrl } from '../config/api';
 
 const proxyHtmlImages = (html: string): string => {
@@ -145,7 +146,7 @@ export function usePreview(
             if (data.error) {
                 throw new Error(data.error.info || 'API Error');
             }
-            renderedHtml.value = proxyHtmlImages(data.parse.text['*']);
+            renderedHtml.value = sanitizeHtml(proxyHtmlImages(data.parse.text['*']));
         } catch (e: any) {
             if (e.name === 'AbortError') {
                 // Request cancelled intentionally

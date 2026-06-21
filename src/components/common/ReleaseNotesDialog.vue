@@ -5,6 +5,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { Sparkles, ExternalLink } from 'lucide-vue-next';
 import { useUiStore } from '../../stores/ui';
+import { sanitizeHtml } from '../../utils/sanitize';
 
 const REPO = 'maicol07/pcgw_editor';
 const ui = useUiStore();
@@ -38,10 +39,10 @@ async function load() {
             // ponytail: GitHub /markdown render avoids adding a markdown dep; content is our own repo, low XSS risk.
             // Add `marked` only if we ever render untrusted markdown.
             html.value = rel.body
-                ? await ofetch<string>('https://api.github.com/markdown', {
+                ? sanitizeHtml(await ofetch<string>('https://api.github.com/markdown', {
                     method: 'POST',
                     body: { text: rel.body, mode: 'gfm', context: REPO },
-                })
+                }))
                 : '<p>No release notes.</p>';
         } else {
             // ponytail: git-cliff can't run in the browser; commit subjects from the compare API are the lazy equivalent.

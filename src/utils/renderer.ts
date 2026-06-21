@@ -1,3 +1,4 @@
+import { sanitizeHtml } from './sanitize';
 import iconTcTrue from '../assets/icons/tc-true.svg';
 import iconTcFalse from '../assets/icons/tc-false.svg';
 import iconTcUnknown from '../assets/icons/tc-unknown.svg';
@@ -822,10 +823,10 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
         bodyText = bodyText.replace(/(?:<br\s*\/?>\s*)+(<h[1-6][^>]*>)/gi, '$1');
         bodyText = bodyText.replace(/(<\/h[1-6]>)\s*(?:<br\s*\/?>\s*)+/gi, '$1');
 
-        return `<div class="mw-parser-output">
+        return sanitizeHtml(`<div class="mw-parser-output">
         ${html}
         <div class="wiki-content">${bodyText}</div>
-    </div>`;
+    </div>`);
     } catch (e: any) {
         return `<div style="color: red; border: 2px solid red; padding: 10px;"><b>Render Error:</b><br><pre>${e.stack || e}</pre></div>`;
     }
