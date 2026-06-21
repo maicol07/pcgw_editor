@@ -1,3 +1,8 @@
+// Side-effect import: registers the global `wikiparse`/`Parser` used by the wikitext
+// editor and parser. Bundled by Vite (hashed, served from 'self' — CSP-clean), so no
+// external <script> tag / public/ copy is needed.
+import 'wikiparser-node/bundle/bundle-lsp.min.js';
+
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';

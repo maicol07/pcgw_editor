@@ -14,6 +14,31 @@ try {
 
 const commitHash = execSync('git rev-parse --short HEAD').toString().trim()
 
+// Production-only CSP. The key control is `script-src` without 'unsafe-inline'/'unsafe-eval':
+// it stops injected markup (e.g. from wiki content rendered via v-html) from executing.
+// Injected via <meta> because the app deploys as static files (no header control on the host).
+// Not applied in dev — Vite's HMR relies on inline/eval scripts. Verify the prod build after changes.
+const CSP = [
+    "default-src 'self'",
+    "script-src 'self' https://accounts.google.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https:",
+    "frame-src 'self' https://accounts.google.com",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+].join('; ')
+
+const cspPlugin = {
+    name: 'inject-csp',
+    apply: 'build' as const,
+    transformIndexHtml(html: string) {
+        return html.replace('</title>', `</title>\n  <meta http-equiv="Content-Security-Policy" content="${CSP}">`)
+    },
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
     define: {
@@ -21,6 +46,7 @@ export default defineConfig({
         __COMMIT_HASH__: JSON.stringify(commitHash),
     },
     plugins: [
+        cspPlugin,
         vue(),
         tailwindcss(),
         VitePWA({
