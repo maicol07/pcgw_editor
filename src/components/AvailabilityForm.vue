@@ -259,56 +259,48 @@ function getKeysArray(keysString: string): string[] {
 
 <template>
     <div class="flex flex-col gap-4">
-        <div class="flex justify-between items-center">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400">Availability
-                Table</h3>
-            <Button label="Add Store" size="small" @click="addRow" severity="primary" class="h-7 text-xs">
-                <template #icon>
-                    <Plus class="w-3.5 h-3.5" />
-                </template>
-            </Button>
+        <!-- Empty state -->
+        <div v-if="!dragList.length"
+            class="flex flex-col items-center gap-2 py-8 text-center border border-dashed border-surface-300 dark:border-surface-700 rounded-lg">
+            <ShoppingCart class="w-6 h-6 text-surface-300 dark:text-surface-600" />
+            <p class="text-sm text-surface-500 dark:text-surface-400">No storefronts added yet.</p>
         </div>
 
         <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-3">
             <div v-for="(row, index) in dragList" :key="getRowId(row)"
-                class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border flex flex-col gap-3 transition-all group relative mt-2 ml-1"
+                class="@container rounded-lg bg-surface-0 dark:bg-surface-900 border overflow-hidden flex flex-col transition-colors group"
                 :class="duplicateRowIds.has(getRowId(row))
                     ? 'border-red-400 dark:border-red-500'
-                    : 'border-surface-200 dark:border-surface-700'">
+                    : 'border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-700'">
 
-                <div class="absolute -left-3 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded
-                        aria-label="Drag" size="small">
-                        <template #icon>
-                            <GripVertical class="w-3 h-3 text-surface-500" />
-                        </template>
-                    </Button>
-                </div>
+                <!-- Header: drag · store · state · delete (single row) -->
+                <div class="flex items-center gap-2 px-2.5 py-2 bg-surface-50 dark:bg-surface-800/60 border-b border-surface-200 dark:border-surface-700">
+                    <button type="button"
+                        class="drag-handle cursor-grab active:cursor-grabbing text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 shrink-0 p-1 -ml-1 rounded transition-colors"
+                        aria-label="Drag to reorder">
+                        <GripVertical class="w-4 h-4" />
+                    </button>
 
-                <p v-if="duplicateRowIds.has(getRowId(row))" class="text-xs text-red-500 -mb-1">
-                    Duplicate store — this storefront is already listed.
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-[minmax(140px,11rem)_minmax(0,1fr)_auto] items-center gap-2">
                     <Select :modelValue="normalizeStoreOption(row.distribution)" @update:modelValue="v => handleStoreChange(index, v)"
                         :options="storefrontOptions" optionLabel="label" optionValue="value" placeholder="Select Store"
-                        aria-label="Store" class="w-full text-xs! h-9! flex! items-center!" size="small">
+                        aria-label="Store" class="flex-1 min-w-[96px] text-xs! h-9! flex! items-center!" size="small">
                         <template #value="slotProps">
                             <div v-if="slotProps.value" class="flex items-center gap-2">
-                                <img v-if="getIconSrc(slotProps.value, ['store', 'drm'])" 
-                                     :src="getIconSrc(slotProps.value, ['store', 'drm'])" 
+                                <img v-if="getIconSrc(slotProps.value, ['store', 'drm'])"
+                                     :src="getIconSrc(slotProps.value, ['store', 'drm'])"
                                      :alt="slotProps.value" class="w-4 h-4 shrink-0 object-contain" />
                                 <component v-else :is="storefrontOptions.find(o => o.value === slotProps.value)?.icon || Box"
                                     class="w-3.5 h-3.5"
                                     :class="{ 'text-surface-400': !storefrontOptions.find(o => o.value === slotProps.value) }" />
-                                <span class="text-xs truncate">{{storefrontOptions.find(o => o.value ===
+                                <span class="text-xs truncate font-medium">{{storefrontOptions.find(o => o.value ===
                                     slotProps.value)?.label || slotProps.value}}</span>
                             </div>
                             <span v-else class="text-xs">Select Store</span>
                         </template>
                         <template #option="slotProps">
                             <div class="flex items-center gap-2">
-                                <img v-if="getIconSrc(slotProps.option.value, ['store', 'drm'])" 
-                                     :src="getIconSrc(slotProps.option.value, ['store', 'drm'])" 
+                                <img v-if="getIconSrc(slotProps.option.value, ['store', 'drm'])"
+                                     :src="getIconSrc(slotProps.option.value, ['store', 'drm'])"
                                      :alt="slotProps.option.label" class="w-4 h-4 shrink-0 object-contain" />
                                 <component v-else :is="slotProps.option.icon || Box" class="w-3.5 h-3.5 text-surface-400" />
                                 <span class="text-xs">{{ slotProps.option.label }}</span>
@@ -319,21 +311,27 @@ function getKeysArray(keysString: string): string[] {
                     <SelectButton :modelValue="row.state || 'normal'"
                         @update:modelValue="v => updateRow(index, 'state', v || 'normal')" :options="stateOptions"
                         optionLabel="label" optionValue="value" size="small" aria-label="Availability state"
-                        class="w-full min-w-min whitespace-nowrap compact-select-button" :pt="{
+                        class="shrink-0 whitespace-nowrap compact-select-button" :pt="{
                             root: { class: 'flex' },
-                            button: { class: '!px-2 !py-0.5 !text-xs flex-1' },
+                            button: { class: '!py-1' },
                             label: { class: '!font-semibold' }
                         }" />
 
-                    <Button text severity="danger" size="small" @click="removeRow(index)"
-                        class="ml-auto !p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md">
+                    <Button text severity="danger" size="small" @click="removeRow(index)" aria-label="Remove store"
+                        class="shrink-0 !p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md">
                         <template #icon>
                             <Trash2 class="w-4 h-4 text-red-500" />
                         </template>
                     </Button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <p v-if="duplicateRowIds.has(getRowId(row))" class="text-xs text-red-500 px-3 pt-2">
+                    Duplicate store — this storefront is already listed.
+                </p>
+
+                <!-- Body: detail fields -->
+                <div class="p-3 flex flex-col gap-3">
+                <div class="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-3">
                     <div class="flex flex-col gap-1">
                         <label :for="`avail-id-${index}`" class="text-xs font-bold uppercase text-surface-400">Product ID</label>
                         <InputText :id="`avail-id-${index}`" :value="row.id"
@@ -396,7 +394,7 @@ function getKeysArray(keysString: string): string[] {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
                     <div class="flex flex-col gap-1">
                         <label :for="`avail-keys-${index}`" class="text-xs font-bold uppercase text-surface-400">Extra Keys</label>
                         <MultiSelect :inputId="`avail-keys-${index}`" :modelValue="getKeysArray(row.keys)" @update:modelValue="(val) => handleKeysChange(index, val)"
@@ -429,7 +427,28 @@ function getKeysArray(keysString: string): string[] {
                             placeholder="e.g. Includes all DLC" class="w-full !text-xs !p-2" />
                     </div>
                 </div>
+                </div>
             </div>
         </VueDraggable>
+
+        <Button label="Add Store" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
+            <template #icon>
+                <Plus class="w-4 h-4" />
+            </template>
+        </Button>
     </div>
 </template>
+
+<style scoped>
+/* Compact the state segmented control so store + state fit on one header row */
+.compact-select-button :deep(.p-togglebutton) {
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+}
+
+.compact-select-button :deep(.p-togglebutton-content),
+.compact-select-button :deep(.p-togglebutton-label) {
+    font-size: 0.6875rem;
+    line-height: 1.15;
+}
+</style>
