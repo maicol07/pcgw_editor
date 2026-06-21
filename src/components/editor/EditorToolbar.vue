@@ -5,7 +5,7 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, CloudSync, Eye, Code2 } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2 } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -92,29 +92,13 @@ const pcgwMenuItems = computed(() => {
 
         items.push({ separator: true });
 
-        // 2. Sync Section
+        // 2. Sync status: revision tracking + check button on the header
         items.push({
-            label: 'PCGW Sync',
             type: 'section-header',
-            disabled: true
-        });
-
-        // Combined Row for Update and Check
-        items.push({
-            type: 'actions-row',
-            hasUpdate: !!(page.onlineRevisionId && (!page.localRevisionId || page.onlineRevisionId > page.localRevisionId)),
+            label: 'Sync Status',
             isChecking: isCheckingUpdates.value
         });
 
-        // 3. Publish Action
-        items.push({
-            label: 'Publish to PCGW',
-            icon: UploadCloud,
-            command: () => emit('publishPcgw'),
-            class: 'text-primary-600 font-bold'
-        });
-
-        // Revision Tracking (Compact)
         items.push({
             type: 'info',
             label: `Local: ${page.localRevisionId || '---'}`,
@@ -129,9 +113,15 @@ const pcgwMenuItems = computed(() => {
             url: page.onlineRevisionId ? `https://www.pcgamingwiki.com/w/index.php?oldid=${page.onlineRevisionId}` : null
         });
 
+        // 3. The two verbs: pull (Update) and push (Publish), side by side
+        items.push({
+            type: 'sync-actions',
+            hasUpdate: !!(page.onlineRevisionId && (!page.localRevisionId || page.onlineRevisionId > page.localRevisionId))
+        });
+
         items.push({ separator: true });
 
-        // 3. Management
+        // 4. Management
         items.push({
             label: 'Unlink PCGW Page',
             icon: Unlink,
@@ -191,10 +181,18 @@ const pcgwMenuItems = computed(() => {
                         </div>
                         <Menu ref="pcgwMenu" :model="pcgwMenuItems" :popup="true" class="text-sm! min-w-48">
                             <template #item="{ item, props }">
-                                <!-- Section Header -->
+                                <!-- Section Header (with inline check-for-updates) -->
                                 <div v-if="item.type === 'section-header'"
-                                    class="px-3 py-2 text-xs font-bold tracking-wider text-surface-400 dark:text-surface-500 uppercase select-none pointer-events-none">
-                                    {{ item.label }}
+                                    class="flex items-center justify-between px-3 pt-2 pb-1 select-none">
+                                    <span class="text-xs font-bold tracking-wider text-surface-400 dark:text-surface-500 uppercase">{{ item.label }}</span>
+                                    <Button text rounded size="small" severity="secondary" class="h-6! w-6! p-0!"
+                                        :disabled="item.isChecking" @click="handleCheckUpdates"
+                                        v-tooltip.bottom="'Check for newer versions'">
+                                        <template #icon>
+                                            <Loader2 v-if="item.isChecking" class="w-3.5 h-3.5 animate-spin" />
+                                            <RefreshCw v-else class="w-3.5 h-3.5" />
+                                        </template>
+                                    </Button>
                                 </div>
 
                                 <!-- Compact Revision Info -->
@@ -205,9 +203,9 @@ const pcgwMenuItems = computed(() => {
                                     <span class="truncate font-mono">{{ item.label }}</span>
                                 </div>
 
-                                <!-- Combined Update & Check Actions -->
-                                <div v-else-if="item.type === 'actions-row'" class="flex gap-1 px-2 py-1">
-                                    <Button size="small" severity="primary" class="flex-1 py-1! text-xs!"
+                                <!-- The two verbs: pull (Update) and push (Publish) -->
+                                <div v-else-if="item.type === 'sync-actions'" class="flex gap-1.5 px-2 pt-1.5 pb-1">
+                                    <Button size="small" severity="secondary" variant="outlined" class="flex-1 py-1.5! text-xs!"
                                         :disabled="!item.hasUpdate" @click="emit('updatePcgw')"
                                         v-tooltip.bottom="'Merge newer version from PCGW'">
                                         <template #icon>
@@ -215,19 +213,12 @@ const pcgwMenuItems = computed(() => {
                                         </template>
                                         Update
                                     </Button>
-                                    <Button size="small" severity="secondary" variant="outlined" class="py-1! px-2! text-xs!"
-                                        @click="emit('updatePcgw')" v-tooltip.bottom="'Force re-sync with latest online revision'">
+                                    <Button size="small" severity="primary" class="flex-1 py-1.5! text-xs!"
+                                        @click="emit('publishPcgw')" v-tooltip.bottom="'Publish your changes to PCGW'">
                                         <template #icon>
-                                            <CloudSync class="w-3.5 h-3.5" />
+                                            <UploadCloud class="w-3.5 h-3.5 mr-1.5" />
                                         </template>
-                                    </Button>
-                                    <Button size="small" severity="secondary" variant="text" class="py-1! px-2! text-xs!"
-                                        :disabled="item.isChecking" @click="handleCheckUpdates"
-                                        v-tooltip.bottom="'Check for newer versions'">
-                                        <template #icon>
-                                            <Loader2 v-if="item.isChecking" class="w-3.5 h-3.5 animate-spin" />
-                                            <RefreshCw v-else class="w-3.5 h-3.5" />
-                                        </template>
+                                        Publish
                                     </Button>
                                 </div>
 
