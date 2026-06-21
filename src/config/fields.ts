@@ -107,7 +107,7 @@ export const fieldsConfig: SectionDefinition[] = [
             },
             {
                 title: 'Taxonomy',
-                gridCols: 'repeat(auto-fill, minmax(350px, 1fr))',
+                gridCols: 'repeat(auto-fill, minmax(220px, 1fr))',
                 fields: [
                     f('taxonomy.monetization', h.taxonomy('Monetization', { dataSource: 'monetization', placeholder: 'Select...' }, { description: 'Primary business model(s)' })),
                     f('taxonomy.microtransactions', h.taxonomy('Microtransactions', { dataSource: 'microtransactions', placeholder: 'Select...' }, { description: 'Type of in-game purchases' })),
@@ -128,19 +128,19 @@ export const fieldsConfig: SectionDefinition[] = [
                 gridCols: 3,
                 fields: [
                     f('links.steamAppId', h.text('Steam App ID', { placeholder: 'e.g. 220' }, { icon: ShoppingCart, iconClass: 'text-blue-500', description: 'Numeric ID from URL' })),
-                    f('links.steamAppIdSide', h.text('Steam Side Param', { placeholder: 'e.g. sub/123' }, { description: 'Optional side parameter' })),
+                    f('links.steamAppIdSide', h.text('Steam Side Param', { placeholder: 'e.g. sub/123' }, { icon: Settings, iconClass: 'text-surface-400', description: 'Optional side parameter' })),
                     f('links.officialSite', h.text('Official Site', { placeholder: 'https://...' }, { icon: Globe, iconClass: 'text-green-500', description: 'URL to official website' })),
 
                     f('links.gogComId', h.text('GOG.com ID', { placeholder: 'e.g. game_title' }, { icon: ShoppingBag, iconClass: 'text-primary-500', description: 'Slug from URL' })),
-                    f('links.gogComIdSide', h.text('GOG Side Param', { placeholder: '' }, { description: 'Optional side parameter' })),
-                    f('links.hltb', h.text('HLTB ID', { placeholder: 'e.g. 12345' }, { description: 'HowLongToBeat ID' })),
+                    f('links.gogComIdSide', h.text('GOG Side Param', { placeholder: '' }, { icon: Settings, iconClass: 'text-surface-400', description: 'Optional side parameter' })),
+                    f('links.hltb', h.text('HLTB ID', { placeholder: 'e.g. 12345' }, { icon: Clock, iconClass: 'text-purple-500', description: 'HowLongToBeat ID' })),
 
-                    f('links.igdb', h.text('IGDB Slug', { placeholder: 'e.g. game-title' }, { description: 'Slug from IGDB URL' })),
-                    f('links.mobygames', h.text('MobyGames Slug', { placeholder: 'e.g. game-title' }, { description: 'Slug from MobyGames URL' })),
-                    f('links.strategyWiki', h.text('StrategyWiki', { placeholder: 'e.g. Game_Title' }, { description: 'Slug from StrategyWiki' })),
+                    f('links.igdb', h.text('IGDB Slug', { placeholder: 'e.g. game-title' }, { icon: Gamepad2, iconClass: 'text-indigo-500', description: 'Slug from IGDB URL' })),
+                    f('links.mobygames', h.text('MobyGames Slug', { placeholder: 'e.g. game-title' }, { icon: Search, iconClass: 'text-amber-500', description: 'Slug from MobyGames URL' })),
+                    f('links.strategyWiki', h.text('StrategyWiki', { placeholder: 'e.g. Game_Title' }, { icon: Server, iconClass: 'text-teal-500', description: 'Slug from StrategyWiki' })),
 
-                    f('links.wikipedia', h.text('Wikipedia', { placeholder: 'e.g. Game Title' }, { description: 'Article title' })),
-                    f('links.vndb', h.text('VNDB ID', { placeholder: 'e.g. v123' }, { description: 'ID starting with v' })),
+                    f('links.wikipedia', h.text('Wikipedia', { placeholder: 'e.g. Game Title' }, { icon: Globe, iconClass: 'text-sky-500', description: 'Article title' })),
+                    f('links.vndb', h.text('VNDB ID', { placeholder: 'e.g. v123' }, { icon: Gamepad2, iconClass: 'text-pink-500', description: 'ID starting with v' })),
                     f('links.lutris', h.text('Lutris Slug', { placeholder: 'e.g. game-title' }, { icon: Terminal, iconClass: 'text-orange-500', description: 'Slug from Lutris' })),
 
                     f('links.wineHq', h.text('WineHQ Slug', { placeholder: 'e.g. 1234' }, { icon: Box, iconClass: 'text-red-500', description: 'ID from WineHQ AppDB' })),

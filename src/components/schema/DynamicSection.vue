@@ -49,21 +49,21 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
 </script>
 
 <template>
-    <div class="dynamic-section flex flex-col gap-6">
+    <div class="dynamic-section @container flex flex-col gap-6">
         <!-- Top-level Fields -->
         <div v-if="section.fields && section.fields.length > 0" class="p-5 gap-6" :class="{
             'flex flex-col': !section.gridCols,
             'grid grid-cols-1': !!section.gridCols,
-            'sm:grid-cols-2': section.gridCols === 2,
-            'sm:grid-cols-2 lg:grid-cols-3': section.gridCols === 3
+            '@md:grid-cols-2': section.gridCols === 2,
+            '@md:grid-cols-2 @3xl:grid-cols-3': section.gridCols === 3
         }">
             <template v-for="field in section.fields" :key="field.key">
                 <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
                     :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                     @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                         'col-span-1': true,
-                        'sm:col-span-2': field.colSpan === 2,
-                        'lg:col-span-3': field.colSpan === 3
+                        '@md:col-span-2': field.colSpan === 2,
+                        '@3xl:col-span-3': field.colSpan === 3
                     }" />
             </template>
         </div>
@@ -72,7 +72,7 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
         <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-6">
                 <div v-for="(group, idx) in section.groups" :key="idx"
-                    class="bg-surface-0 dark:bg-surface-900/70 border border-surface-200/70 dark:border-surface-700/55 rounded-xl shadow-soft overflow-hidden transition-all duration-200">
+                    class="@container bg-surface-0 dark:bg-surface-900/70 border border-surface-200/70 dark:border-surface-700/55 rounded-xl shadow-soft overflow-hidden transition-all duration-200">
                     <div @click="toggleGroup(idx)"
                         role="button"
                         tabindex="0"
@@ -113,8 +113,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                             <div class="p-5" :class="{
                                 'flex flex-col gap-5': !group.gridCols,
                                 'grid grid-cols-1 gap-5': !!group.gridCols && typeof group.gridCols === 'number',
-                                'sm:grid-cols-2': group.gridCols === 2,
-                                'sm:grid-cols-2 lg:grid-cols-3': group.gridCols === 3,
+                                '@md:grid-cols-2': group.gridCols === 2,
+                                '@md:grid-cols-2 @3xl:grid-cols-3': group.gridCols === 3,
                                 'grid gap-5': typeof group.gridCols === 'string'
                             }"
                                 :style="typeof group.gridCols === 'string' ? { gridTemplateColumns: group.gridCols } : {}">
@@ -123,8 +123,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                                         :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                                         @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                                             'col-span-1': true,
-                                            'sm:col-span-2': field.colSpan === 2,
-                                            'lg:col-span-3': field.colSpan === 3
+                                            '@md:col-span-2': field.colSpan === 2,
+                                            '@3xl:col-span-3': field.colSpan === 3
                                         }" />
                                 </template>
                             </div>
