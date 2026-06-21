@@ -127,6 +127,34 @@ export async function generateEditSummary(
     return response.replace(/^["']|["']$/g, '').replace(/\r?\n/g, ' ').trim();
 }
 
+/** Resolves a 3-way wikitext merge, returning the full merged wikitext (no conflict markers). */
+export async function resolveMerge(local: string, base: string, online: string): Promise<string> {
+    const prompt = `
+            You are merging three versions of a MediaWiki wikitext page.
+            Produce the single best merged wikitext that keeps the intent of BOTH the local and online edits.
+            Resolve every conflict sensibly; never emit conflict markers (<<<<<<<, =======, >>>>>>>).
+            Output ONLY the raw merged wikitext, no explanations, no code fences.
+
+            BASE (common ancestor):
+            """
+            ${base}
+            """
+
+            LOCAL (your version):
+            """
+            ${local}
+            """
+
+            ONLINE (PCGamingWiki version):
+            """
+            ${online}
+            """
+        `;
+    const response = await streamPrompt(prompt);
+    // Strip any markdown code fences the model may add despite instructions.
+    return response.replace(/^```(?:\w*)?\s*\n?|\n?\s*```$/g, '');
+}
+
 /** Analyzes an image (Base64) against a Zod schema and returns the validated object. */
 export async function analyzeImageJSON<T>(imageBase64: string, schema: z.ZodType<T>, prompt: string): Promise<T> {
     try {

@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Checkbox from 'primevue/checkbox';
-import { MisMerge2 } from '@mismerge/vue';
-import { DefaultDarkColors, DefaultLightColors } from '@mismerge/core/colors';
+import CodeDiffView from './diff/CodeDiffView.vue';
 import { UploadCloud, GitCompare, Wand2 } from 'lucide-vue-next';
-import { codeToHtml } from 'shiki';
-import '@mismerge/core/styles.css';
 
 const props = defineProps<{
     visible: boolean;
@@ -55,28 +52,6 @@ const cancel = () => {
 const publish = () => {
     emit('publish', { summary: summary.value, minor: isMinorEdit.value });
 };
-
-// Check for dark mode to sync MisMerge colors
-const isDark = ref(document.documentElement.classList.contains('dark'));
-const mismergeColors = computed(() => isDark.value ? DefaultDarkColors : DefaultLightColors);
-
-// Watch for manual theme changes
-const observer = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('dark');
-});
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-onUnmounted(() => {
-    observer.disconnect();
-});
-
-const shikiHighlighter = async (text: string) => {
-    if (!text) return '';
-    return await codeToHtml(text, {
-        lang: 'wikitext',
-        theme: isDark.value ? 'min-dark' : 'min-light'
-    });
-};
 </script>
 
 <template>
@@ -101,13 +76,9 @@ const shikiHighlighter = async (text: string) => {
                     <GitCompare class="w-4 h-4" />
                     <span>Wikitext Diff Viewer</span>
                 </div>
-                <div class="flex-1 w-full border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 rounded-lg overflow-hidden relative">
-                    <MisMerge2 :lhs="onlineWikitext" :rhs="localWikitext"
-                        :colors="mismergeColors"
-                        :highlight="shikiHighlighter"
-                        :lhsEditable="false"
-                        :rhsEditable="false"
-                        class="h-full w-full absolute inset-0" />
+                <div class="flex-1 w-full border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 rounded-lg overflow-hidden">
+                    <CodeDiffView :original="onlineWikitext" :modified="localWikitext"
+                        originalLabel="Online (PCGamingWiki)" modifiedLabel="Local (yours)" />
                 </div>
             </div>
 
@@ -147,34 +118,3 @@ const shikiHighlighter = async (text: string) => {
     </Dialog>
 </template>
 
-<style scoped>
-/* Ensure MisMerge fills its container completely */
-:deep(.mismerge) {
-    height: 100%;
-    width: 100%;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-}
-
-:deep(.mismerge textarea),
-:deep(.mismerge-code) {
-    font-family: inherit !important;
-    font-size: 0.875rem !important; /* text-sm */
-    line-height: 1.5 !important;
-}
-
-:deep(.msm__highlight-overlay .shiki) {
-    background-color: transparent !important;
-}
-
-:deep(.msm__header) {
-    background-color: var(--p-surface-50) !important;
-    border-bottom: 1px solid var(--p-surface-200) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-    :deep(.msm__header) {
-        background-color: var(--p-surface-900) !important;
-        border-bottom: 1px solid var(--p-surface-700) !important;
-    }
-}
-</style>

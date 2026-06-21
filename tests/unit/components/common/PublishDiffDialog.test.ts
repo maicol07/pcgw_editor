@@ -13,15 +13,6 @@ vi.mock('lucide-vue-next', () => ({
     Wand2: { template: '<span class="wand-icon"></span>' }
 }));
 
-// Mock Shiki
-vi.mock('shiki', () => ({
-    codeToHtml: vi.fn().mockResolvedValue('<html>code</html>')
-}));
-
-// Mock MisMerge2
-vi.mock('@mismerge/vue', () => ({
-    MisMerge2: { template: '<div class="mismerge-stub"></div>', props: ['lhs', 'rhs'] }
-}));
 
 describe('PublishDiffDialog.vue', () => {
     const defaultProps = {
@@ -41,7 +32,8 @@ describe('PublishDiffDialog.vue', () => {
                     Dialog: {
                         template: '<div><slot></slot></div>',
                         props: ['visible', 'header']
-                    }
+                    },
+                    CodeDiffView: { template: '<div class="diff-stub"></div>' }
                 }
             }
         });
@@ -50,7 +42,7 @@ describe('PublishDiffDialog.vue', () => {
     it('renders dialog when visible is true', () => {
         const wrapper = setupWrapper();
         expect(wrapper.text()).toContain('Test Game');
-        expect(wrapper.find('.mismerge-stub').exists()).toBe(true);
+        expect(wrapper.find('.diff-stub').exists()).toBe(true);
     });
 
     it('handles cancel click properly', async () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Tabs from 'primevue/tabs';
@@ -7,15 +7,14 @@ import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
-import { MisMerge3 } from '@mismerge/vue';
-import { DefaultDarkColors, DefaultLightColors } from '@mismerge/core/colors';
+import ThreeWayMerge from './diff/ThreeWayMerge.vue';
 import { usePreview } from '../../composables/usePreview';
 import { Monitor, Code, AlertTriangle } from 'lucide-vue-next';
-import '@mismerge/core/styles.css';
 
 const props = defineProps<{
     visible: boolean;
     localWikitext: string;
+    baseWikitext: string;
     onlineWikitext: string;
     pageTitle?: string;
 }>();
@@ -38,14 +37,6 @@ const { renderedHtml, isLoading, error } = usePreview(
     () => props.pageTitle || 'Main Page'
 );
 
-const handleCtrChange = (value: string) => {
-    mergedText.value = value;
-};
-
-const handleConflictsResolvedChange = (resolved: boolean) => {
-    conflictsResolved.value = resolved;
-};
-
 const cancelMerge = () => {
     visibleState.value = false;
 };
@@ -54,30 +45,6 @@ const finishMerge = () => {
     emit('merge', mergedText.value);
     visibleState.value = false;
 };
-
-// Check for dark mode to sync MisMerge colors
-const isDark = ref(document.documentElement.classList.contains('dark'));
-const mismergeColors = computed(() => isDark.value ? DefaultDarkColors : DefaultLightColors);
-
-// Watch for manual theme changes
-const observer = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('dark');
-});
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-onUnmounted(() => {
-    observer.disconnect();
-});
-
-import { codeToHtml } from 'shiki';
-
-const shikiHighlighter = async (text: string) => {
-    return await codeToHtml(text, {
-        lang: 'wikitext',
-        theme: isDark.value ? 'min-dark' : 'min-light'
-    });
-};
-
 </script>
 
 <template>
@@ -101,20 +68,18 @@ const shikiHighlighter = async (text: string) => {
                     <TabPanel value="0" class="h-full p-0!">
                         <div class="flex flex-col h-full gap-4">
                             <div class="text-xs text-surface-500 px-1">
-                                Merging Changes from PCGamingWiki. Please resolve all conflicts using the editor before
-                                finishing.
+                                Merging Changes from PCGamingWiki. Use the gutter buttons to include, discard or resolve
+                                every change before finishing.
                                 <br />
                                 <span class="text-2xs opacity-70">Left: Local Version | Center: Merged Result | Right:
                                     Online Version</span>
                             </div>
 
                             <div
-                                class="flex-1 w-full border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 rounded-lg overflow-hidden relative">
-                                <MisMerge3 :lhs="localWikitext" :ctr="localWikitext" :rhs="onlineWikitext"
-                                    :onCtrChange="handleCtrChange"
-                                    :onConflictsResolvedChange="handleConflictsResolvedChange" :colors="mismergeColors"
-                                    :ctrEditable="true" :highlight="shikiHighlighter"
-                                    class="h-full w-full absolute inset-0" />
+                                class="flex-1 w-full border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 rounded-lg overflow-hidden">
+                                <ThreeWayMerge :local="localWikitext" :base="baseWikitext" :online="onlineWikitext"
+                                    @update:result="mergedText = $event"
+                                    @update:conflictsResolved="conflictsResolved = $event" />
                             </div>
                         </div>
                     </TabPanel>
@@ -141,7 +106,7 @@ const shikiHighlighter = async (text: string) => {
                 <Button label="Cancel" text severity="secondary" @click="cancelMerge" />
                 <div class="flex items-center gap-3">
                     <div v-if="!conflictsResolved" class="text-xs text-orange-500 font-medium">
-                        Unresolved conflicts remaining
+                        Unresolved changes remaining
                     </div>
                     <Button label="Finish Merge" severity="primary" @click="finishMerge"
                         :disabled="!conflictsResolved" />
@@ -152,41 +117,6 @@ const shikiHighlighter = async (text: string) => {
 </template>
 
 <style scoped>
-/* Ensure MisMerge fills its container completely */
-:deep(.mismerge) {
-    height: 100%;
-    width: 100%;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-}
-
-:deep(.mismerge textarea),
-:deep(.mismerge-code) {
-    font-family: inherit !important;
-    font-size: 0.875rem !important;
-    /* text-sm */
-    line-height: 1.5 !important;
-}
-
-:deep(.mismerge textarea) {
-    caret-color: var(--p-text-color) !important;
-}
-
-:deep(.msm__highlight-overlay .shiki) {
-    background-color: transparent !important;
-}
-
-:deep(footer.msm__footer) {
-    background-color: var(--p-surface-0) !important;
-    border-top: 1px solid var(--p-surface-200) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-    :deep(footer.msm__footer) {
-        background-color: var(--p-surface-900) !important;
-        border-top: 1px solid var(--p-surface-700) !important;
-    }
-}
-
 /* Tabs styling to fix height issues */
 :deep(.p-tabs) {
     display: flex;

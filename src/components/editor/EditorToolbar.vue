@@ -5,7 +5,7 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Search, Menu as MenuIcon, FileClock, History, UploadCloud } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, CloudSync } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -215,7 +215,7 @@ const pcgwMenuItems = computed(() => {
                                     <Button size="small" severity="secondary" variant="outlined" class="py-1! px-2! text-xs!"
                                         @click="emit('updatePcgw')" v-tooltip.bottom="'Force re-sync with latest online revision'">
                                         <template #icon>
-                                            <RefreshCw class="w-3.5 h-3.5" />
+                                            <CloudSync class="w-3.5 h-3.5" />
                                         </template>
                                     </Button>
                                     <Button size="small" severity="secondary" variant="text" class="py-1! px-2! text-xs!"
@@ -223,7 +223,7 @@ const pcgwMenuItems = computed(() => {
                                         v-tooltip.bottom="'Check for newer versions'">
                                         <template #icon>
                                             <Loader2 v-if="item.isChecking" class="w-3.5 h-3.5 animate-spin" />
-                                            <Search v-else class="w-3.5 h-3.5" />
+                                            <RefreshCw v-else class="w-3.5 h-3.5" />
                                         </template>
                                     </Button>
                                 </div>

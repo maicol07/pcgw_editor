@@ -114,6 +114,7 @@ const {
 // --- Diff Merger Logic ---
 const isDiffMergerVisible = ref(false);
 const diffMergerLocalWikitext = ref('');
+const diffMergerBaseWikitext = ref('');
 const diffMergerOnlineWikitext = ref('');
 const diffMergerOnlineRevid = ref<number | undefined>();
 const diffMergerPageTitle = ref('');
@@ -130,6 +131,9 @@ const handleUpdateFromPcgw = async (page: any) => {
     }
 
     diffMergerLocalWikitext.value = page.wikitext;
+    // ponytail: base = baseWikitext; se diverge dall'antenato reale, fetchare il testo di
+    // onlineRevisionId via pcgwApi.fetchWikitext(title, revid) come base — upgrade path se i conflitti risultano imprecisi.
+    diffMergerBaseWikitext.value = page.baseWikitext ?? page.wikitext;
     diffMergerOnlineWikitext.value = result.content;
     diffMergerOnlineRevid.value = result.revid;
     diffMergerPageTitle.value = page.pcgwPageTitle;
@@ -681,7 +685,8 @@ onMounted(() => {
     <AppSettings />
     <MetadataAutofillDialog v-model:visible="isAutofillDialogVisible" />
     <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
-        :onlineWikitext="diffMergerOnlineWikitext" :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
+        :baseWikitext="diffMergerBaseWikitext" :onlineWikitext="diffMergerOnlineWikitext"
+        :pageTitle="diffMergerPageTitle" @merge="handleDiffMerge" />
 
     <!-- Publish Diff Dialog -->
     <PublishDiffDialog 
