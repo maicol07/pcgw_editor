@@ -60,6 +60,8 @@ const importSourceOptions = [
 const searchQuery = ref('');
 const filterTemplate = ref('all');
 const sortBy = ref('recent');
+const showFilters = ref(false);
+const hasActiveFilters = computed(() => filterTemplate.value !== 'all' || sortBy.value !== 'recent');
 
 const filterOptions = [
     { label: 'All Templates', value: 'all', icon: Layout },
@@ -299,10 +301,35 @@ defineExpose({ openLinkDialog });
 .list-leave-active {
     position: absolute;
 }
+
+/* Animate filter row: grid-rows 0fr->1fr handles auto height without a hardcoded max-height */
+.filters-grid {
+    display: grid;
+    grid-template-rows: 1fr;
+}
+
+.filters-enter-active,
+.filters-leave-active {
+    transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
+}
+
+.filters-enter-from,
+.filters-leave-to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+}
 </style>
 
 <template>
-    <Drawer v-model:visible="visibleState" header="Workspace" position="left" class="w-full! md:w-96! lg:w-[450px]!">
+    <Drawer v-model:visible="visibleState" position="left" class="w-full! md:w-96! lg:w-[450px]!">
+        <template #header>
+            <div class="flex items-baseline gap-2">
+                <span class="font-bold text-lg text-surface-900 dark:text-surface-0">Workspace</span>
+                <span class="text-xs font-medium text-surface-400 dark:text-surface-500">
+                    {{ filteredPages.length }} {{ filteredPages.length === 1 ? 'page' : 'pages' }}<span v-if="searchQuery || hasActiveFilters"> shown</span>
+                </span>
+            </div>
+        </template>
         <div class="flex flex-col h-full gap-4">
 
             <!-- Actions -->
@@ -323,16 +350,29 @@ defineExpose({ openLinkDialog });
 
             <!-- Search & Filters -->
             <div class="flex flex-col gap-2">
-                <IconField iconPosition="left">
-                    <InputIcon>
-                        <Search class="w-4 h-4 text-surface-400" />
-                    </InputIcon>
-                    <InputText v-model="searchQuery" placeholder="Filter pages..." class="w-full text-sm!" />
-                </IconField>
+                <div class="flex gap-2">
+                    <IconField iconPosition="left" class="flex-1">
+                        <InputIcon>
+                            <Search class="w-4 h-4 text-surface-400" />
+                        </InputIcon>
+                        <InputText v-model="searchQuery" placeholder="Filter pages..." class="w-full text-sm!" />
+                    </IconField>
+                    <Button :severity="hasActiveFilters ? 'primary' : 'secondary'" :outlined="!hasActiveFilters"
+                        v-tooltip.bottom="'Filters & sorting'" class="shrink-0 relative"
+                        @click="showFilters = !showFilters">
+                        <template #icon>
+                            <Filter class="w-4 h-4" />
+                        </template>
+                        <span v-if="hasActiveFilters"
+                            class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary-500 ring-2 ring-surface-0 dark:ring-surface-900" />
+                    </Button>
+                </div>
 
-                <div class="flex gap-2 w-full">
+                <Transition name="filters">
+                <div v-if="showFilters || hasActiveFilters" class="filters-grid">
+                <div class="flex gap-2 w-full overflow-hidden min-h-0">
                     <Select v-model="filterTemplate" :options="filterOptions" optionLabel="label" optionValue="value"
-                        class="flex-1 w-0 text-2xs!" size="small">
+                        class="flex-1 w-0 text-xs!">
                         <template #value="slotProps">
                             <div class="flex items-center overflow-hidden">
                                 <component :is="filterOptions.find(o => o.value === slotProps.value)?.icon || Filter"
@@ -350,7 +390,7 @@ defineExpose({ openLinkDialog });
                         </template>
                     </Select>
                     <Select v-model="sortBy" :options="sortOptions" optionLabel="label" optionValue="value"
-                        class="flex-1 w-0 text-2xs!" size="small">
+                        class="flex-1 w-0 text-xs!">
                         <template #value="slotProps">
                             <div v-if="slotProps.value" class="flex items-center overflow-hidden">
                                 <component :is="sortOptions.find(o => o.value === slotProps.value)?.icon || ArrowUpDown"
@@ -369,9 +409,8 @@ defineExpose({ openLinkDialog });
                         </template>
                     </Select>
                 </div>
-                <div class="px-1 text-xs font-medium text-surface-400 dark:text-surface-500 select-none">
-                    {{ filteredPages.length }} {{ filteredPages.length === 1 ? 'page' : 'pages' }}<span v-if="searchQuery || filterTemplate !== 'all'"> shown</span>
                 </div>
+                </Transition>
             </div>
 
             <!-- Page List -->
@@ -392,26 +431,27 @@ defineExpose({ openLinkDialog });
 
                         <div class="flex justify-between items-start">
                             <div class="flex-1 min-w-0 pr-2 md:pr-10">
-                                <div class="font-bold text-sm truncate transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
-                                    :class="page.id === store.activePageId ? 'text-primary-600 dark:text-primary-300' : 'text-surface-900 dark:text-surface-0'"
-                                    :title="page.title">
-                                    {{ page.title }}
-                                </div>
-                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                                    <div
-                                        class="flex items-center min-h-6 text-xs text-surface-500 bg-surface-200/50 dark:bg-surface-800 px-2 py-0.5 rounded capitalize">
-                                        <Hash class="w-2.5 h-2.5 mr-1" />
-                                        {{ page.template || 'blank' }}
-                                    </div>
-                                    <div class="flex items-center min-h-6 text-xs text-surface-500 font-medium px-1 py-0.5">
-                                        <Clock class="w-2.5 h-2.5 mr-1" />
-                                        {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
-                                    </div>
-                                    <div v-if="page.pcgwPageTitle" :title="`Linked to ${page.pcgwPageTitle}`"
-                                        class="flex items-center min-h-6 gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-2 py-0.5 rounded">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="font-bold text-sm truncate transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+                                        :class="page.id === store.activePageId ? 'text-primary-600 dark:text-primary-300' : 'text-surface-900 dark:text-surface-0'"
+                                        :title="page.title">
+                                        {{ page.title }}
+                                    </span>
+                                    <span v-if="page.pcgwPageTitle" :title="`Linked to ${page.pcgwPageTitle}`"
+                                        class="flex items-center gap-0.5 shrink-0 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded">
                                         <Link class="w-2.5 h-2.5" />
                                         PCGW
-                                    </div>
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1 text-xs text-surface-500 overflow-hidden whitespace-nowrap">
+                                    <span class="flex items-center shrink-0 bg-surface-200/50 dark:bg-surface-800 px-1.5 py-0.5 rounded capitalize">
+                                        <Hash class="w-2.5 h-2.5 mr-1" />
+                                        {{ page.template || 'blank' }}
+                                    </span>
+                                    <span class="flex items-center font-medium truncate">
+                                        <Clock class="w-2.5 h-2.5 mr-1 shrink-0" />
+                                        {{ formatDistanceToNow(page.lastModified, { addSuffix: true }) }}
+                                    </span>
                                 </div>
                             </div>
 
