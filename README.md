@@ -108,6 +108,45 @@ pnpm run build
 
 ---
 
+## ☁️ Backend Proxy (Cloudflare Worker)
+
+Authenticated PCGamingWiki requests, image proxying, and third-party metadata
+lookups (IGDB / RAWG / Steam / VNDB) go through a Cloudflare Worker. Its source
+is [`worker.js`](worker.js) in this repo and is deployed **separately** from the
+frontend.
+
+### Deploy
+
+```bash
+npm i -g wrangler      # once
+wrangler login         # once
+wrangler deploy worker.js --name pcgw-proxy-login
+```
+
+Endpoints: `/api/login`, `/api/proxy`, `/api/image`, and `/api/ext` — an
+**allowlisted** proxy for IGDB/RAWG/Steam/VNDB that replaces the public
+`corsproxy.io` (so user-supplied API keys are no longer exposed to a third
+party). No per-environment configuration is required; CORS is open on these
+endpoints, so the same Worker serves localhost, Vercel, and GitHub Pages.
+
+### Optional: `HttpOnly` session cookies
+
+By default the MediaWiki session is returned to the client and kept in
+`localStorage`. To instead store it in a server-side `HttpOnly` cookie
+(defense-in-depth against XSS), enable it on **both** sides — they must match,
+or login breaks:
+
+1. **Worker** env var with every app origin (scheme + host, no trailing slash):
+   ```
+   ALLOWED_ORIGINS=https://pcgwe.maicol07.it,https://pcgw-editor.vercel.app,http://localhost:5173
+   ```
+2. **Frontend** build flag: `VITE_HTTPONLY_AUTH=true` (Vercel/GitHub env var, or `.env.local`).
+
+This needs HTTPS on every origin (cross-site cookies require `SameSite=None; Secure`).
+Left unset, the default flow runs unchanged.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's a bug fix, a new feature, or a design improvement, feel free to open a Pull Request.
