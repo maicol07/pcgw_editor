@@ -15,11 +15,11 @@ importers:
         specifier: ^3.0.83
         version: 3.0.83(zod@4.4.3)
       '@ai-sdk/openai':
-        specifier: ^3.0.73
-        version: 3.0.73(zod@4.4.3)
+        specifier: ^3.0.74
+        version: 3.0.74(zod@4.4.3)
       '@bhsd/codemirror-wikitext':
-        specifier: ^0.9.0
-        version: 0.9.0(@codemirror/autocomplete@6.20.2)(@codemirror/commands@6.10.3)(@codemirror/language@6.12.3)(@codemirror/lint@6.9.6)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(color-name@2.0.2)(mathoid-texvcjs@0.6.0)(monaco-editor@0.53.0)(prism-wiki@2.1.1)(prismjs@1.30.0)(stylelint-config-recommended@18.0.0(stylelint@17.12.0(typescript@6.0.3)))(stylelint@17.12.0(typescript@6.0.3))(vscode-css-languageservice@6.3.10)(vscode-html-languageservice@5.6.2)(vscode-json-languageservice@5.7.2)
+        specifier: ^0.9.1
+        version: 0.9.1(@codemirror/autocomplete@6.20.2)(@codemirror/commands@6.10.3)(@codemirror/language@6.12.3)(@codemirror/lint@6.9.6)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(color-name@2.0.2)(mathoid-texvcjs@0.6.0)(monaco-editor@0.53.0)(prism-wiki@2.1.1)(prismjs@1.30.0)(stylelint-config-recommended@18.0.0(stylelint@17.12.0(typescript@6.0.3)))(stylelint@17.12.0(typescript@6.0.3))(vscode-css-languageservice@6.3.10)(vscode-html-languageservice@5.6.2)(vscode-json-languageservice@5.7.2)
       '@codemirror/commands':
         specifier: ^6.10.3
         version: 6.10.3
@@ -69,8 +69,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.38(typescript@6.0.3))
       mwn:
-        specifier: ^3.0.2
-        version: 3.0.2
+        specifier: ^3.0.3
+        version: 3.0.3
       node-diff3:
         specifier: ^3.2.1
         version: 3.2.1
@@ -186,8 +186,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.73':
-    resolution: {integrity: sha512-+3x9oxHv9Xp33Iv2L8D+e5hqmZi64jofBKig/9611JKyfV59NdkaDDajtwc0CxOEfARgCVq1BW7dP+526gKOKw==}
+  '@ai-sdk/openai@3.0.74':
+    resolution: {integrity: sha512-LPDBWd2WCv0GQs29K2pHcNrGx24hm4D8QEP386HwUAUPr1URho6bNVXHNmIv0FxaW+xDkLpNMTen+mFCUBp2LA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -709,8 +709,8 @@ packages:
     resolution: {integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==}
     engines: {node: '>=6.9.0'}
 
-  '@bhsd/browser@0.5.0':
-    resolution: {integrity: sha512-eHKql4uHOwl0Fh+oxfZpAtXo+C8D4CcBkErZlhGjzLRZk+Uscxr+2nPOhubEXd5EAjsC3hSIEyHgaFpRFVu0gg==}
+  '@bhsd/browser@1.0.0':
+    resolution: {integrity: sha512-ezSi+/nfjcfYDlRe2GTA/RIJdurt2kHPyqZEgs+bOilRLa7qK1nWoY1N2IkTQvvCtbS2ld9GwWD1szxuo1VpqA==}
 
   '@bhsd/cm-util@2.2.0':
     resolution: {integrity: sha512-2BbTYlTEw+3FGf2fXCSysLuGG8/lzU6nGTRjxdXt5FyaLPpH7OB/UQ5SS0wpHbv8pza0i2RvXrT2WV4e4ytSmg==}
@@ -727,8 +727,8 @@ packages:
       '@codemirror/language': ^6.0.0
       '@codemirror/view': ^6.0.0
 
-  '@bhsd/codemirror-wikitext@0.9.0':
-    resolution: {integrity: sha512-jFKokFQXLZZdE9QuaPHAXYd9/2bEot27M19Ee3rwjMXwnSeku2Gml7+gDDetZE4VSu2v69Pmurmc9MIJ0uJCvA==}
+  '@bhsd/codemirror-wikitext@0.9.1':
+    resolution: {integrity: sha512-71zSq4zcRqwdoxkSRpZyPwDNPQ9BvosZfoNXFsgqQnCpsUwsHxtXGKo2sWNc212bzYN9RAdIF5e86k3DPjKXww==}
     peerDependencies:
       '@codemirror/autocomplete': ^6.0.0
       '@codemirror/commands': ^6.0.0
@@ -1809,6 +1809,11 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  baseline-browser-mapping@2.10.38:
+    resolution: {integrity: sha512-31/02mVB4yuQU6adKk5SlY6m+mxDwUq5KZkyYgnLrrKl7TEm1+3PyDtDBz2kOv/wxZz41GHsvV1A/u6RmiyBvw==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   birpc@2.9.0:
     resolution: {integrity: sha512-KrayHS5pBi69Xi9JmvoqrIgYGDkD6mcSe/i6YKi3w5kekCLzrX4+nawcXqrj2tIp50Kw/mT/s3p+GVK0A0sKxw==}
 
@@ -1825,6 +1830,11 @@ packages:
 
   browserslist@4.28.2:
     resolution: {integrity: sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg==}
+    engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
+    hasBin: true
+
+  browserslist@4.28.3:
+    resolution: {integrity: sha512-fJuAi3QO096TeMRa/1Z/Z4xVxx2NVXFQc8aOX5huX0gA1V7NkIw+Qv1/Y16MatpJUeYs4mLXAsRs6RUp4sylIQ==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
@@ -1856,6 +1866,9 @@ packages:
 
   caniuse-lite@1.0.30001791:
     resolution: {integrity: sha512-yk0l/YSrOnFZk3UROpDLQD9+kC1l4meK/wed583AXrzoarMGJcbRi2Q4RaUYbKxYAsZ8sWmaSa/DsLmdBeI1vQ==}
+
+  caniuse-lite@1.0.30001799:
+    resolution: {integrity: sha512-hG1bReV+OUU+MOqK4t/ZWI0tZOyz3rqS9XuhOUz1cIcbwBKjOyJEJuw9ER5JuNyqxNk8u/JUVbGibBOL1yrjFw==}
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -2058,6 +2071,9 @@ packages:
 
   electron-to-chromium@1.5.344:
     resolution: {integrity: sha512-4MxfbmNDm+KPh066EZy+eUnkcDPcZ35wNmOWzFuh/ijvHsve6kbLTLURy88uCNK5FbpN+yk2nQY6BYh1GEt+wg==}
+
+  electron-to-chromium@1.5.376:
+    resolution: {integrity: sha512-cUVA7/RvbFTEuw/i3obUwDTRIXojaxkResf+ibByPFxjc6XK3VNtcQXV0NSbAlJ0FMjcJGgftVVB4Qo184EXvA==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -2816,8 +2832,8 @@ packages:
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
 
-  mwn@3.0.2:
-    resolution: {integrity: sha512-EEwsR6L4sIp1s87t4CrLR2I+r4Cp2khBvuGhBXvzJCjYmC1NGRp24X8B05Gcu2rXmqnqgHEcjrbdi0Z3dccITQ==}
+  mwn@3.0.3:
+    resolution: {integrity: sha512-RpVDaMstrbdjn18xwUKB3tpk8XyrdG9bLQF3x/9ygpt57z35o/xCbVoGJPuhZf3gMs0ZL8Mekc5MIDkX1/Gx3g==}
     engines: {node: '>=14'}
 
   nanoid@3.3.12:
@@ -2837,6 +2853,10 @@ packages:
 
   node-releases@2.0.38:
     resolution: {integrity: sha512-3qT/88Y3FbH/Kx4szpQQ4HzUbVrHPKTLVpVocKiLfoYvw9XSGOX2FmD2d6DrXbVYyAQTF2HeF6My8jmzx7/CRw==}
+
+  node-releases@2.0.48:
+    resolution: {integrity: sha512-1uz8041X6LoI6ZSdZacM9lVY28vuzDlSKitnpbSNK0RfKoIJkX29NBPVEFXhnuSuEOA9Ww0xnPJ+ILWbGAv8DA==}
+    engines: {node: '>=18'}
 
   nopt@7.2.1:
     resolution: {integrity: sha512-taM24ViiimT/XntxbPyJQzCG+p4EKOpgD3mxFwW38mGjVUrfERQOeY4EDHjdnptttfHuHQXFx+lTP08Q+mLa/w==}
@@ -3300,8 +3320,8 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
-  supports-hyperlinks@4.4.0:
-    resolution: {integrity: sha512-UKbpT93hN5Nr9go5UY7bopIB9YQlMz9nm/ct4IXt/irb5YRkn9WaqrOBJGZ5Pwvsd5FQzSVeYlGdXoCAPQZrPg==}
+  supports-hyperlinks@4.5.0:
+    resolution: {integrity: sha512-ZW2OvfeCXrNTbLakPUzjQG922EeGCOteFSVoek5DKStTh898wf7zgtuFlzQN8HfZCxC3Eh02yJVrRW51hADf+w==}
     engines: {node: '>=20'}
 
   supports-preserve-symlinks-flag@1.0.0:
@@ -3821,7 +3841,7 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.30(zod@4.4.3)
       zod: 4.4.3
 
-  '@ai-sdk/openai@3.0.73(zod@4.4.3)':
+  '@ai-sdk/openai@3.0.74(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
       '@ai-sdk/provider-utils': 4.0.30(zod@4.4.3)
@@ -3888,7 +3908,7 @@ snapshots:
     dependencies:
       '@babel/compat-data': 7.29.7
       '@babel/helper-validator-option': 7.29.7
-      browserslist: 4.28.2
+      browserslist: 4.28.3
       lru-cache: 5.1.1
       semver: 6.3.1
 
@@ -4507,7 +4527,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@bhsd/browser@0.5.0': {}
+  '@bhsd/browser@1.0.0': {}
 
   '@bhsd/cm-util@2.2.0(monaco-editor@0.53.0)':
     optionalDependencies:
@@ -4519,9 +4539,9 @@ snapshots:
       '@codemirror/language': 6.12.3
       '@codemirror/view': 6.43.1
 
-  '@bhsd/codemirror-wikitext@0.9.0(@codemirror/autocomplete@6.20.2)(@codemirror/commands@6.10.3)(@codemirror/language@6.12.3)(@codemirror/lint@6.9.6)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(color-name@2.0.2)(mathoid-texvcjs@0.6.0)(monaco-editor@0.53.0)(prism-wiki@2.1.1)(prismjs@1.30.0)(stylelint-config-recommended@18.0.0(stylelint@17.12.0(typescript@6.0.3)))(stylelint@17.12.0(typescript@6.0.3))(vscode-css-languageservice@6.3.10)(vscode-html-languageservice@5.6.2)(vscode-json-languageservice@5.7.2)':
+  '@bhsd/codemirror-wikitext@0.9.1(@codemirror/autocomplete@6.20.2)(@codemirror/commands@6.10.3)(@codemirror/language@6.12.3)(@codemirror/lint@6.9.6)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(color-name@2.0.2)(mathoid-texvcjs@0.6.0)(monaco-editor@0.53.0)(prism-wiki@2.1.1)(prismjs@1.30.0)(stylelint-config-recommended@18.0.0(stylelint@17.12.0(typescript@6.0.3)))(stylelint@17.12.0(typescript@6.0.3))(vscode-css-languageservice@6.3.10)(vscode-html-languageservice@5.6.2)(vscode-json-languageservice@5.7.2)':
     dependencies:
-      '@bhsd/browser': 0.5.0
+      '@bhsd/browser': 1.0.0
       '@bhsd/cm-util': 2.2.0(monaco-editor@0.53.0)
       '@bhsd/codemirror-css-color-picker': 8.0.0(@codemirror/language@6.12.3)(@codemirror/view@6.43.1)
       '@bhsd/common': 3.0.0
@@ -5584,6 +5604,8 @@ snapshots:
 
   baseline-browser-mapping@2.10.23: {}
 
+  baseline-browser-mapping@2.10.38: {}
+
   birpc@2.9.0: {}
 
   brace-expansion@2.1.1:
@@ -5605,6 +5627,14 @@ snapshots:
       electron-to-chromium: 1.5.344
       node-releases: 2.0.38
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
+
+  browserslist@4.28.3:
+    dependencies:
+      baseline-browser-mapping: 2.10.38
+      caniuse-lite: 1.0.30001799
+      electron-to-chromium: 1.5.376
+      node-releases: 2.0.48
+      update-browserslist-db: 1.2.3(browserslist@4.28.3)
 
   buffer-from@1.1.2: {}
 
@@ -5640,6 +5670,8 @@ snapshots:
   callsites@3.1.0: {}
 
   caniuse-lite@1.0.30001791: {}
+
+  caniuse-lite@1.0.30001799: {}
 
   ccount@2.0.1: {}
 
@@ -5709,7 +5741,7 @@ snapshots:
 
   core-js-compat@3.49.0:
     dependencies:
-      browserslist: 4.28.2
+      browserslist: 4.28.3
 
   cosmiconfig@9.0.2(typescript@6.0.3):
     dependencies:
@@ -5823,6 +5855,8 @@ snapshots:
       jake: 10.9.4
 
   electron-to-chromium@1.5.344: {}
+
+  electron-to-chromium@1.5.376: {}
 
   emoji-regex@8.0.0: {}
 
@@ -6617,7 +6651,7 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
-  mwn@3.0.2:
+  mwn@3.0.3:
     dependencies:
       '@types/node': 14.18.63
       '@types/tough-cookie': 4.0.5
@@ -6640,6 +6674,8 @@ snapshots:
   node-fetch-native@1.6.7: {}
 
   node-releases@2.0.38: {}
+
+  node-releases@2.0.48: {}
 
   nopt@7.2.1:
     dependencies:
@@ -7176,7 +7212,7 @@ snapshots:
       postcss-selector-parser: 7.1.4
       postcss-value-parser: 4.2.0
       string-width: 8.2.1
-      supports-hyperlinks: 4.4.0
+      supports-hyperlinks: 4.5.0
       svg-tags: 1.0.0
       table: 6.9.0
       write-file-atomic: 7.0.1
@@ -7194,7 +7230,7 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  supports-hyperlinks@4.4.0:
+  supports-hyperlinks@4.5.0:
     dependencies:
       has-flag: 5.0.1
       supports-color: 10.2.2
@@ -7370,6 +7406,12 @@ snapshots:
   update-browserslist-db@1.2.3(browserslist@4.28.2):
     dependencies:
       browserslist: 4.28.2
+      escalade: 3.2.0
+      picocolors: 1.1.1
+
+  update-browserslist-db@1.2.3(browserslist@4.28.3):
+    dependencies:
+      browserslist: 4.28.3
       escalade: 3.2.0
       picocolors: 1.1.1
 
