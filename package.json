@@ -19,6 +19,7 @@
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/openai": "^3.0.73",
     "@bhsd/codemirror-wikitext": "^0.9.0",
+    "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/merge": "^6.12.2",
     "@codemirror/state": "^6.6.0",

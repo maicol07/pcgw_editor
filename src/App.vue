@@ -781,21 +781,21 @@ onMounted(() => {
 
 /* Splitter Modern Styling */
 /* Hairline gutter — a quiet surface rule that warms to blue only on interaction. */
-.splitter-modern :deep(.p-splitter-gutter) {
+.splitter-modern .p-splitter-gutter {
     background: var(--color-surface-200);
     transition: background 0.15s ease;
     position: relative;
 }
 
-.dark .splitter-modern :deep(.p-splitter-gutter) {
+.dark .splitter-modern .p-splitter-gutter {
     background: var(--color-surface-800);
 }
 
-.splitter-modern :deep(.p-splitter-gutter):hover {
+.splitter-modern .p-splitter-gutter:hover {
     background: var(--color-primary-500);
 }
 
-.splitter-modern :deep(.p-splitter-gutter)::after {
+.splitter-modern .p-splitter-gutter::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -809,7 +809,7 @@ onMounted(() => {
     transition: opacity 0.15s ease;
 }
 
-.splitter-modern :deep(.p-splitter-gutter):hover::after {
+.splitter-modern .p-splitter-gutter:hover::after {
     opacity: 1;
 }
 
