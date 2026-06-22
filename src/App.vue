@@ -426,7 +426,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <File class="text-slate-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Article State</span>
+                                            class="section-eyebrow">Article State</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.articleState.value"
@@ -438,7 +438,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Info class="text-blue-600 w-4 h-4" />
-                                        <span class="font-semibold text-base tracking-tight">Infobox</span>
+                                        <span class="section-eyebrow">Infobox</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.infobox.value"
@@ -451,7 +451,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlignLeft class="text-orange-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Introduction</span>
+                                            class="section-eyebrow">Introduction</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-4">
@@ -471,7 +471,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <ShoppingCart class="text-emerald-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Availability</span>
+                                            class="section-eyebrow">Availability</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.availability.value"
@@ -483,7 +483,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <DollarSign class="text-amber-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Monetization & Microtransactions</span>
+                                            class="section-eyebrow">Monetization & Microtransactions</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
@@ -511,7 +511,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-primary-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">DLC & Expansions</span>
+                                            class="section-eyebrow">DLC & Expansions</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.dlc.value"
@@ -523,7 +523,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Star class="text-yellow-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Essential Improvements</span>
+                                            class="section-eyebrow">Essential Improvements</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-4">
@@ -544,7 +544,7 @@ onMounted(() => {
                                 v-show="panelVisibility.gameData">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Save class="text-green-600 w-4 h-4" /><span class="font-semibold text-base tracking-tight">Game
+                                        <Save class="text-green-600 w-4 h-4" /><span class="section-eyebrow">Game
                                             Data (Config, Saves, Cloud)</span>
                                     </div>
                                 </template>
@@ -556,7 +556,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Video</span>
+                                            class="section-eyebrow">Video</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.video.value"
@@ -567,7 +567,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Input</span>
+                                            class="section-eyebrow">Input</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.input.value"
@@ -578,7 +578,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-primary-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Audio</span>
+                                            class="section-eyebrow">Audio</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.audio.value"
@@ -590,7 +590,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Wifi class="text-cyan-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Network</span>
+                                            class="section-eyebrow">Network</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.network.value"
@@ -600,7 +600,7 @@ onMounted(() => {
                             <ModernPanel id="sec-vr" v-show="panelVisibility.vr">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Eye class="text-pink-500 w-4 h-4" /><span class="font-semibold text-base tracking-tight">VR
+                                        <Eye class="text-pink-500 w-4 h-4" /><span class="section-eyebrow">VR
                                             Support</span>
                                     </div>
                                 </template>
@@ -612,7 +612,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlertCircle class="text-red-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Issues</span>
+                                            class="section-eyebrow">Issues</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.issues.value"
@@ -623,7 +623,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Other Information (API, Middleware)</span>
+                                            class="section-eyebrow">Other Information (API, Middleware)</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
@@ -638,7 +638,7 @@ onMounted(() => {
                                 v-show="panelVisibility.systemReq">
                                 <template #header>
                                     <div class="flex items-center gap-2">
-                                        <Cpu class="text-lime-500 w-4 h-4" /><span class="font-semibold text-base tracking-tight">System
+                                        <Cpu class="text-lime-500 w-4 h-4" /><span class="section-eyebrow">System
                                             Requirements</span>
                                     </div>
                                 </template>
@@ -652,7 +652,7 @@ onMounted(() => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Globe class="text-teal-400 w-4 h-4" /><span
-                                            class="font-semibold text-base tracking-tight">Localizations</span>
+                                            class="section-eyebrow">Localizations</span>
                                     </div>
                                 </template>
                                 <DynamicSection v-if="schemas.l10n.value"
@@ -780,14 +780,19 @@ onMounted(() => {
 @import './styles/animations.css';
 
 /* Splitter Modern Styling */
+/* Hairline gutter — a quiet surface rule that warms to blue only on interaction. */
 .splitter-modern :deep(.p-splitter-gutter) {
-    background: linear-gradient(to right, transparent 0%, rgba(51, 122, 190, 0.1) 45%, rgba(51, 122, 190, 0.2) 50%, rgba(51, 122, 190, 0.1) 55%, transparent 100%);
-    transition: all 0.2s ease;
+    background: var(--color-surface-200);
+    transition: background 0.15s ease;
     position: relative;
 }
 
+.dark .splitter-modern :deep(.p-splitter-gutter) {
+    background: var(--color-surface-800);
+}
+
 .splitter-modern :deep(.p-splitter-gutter):hover {
-    background: linear-gradient(to right, transparent 0%, rgba(51, 122, 190, 0.15) 40%, rgba(51, 122, 190, 0.3) 50%, rgba(51, 122, 190, 0.15) 60%, transparent 100%);
+    background: var(--color-primary-500);
 }
 
 .splitter-modern :deep(.p-splitter-gutter)::after {
@@ -796,12 +801,12 @@ onMounted(() => {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 2px;
-    height: 32px;
-    background: rgba(51, 122, 190, 0.4);
-    border-radius: 1px;
+    width: 3px;
+    height: 28px;
+    background: var(--color-surface-400);
+    border-radius: 2px;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.15s ease;
 }
 
 .splitter-modern :deep(.p-splitter-gutter):hover::after {

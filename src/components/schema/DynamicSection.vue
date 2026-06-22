@@ -72,7 +72,7 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
         <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-6">
                 <div v-for="(group, idx) in section.groups" :key="idx"
-                    class="@container bg-surface-0 dark:bg-surface-900/70 border border-surface-200/70 dark:border-surface-700/55 rounded-xl shadow-soft overflow-hidden transition-all duration-200">
+                    class="@container border border-surface-200 dark:border-surface-800 rounded-md overflow-hidden transition-all duration-200">
                     <div @click="toggleGroup(idx)"
                         role="button"
                         tabindex="0"
@@ -84,9 +84,9 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                         :class="{ 'border-b-0': collapsedGroups[idx] }">
                         <div class="flex items-center gap-3 text-surface-900 dark:text-surface-100">
                             <component :is="group.icon"
-                                class="w-5 h-5 text-surface-500 group-hover:text-primary-500 transition-colors"
+                                class="w-4 h-4 text-surface-400 group-hover:text-primary-500 transition-colors"
                                 :class="group.iconClass" v-if="group.icon" />
-                            <span class="text-base font-semibold tracking-tight">{{ group.title }}</span>
+                            <span class="section-eyebrow text-xs">{{ group.title }}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <Button 
