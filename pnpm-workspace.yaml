@@ -1,6 +1,10 @@
 packages:
   - '.'
 
+# browserslist 4.28.3 shipped a corrupted tarball (truncated node.js, breaks vite build). Pin to 4.28.4.
+overrides:
+  browserslist: 4.28.4
+
 allowBuilds:
   '@google/genai': true
   '@parcel/watcher': true
