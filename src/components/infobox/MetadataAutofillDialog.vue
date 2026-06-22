@@ -11,7 +11,7 @@ import Checkbox from 'primevue/checkbox';
 import ToggleSwitch from 'primevue/toggleswitch';
 import { 
     Sparkles, Search, AlertCircle, Info, Database, 
-    Twitch, Cpu, ChevronRight
+    Twitch, Cpu
 } from 'lucide-vue-next';
 
 const visible = defineModel<boolean>('visible', { default: false });
@@ -259,6 +259,12 @@ const handleFetchDetailsForSelected = async () => {
             }
         }
 
+        // PCGW's Metacritic reception param is just the slug — strip the legacy
+        // "game/pc/" (or bare "game/") prefix that Metacritic URLs carry.
+        if (mergedMetadata.metacriticId) {
+            mergedMetadata.metacriticId = mergedMetadata.metacriticId.replace(/^game\/(pc\/)?/i, '');
+        }
+
         // Build comparison table
         buildComparison(mergedMetadata);
     } catch (e) {
@@ -437,7 +443,7 @@ const handleApply = () => {
 </script>
 
 <template>
-    <Dialog v-model:visible="visible" modal header="Autofill Ratings & Links" :style="{ width: '680px' }" :draggable="false" class="p-fluid glass">
+    <Dialog v-model:visible="visible" modal header="Autofill Ratings & Links" :draggable="false" class="p-fluid w-full max-w-2xl mx-4">
         <template #header>
             <div class="flex items-center gap-2">
                 <Sparkles class="w-5 h-5 text-primary-500 animate-pulse" />
@@ -447,7 +453,7 @@ const handleApply = () => {
 
         <div class="flex flex-col gap-5 py-2">
             <!-- Settings and Status Panel with Explanations (Scrollable) -->
-            <div class="flex flex-col gap-3.5 p-4 bg-surface-50 dark:bg-surface-900/50 rounded-xl border border-surface-200 dark:border-surface-800 max-h-64 overflow-y-auto custom-scrollbar">
+            <div class="flex flex-col gap-3.5 p-4 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-200 dark:border-surface-800 max-h-64 overflow-y-auto custom-scrollbar">
                 
                 <!-- IGDB API -->
                 <div class="flex items-start justify-between gap-4 py-0.5">
@@ -456,14 +462,14 @@ const handleApply = () => {
                             <Twitch class="w-3.5 h-3.5 text-purple-500 shrink-0" />
                             <span>IGDB API</span>
                         </div>
-                        <p class="text-[11px] text-surface-500 leading-normal max-w-[480px]">
+                        <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
                             Retrieves store links (Steam, GOG, Epic, Itch, Xbox) and Wikipedia/official URLs.
                         </p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <template v-if="hasTwitch">
                             <ToggleSwitch v-model="useIGDB" class="scale-90" />
-                            <span class="text-[11px] font-semibold w-10 text-right" :class="useIGDB ? 'text-purple-500' : 'text-surface-400'">
+                            <span class="text-xs font-semibold w-10 text-right" :class="useIGDB ? 'text-purple-500' : 'text-surface-400'">
                                 {{ useIGDB ? 'Active' : 'Off' }}
                             </span>
                         </template>
@@ -482,14 +488,14 @@ const handleApply = () => {
                             <Database class="w-3.5 h-3.5 text-rose-500 shrink-0" />
                             <span>RAWG.io API</span>
                         </div>
-                        <p class="text-[11px] text-surface-500 leading-normal max-w-[480px]">
+                        <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
                             Retrieves Metacritic scores and storefront links (Steam, GOG, Epic, Itch, Xbox).
                         </p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <template v-if="hasRawg">
                             <ToggleSwitch v-model="useRAWG" class="scale-90" />
-                            <span class="text-[11px] font-semibold w-10 text-right" :class="useRAWG ? 'text-rose-500' : 'text-surface-400'">
+                            <span class="text-xs font-semibold w-10 text-right" :class="useRAWG ? 'text-rose-500' : 'text-surface-400'">
                                 {{ useRAWG ? 'Active' : 'Off' }}
                             </span>
                         </template>
@@ -510,13 +516,13 @@ const handleApply = () => {
                             <Database class="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span>VNDB API</span>
                         </div>
-                        <p class="text-[11px] text-surface-500 leading-normal max-w-[480px]">
+                        <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
                             Retrieves visual novel database IDs directly from VNDB.org (no key required).
                         </p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <ToggleSwitch v-model="useVNDB" class="scale-90" />
-                        <span class="text-[11px] font-semibold w-10 text-right" :class="useVNDB ? 'text-amber-500' : 'text-surface-400'">
+                        <span class="text-xs font-semibold w-10 text-right" :class="useVNDB ? 'text-amber-500' : 'text-surface-400'">
                             {{ useVNDB ? 'Active' : 'Off' }}
                         </span>
                     </div>
@@ -531,14 +537,14 @@ const handleApply = () => {
                             <Cpu class="w-3.5 h-3.5 text-sky-500 shrink-0" />
                             <span>Gemini AI Grounding</span>
                         </div>
-                        <p class="text-[11px] text-surface-500 leading-normal max-w-[480px]">
+                        <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
                             Uses Google Search grounding to retrieve secondary database IDs (HLTB, Lutris, WineHQ, etc.).
                         </p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <template v-if="hasGemini">
                             <ToggleSwitch v-model="useGemini" class="scale-90" />
-                            <span class="text-[11px] font-semibold w-10 text-right" :class="useGemini ? 'text-sky-500' : 'text-surface-400'">
+                            <span class="text-xs font-semibold w-10 text-right" :class="useGemini ? 'text-sky-500' : 'text-surface-400'">
                                 {{ useGemini ? 'Active' : 'Off' }}
                             </span>
                         </template>
@@ -559,41 +565,46 @@ const handleApply = () => {
             </div>
 
             <!-- Candidates Results List -->
-            <div v-if="candidates.length > 0 && comparisonRows.length === 0" class="flex flex-col gap-2 max-h-68 overflow-y-auto custom-scrollbar border rounded-lg border-surface-200 dark:border-surface-800 bg-surface-50/20 dark:bg-surface-900/10">
-                <div class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase px-3 pt-2">Matches Found</div>
-                
-                <div v-for="cand in candidates" :key="cand.id" 
-                    @click="toggleCandidateSelection(cand)"
-                    class="flex items-center justify-between p-3 border-b last:border-0 border-surface-100 dark:border-surface-800 hover:bg-surface-100/50 dark:hover:bg-surface-800/40 cursor-pointer transition-colors group">
-                    <div class="flex items-center gap-3">
+            <div v-if="candidates.length > 0 && comparisonRows.length === 0"
+                class="flex flex-col border rounded-lg border-surface-200 dark:border-surface-800 overflow-hidden">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-surface-200 dark:border-surface-800 bg-surface-50 dark:bg-surface-900/30">
+                    <span class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">Matches Found</span>
+                    <span class="text-xs font-medium text-surface-400 dark:text-surface-500">{{ candidates.length }}</span>
+                </div>
+
+                <!-- Only the rows scroll; the action footer below stays in view -->
+                <div class="flex flex-col max-h-56 overflow-y-auto custom-scrollbar">
+                    <div v-for="cand in candidates" :key="cand.id"
+                        @click="toggleCandidateSelection(cand)"
+                        class="flex items-center gap-3 p-3 border-b last:border-0 border-surface-100 dark:border-surface-800 cursor-pointer transition-colors"
+                        :class="isCandidateSelected(cand) ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-surface-100/60 dark:hover:bg-surface-800/40'">
                         <Checkbox :modelValue="isCandidateSelected(cand)" :binary="true" class="pointer-events-none" />
-                        <img v-if="cand.coverUrl" :src="cand.coverUrl" alt="Cover" class="w-8 h-10 object-cover rounded shadow-xs" />
-                        <div v-else class="w-8 h-10 bg-surface-200 dark:bg-surface-800 rounded flex items-center justify-center">
+                        <img v-if="cand.coverUrl" :src="cand.coverUrl" alt="Cover" class="w-8 h-10 object-cover rounded shadow-xs shrink-0" />
+                        <div v-else class="w-8 h-10 bg-surface-200 dark:bg-surface-800 rounded flex items-center justify-center shrink-0">
                             <Database class="w-4 h-4 text-surface-400" />
                         </div>
-                        <div class="flex flex-col gap-0.5">
+                        <div class="flex flex-col gap-0.5 min-w-0">
                             <div class="flex items-center gap-2">
-                                <span class="font-semibold text-sm group-hover:text-primary-500 transition-colors">{{ cand.name }}</span>
-                                <span class="text-[9px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded-sm bg-surface-200 dark:bg-surface-800 text-surface-500 leading-none">
+                                <span class="font-semibold text-sm truncate" :class="isCandidateSelected(cand) ? 'text-primary-600 dark:text-primary-300' : ''">{{ cand.name }}</span>
+                                <span class="text-xs font-bold uppercase tracking-tight px-1.5 py-0.5 rounded-sm bg-surface-200 dark:bg-surface-800 text-surface-500 leading-none shrink-0">
                                     {{ cand.source || 'IGDB' }}
                                 </span>
                             </div>
                             <span class="text-xs text-surface-500" v-if="cand.releaseYear">Released: {{ cand.releaseYear }}</span>
                         </div>
                     </div>
-                    <ChevronRight class="w-4 h-4 text-surface-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                
-                <!-- Merge selection footer inside candidates container -->
-                <div class="flex justify-end p-2.5 border-t border-surface-200 dark:border-surface-800 bg-surface-50 dark:bg-surface-900/10">
-                    <Button 
-                        :label="selectedCandidates.length > 0 ? `Compare & Merge Selected (${selectedCandidates.length})` : 'Compare & Merge Selected'" 
-                        icon="pi pi-clone" 
-                        size="small" 
-                        class="w-auto! bg-primary-600 border-primary-600 hover:bg-primary-700 hover:border-primary-700 font-semibold"
+
+                <!-- Always-visible action footer -->
+                <div class="flex items-center justify-between gap-3 px-3 py-2.5 border-t border-surface-200 dark:border-surface-800 bg-surface-50 dark:bg-surface-900/30">
+                    <span class="text-xs text-surface-500 dark:text-surface-400">{{ selectedCandidates.length }} of {{ candidates.length }} selected</span>
+                    <Button
+                        :label="selectedCandidates.length > 0 ? `Compare & Merge (${selectedCandidates.length})` : 'Compare & Merge'"
+                        icon="pi pi-clone"
+                        size="small"
+                        class="font-semibold"
                         :disabled="selectedCandidates.length === 0"
-                        @click="handleFetchDetailsForSelected" 
-                    />
+                        @click="handleFetchDetailsForSelected" />
                 </div>
             </div>
 
@@ -623,7 +634,7 @@ const handleApply = () => {
             <div v-if="comparisonRows.length > 0 && !isFetchingDetails" class="flex flex-col gap-3">
                 <div class="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">Review proposed changes</div>
 
-                <div class="border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden max-h-80 overflow-y-auto custom-scrollbar">
+                <div class="border border-surface-200 dark:border-surface-800 rounded-lg overflow-hidden max-h-80 overflow-y-auto custom-scrollbar">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
                             <tr class="bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700 font-semibold text-surface-500 dark:text-surface-400">
