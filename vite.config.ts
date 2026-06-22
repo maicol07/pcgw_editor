@@ -64,7 +64,7 @@ export default defineConfig({
                 name: 'PCGamingWiki Editor',
                 short_name: 'PCGW Editor',
                 description: 'PCGamingWiki Editor Tool',
-                theme_color: '#5b21b6',
+                theme_color: '#337abe',
                 background_color: '#0f172a',
                 icons: [
                     {
