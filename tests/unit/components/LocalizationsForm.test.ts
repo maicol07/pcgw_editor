@@ -34,15 +34,34 @@ const ButtonStub = {
     emits: ['click']
 };
 
+const MultiSelectStub = {
+    template: '<select multiple :value="modelValue" @change="$emit(\'update:modelValue\', [])"></select>',
+    props: ['modelValue', 'options'],
+    emits: ['update:modelValue']
+};
+
+// Popover only renders its content once toggled; default to no content so the
+// footer button counts reflect the closed state.
+const PopoverStub = {
+    template: '<div></div>',
+    methods: { toggle() {}, hide() {} }
+};
+
 // Mock Lucide and Flag icons
 vi.mock('lucide-vue-next', () => ({
     Trash2: { template: '<span class="icon-trash"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
-    GripVertical: { template: '<span class="icon-grip"></span>' }
+    GripVertical: { template: '<span class="icon-grip"></span>' },
+    Languages: { template: '<span class="icon-languages"></span>' }
 }));
 
 vi.mock('@placetopay/flagicons-vue', () => ({
     FlagIcon: { template: '<span class="flag-icon"></span>' }
+}));
+
+// vue-draggable-plus renders a wrapper that just emits its default slot
+vi.mock('vue-draggable-plus', () => ({
+    VueDraggable: { template: '<div><slot /></div>', props: ['modelValue'] }
 }));
 
 describe('LocalizationsForm.vue', () => {
@@ -61,7 +80,9 @@ describe('LocalizationsForm.vue', () => {
                         Checkbox: CheckboxStub,
                         RatingSelect: RatingSelectStub,
                         InputText: InputTextStub,
-                        Button: ButtonStub
+                        Button: ButtonStub,
+                        MultiSelect: MultiSelectStub,
+                        Popover: PopoverStub
                     }
                 }
             }),
@@ -69,18 +90,22 @@ describe('LocalizationsForm.vue', () => {
         };
     };
 
-    it('renders initial rows', async () => {
+    it('renders one language Select per row plus the Set-all column selects', async () => {
         const { wrapper, localizations } = setupWrapper();
         const selects = wrapper.findAllComponents(SelectStub);
-        expect(selects.length).toBe(localizations.length);
+        // One language Select per row + 3 "Set all" column Selects (UI/Audio/Subtitles)
+        expect(selects.length).toBe(localizations.length + 3);
     });
 
     it('adds a new row', async () => {
         const { wrapper } = setupWrapper([]);
 
+        // With no rows the "Set all" bar is hidden; only the two footer buttons remain:
+        // "Add Language" and "Add common languages". Popover is closed (no content).
         const buttons = wrapper.findAllComponents(ButtonStub);
-        expect(buttons.length).toBe(1); // Add button only
+        expect(buttons.length).toBe(2);
 
+        // First footer button is "Add Language"
         await buttons[0].trigger('click');
 
         const emitted = wrapper.emitted('update:localizations');
@@ -93,10 +118,11 @@ describe('LocalizationsForm.vue', () => {
         const { wrapper } = setupWrapper(createLocalizations());
 
         const buttons = wrapper.findAllComponents(ButtonStub);
-        // Buttons: Row 1 drag, Row 1 remove, Row 2 drag, Row 2 remove, Add.
-        // buttons[1] is remove for row 0.
-        expect(buttons.length).toBe(5);
+        // Per row: drag handle + delete (2 each) for 2 rows = 4,
+        // plus footer "Add Language" + "Add common languages" = 2. Total = 6.
+        expect(buttons.length).toBe(6);
 
+        // Row 0: buttons[0] is drag handle, buttons[1] is delete.
         await buttons[1].trigger('click');
 
         const emitted = wrapper.emitted('update:localizations');

@@ -117,13 +117,14 @@ describe('AvailabilityForm.vue', () => {
     it('removes a row when Remove button is clicked', async () => {
         const { wrapper } = setupWrapper(createAvailabilityRows());
 
-        // Remove buttons are the Danger buttons. 
-        // 1 Add + 2 Drag + 2 Remove = 5 Buttons
+        // The drag handle is a plain <button>, not a PrimeVue Button, so it is NOT
+        // matched by ButtonStub. Each row renders a single Remove button; one Add
+        // button follows at the end. Document order: [r0-remove, r1-remove, add].
         const buttons = wrapper.findAllComponents(ButtonStub);
-        expect(buttons.length).toBe(5);
+        expect(buttons.length).toBe(3);
 
-        // Remove button for first row is at index 2 (0: Add, 1: Drag 0, 2: Remove 0, 3: Drag 1, 4: Remove 1)
-        await buttons[2].trigger('click');
+        // Remove button for the first row is at index 0.
+        await buttons[0].trigger('click');
 
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();

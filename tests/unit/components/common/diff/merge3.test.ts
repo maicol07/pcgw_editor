@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult, allResolved,
-} from './merge3';
+} from '@/components/common/diff/merge3';
 
 const base = 'line1\nbase\nline3';
 

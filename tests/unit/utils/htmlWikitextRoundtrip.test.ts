@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wikitextToHtml, htmlToWikitext } from './htmlWikitextConverter';
+import { wikitextToHtml, htmlToWikitext } from '@/utils/htmlWikitextConverter';
 
 /** Round-trip: wikitext -> editor HTML -> wikitext should be stable for rendered tokens. */
 const roundtrip = (wt: string) => htmlToWikitext(wikitextToHtml(wt));

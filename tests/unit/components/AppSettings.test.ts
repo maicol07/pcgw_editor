@@ -9,15 +9,17 @@ import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import ToggleSwitch from 'primevue/toggleswitch';
 import { ref } from 'vue';
 
-// Mock Lucide icons
+// Mock Lucide icons. Must enumerate every icon the component imports (Vitest
+// validates named exports against this object), including the Cloud-sync set.
 vi.mock('lucide-vue-next', () => {
     const icons = [
-        'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key', 
-        'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn', 
-        'Info', 'RotateCcw', 'ShieldAlert', 'Wrench', 'FileText', 'Puzzle', 'Keyboard',
-        'MessageSquareWarning', 'Link2', 'ListChecks', 'Eye', 'EyeOff'
+        'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key',
+        'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn',
+        'Info', 'RotateCcw', 'Eye', 'EyeOff', 'Cloud', 'RefreshCw',
+        'Loader2', 'AlertCircle'
     ];
     const mock: any = {};
     icons.forEach(icon => {
@@ -51,14 +53,23 @@ describe('AppSettings.vue', () => {
             wrapper: mount(AppSettings, {
                 global: {
                     plugins: [pinia],
-                    components: { Dialog, SelectButton, Select, Slider, InputText, Button },
+                    components: { Dialog, SelectButton, Select, Slider, InputText, Button, ToggleSwitch },
+                    directives: {
+                        tooltip: {}
+                    },
                     stubs: {
                         Dialog: {
                             template: '<div class="p-dialog"><slot name="header"></slot><slot></slot><slot name="footer"></slot></div>',
                             props: ['visible']
-                        }
+                        },
+                        // Login dialog pulls in unrelated services; stub it out.
+                        PcgwLoginDialog: true
                     },
                     provide: {
+                        // The component injects per-integration credential refs (not a single gemini key).
+                        twitchClientId: ref(''),
+                        twitchClientSecret: ref(''),
+                        rawgApiKey: ref(''),
                         geminiApiKey: mockGeminiApiKey
                     }
                 }

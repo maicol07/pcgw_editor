@@ -9,6 +9,11 @@ vi.mock('../../../src/services/pcgwApi', () => ({
     }
 }));
 
+// The component calls useConfirm() in setup; provide a stub so it doesn't throw.
+vi.mock('primevue/useconfirm', () => ({
+    useConfirm: () => ({ require: vi.fn(), close: vi.fn() })
+}));
+
 vi.mock('../../../src/stores/workspace', () => ({
     useWorkspaceStore: vi.fn(() => ({
         pages: [
@@ -42,7 +47,13 @@ describe('WorkspaceSidebar.vue', () => {
                     VirtualScroller: { template: '<div><slot name="item" :item="item" v-for="item in items"></slot></div>', props: ['items'] },
                     FileUpload: true,
                     InputText: true,
-                    Select: true
+                    Select: true,
+                    SelectButton: true,
+                    Message: true,
+                    IconField: { template: '<div><slot></slot></div>' },
+                    InputIcon: { template: '<span><slot></slot></span>' },
+                    ConfirmPopup: true,
+                    AutocompleteField: true
                 },
                 directives: {
                     tooltip: () => { }

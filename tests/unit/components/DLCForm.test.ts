@@ -1,6 +1,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import DLCForm from '../../../src/components/DLCForm.vue';
 import { DLCRow } from '../../../src/models/GameData';
 
@@ -37,7 +38,8 @@ vi.mock('lucide-vue-next', () => ({
     X: { template: '<span class="icon-x"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
     Info: { template: '<span class="icon-info"></span>' },
-    GripVertical: { template: '<span class="icon-grip"></span>' }
+    GripVertical: { template: '<span class="icon-grip"></span>' },
+    MonitorCheck: { template: '<span class="icon-monitor-check"></span>' }
 }));
 
 describe('DLCForm.vue', () => {
@@ -47,10 +49,13 @@ describe('DLCForm.vue', () => {
     ];
 
     const setupWrapper = (rows: DLCRow[] = createRows()) => {
+        // DLCForm reads platform hints from the workspace store (Pinia).
+        setActivePinia(createPinia());
         return {
             wrapper: mount(DLCForm, {
                 props: { modelValue: rows },
                 global: {
+                    directives: { tooltip: {} },
                     stubs: {
                         InputText: InputTextStub,
                         Button: ButtonStub,
@@ -94,13 +99,14 @@ describe('DLCForm.vue', () => {
     it('removes a row', async () => {
         const { wrapper } = setupWrapper(createRows());
 
-        // Rows have drag handle and delete buttons.
-        // Wrapper has 2 rows -> 2 drag + 2 delete + 1 add = 5 buttons.
-        // row 0 delete button is at index 1.
-
+        // The drag handle is a plain <button>, not a PrimeVue Button, so it is NOT
+        // matched by ButtonStub. Each row now renders: a Remove button (header) and an
+        // "OS same as game" button (body), plus a single Add button at the end.
+        // Document order: [r0-remove, r0-osSameAsGame, r1-remove, r1-osSameAsGame, add].
         const buttons = wrapper.findAllComponents(ButtonStub);
         expect(buttons.length).toBe(5);
-        await buttons[1].trigger('click');
+        // Remove button for the first row is at index 0.
+        await buttons[0].trigger('click');
 
         const emitted = wrapper.emitted('update:modelValue');
         expect(emitted).toBeTruthy();

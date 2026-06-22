@@ -21,7 +21,8 @@ const InputGroupStub = { template: '<div class="p-inputgroup"><slot /></div>' };
 const InputGroupAddonStub = { template: '<span class="p-inputgroup-addon"><slot /></span>' };
 
 const ButtonStub = {
-    template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>',
+    template: '<button :data-label="label" @click="$emit(\'click\')">{{ label }}<slot /><slot name="icon" /></button>',
+    props: ['label'],
     emits: ['click']
 };
 
@@ -49,7 +50,13 @@ vi.mock('lucide-vue-next', () => ({
     Save: { template: '<span class="icon-save"></span>' },
     Gamepad2: { template: '<span class="icon-gamepad2"></span>' },
     Search: { template: '<span class="icon-search"></span>' },
-    ShoppingCart: { template: '<span class="icon-shopping-cart"></span>' }
+    ShoppingCart: { template: '<span class="icon-shopping-cart"></span>' },
+    GripVertical: { template: '<span class="icon-grip-vertical"></span>' }
+}));
+
+// VueDraggable wraps the row list; stub it to a plain container that renders its slot.
+vi.mock('vue-draggable-plus', () => ({
+    VueDraggable: { template: '<div class="vue-draggable-stub"><slot /></div>' }
 }));
 
 // Mock imported icons (using strings or stubs)
@@ -106,17 +113,12 @@ describe('GameDataPathForm.vue', () => {
     it('adds a new platform row', async () => {
         const { wrapper } = setupWrapper([]);
 
-        // Find "Add Platform" button. 
-        // It's in the header, probably first/second button.
-        // Or find by hierarchy.
-        // Structure: Header -> Add Platform Button.
-        // Then rows.
+        // "Add Platform" is the dashed button rendered below the (empty) list.
+        const addBtn = wrapper.findAllComponents(ButtonStub)
+            .find((b) => b.props('label') === 'Add Platform');
+        expect(addBtn).toBeTruthy();
 
-        const buttons = wrapper.findAllComponents(ButtonStub);
-        // Assuming "Add Platform" is visibly first/prominent button before list.
-        const addBtn = buttons[0]; // Usually.
-
-        await addBtn.trigger('click');
+        await addBtn!.trigger('click');
 
         const emitted = wrapper.emitted('update:rows');
         expect(emitted).toBeTruthy();
@@ -128,28 +130,12 @@ describe('GameDataPathForm.vue', () => {
     it('adds a new path to a row', async () => {
         const { wrapper } = setupWrapper();
 
-        // Find "Add Path" button for row 0.
-        // Inside row 0 div.
-        // Button with label "Add Path" (not visible in stub unless slot content checked, but stub renders slot).
-        // Let's find button by some context if possible.
-        // There are many buttons: Add Platform, Remove Platform, Add Path, Insert Path, Remove Path.
+        // Each row exposes an "Add Path" button in its body header.
+        const addPathBtn = wrapper.findAllComponents(ButtonStub)
+            .find((b) => b.props('label') === 'Add Path');
+        expect(addPathBtn).toBeTruthy();
 
-        // Logic:
-        // wrapper.findAllComponents(ButtonStub) order:
-        // 1. Add Platform (header)
-        // 2. Remove Platform (row 0 header)
-        // 3. Add Path (row 0 path header)
-        // 4. Bookmark (path 0)
-        // 5. Remove Path (path 0 - only if length > 1, so hidden initially for 1 path)
-
-        // With 1 row, 1 path:
-        // Buttons present: Add Platform, Remove Platform, Add Path, Bookmark.
-        // Index 2 should be Add Path.
-
-        const buttons = wrapper.findAllComponents(ButtonStub);
-        const addPathBtn = buttons[2];
-
-        await addPathBtn.trigger('click');
+        await addPathBtn!.trigger('click');
 
         const emitted = wrapper.emitted('update:rows');
         expect(emitted).toBeTruthy();
@@ -162,48 +148,11 @@ describe('GameDataPathForm.vue', () => {
         const inputs = wrapper.findAllComponents(PathInputFieldStub);
 
         await inputs[0].vm.$emit('update:modelValue', 'New Path');
+        await wrapper.vm.$nextTick();
 
-        // Since props.rows is mutated via v-model="row.paths[pathIndex]"
-        // And emit('update:rows') is NOT called on input change in the component directly?
-        // Let's check `GameDataPathForm.vue`.
-        // <InputText v-model="row.paths[pathIndex]" ... />
-        // It mutates the prop object directly.
-        // It does NOT emit 'update:rows' on input change.
-        // So the parent must rely on object mutation reactivity or the component is designed to mutate props (anti-pattern but common in complex forms).
-        // However, `update:rows` IS emitted on add/remove row/path.
-
-        // If it mutates prop without verify, we just check if prop was mutated?
-        // But in test utils, props are reactive if passed reactive?
-        // setupWrapper returns `rows` array.
-        // We can check if `rows[0].paths[0]` changed.
-
-        // Wait, if it doesn't emit, we can't strict check emitted.
-        // If the component relies on direct mutation of objects inside the array prop,
-        // then checking `rows` object reference for changes helps.
-
-        expect(inputs[0].props('modelValue')).toBe('New Path'); // If v-model updates local state
-        // Actually, InputTextStub updates its own modelValue if implementation allows? No.
-        // Parent component updates `row.paths`.
-
-        // In Vue 3, v-model on component prop:
-        // If `row` is reactive, `row.paths[i] = val` updates it.
-        // `createRows` returns plain object. Mount wraps props in reactive?
-        // Yes, `props` are reactive.
-        // `rows` variable in test scope is the original array.
-        // If mounted component mutates prop objects, strict mode warns.
-        // But usually it works.
-
-        // Let's check wrapper.props().rows[0].paths[0].
-        // But since we just triggered emit on stub, parent handles update. 
-        // Parent `v-model` updates `row.paths[pathIndex]`.
-
-        // Test: verify if we can emit update.
-        // Actually, `GameDataPathForm` does NOT Listen to @update:modelValue explicitly to re-emit.
-        // It relies on deep mutation.
-
-        // So we skip expect(emitted).
-        // We verify visual or internal state if possible.
-        // Or if we can't easily verify mutation in test utils without warning, maybe skip or just check add/remove.
-        // Add/remove DO emit.
+        // The path field is bound with v-model="row.paths[pathIndex]", so the
+        // edit propagates back through the bound row and re-renders the input.
+        const updated = wrapper.findAllComponents(PathInputFieldStub);
+        expect(updated[0].props('modelValue')).toBe('New Path');
     });
 });

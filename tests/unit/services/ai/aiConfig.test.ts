@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadKeys } from './aiConfig';
-import { getModel } from './AIService';
-import { aiConfig } from './aiConfig';
+import { loadKeys } from '@/services/ai/aiConfig';
+import { getModel } from '@/services/ai/AIService';
+import { aiConfig } from '@/services/ai/aiConfig';
 
 describe('loadKeys migration', () => {
     beforeEach(() => localStorage.clear());

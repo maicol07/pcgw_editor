@@ -14,7 +14,8 @@ const TextareaStub = {
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({
     Download: { template: '<span class="icon-download"></span>' },
-    Info: { template: '<span class="icon-info"></span>' }
+    Info: { template: '<span class="icon-info"></span>' },
+    ChevronDown: { template: '<span class="icon-chevron-down"></span>' }
 }));
 
 describe('EssentialImprovementsForm.vue', () => {
@@ -51,6 +52,10 @@ describe('EssentialImprovementsForm.vue', () => {
     it('renders helper text', async () => {
         const { wrapper } = setupWrapper();
         expect(wrapper.text()).toContain('Required or highly recommended downloads');
+
+        // The wikitext guidance lives inside the collapsible "example entries" panel.
+        expect(wrapper.text()).not.toContain('Use basic wikitext formatting');
+        await wrapper.find('button').trigger('click');
         expect(wrapper.text()).toContain('Use basic wikitext formatting');
     });
 });

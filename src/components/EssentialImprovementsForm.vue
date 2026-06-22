@@ -14,6 +14,7 @@ const examplesOpen = ref(false);
 const EXAMPLE_ENTRIES = `* [https://example.com/patch Official Patch 1.05] - fixes crashes and adds widescreen support.
 * {{ii|Skip Intro Videos}} - delete or rename the intro video files in <code>\\Movies</code> to skip startup logos.
 * [https://www.nexusmods.com/ Community Bugfix Mod] - resolves common stability issues left unpatched.`;
+</script>
 
 <template>
   <div class="flex flex-col gap-4">

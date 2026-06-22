@@ -8,6 +8,7 @@ vi.mock('../../../src/config/api', () => ({
     getWorkerProxyUrl: () => 'http://proxy-worker.test',
     getDirectApiUrl: () => 'http://direct-api.test',
     getApiHeaders: () => ({}),
+    HTTPONLY_AUTH: false,
     apiFetch: vi.fn()
 }));
 
@@ -23,6 +24,8 @@ describe('pcgwAuth.ts - Session Refresh and Login', () => {
             password: '',
             sessionCookies: ''
         };
+        // @ts-ignore - clear in-memory password between tests
+        pcgwAuth['sessionPassword'].value = undefined;
     });
 
     it('successfully logs in and stores credentials', async () => {
@@ -43,8 +46,8 @@ describe('pcgwAuth.ts - Session Refresh and Login', () => {
         expect(pcgwAuth.isLoggedIn).toBe(true);
         expect(pcgwAuth.username).toBe('TestUser');
         expect(pcgwAuth.sessionCookies).toBe('test-cookies');
-        // @ts-ignore
-        expect(pcgwAuth.authData.value.password).toBe('TestPass');
+        // Password is kept in the in-memory sessionPassword ref, exposed via the getter.
+        expect(pcgwAuth.password).toBe('TestPass');
         // @ts-ignore
         expect(pcgwAuth.authData.value.csrfToken).toBe('test-token');
     });
@@ -55,9 +58,10 @@ describe('pcgwAuth.ts - Session Refresh and Login', () => {
         pcgwAuth.authData.value = {
             username: 'TestUser',
             isLoggedIn: true,
-            password: 'TestPass',
             sessionCookies: 'old-cookies'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'TestPass';
         localStorage.setItem('autoReLogin', 'true');
 
         // First call fails with notloggedin
@@ -122,9 +126,10 @@ describe('pcgwAuth.ts - Session Refresh and Login', () => {
         pcgwAuth.authData.value = {
             username: 'TestUser',
             isLoggedIn: true,
-            password: 'TestPass',
             sessionCookies: 'old-cookies'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'TestPass';
         localStorage.setItem('autoReLogin', 'true');
 
         // First call fails
@@ -161,6 +166,8 @@ describe('PCGWAuthService', () => {
             csrfToken: undefined,
             password: undefined
         };
+        // @ts-ignore - clear in-memory password between tests
+        pcgwAuth['sessionPassword'].value = undefined;
         localStorage.clear();
     });
 
@@ -196,10 +203,11 @@ describe('PCGWAuthService', () => {
         // @ts-ignore
         pcgwAuth['authData'].value = {
             username: 'testuser',
-            password: 'testpassword',
             isLoggedIn: true,
             sessionCookies: 'oldcookie=1'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'testpassword';
         localStorage.setItem('autoReLogin', 'true');
 
         // First mock: failure due to assertuserfailed
@@ -234,10 +242,11 @@ describe('PCGWAuthService', () => {
         // @ts-ignore
         pcgwAuth['authData'].value = {
             username: 'testuser',
-            password: 'testpassword',
             isLoggedIn: true,
             sessionCookies: 'oldcookie=1'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'testpassword';
         localStorage.setItem('autoReLogin', 'false');
 
         vi.mocked(apiFetch).mockResolvedValueOnce({
@@ -258,12 +267,13 @@ describe('PCGWAuthService', () => {
         // @ts-ignore
         pcgwAuth['authData'].value = {
             username: 'testuser',
-            password: 'testpassword',
             isLoggedIn: true,
             sessionCookies: 'testcookie=1'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'testpassword';
         localStorage.setItem('autoReLogin', 'true');
-        
+
         vi.mocked(apiFetch).mockResolvedValueOnce({ success: true }); // logout call
         
         await pcgwAuth.logout();
@@ -278,10 +288,11 @@ describe('PCGWAuthService', () => {
         // @ts-ignore
         pcgwAuth['authData'].value = {
             username: 'testuser',
-            password: 'testpassword',
             isLoggedIn: false,
             sessionCookies: undefined
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'testpassword';
         localStorage.setItem('autoReLogin', 'true');
 
         // 1st mock: successful login
@@ -311,11 +322,12 @@ describe('PCGWAuthService', () => {
         // @ts-ignore
         pcgwAuth['authData'].value = {
             username: 'testuser',
-            password: 'testpassword',
             isLoggedIn: true,
             sessionCookies: 'oldcookie=1',
             csrfToken: 'oldtoken'
         };
+        // @ts-ignore - password lives in the in-memory sessionPassword ref
+        pcgwAuth['sessionPassword'].value = 'testpassword';
         localStorage.setItem('autoReLogin', 'true');
 
         // 1st mock: failure due to badtoken

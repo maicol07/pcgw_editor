@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveKey, encrypt, decrypt, randomSalt } from './crypto';
+import { deriveKey, encrypt, decrypt, randomSalt } from '@/services/sync/crypto';
 
 describe('sync crypto', () => {
     it('round-trips a JSON payload', async () => {

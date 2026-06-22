@@ -12,7 +12,7 @@ export default defineConfig({
     test: {
         environment: 'happy-dom',
         globals: true,
-        include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+        include: ['tests/**/*.test.ts'],
         setupFiles: ['./tests/setup.ts'],
         server: {
             deps: {

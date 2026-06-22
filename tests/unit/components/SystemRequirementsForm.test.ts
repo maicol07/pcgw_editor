@@ -39,8 +39,14 @@ const TabPanelStub = {
 vi.mock('lucide-vue-next', () => ({
     MinusCircle: { template: '<span class="icon-minus"></span>' },
     PlusCircle: { template: '<span class="icon-plus"></span>' },
-    FileText: { template: '<span class="icon-filetext"></span>' }
+    FileText: { template: '<span class="icon-filetext"></span>' },
+    Copy: { template: '<span class="icon-copy"></span>' }
 }));
+
+const ButtonStub = {
+    template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>',
+    emits: ['click']
+};
 
 // Mock Assets
 vi.mock('../../../src/assets/icons/os-windows.svg', () => ({ default: 'windows.svg' }));
@@ -87,7 +93,11 @@ describe('SystemRequirementsForm.vue', () => {
                         TabList: TabListStub,
                         Tab: TabStub,
                         TabPanels: TabPanelsStub,
-                        TabPanel: TabPanelStub
+                        TabPanel: TabPanelStub,
+                        Button: ButtonStub
+                    },
+                    directives: {
+                        tooltip: () => { }
                     }
                 }
             }),
@@ -122,7 +132,11 @@ describe('SystemRequirementsForm.vue', () => {
                     TabList: TabListStub,
                     Tab: TabStub,
                     TabPanels: TabPanelsStub,
-                    TabPanel: TabPanelStub
+                    TabPanel: TabPanelStub,
+                    Button: ButtonStub
+                },
+                directives: {
+                    tooltip: () => { }
                 },
                 // Need to mock assets/icons in global context if not already done by vi.mock
                 // which is done at top file level.

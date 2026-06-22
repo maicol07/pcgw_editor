@@ -23,7 +23,10 @@ vi.mock('lucide-vue-next', () => ({
     RefreshCw: { template: '<span class="refresh-cw-icon"></span>' },
     Unlink: { template: '<span class="unlink-icon"></span>' },
     Link: { template: '<span class="link-icon"></span>' },
-    Search: { template: '<span class="search-icon"></span>' }
+    Search: { template: '<span class="search-icon"></span>' },
+    UploadCloud: { template: '<span class="upload-cloud-icon"></span>' },
+    Eye: { template: '<span class="eye-icon"></span>' },
+    Code2: { template: '<span class="code2-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {
