@@ -7,7 +7,8 @@ import {
     GitFork, Tags, AlertCircle, Brush, Trash2, Gamepad2, DollarSign, PlusCircle, Star,
     Monitor, Grid2X2, Maximize, Minimize, ScanLine, LineChart, ArrowUpRight, FastForward, RefreshCcw, Clock, Zap, Sun, Sparkles, Palette, Eye,
     Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet, Settings, Plug, Smartphone, Search, Hand, Wifi, Headset,
-    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle, Cloud
+    Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle, Cloud,
+    Disc, Music
 } from 'lucide-vue-next';
 import { FIELD_DEFINITIONS } from './fieldDefinitions';
 import * as h from './fieldHelpers';
@@ -331,11 +332,11 @@ export const fieldsConfig: SectionDefinition[] = [
                 ]
             },
             {
-                title: 'API',
+                title: 'Audio API',
                 fields: [
-                    f('audio.eaxSupport', h.rating('EAX Support', { field: 'eaxSupport', label: 'EAX Support' }, { key: 'audio' })),
-                    f('audio.redBookCdAudio', h.rating('Red Book CD Audio', { field: 'redBookCdAudio', label: 'Red Book CD Audio' }, { key: 'audio' })),
-                    f('audio.generalMidiAudio', h.rating('General MIDI Audio', { field: 'generalMidiAudio', label: 'General MIDI Audio' }, { key: 'audio' })),
+                    f('audio.eaxSupport', h.rating('EAX Support', { field: 'eaxSupport', label: 'EAX Support', icon: Volume2 }, { key: 'audio', description: 'Environmental Audio Extensions (legacy hardware 3D audio).' })),
+                    f('audio.redBookCdAudio', h.rating('Red Book CD Audio', { field: 'redBookCdAudio', label: 'Red Book CD Audio', icon: Disc }, { key: 'audio', description: 'Music streamed from CD audio tracks on the disc.' })),
+                    f('audio.generalMidiAudio', h.rating('General MIDI Audio', { field: 'generalMidiAudio', label: 'General MIDI Audio', icon: Music }, { key: 'audio', description: 'General MIDI music playback support.' })),
                 ]
             }
         ]
@@ -866,7 +867,7 @@ export const fieldsConfig: SectionDefinition[] = [
         fields: [
             h.gallery('Gallery', { section: 'System requirements' }, { key: 'galleries.systemReq', wikitextParam: '' }) as FieldDefinition,
             f('requirements', {
-                label: 'System Requirements',
+                label: '',
                 component: 'SystemRequirementsForm',
             })
         ]
@@ -881,7 +882,7 @@ export const fieldsConfig: SectionDefinition[] = [
         templateName: 'Localizations',
         fields: [
             f('localizations', {
-                label: 'Localizations',
+                label: '',
                 component: 'LocalizationsForm',
             })
         ]
@@ -895,7 +896,7 @@ export const fieldsConfig: SectionDefinition[] = [
         isCustomSection: true,
         templateName: 'Issues', // Faux template to hook into our logic easily
         fields: [
-            f('issues', h.custom('Issues', 'IssuesForm'))
+            f('issues', h.custom('', 'IssuesForm'))
         ]
     }
 ];

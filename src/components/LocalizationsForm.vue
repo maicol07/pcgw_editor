@@ -153,7 +153,7 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
                     <!-- Language -->
                     <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
-                        <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Language</label>
+                        <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Language</label>
                         <div class="flex gap-2">
                             <Select v-model="row.language" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
                                 optionValue="value" placeholder="Select or type..." class="w-full">
@@ -178,7 +178,7 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
 
                     <!-- Interface -->
                     <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
-                        <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold text-surface-500">UI</label>
+                        <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">UI</label>
                         <div
                             class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
                             <Checkbox :inputId="`loc-ui-${getRowId(row)}`" v-model="row.interface" true-value="true" false-value="false" binary />
@@ -187,20 +187,20 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
 
                     <!-- Audio -->
                     <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                        <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Audio</label>
+                        <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Audio</label>
                         <RatingSelect v-model="row.audio" :inputId="`loc-audio-${getRowId(row)}`" />
                     </div>
 
                     <!-- Subtitles -->
                     <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
-                        <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Subtitles</label>
+                        <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Subtitles</label>
                         <RatingSelect v-model="row.subtitles" :inputId="`loc-subs-${getRowId(row)}`" />
                     </div>
 
                     <!-- Notes & Fan -->
                     <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
                         <div class="flex-1 flex flex-col gap-1">
-                            <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold text-surface-500">Notes</label>
+                            <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Notes</label>
                             <InputText :id="`loc-notes-${getRowId(row)}`" v-model="row.notes" class="w-full" placeholder="Notes..." />
                         </div>
                         <div class="flex flex-col gap-1 items-center pb-2" title="Fan Translation">

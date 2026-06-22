@@ -4,7 +4,7 @@ import { Issue } from '../../models/GameData';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
-import { X, Plus, Info, GripVertical, ChevronDown, Wand2 } from 'lucide-vue-next';
+import { X, Plus, Info, GripVertical, ChevronDown } from 'lucide-vue-next';
 import WysiwygEditor from '../common/WysiwygEditor.vue';
 import { VueDraggable } from 'vue-draggable-plus';
 
@@ -34,20 +34,8 @@ function setStatus(row: Issue, value: string) {
   row.fixed = value !== 'open';
 }
 
-// Common issue templates: prefill title + description starters.
-const ISSUE_TEMPLATES = [
-  { label: 'Crash on launch', title: 'Game crashes on launch', body: '<p>The game fails to start or crashes immediately on launch.</p>' },
-  { label: 'Audio desync', title: 'Audio is out of sync', body: '<p>Audio drifts out of sync with video/cutscenes.</p>' },
-  { label: 'Performance drops', title: 'Performance drops / stuttering', body: '<p>Frame rate drops or stuttering occurs during gameplay.</p>' },
-  { label: 'Save corruption', title: 'Save data corruption', body: '<p>Save files become corrupted or fail to load.</p>' },
-];
-
 function addRow() {
   dragList.value = [...dragList.value, { title: '', fixed: false, body: '' }];
-}
-
-function addTemplate(tpl: { title: string; body: string }) {
-  dragList.value = [...dragList.value, { title: tpl.title, fixed: false, body: tpl.body }];
 }
 
 function removeRow(index: number) {
@@ -105,22 +93,11 @@ const guidelinesOpen = ref(false);
       </div>
     </VueDraggable>
 
-    <div class="flex flex-col sm:flex-row gap-2">
-      <Button label="Add Issue" severity="secondary" outlined class="flex-1 border-dashed" @click="addRow">
-        <template #icon>
-          <Plus class="w-4 h-4" />
-        </template>
-      </Button>
-
-      <div class="flex-1">
-        <Select :options="ISSUE_TEMPLATES" optionLabel="label" placeholder="Common issue templates"
-          class="w-full" @update:modelValue="addTemplate">
-          <template #dropdownicon>
-            <Wand2 class="w-4 h-4" />
-          </template>
-        </Select>
-      </div>
-    </div>
+    <Button label="Add Issue" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
+      <template #icon>
+        <Plus class="w-4 h-4" />
+      </template>
+    </Button>
 
     <div class="mt-2 rounded border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
       <button type="button" @click="guidelinesOpen = !guidelinesOpen"

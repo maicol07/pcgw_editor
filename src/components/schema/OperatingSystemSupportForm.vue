@@ -121,14 +121,14 @@ const columns = [
 <template>
     <div class="w-full overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-700">
         <table class="w-full text-sm text-left border-collapse bg-surface-0 dark:bg-surface-900">
-            <thead class="text-xs uppercase bg-primary-600 text-white">
+            <thead class="text-xs uppercase tracking-wider bg-surface-50 dark:bg-surface-800/60 text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700">
                 <tr>
-                    <th class="px-4 py-3 font-semibold rounded-tl-lg">Executable</th>
-                    <th v-for="col in columns" :key="col.label" class="px-2 py-3 text-center font-semibold"
+                    <th class="px-4 py-3 font-bold">Executable</th>
+                    <th v-for="col in columns" :key="col.label" class="px-2 py-3 text-center font-bold"
                         :class="col.width">
                         {{ col.label }}
                     </th>
-                    <th class="px-4 py-3 font-semibold rounded-tr-lg">Notes</th>
+                    <th class="px-4 py-3 font-bold">Notes</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-surface-200 dark:divide-surface-700">

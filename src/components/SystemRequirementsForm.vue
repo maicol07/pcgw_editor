@@ -4,8 +4,7 @@
             System requirements should be populated for <b>all</b> supported operating systems.
         </Message>
 
-        <div
-            class="card bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden shadow-sm">
+        <div class="card surface-card overflow-hidden">
             <Tabs v-model:value="activeTab">
                 <TabList class="bg-surface-50 dark:bg-surface-800/50 p-1 gap-1">
                     <Tab v-for="os in supportedOS" :key="os.key" :value="os.key"
@@ -34,7 +33,7 @@
                             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 <!-- Minimum Specs -->
                                 <div
-                                    class="flex flex-col gap-4 p-4 rounded-xl bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
+                                    class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
                                     <div
                                         class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
                                         <MinusCircle class="w-4 h-4 text-orange-500" />
@@ -76,7 +75,7 @@
 
                                 <!-- Recommended Specs -->
                                 <div
-                                    class="flex flex-col gap-4 p-4 rounded-xl bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
+                                    class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
                                     <div
                                         class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
                                         <PlusCircle class="w-4 h-4 text-green-500" />
