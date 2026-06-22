@@ -28,7 +28,7 @@ import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
-    X, ArrowRightLeft, ListChecks, TriangleAlert
+    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
@@ -1699,6 +1699,80 @@ const removeCombineItem = (index: number) => {
     combineQueue.value.splice(index, 1);
 };
 
+// Smart auto-adjust (no AI): center-crop every queued image to a uniform dimension so
+// the montage lines up flush — equal height for a horizontal strip, equal width for a
+// vertical stack. Crops the larger images down to the smallest along the shared axis.
+const isAdjusting = ref(false);
+const autoAdjustImages = async () => {
+    if (combineQueue.value.length < 2 || isAdjusting.value) return;
+    isAdjusting.value = true;
+    try {
+        const items = combineQueue.value;
+        const loaded = await Promise.all(items.map(it => new Promise<HTMLImageElement>((resolve, reject) => {
+            const im = new window.Image();
+            im.crossOrigin = 'anonymous';
+            im.onload = () => resolve(im);
+            im.onerror = () => reject(new Error(`Failed to load ${it.name}`));
+            im.src = it.url || '';
+        })));
+
+        const horizontal = combineOrientation.value === 'horizontal';
+        // ponytail: crop-to-min on the shared axis. Resize-to-fit would avoid pixel loss
+        // but the request is explicitly crops.
+        const target = horizontal
+            ? Math.min(...loaded.map(i => i.naturalHeight))
+            : Math.min(...loaded.map(i => i.naturalWidth));
+
+        let changed = 0;
+        for (let idx = 0; idx < items.length; idx++) {
+            const item = items[idx];
+            const img = loaded[idx];
+            const fullW = img.naturalWidth, fullH = img.naturalHeight;
+            const cropW = horizontal ? fullW : target;
+            const cropH = horizontal ? target : fullH;
+            if (cropW >= fullW && cropH >= fullH) continue; // already at the shared minimum
+
+            const sx = Math.max(0, Math.floor((fullW - cropW) / 2));
+            const sy = Math.max(0, Math.floor((fullH - cropH) / 2));
+            const canvas = document.createElement('canvas');
+            canvas.width = cropW;
+            canvas.height = cropH;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue;
+            ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+
+            const mime = item.file?.type || getImageFormatFromName(item.name);
+            const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, mime));
+            if (!blob) continue;
+            const newFile = new File([blob], item.name, { type: mime, lastModified: Date.now() });
+
+            if (item.localId) {
+                await fileStore.updateFileStatus(item.localId, { blob: newFile, size: newFile.size, type: mime, lastModified: newFile.lastModified });
+            } else {
+                item.localId = await fileStore.addFile(newFile);
+                item.type = 'local';
+                item.id = 'local-' + item.localId;
+            }
+            item.file = newFile;
+            if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
+            item.url = URL.createObjectURL(newFile);
+            combineQueue.value[idx] = { ...item };
+            changed++;
+        }
+        combineQueue.value = [...combineQueue.value]; // re-trigger the live preview
+
+        if (changed > 0) {
+            toast.add({ severity: 'success', summary: 'Images Adjusted', detail: `Cropped ${changed} image${changed > 1 ? 's' : ''} to a uniform ${horizontal ? 'height' : 'width'}.`, life: 3000 });
+        } else {
+            toast.add({ severity: 'info', summary: 'Already Aligned', detail: `All images already share the same ${horizontal ? 'height' : 'width'}.`, life: 3000 });
+        }
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: 'Adjust Failed', detail: e.message || 'Could not adjust images.', life: 4000 });
+    } finally {
+        isAdjusting.value = false;
+    }
+};
+
 // Generate Preview live!
 let previewObjUrlBlob: Blob | null = null;
 const generatePreview = async () => {
@@ -1971,19 +2045,15 @@ defineExpose({
 
 <template>
     <div
-        class="gallery-section flex flex-col gap-4 p-4 bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl relative overflow-hidden">
-        <!-- Decoration -->
-        <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-            <Images class="w-24 h-24" />
-        </div>
-
-        <div class="flex items-center justify-between relative z-10">
-            <label class="font-bold text-sm text-surface-500 uppercase tracking-widest flex items-center">
-                <Images class="mr-2 w-4 h-4" /> Gallery
+        class="gallery-section surface-card flex flex-col gap-4 p-4">
+        <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-surface-200/80 dark:border-surface-800/80">
+            <label class="section-eyebrow flex items-center gap-2">
+                <Images class="w-4 h-4 text-surface-400" /> Gallery
+                <span v-if="displayImages.length" class="font-data text-xs font-normal tracking-normal text-surface-400 normal-case">{{ displayImages.length }}</span>
             </label>
             <div v-if="pcgwAuth.isLoggedIn" class="flex items-center gap-2">
                 <span
-                    class="text-xs text-surface-500 bg-surface-100 dark:bg-surface-900 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    class="text-xs text-surface-500 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <CheckCircle2 class="w-3 h-3 text-green-500" />
                     {{ pcgwAuth.username }}
                 </span>
@@ -2048,12 +2118,12 @@ defineExpose({
             </Transition>
         </div>
 
-        <Dialog v-model:visible="showSearchDialog" :header="isReplacing ? 'Replace Image' : 'Add Image'" modal :style="{ width: '500px' }"
-            :draggable="false">
+        <Dialog v-model:visible="showSearchDialog" :header="isReplacing ? 'Replace Image' : 'Add Image'" modal
+            class="w-full max-w-lg mx-4" :draggable="false">
             <div class="flex flex-col gap-6 py-4">
                 <div class="flex flex-col gap-3">
                     <div class="flex items-center justify-between">
-                        <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
+                        <label class="font-bold text-xs text-surface-500 uppercase tracking-wider flex items-center gap-2">
                             <Upload class="w-4 h-4" /> From your computer
                         </label>
                         <div class="flex items-center gap-2">
@@ -2069,13 +2139,13 @@ defineExpose({
                     </Button>
                 </div>
 
-                <div class="border-t border-surface-100 dark:border-surface-700 relative flex justify-center">
+                <div class="border-t border-surface-200 dark:border-surface-700 relative flex justify-center">
                     <span
                         class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-xs text-surface-400 uppercase tracking-widest font-bold">Or</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
+                    <label class="font-bold text-xs text-surface-500 uppercase tracking-wider flex items-center gap-2">
                         <Images class="w-4 h-4" /> Existing PCGW Image
                     </label>
                     <AutocompleteField v-model="newImage" dataSource="files" placeholder="Search by filename..."
@@ -2109,13 +2179,13 @@ defineExpose({
                     </AutocompleteField>
                 </div>
 
-                <div class="border-t border-surface-100 dark:border-surface-700 relative flex justify-center mt-4">
+                <div class="border-t border-surface-200 dark:border-surface-700 relative flex justify-center mt-4">
                     <span class="absolute -top-3 px-3 bg-surface-0 dark:bg-surface-800 text-xs text-surface-400 uppercase tracking-widest font-bold">Advanced Tools</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
-                        <Combine class="w-4 h-4" /> Layout Builder
+                    <label class="font-bold text-xs text-surface-500 uppercase tracking-wider flex items-center gap-2">
+                        <Combine class="w-4 h-4" /> Image Combiner
                     </label>
                     <Button label="Open Image Combiner" severity="secondary" @click="() => { showSearchDialog = false; showCombineDialog = true; }" class="w-full">
                         <template #icon>
@@ -2124,7 +2194,7 @@ defineExpose({
                     </Button>
                 </div>
 
-                <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-surface-100 dark:border-surface-700">
+                <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
                     <Button label="Cancel" text @click="showSearchDialog = false" />
                     <Button :label="isReplacing ? 'Replace Selected' : 'Add Selected'" @click="() => { addImage(); showSearchDialog = false; }"
                         :disabled="!newImage || newImage.length === 0" />
@@ -2211,7 +2281,7 @@ defineExpose({
 
                     <!-- Actions -->
                     <div
-                        class="gallery-actions flex items-center justify-between mt-3 border-t border-surface-100 dark:border-surface-700 pt-2">
+                        class="gallery-actions flex items-center justify-between mt-3 border-t border-surface-200 dark:border-surface-700 pt-2">
                         <!-- Left: Gallery Settings (Always Visible) -->
                         <div class="flex gap-1">
                             <Button text rounded size="small" v-tooltip="'Edit Caption'"
@@ -2274,19 +2344,19 @@ defineExpose({
         </div>
 
         <!-- Caption Dialog -->
-        <Dialog v-model:visible="showCaptionDialog" header="Edit Caption" modal :style="{ width: '400px' }"
+        <Dialog v-model:visible="showCaptionDialog" header="Edit Caption" modal class="w-full max-w-sm mx-4"
             :draggable="false">
             <div class="flex flex-col gap-4">
-                <div class="flex flex-col gap-2">
-                    <label class="font-bold text-sm">Image</label>
-                    <InputText :value="editingImage?.name" disabled class="w-full bg-surface-100 dark:bg-surface-900" />
+                <div class="flex flex-col gap-1.5">
+                    <label for="captionImage" class="text-xs font-bold text-surface-500 uppercase tracking-wider">Image</label>
+                    <InputText id="captionImage" :value="editingImage?.name" disabled class="w-full font-data text-sm! bg-surface-100 dark:bg-surface-800" />
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="font-bold text-sm">Caption</label>
-                    <Textarea v-model="editingCaption" rows="3" autoResize class="w-full"
+                <div class="flex flex-col gap-1.5">
+                    <label for="captionText" class="text-xs font-bold text-surface-500 uppercase tracking-wider">Caption</label>
+                    <Textarea id="captionText" v-model="editingCaption" rows="3" autoResize class="w-full"
                         placeholder="Enter caption..." />
                 </div>
-                <div class="flex justify-end gap-2 mt-2">
+                <div class="flex justify-end gap-2 pt-3 border-t border-surface-200 dark:border-surface-700">
                     <Button label="Cancel" text @click="showCaptionDialog = false" />
                     <Button label="Save" @click="saveCaption" />
                 </div>
@@ -2296,31 +2366,24 @@ defineExpose({
         <!-- Edit PCGW Description Dialog -->
         <Dialog v-model:visible="showPcgwEditDialog" modal header="Edit PCGW Description" :draggable="false"
             class="w-full max-w-md">
-            <div class="flex flex-col gap-5">
-                <div
-                    class="flex items-center gap-4 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20">
-                    <div class="p-2.5 bg-primary-500 rounded-lg shadow-lg">
-                        <Pencil class="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <p class="font-bold text-xs text-primary-600 uppercase tracking-widest">Wiki Metadata Editor</p>
-                        <p class="text-xs opacity-70">Modify the description of the file on PCGamingWiki.</p>
-                    </div>
-                </div>
+            <div class="flex flex-col gap-4">
+                <p class="text-sm text-surface-500 dark:text-surface-400">
+                    Edit this file's description as it appears on PCGamingWiki.
+                </p>
 
                 <div v-if="pcgwEditingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
                         <label
-                            class="text-xs font-bold text-surface-500 uppercase flex items-center justify-between gap-1.5">
+                            class="text-xs font-bold text-surface-500 uppercase tracking-wider flex items-center justify-between gap-1.5">
                             <span>Target Filename</span>
-                            <div v-if="isFetchingContent"
-                                class="flex items-center gap-1.5 text-primary-500 font-normal italic lowercase tracking-normal">
+                            <span v-if="isFetchingContent"
+                                class="flex items-center gap-1.5 text-primary-500 font-normal italic normal-case tracking-normal">
                                 <Loader2 class="w-3 h-3 animate-spin" />
-                                <span>Syncing with wiki...</span>
-                            </div>
+                                Syncing with wiki…
+                            </span>
                         </label>
                         <div
-                            class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-sm text-surface-600 truncate">
+                            class="font-data px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded-md text-sm text-surface-600 dark:text-surface-300 truncate border border-surface-200 dark:border-surface-700">
                             {{ pcgwEditingImage.name }}
                         </div>
                     </div>
@@ -2351,21 +2414,11 @@ defineExpose({
         <!-- PCGW Deletion Request Dialog -->
         <Dialog v-model:visible="showPcgwDeleteDialog" modal header="Request PCGW Deletion" :draggable="false"
             class="w-full max-w-sm">
-            <div class="flex flex-col gap-5">
-                <div
-                    class="flex items-center gap-4 bg-red-50 dark:bg-red-900/10 p-4 rounded-xl border border-red-100 dark:border-red-900/20">
-                    <div class="p-2.5 bg-red-500 rounded-lg shadow-lg">
-                        <Trash2 class="w-5 h-5 text-white" />
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-bold text-xs text-red-600 uppercase tracking-widest dark:text-red-400">Deletion
-                            Request
-                        </p>
-                        <p class="text-[11px] opacity-80 leading-tight mt-0.5">This will add a <code
-                                v-pre>{{delete}}</code> tag
-                            to the file description on PCGamingWiki.</p>
-                    </div>
-                </div>
+            <div class="flex flex-col gap-4">
+                <p class="text-sm text-surface-500 dark:text-surface-400 leading-relaxed">
+                    This adds a <code v-pre class="font-data text-red-500">{{delete}}</code> tag to the file's
+                    description on PCGamingWiki, flagging it for an administrator to remove.
+                </p>
 
                 <div v-if="isCheckingExistingDelete"
                     class="flex items-center justify-center py-2 gap-2 text-xs text-surface-500 italic">
@@ -2379,7 +2432,7 @@ defineExpose({
                         <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
                         <div class="flex flex-col gap-1">
                             <span class="text-xs font-bold uppercase">Existing Request Found</span>
-                            <p class="text-[11px] leading-tight">This file already has a deletion tag. Sending this
+                            <p class="text-xs leading-tight">This file already has a deletion tag. Sending this
                                 request will
                                 <strong>replace</strong> the previous one.
                             </p>
@@ -2392,18 +2445,18 @@ defineExpose({
 
                 <div v-if="pcgwDeletingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-surface-500 uppercase">Target Filename</label>
+                        <label class="text-xs font-bold text-surface-500 uppercase tracking-wider">Target Filename</label>
                         <div
-                            class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-xs text-surface-600 truncate border border-surface-200 dark:border-surface-700">
+                            class="font-data px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded-md text-sm text-surface-600 dark:text-surface-300 truncate border border-surface-200 dark:border-surface-700">
                             {{ pcgwDeletingImage.name }}
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-1.5">
                         <label for="deletionReason"
-                            class="text-xs font-bold text-surface-500 uppercase flex items-center justify-between">
+                            class="text-xs font-bold text-surface-500 uppercase tracking-wider flex items-center justify-between">
                             <span>Reason (Optional)</span>
-                            <span class="font-normal text-[9px] lowercase opacity-60">Shown in the template</span>
+                            <span class="font-normal text-xs lowercase opacity-60">Shown in the template</span>
                         </label>
                         <InputText id="deletionReason" v-model="pcgwDeletionReason"
                             placeholder="e.g., Duplicated, lower quality..." class="w-full text-sm!"
@@ -2427,33 +2480,26 @@ defineExpose({
         <!-- PCGW Rename Dialog -->
         <Dialog v-model:visible="showRenameDialog" modal :header="renamingImage?.localId !== undefined ? 'Rename File' : 'Rename on PCGW'" :draggable="false"
             class="w-full max-w-sm">
-            <div class="flex flex-col gap-5">
-                <div
-                    class="flex items-center gap-4 bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/20">
-                    <div class="p-2.5 bg-primary-500 rounded-lg shadow-lg">
-                        <TextCursorInput class="w-5 h-5 text-white" />
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-bold text-xs text-primary-600 uppercase tracking-widest">{{ renamingImage?.localId !== undefined ? 'Rename Local File' : 'Rename Wiki File' }}</p>
-                        <p class="text-[11px] opacity-80 leading-tight mt-0.5">{{ renamingImage?.localId !== undefined ? 'Update the name of this local file before upload.' : 'This will rename the file on PCGamingWiki using the Move API.' }}</p>
-                    </div>
-                </div>
+            <div class="flex flex-col gap-4">
+                <p class="text-sm text-surface-500 dark:text-surface-400">
+                    {{ renamingImage?.localId !== undefined ? 'Update the name of this local file before upload.' : 'Rename this file on PCGamingWiki using the Move API.' }}
+                </p>
 
                 <div v-if="renamingImage" class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-surface-500 uppercase">Current Filename</label>
+                        <label class="text-xs font-bold text-surface-500 uppercase tracking-wider">Current Filename</label>
                         <div
-                            class="px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded text-xs text-surface-400 truncate border border-surface-200 dark:border-surface-700 italic">
+                            class="font-data px-3 py-2 bg-surface-100 dark:bg-surface-800 rounded-md text-sm text-surface-400 truncate border border-surface-200 dark:border-surface-700">
                             {{ renamingImage.name }}
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-1.5">
-                        <label for="newRenameName" class="text-xs font-bold text-surface-500 uppercase">New
+                        <label for="newRenameName" class="text-xs font-bold text-surface-500 uppercase tracking-wider">New
                             Filename</label>
                         <InputText id="newRenameName" v-model="newRenameName" placeholder="New-filename.png"
                             class="w-full text-sm!" @keyup.enter="handleConfirmRename" />
-                        <span class="text-[9px] text-surface-400 italic px-1">Remember to include the extension (e.g.,
+                        <span class="text-xs text-surface-400 italic px-1">Remember to include the extension (e.g.,
                             .png, .jpg).</span>
                     </div>
                 </div>
@@ -2472,7 +2518,7 @@ defineExpose({
         </Dialog>
 
         <!-- Upload Confirmation & Metadata Dialog -->
-        <Dialog v-model:visible="showConfirmUpload" header="Confirm PCGW Upload" modal :style="{ width: '450px' }"
+        <Dialog v-model:visible="showConfirmUpload" header="Confirm PCGW Upload" modal class="w-full max-w-md mx-4"
             :draggable="false">
             <div class="flex flex-col gap-4">
                 <div v-if="selectedFile"
@@ -2486,14 +2532,14 @@ defineExpose({
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-surface-500 uppercase">PCGW Filename</label>
-                    <InputText v-model="editFilename" class="w-full" placeholder="Existing-filename.png" />
+                    <label for="uploadFilename" class="text-xs font-bold text-surface-500 uppercase">PCGW Filename</label>
+                    <InputText id="uploadFilename" v-model="editFilename" class="w-full" placeholder="Existing-filename.png" />
                     <span class="text-xs text-surface-400 italic">This will be the final name on the wiki.</span>
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-surface-500 uppercase">Description / Comment</label>
-                    <Textarea v-model="editDescription" rows="2" class="w-full text-sm"
+                    <label for="uploadDescription" class="text-xs font-bold text-surface-500 uppercase">Description / Comment</label>
+                    <Textarea id="uploadDescription" v-model="editDescription" rows="2" class="w-full text-sm"
                         placeholder="Brief description of the image content..." />
                 </div>
 
@@ -2519,7 +2565,7 @@ defineExpose({
         </Dialog>
 
         <!-- Overwrite / Duplicate Warning Dialog -->
-        <Dialog v-model:visible="showOverwriteConfirm" header="File Already Exists" modal :style="{ width: '400px' }"
+        <Dialog v-model:visible="showOverwriteConfirm" header="File Already Exists" modal class="w-full max-w-sm mx-4"
             :draggable="false" severity="warning">
             <template #header>
                 <div class="flex items-center gap-2">
@@ -2567,7 +2613,7 @@ defineExpose({
                     <span class="text-xs text-surface-400 italic">Original aspect ratio will be preserved exactly.</span>
                 </div>
 
-                <div class="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-surface-100 dark:border-surface-700">
+                <div class="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-surface-200 dark:border-surface-700">
                     <Button label="Cancel" severity="danger" text class="w-full sm:w-auto" @click="handleMpCancel" />
                     <Button label="No, keep original" severity="secondary" text class="w-full sm:w-auto" @click="handleMpKeepOriginal" />
                     <Button label="Yes, resize" severity="warning" class="w-full sm:w-auto" @click="handleMpResizeConfirm" />
@@ -2576,12 +2622,12 @@ defineExpose({
         </Dialog>
 
         <!-- Image Cropper Dialog -->
-        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal :style="{ width: '800px' }" :draggable="false">
+        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal class="w-full max-w-3xl mx-4" :draggable="false">
             <div class="flex flex-col gap-4">
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
                     <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" auto-zoom />
                 </div>
-                <div class="flex items-center justify-between w-full mt-2 pt-2 border-t border-surface-100 dark:border-surface-700">
+                <div class="flex items-center justify-between w-full mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Format:</span>
                         <Select v-model="selectedCropFormat" :options="cropFormatOptions" optionLabel="label" optionValue="value" class="w-32 text-xs" />
@@ -2600,7 +2646,7 @@ defineExpose({
         </Dialog>
 
         <!-- Combine Images Dialog -->
-        <Dialog v-model:visible="showCombineDialog" header="Combine Images Builder" modal :style="{ width: '100%', maxWidth: '800px' }" class="mx-4" :draggable="false" @hide="closeCombineDialog">
+        <Dialog v-model:visible="showCombineDialog" header="Image Combiner" modal class="w-full max-w-3xl mx-4" :draggable="false" @hide="closeCombineDialog">
             <div class="flex flex-col gap-6 py-4">
                 
                 <!-- Live Preview -->
@@ -2614,9 +2660,9 @@ defineExpose({
                     Add at least 2 images to generate a preview
                 </div>
 
-                <div class="flex items-center gap-8">
-                    <div class="flex flex-col gap-2 flex-1">
-                        <label class="font-bold text-xs text-surface-500 uppercase">Orientation</label>
+                <div class="flex flex-wrap items-center gap-4 sm:gap-8">
+                    <div class="flex flex-col gap-2 flex-1 min-w-[12rem]">
+                        <label class="font-bold text-xs text-surface-500 uppercase tracking-wider">Orientation</label>
                         <div class="flex items-center gap-4 bg-surface-100 dark:bg-surface-800 py-2 px-3 rounded-md w-fit">
                             <div class="flex items-center gap-2 cursor-pointer" @click="combineOrientation = 'horizontal'">
                                 <RadioButton v-model="combineOrientation" inputId="horizontal" name="orientation" value="horizontal" />
@@ -2630,25 +2676,32 @@ defineExpose({
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <label class="font-bold text-xs text-surface-500 uppercase">Format</label>
+                        <label class="font-bold text-xs text-surface-500 uppercase tracking-wider">Format</label>
                         <Select v-model="selectedCombineFormat" :options="cropFormatOptions" optionLabel="label" optionValue="value" class="w-32" @change="onCombineFormatChange" />
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <label class="font-bold text-xs text-surface-500 uppercase">Gap (px)</label>
+                        <label class="font-bold text-xs text-surface-500 uppercase tracking-wider">Gap (px)</label>
                         <InputNumber v-model="combineGap" inputId="gap" :min="0" :max="1000" class="w-20" inputClass="w-full" />
                     </div>
                 </div>
 
-                <hr class="border-surface-100 dark:border-surface-700" />
+                <hr class="border-surface-200 dark:border-surface-700" />
 
                 <!-- Unified Queue -->
                 <div class="flex flex-col gap-2 relative">
-                    <div class="flex items-center justify-between">
-                        <label class="font-bold text-xs text-surface-500 uppercase flex items-center gap-2">
-                            <Images class="w-4 h-4" /> Layout Queue
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <label class="font-bold text-xs text-surface-500 uppercase tracking-wider flex items-center gap-2">
+                            <Images class="w-4 h-4" /> Image Queue
                         </label>
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+                            <Button label="Auto-adjust" size="small" outlined severity="secondary"
+                                :loading="isAdjusting" :disabled="combineQueue.length < 2" @click="autoAdjustImages"
+                                v-tooltip.top="combineOrientation === 'horizontal' ? 'Center-crop every image to a uniform height for a flush horizontal strip' : 'Center-crop every image to a uniform width for a flush vertical stack'">
+                                <template #icon>
+                                    <Scaling class="w-4 h-4 mr-1.5" />
+                                </template>
+                            </Button>
                             <div class="flex items-center gap-2">
                                 <label for="combineCropOnUpload" class="text-xs text-surface-400 font-bold uppercase cursor-pointer">Crop after upload</label>
                                 <ToggleSwitch v-model="cropOnUpload" inputId="combineCropOnUpload" class="scale-75 origin-right" />
@@ -2678,8 +2731,8 @@ defineExpose({
                                     <img v-if="item.url" :src="item.url" class="w-full h-full object-cover" />
                                     <Image v-else class="w-4 h-4 text-surface-400" />
                                 </div>
-                                <span class="truncate">{{ item.name }}</span>
-                                <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-surface-300 dark:bg-surface-600 text-surface-600 dark:text-surface-300 ml-2 shrink-0">{{ item.type }}</span>
+                                <span class="font-data truncate text-sm">{{ item.name }}</span>
+                                <span class="text-xs uppercase tracking-widest px-1.5 py-0.5 rounded bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-300 ml-2 shrink-0">{{ item.type }}</span>
                             </div>
                             <div class="flex items-center gap-0.5 shrink-0 ml-2">
                                 <Button text severity="secondary" @click="initiateCrop({ type: 'combine', combineItem: item })" class="p-1" v-tooltip.bottom="'Crop Image'">
@@ -2703,7 +2756,7 @@ defineExpose({
                     </VueDraggable>
                 </div>
 
-                <div class="flex justify-end gap-2 mt-4 border-t border-surface-100 dark:border-surface-700 pt-4">
+                <div class="flex justify-end gap-2 mt-4 border-t border-surface-200 dark:border-surface-700 pt-4">
                     <Button label="Cancel" text @click="closeCombineDialog" :disabled="isCombining" />
                     <Button label="Confirm & Add Image" severity="primary" @click="handleConfirmCombine" :loading="isCombining" :disabled="combineQueue.length < 2 || !previewObjUrlBlob">
                         <template #icon>
