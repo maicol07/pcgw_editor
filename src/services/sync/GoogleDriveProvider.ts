@@ -107,10 +107,12 @@ class GoogleDriveProvider implements SyncProvider {
             ? `https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=multipart&fields=id`
             : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
         const res = await fetch(url, {
-            method: this.fileId ? 'PATCH' : 'POST',
+            // ponytail: Drive's upload endpoint CORS rejects PATCH preflight; POST + override is the supported path
+            method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': `multipart/related; boundary=${BOUNDARY}`,
+                ...(this.fileId ? { 'X-HTTP-Method-Override': 'PATCH' } : {}),
             },
             body,
         });
