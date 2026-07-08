@@ -323,9 +323,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
 
     // Initialize if empty
-    if (pages.value.length === 0) {
-        createPage('My First Page');
-    } else if (!activePageId.value || !pages.value.find(p => p.id === activePageId.value)) {
+    if (pages.value.length > 0 && (!activePageId.value || !pages.value.find(p => p.id === activePageId.value))) {
         activePageId.value = pages.value[0].id;
     }
 

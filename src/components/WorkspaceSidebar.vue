@@ -282,7 +282,7 @@ const submitLinkPage = async () => {
 const appVersion = __APP_VERSION__;
 const commitHash = __COMMIT_HASH__;
 
-defineExpose({ openLinkDialog });
+defineExpose({ openLinkDialog, openNewPageDialog });
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent } from 'vue';
+import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { useWorkspaceStore } from './stores/workspace';
 import { useUiStore } from './stores/ui';
@@ -38,6 +38,7 @@ import ReleaseNotesDialog from './components/common/ReleaseNotesDialog.vue';
 import RateLimitNotice from './components/common/RateLimitNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import FileUpload from 'primevue/fileupload';
 import { pcgwApi } from './services/pcgwApi';
 import { start as startSync } from './services/sync/syncService';
 import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.vue';
@@ -45,7 +46,8 @@ import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.
 // Icons
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock,
+    Plus, Download
 } from 'lucide-vue-next';
 
 // Async Components
@@ -335,10 +337,34 @@ const updateGameData = (path: string, value: any) => {
     gameData.value = newData;
 };
 
+const handleCreateNewPageEmptyState = () => {
+    uiStore.sidebarVisible = true;
+    setTimeout(() => {
+        workspaceSidebarRef.value?.openNewPageDialog();
+    }, 150);
+};
+
+const onImportSelectEmptyState = (event: any) => {
+    const file = event.files[0];
+    if (file) {
+        workspaceStore.importPage(file);
+    }
+};
+
+watch(() => workspaceStore.pages.length, (newLength) => {
+    if (newLength === 0) {
+        uiStore.sidebarVisible = true;
+    }
+});
+
 onMounted(() => {
     setTimeout(() => { uiStore.isInitialLoad = false; }, 100);
     pcgwApi.prewarmCache().catch(console.warn);
     startSync().catch(console.warn);
+
+    if (workspaceStore.pages.length === 0) {
+        uiStore.sidebarVisible = true;
+    }
 
     const handleGlobalKeydown = (e: KeyboardEvent) => {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
@@ -379,7 +405,7 @@ onMounted(() => {
         <Toast />
         <WorkspaceSidebar ref="workspaceSidebarRef" v-model:visible="uiStore.sidebarVisible" />
 
-        <Splitter style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern"
+        <Splitter v-if="workspaceStore.activePage" style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern"
             :layout="splitterLayout" stateKey="editor-splitter" stateStorage="local">
             <!-- Left Panel: Editor -->
             <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
@@ -693,6 +719,61 @@ onMounted(() => {
                     :previewMode="previewMode" @update:previewMode="previewMode = $event" />
             </SplitterPanel>
         </Splitter>
+
+        <div v-else class="h-screen w-screen flex flex-col items-center justify-center bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative px-4 text-center">
+            <!-- Glowing gradient background elements -->
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-400/20 dark:bg-primary-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/20 dark:bg-sky-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+
+            <div class="z-10 max-w-md p-8 md:p-10 rounded-2xl bg-surface-0/60 dark:bg-surface-900/60 backdrop-blur-xl border border-surface-200/50 dark:border-surface-800/50 shadow-2xl flex flex-col items-center gap-6 transition-all duration-300 hover:shadow-primary-500/5 dark:hover:shadow-primary-400/5">
+                
+                <!-- App Logo / Mascot / Icon -->
+                <div class="p-5 bg-linear-to-tr from-primary-500 to-sky-500 dark:from-primary-600 dark:to-sky-600 rounded-2xl shadow-lg relative group">
+                    <div class="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <svg class="w-12 h-12 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <h1 class="text-3xl font-extrabold tracking-tight bg-linear-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 bg-clip-text text-transparent">
+                        PCGamingWiki Editor
+                    </h1>
+                    <p class="text-sm text-surface-500 dark:text-surface-400 max-w-xs leading-relaxed">
+                        A gorgeous, modern visual wiki editor for making contributions to PCGamingWiki easy and fast.
+                    </p>
+                </div>
+
+                <div class="border-t border-surface-200 dark:border-surface-800 w-full my-1"></div>
+
+                <!-- Quick Actions -->
+                <div class="flex flex-col gap-3 w-full sm:w-80">
+                    <Button label="Open Workspace Sidebar" class="w-full text-sm font-semibold py-2.5 rounded-xl shadow-md cursor-pointer" @click="uiStore.sidebarVisible = true">
+                        <template #icon>
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                            </svg>
+                        </template>
+                    </Button>
+                    
+                    <div class="flex gap-3 w-full">
+                        <Button label="New Page" severity="secondary" outlined class="flex-1 text-sm font-semibold rounded-xl cursor-pointer" @click="handleCreateNewPageEmptyState">
+                            <template #icon>
+                                <Plus class="w-4 h-4 mr-1.5" />
+                            </template>
+                        </Button>
+
+                        <FileUpload mode="basic" name="import[]" accept=".json" :maxFileSize="1000000" @select="onImportSelectEmptyState"
+                            customUpload auto chooseLabel="Import" :chooseButtonProps="{ severity: 'secondary', outlined: true }"
+                            class="flex-1 cursor-pointer">
+                            <template #chooseicon>
+                                <Download class="w-4 h-4 mr-1.5" />
+                            </template>
+                        </FileUpload>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <GeminiDialogs v-model:showApiKeyDialog="showApiKeyDialog" v-model:shareSummaryVisible="shareSummaryVisible"
             v-model:tempApiKey="tempApiKey" :isGeneratingSummary="isGeneratingSummary" :geminiApiKey="activeKey()"
