@@ -1,7 +1,7 @@
 import { GameData, initialGameData, CloudSync, SystemRequirementsOS, RatingValue, GalleryImage, Issue } from '../models/GameData';
-import 'wikiparser-node/bundle/bundle-lsp.min.js';
 import type Parser from 'wikiparser-node';
 import type { AstNodes as ASTNode } from 'wikiparser-node';
+import { db } from '../db';
 
 // Dynamic import to ensure it is evaluated before access
 const ensureParserLoaded = async () => {
@@ -1369,7 +1369,6 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
 
     // Restore local file mappings for gallery images
     try {
-        const { db } = await import('../db');
         const localFiles = await db.localFiles.toArray();
         for (const gallery of Object.values(data.galleries)) {
             for (const img of gallery) {

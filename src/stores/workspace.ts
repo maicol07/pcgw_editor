@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue';
 import { generateWikitext } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
 import { pcgwApi } from '../services/pcgwApi';
+import { pcgwMedia } from '../services/pcgwMedia';
 
 export interface Page {
     id: string;
@@ -215,7 +216,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
 
         // 2. Perform Edit
-        const { pcgwMedia } = await import('../services/pcgwMedia');
         // Only send baserevid if we want the server to check for conflicts (i.e. not forced)
         // This is extra safety besides our check.
         const result = await pcgwMedia.editPage(

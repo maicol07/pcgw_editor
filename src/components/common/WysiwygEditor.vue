@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, defineAsyncComponent } from 'vue';
 
 defineOptions({
     inheritAttrs: false
@@ -24,7 +24,7 @@ import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverte
 import { useReferences } from '../../composables/useReferences';
 import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
-import CodeEditor from '../CodeEditor.vue';
+const CodeEditor = defineAsyncComponent(() => import('../CodeEditor.vue'));
 import EditorSnippetTools, { type SnippetAction } from './EditorSnippetTools.vue';
 import Quill from 'quill';
 import { renderInlineToken, renderMmList, splitArgs } from '../../utils/wikiRender';

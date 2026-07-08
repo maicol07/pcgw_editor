@@ -41,6 +41,12 @@ const cspPlugin = {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    css: {
+        transformer: 'lightningcss',
+    },
+    build: {
+        cssMinify: 'lightningcss',
+    },
     define: {
         __APP_VERSION__: JSON.stringify(version),
         __COMMIT_HASH__: JSON.stringify(commitHash),
