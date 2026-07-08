@@ -353,9 +353,6 @@ const onImportSelectEmptyState = (event: any) => {
 };
 
 watch(() => workspaceStore.pages.length, (newLength, oldLength) => {
-    if (newLength === 0) {
-        uiStore.sidebarVisible = true;
-    }
     // Launch Part 2 when the first page is created/imported
     if (newLength > 0 && (!oldLength || oldLength === 0) && !uiStore.tourPart2Seen) {
         setTimeout(() => {
@@ -369,9 +366,7 @@ onMounted(() => {
     pcgwApi.prewarmCache().catch(console.warn);
     startSync().catch(console.warn);
 
-    if (workspaceStore.pages.length === 0) {
-        uiStore.sidebarVisible = true;
-    }
+
 
     if (!uiStore.tourPart1Seen) {
         setTimeout(() => {
