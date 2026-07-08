@@ -149,7 +149,28 @@ Left unset, the default flow runs unchanged.
 
 ## 🔑 Third-Party API Credentials
 
-To enable metadata autofill features, you can configure RAWG and IGDB API credentials in the **Integrations & APIs** tab within the App Settings (stored locally in your browser).
+To enable metadata autofill and AI-assisted features (like screenshot parsing or summary generation), you can configure RAWG, IGDB, and AI Assistant credentials in the **Integrations & APIs** tab within the App Settings (stored locally in your browser).
+
+### AI Assistant API Keys
+The AI Assistant powers screenshot parsing (extracting game settings), edit-summary generation, and infobox mapping. You can choose your preferred provider:
+
+*   **Google Gemini (Recommended)**
+    1. Visit [Google AI Studio](https://aistudio.google.com/apikey).
+    2. Log in with a Google account.
+    3. Click **Create API Key**.
+    4. Copy the key and paste it into the **Google Gemini API Key** field.
+    > [!NOTE]
+    > Web-grounded metadata autofill (fetching direct store platform URLs) requires a **Google** key.
+*   **OpenAI (GPT)**
+    1. Go to the [OpenAI API Keys dashboard](https://platform.openai.com/api-keys).
+    2. Log in or sign up.
+    3. Click **Create new secret key**.
+    4. Copy it immediately and paste it into the **OpenAI API Key** field.
+*   **Anthropic (Claude)**
+    1. Visit the [Anthropic Console keys page](https://console.anthropic.com/settings/keys).
+    2. Log in or create an account.
+    3. Click **Create Key**.
+    4. Copy the key and paste it into the **Anthropic Claude API Key** field.
 
 ### RAWG API Key
 RAWG is used to fetch game release dates, developers, publishers, and store links.

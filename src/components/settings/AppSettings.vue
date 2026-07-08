@@ -48,6 +48,7 @@ const showRawgKey = ref(false);
 // Help section toggles
 const showRawgHelp = ref(false);
 const showIgdbHelp = ref(false);
+const showAiHelp = ref(false);
 
 const handleResetCache = () => {
     pcgwApi.resetCache();
@@ -289,10 +290,33 @@ const saveSettings = () => {
                 <div v-show="activeTab === 'integrations'" class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 animate-fade-in">
                     <!-- AI Assistant -->
                     <div class="flex flex-col gap-3 pb-5">
-                        <div class="flex items-center gap-2.5">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Bot class="w-4 h-4" /></span>
-                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">AI Assistant</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Bot class="w-4 h-4" /></span>
+                                <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">AI Assistant</span>
+                            </div>
+                            <button type="button" @click="showAiHelp = !showAiHelp" class="flex items-center gap-1.5 text-xs text-primary-500 hover:text-primary-600 font-semibold cursor-pointer select-none">
+                                <Info class="w-3.5 h-3.5" />
+                                <span>{{ showAiHelp ? 'Hide Setup' : 'How to get a key?' }}</span>
+                            </button>
                         </div>
+                        <Transition
+                            enter-active-class="transition duration-200 ease-out"
+                            enter-from-class="opacity-0 -translate-y-2"
+                            enter-to-class="opacity-100 translate-y-0"
+                            leave-active-class="transition duration-150 ease-in"
+                            leave-from-class="opacity-100 translate-y-0"
+                            leave-to-class="opacity-0 -translate-y-2"
+                        >
+                            <div v-show="showAiHelp" class="p-3.5 bg-surface-100/50 dark:bg-surface-800/40 rounded-xl text-xs text-surface-600 dark:text-surface-300 flex flex-col gap-2 md:pl-9 border border-surface-200/50 dark:border-surface-800/50 leading-relaxed">
+                                <span class="font-bold text-surface-800 dark:text-surface-200">How to get an AI Provider Key:</span>
+                                <ul class="list-disc list-inside flex flex-col gap-1.5 pl-1">
+                                    <li><b>Google Gemini:</b> Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary-500 hover:underline font-medium">Google AI Studio</a>, click on <i>Create API key</i>, and copy the generated key. (Free tier available).</li>
+                                    <li><b>OpenAI:</b> Visit the <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary-500 hover:underline font-medium">OpenAI API Keys dashboard</a>, click <i>Create new secret key</i>, and copy it. (Requires credit balance).</li>
+                                    <li><b>Anthropic Claude:</b> Go to the <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-primary-500 hover:underline font-medium">Anthropic Console keys page</a>, click <i>Create Key</i>, and copy the key. (Requires active credits).</li>
+                                </ul>
+                            </div>
+                        </Transition>
                         <div class="flex flex-col gap-3 md:pl-9">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
