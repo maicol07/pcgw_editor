@@ -27,6 +27,7 @@ import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
 import GeminiDialogs from './features/ai/GeminiDialogs.vue';
 import AppSettings from './components/settings/AppSettings.vue';
+import GuidedTour from './components/layout/GuidedTour.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import SectionNav from './components/layout/SectionNav.vue';
 import { sectionKeysInOrder } from './config/sections';
@@ -351,9 +352,15 @@ const onImportSelectEmptyState = (event: any) => {
     }
 };
 
-watch(() => workspaceStore.pages.length, (newLength) => {
+watch(() => workspaceStore.pages.length, (newLength, oldLength) => {
     if (newLength === 0) {
         uiStore.sidebarVisible = true;
+    }
+    // Launch Part 2 when the first page is created/imported
+    if (newLength > 0 && (!oldLength || oldLength === 0) && !uiStore.tourPart2Seen) {
+        setTimeout(() => {
+            uiStore.startTour('Editor Toolbar');
+        }, 800);
     }
 });
 
@@ -364,6 +371,12 @@ onMounted(() => {
 
     if (workspaceStore.pages.length === 0) {
         uiStore.sidebarVisible = true;
+    }
+
+    if (!uiStore.tourPart1Seen) {
+        setTimeout(() => {
+            uiStore.startTour();
+        }, 800);
     }
 
     const handleGlobalKeydown = (e: KeyboardEvent) => {
@@ -420,12 +433,12 @@ onMounted(() => {
 
                 <div class="flex-1 flex overflow-hidden">
                     <!-- Section navigation rail (Visual mode only) -->
-                    <SectionNav v-if="editorMode === 'Visual' && !uiStore.isInitialLoad"
+                    <SectionNav v-if="editorMode === 'Visual' && !uiStore.isInitialLoad" data-tour="section-nav"
                         v-model:collapsed="uiStore.navRailCollapsed"
                         :activeKey="activeSection" :panelVisibility="panelVisibility"
                         @navigate="navigateToSection" />
 
-                    <div ref="scrollContainer" @scroll="onScrollSpy"
+                    <div ref="scrollContainer" @scroll="onScrollSpy" data-tour="editor-sections"
                         class="flex-1 overflow-y-auto custom-scrollbar bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative">
                     <!-- Loading Overlay for Mode Switching -->
                     <Transition name="fade-fast">
@@ -715,12 +728,22 @@ onMounted(() => {
             <SplitterPanel
                 class="flex flex-col overflow-hidden bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700"
                 :size="50" :minSize="30">
-                <PreviewPanel :html="renderedHtml" :loading="isPreviewLoading" :error="previewError"
+                <PreviewPanel data-tour="preview-panel" :html="renderedHtml" :loading="isPreviewLoading" :error="previewError"
                     :previewMode="previewMode" @update:previewMode="previewMode = $event" />
             </SplitterPanel>
         </Splitter>
 
         <div v-else class="h-screen w-screen flex flex-col items-center justify-center bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative px-4 text-center">
+            <!-- Settings button on empty state -->
+            <div class="absolute top-4 right-4 z-10">
+                <Button text rounded severity="secondary" @click="uiStore.isSettingsOpen = true" data-tour="settings-btn"
+                    class="h-10! w-10! p-0! hover-scale" v-tooltip.bottom="'App Settings'">
+                    <template #icon>
+                        <Settings class="w-5 h-5 text-surface-500 dark:text-surface-400" />
+                    </template>
+                </Button>
+            </div>
+
             <!-- Glowing gradient background elements -->
             <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-400/20 dark:bg-primary-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
             <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/20 dark:bg-sky-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
@@ -783,6 +806,7 @@ onMounted(() => {
 
     <!-- Global Modals -->
     <AppSettings />
+    <GuidedTour />
     <MetadataAutofillDialog v-model:visible="isAutofillDialogVisible" />
     <DiffMergerDialog v-model:visible="isDiffMergerVisible" :localWikitext="diffMergerLocalWikitext"
         :baseWikitext="diffMergerBaseWikitext" :onlineWikitext="diffMergerOnlineWikitext"

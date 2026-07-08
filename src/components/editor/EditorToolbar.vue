@@ -142,7 +142,7 @@ const pcgwMenuItems = computed(() => {
 </script>
 
 <template>
-    <Toolbar
+    <Toolbar data-tour="editor-toolbar"
         class="border-b! border-0! rounded-none! glass glass-border shadow-soft z-20 p-1.5! sticky top-0 bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md">
         <template #start>
             <div class="flex items-center gap-2 md:gap-3">
@@ -234,7 +234,7 @@ const pcgwMenuItems = computed(() => {
                     </div>
                 </div>
 
-                <Button text size="small" @click="emit('generateSummary')" severity="secondary"
+                <Button text size="small" @click="emit('generateSummary')" severity="secondary" data-tour="ai-summary"
                     class="h-8! w-8! p-0! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
                     :disabled="isGeneratingSummary">
                     <template #icon>
@@ -247,7 +247,7 @@ const pcgwMenuItems = computed(() => {
 
         <template #end>
             <div class="flex items-center gap-2">
-                <Button text size="small" @click="uiStore.isSettingsOpen = true" severity="secondary"
+                <Button text size="small" @click="uiStore.isSettingsOpen = true" severity="secondary" data-tour="settings-btn"
                     class="h-8! w-8! p-0! hover-scale" v-tooltip.bottom="'App Settings'">
                     <template #icon>
                         <Settings class="w-4 h-4 text-surface-500 dark:text-surface-400" />
@@ -256,7 +256,7 @@ const pcgwMenuItems = computed(() => {
 
                 <div class="w-px h-4 bg-surface-200 dark:bg-surface-700 mx-1"></div>
 
-                <SelectButton :modelValue="editorMode" @update:modelValue="emit('update:editorMode', $event)"
+                <SelectButton :modelValue="editorMode" @update:modelValue="emit('update:editorMode', $event)" data-tour="editor-mode"
                     :options="editorModeOptions" optionLabel="label" optionValue="value" dataKey="value"
                     :allowEmpty="false" size="small" class="transition-fast">
                     <template #option="{ option }">

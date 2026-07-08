@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, reactive, watch } from 'vue';
+import { ref, watch } from 'vue';
 
 export const useUiStore = defineStore('ui', () => {
     const isSettingsOpen = ref(false);
@@ -25,6 +25,10 @@ export const useUiStore = defineStore('ui', () => {
     const fontFamily = ref<string>(localStorage.getItem('fontFamily') || '"Google Sans"');
     const autoUploadDescription = ref<boolean>(localStorage.getItem('autoUploadDescription') !== 'false');
     const autoReLogin = ref<boolean>(localStorage.getItem('autoReLogin') === 'true');
+    const tourPart1Seen = ref<boolean>(localStorage.getItem('tour-part1-seen') === 'true');
+    const tourPart2Seen = ref<boolean>(localStorage.getItem('tour-part2-seen') === 'true');
+    const isTourActive = ref<boolean>(false);
+    const tourStartTitle = ref<string | null>(null);
 
     // Initialize the property on load
     if (typeof document !== 'undefined') {
@@ -38,6 +42,32 @@ export const useUiStore = defineStore('ui', () => {
     watch(autoReLogin, (val: boolean) => {
         localStorage.setItem('autoReLogin', val.toString());
     });
+
+    watch(tourPart1Seen, (val: boolean) => {
+        localStorage.setItem('tour-part1-seen', val.toString());
+    });
+
+    watch(tourPart2Seen, (val: boolean) => {
+        localStorage.setItem('tour-part2-seen', val.toString());
+    });
+
+    const startTour = (startTitle: string | null = null) => {
+        isSettingsOpen.value = false;
+        tourStartTitle.value = startTitle;
+        isTourActive.value = true;
+    };
+
+    const completeTour = (completedPart?: 1 | 2) => {
+        isTourActive.value = false;
+        if (completedPart === 1) {
+            tourPart1Seen.value = true;
+        } else if (completedPart === 2) {
+            tourPart2Seen.value = true;
+        } else {
+            tourPart1Seen.value = true;
+            tourPart2Seen.value = true;
+        }
+    };
 
     watch(densityMode, (val: DensityMode) => {
         localStorage.setItem('densityMode', val);
@@ -84,6 +114,13 @@ export const useUiStore = defineStore('ui', () => {
         isNewBuild,
         openReleaseNotes,
         markBuildSeen,
+
+        tourPart1Seen,
+        tourPart2Seen,
+        tourStartTitle,
+        isTourActive,
+        startTour,
+        completeTour,
 
         toggleSidebar,
         setEditorMode,

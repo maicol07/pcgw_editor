@@ -284,6 +284,24 @@ const saveSettings = () => {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Guided Tour -->
+                    <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Info class="w-4 h-4 text-primary-500" /> Guided Tour
+                        </label>
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Interactive Tour</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Start the guided walkthrough to learn the editor features.</span>
+                            </div>
+                            <Button label="Start Tour" severity="primary" size="small" @click="uiStore.startTour()" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <RefreshCw class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Integrations Tab -->

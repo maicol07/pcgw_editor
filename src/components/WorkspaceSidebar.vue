@@ -321,7 +321,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
 </style>
 
 <template>
-    <Drawer v-model:visible="visibleState" position="left" class="w-full! md:w-96! lg:w-[450px]!">
+    <Drawer v-model:visible="visibleState" position="left" class="w-full! md:w-96! lg:w-[450px]!" data-tour="workspace-sidebar">
         <template #header>
             <div class="flex items-baseline gap-2">
                 <span class="font-bold text-lg text-surface-900 dark:text-surface-0">Workspace</span>
@@ -334,7 +334,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
 
             <!-- Actions -->
             <div class="flex gap-2">
-                <Button label="New Page" class="flex-1" @click="openNewPageDialog">
+                <Button label="New Page" class="flex-1" @click="openNewPageDialog" data-tour="new-page-btn">
                     <template #icon>
                         <Plus class="w-4 h-4 mr-2" />
                     </template>
