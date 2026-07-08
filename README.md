@@ -147,6 +147,32 @@ Left unset, the default flow runs unchanged.
 
 ---
 
+## 🔑 Third-Party API Credentials
+
+To enable metadata autofill features, you can configure RAWG and IGDB API credentials in the **Integrations & APIs** tab within the App Settings (stored locally in your browser).
+
+### RAWG API Key
+RAWG is used to fetch game release dates, developers, publishers, and store links.
+1. Visit the [RAWG.io API Docs](https://rawg.io/apidocs).
+2. Log in or create a RAWG account.
+3. Request an API key by completing the form. The key is typically issued immediately.
+4. Copy the key and paste it into the **RAWG API Key** field in the app settings.
+
+### IGDB / Twitch API Credentials
+IGDB (Internet Game Database) is used to query ratings, genres, and store platform URLs. IGDB requires Twitch developer credentials.
+1. Log in to the [Twitch Developer Console](https://dev.twitch.tv/console) using your Twitch account (Two-Factor Authentication must be enabled on your Twitch account).
+2. Click **Register Your Application**.
+3. Fill in the application details:
+   - **Name**: Choose a unique name (e.g., `PCGamingWiki Editor`).
+   - **OAuth Redirect URLs**: Use `http://localhost` (or any valid URL, since we do not redirect users for authentication).
+   - **Category**: Select `Application Integration` or `Other`.
+4. Click **Create**.
+5. Locate your registered application, click **Manage**, and copy the **Client ID**.
+6. Click **New Secret** to generate a client secret, and copy the **Client Secret** immediately (it will only be displayed once).
+7. Paste these credentials into the **Client ID** and **Client Secret** fields in the Twitch IGDB Integration settings.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's a bug fix, a new feature, or a design improvement, feel free to open a Pull Request.

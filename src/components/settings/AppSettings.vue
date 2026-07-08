@@ -45,6 +45,10 @@ const showGeminiKey = ref(false);
 const showTwitchSecret = ref(false);
 const showRawgKey = ref(false);
 
+// Help section toggles
+const showRawgHelp = ref(false);
+const showIgdbHelp = ref(false);
+
 const handleResetCache = () => {
     pcgwApi.resetCache();
     toast.add({
@@ -318,10 +322,34 @@ const saveSettings = () => {
 
                     <!-- RAWG -->
                     <div class="flex flex-col gap-3 py-5">
-                        <div class="flex items-center gap-2.5">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 text-teal-500 shrink-0"><Key class="w-4 h-4" /></span>
-                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 text-teal-500 shrink-0"><Key class="w-4 h-4" /></span>
+                                <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
+                            </div>
+                            <button type="button" @click="showRawgHelp = !showRawgHelp" class="flex items-center gap-1.5 text-xs text-primary-500 hover:text-primary-600 font-semibold cursor-pointer select-none">
+                                <Info class="w-3.5 h-3.5" />
+                                <span>{{ showRawgHelp ? 'Hide Setup' : 'How to get a key?' }}</span>
+                            </button>
                         </div>
+                        <Transition
+                            enter-active-class="transition duration-200 ease-out"
+                            enter-from-class="opacity-0 -translate-y-2"
+                            enter-to-class="opacity-100 translate-y-0"
+                            leave-active-class="transition duration-150 ease-in"
+                            leave-from-class="opacity-100 translate-y-0"
+                            leave-to-class="opacity-0 -translate-y-2"
+                        >
+                            <div v-show="showRawgHelp" class="p-3.5 bg-surface-100/50 dark:bg-surface-800/40 rounded-xl text-xs text-surface-600 dark:text-surface-300 flex flex-col gap-2 md:pl-9 border border-surface-200/50 dark:border-surface-800/50 leading-relaxed">
+                                <span class="font-bold text-surface-800 dark:text-surface-200">How to get a RAWG API Key:</span>
+                                <ol class="list-decimal list-inside flex flex-col gap-1.5 pl-1">
+                                    <li>Go to the <a href="https://rawg.io/apidocs" target="_blank" class="text-primary-500 hover:underline font-medium">RAWG.io API Docs</a>.</li>
+                                    <li>Log in or register a new RAWG account.</li>
+                                    <li>Click on <b>Get an API key</b> and fill out the form.</li>
+                                    <li>Copy the generated key and paste it below.</li>
+                                </ol>
+                            </div>
+                        </Transition>
                         <div class="flex flex-col gap-2 md:pl-9">
                             <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
                             <div class="flex relative items-center">
@@ -330,16 +358,41 @@ const saveSettings = () => {
                                     <component :is="showRawgKey ? EyeOff : Eye" class="w-4 h-4" />
                                 </button>
                             </div>
-                            <span class="text-[11px] text-surface-500 leading-normal">Used for populating release dates, developers, publishers, and store identifiers directly.</span>
+                            <span class="text-[11px] text-surface-500 leading-normal">Used for populating release dates, developers, publishers, and store identifiers directly. Get an API key from the <a href="https://rawg.io/apidocs" target="_blank" class="text-primary-500 hover:underline">RAWG API Docs</a>.</span>
                         </div>
                     </div>
 
                     <!-- Twitch / IGDB -->
                     <div class="flex flex-col gap-3.5 pt-5">
-                        <div class="flex items-center gap-2.5">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Key class="w-4 h-4" /></span>
-                            <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Key class="w-4 h-4" /></span>
+                                <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">Twitch IGDB Integration</span>
+                            </div>
+                            <button type="button" @click="showIgdbHelp = !showIgdbHelp" class="flex items-center gap-1.5 text-xs text-primary-500 hover:text-primary-600 font-semibold cursor-pointer select-none">
+                                <Info class="w-3.5 h-3.5" />
+                                <span>{{ showIgdbHelp ? 'Hide Setup' : 'How to get credentials?' }}</span>
+                            </button>
                         </div>
+                        <Transition
+                            enter-active-class="transition duration-200 ease-out"
+                            enter-from-class="opacity-0 -translate-y-2"
+                            enter-to-class="opacity-100 translate-y-0"
+                            leave-active-class="transition duration-150 ease-in"
+                            leave-from-class="opacity-100 translate-y-0"
+                            leave-to-class="opacity-0 -translate-y-2"
+                        >
+                            <div v-show="showIgdbHelp" class="p-3.5 bg-surface-100/50 dark:bg-surface-800/40 rounded-xl text-xs text-surface-600 dark:text-surface-300 flex flex-col gap-2 md:pl-9 border border-surface-200/50 dark:border-surface-800/50 leading-relaxed">
+                                <span class="font-bold text-surface-800 dark:text-surface-200">How to get Twitch IGDB Credentials:</span>
+                                <ol class="list-decimal list-inside flex flex-col gap-1.5 pl-1">
+                                    <li>Log in to the <a href="https://dev.twitch.tv/console" target="_blank" class="text-primary-500 hover:underline font-medium">Twitch Developer Console</a> (requires 2FA).</li>
+                                    <li>Click <b>Register Your Application</b>.</li>
+                                    <li>Choose a unique name, set OAuth Redirect URL to <code class="bg-surface-200 dark:bg-surface-800 px-1.5 py-0.5 rounded font-mono text-[10px]">http://localhost</code>, and set category to <i>Application Integration</i>.</li>
+                                    <li>Click <b>Create</b>, then click <b>Manage</b> on your new app.</li>
+                                    <li>Copy the <b>Client ID</b> and generate a <b>Client Secret</b> (copy it immediately!).</li>
+                                </ol>
+                            </div>
+                        </Transition>
                         <div class="md:pl-9 flex flex-col gap-3">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
@@ -356,7 +409,7 @@ const saveSettings = () => {
                                     </div>
                                 </div>
                             </div>
-                            <span class="text-[11px] text-surface-500 leading-normal">Enables querying ratings, genres, and store platform URLs using the IGDB game database endpoints.</span>
+                            <span class="text-[11px] text-surface-500 leading-normal">Enables querying ratings, genres, and store platform URLs using the IGDB game database endpoints. Register your application on the <a href="https://dev.twitch.tv/console" target="_blank" class="text-primary-500 hover:underline">Twitch Developer Console</a> to obtain a Client ID and Client Secret.</span>
                         </div>
                     </div>
                 </div>
