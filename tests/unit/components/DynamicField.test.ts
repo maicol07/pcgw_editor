@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { ref, nextTick } from 'vue';
 import DynamicField from '../../../src/components/schema/DynamicField.vue';
 import InputText from 'primevue/inputtext';
+import Tooltip from 'primevue/tooltip';
 
 vi.mock('lucide-vue-next', () => ({
     Info: { template: '<span class="icon-info"></span>' }
@@ -75,6 +76,9 @@ describe('DynamicField.vue - IGDB Pre-fill and Disable Logic', () => {
                 field: fieldDef as any,
                 modelValue: 'reception-slug-123',
                 formModel: formModel.value
+            },
+            global: {
+                directives: { tooltip: Tooltip }
             }
         });
 
@@ -83,8 +87,10 @@ describe('DynamicField.vue - IGDB Pre-fill and Disable Logic', () => {
         expect(input.props('disabled')).toBe(true);
         expect(input.props('modelValue')).toBe('reception-slug-123');
 
-        // Helper text should be visible
-        expect(wrapperWithPreFilled.text()).toContain('This field is automatically compiled from the IGDB entry in the Reception section.');
+        // Helper text is exposed as a tooltip on the Info icon, not inline
+        const tooltipTarget = wrapperWithPreFilled.find('span.cursor-help');
+        expect(tooltipTarget.exists()).toBe(true);
+        expect((tooltipTarget.element as any).$_ptooltipValue).toBe('This field is automatically compiled from the IGDB entry in the Reception section.');
     });
 
     it('updates value reactively when the IGDB reception entry ID changes', async () => {
