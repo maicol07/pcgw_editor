@@ -62,6 +62,7 @@ export const useUiStore = defineStore('ui', () => {
         if (completedPart === 1) {
             tourPart1Seen.value = true;
         } else if (completedPart === 2) {
+            tourPart1Seen.value = true;
             tourPart2Seen.value = true;
         } else {
             tourPart1Seen.value = true;

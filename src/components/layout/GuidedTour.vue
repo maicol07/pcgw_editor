@@ -279,7 +279,7 @@ const handleNext = () => {
     if (currentStepIndex.value < activeSteps.value.length - 1) {
         goToStep(currentStepIndex.value + 1);
     } else {
-        handleClose();
+        handleFinish();
     }
 };
 
@@ -289,12 +289,16 @@ const handleBack = () => {
     }
 };
 
-const handleClose = () => {
+const handleFinish = () => {
     if (!workspaceStore.activePage) {
         uiStore.completeTour(1);
     } else {
         uiStore.completeTour(2);
     }
+};
+
+const handleClose = () => {
+    uiStore.completeTour();
 };
 
 watch(() => uiStore.isTourActive, (active) => {
