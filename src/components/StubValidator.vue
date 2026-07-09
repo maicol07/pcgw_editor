@@ -78,7 +78,7 @@ const scrollToSection = (key: string) => {
 <template>
     <div v-if="formModel && formModel.articleState && formModel.articleState.stub" class="flex flex-col gap-2">
         <Message severity="warn" class="text-sm shadow-sm">
-            <template #icon><TriangleAlert class="w-5 h-5 mr-2" /></template>
+            <template #icon><TriangleAlert class="w-6 h-6 mr-2 shrink-0" /></template>
             <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-2">
                     <span class="font-bold">Required elements</span>
