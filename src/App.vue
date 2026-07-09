@@ -37,6 +37,7 @@ import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
 import ReloadPrompt from './components/common/ReloadPrompt.vue';
 import ReleaseNotesDialog from './components/common/ReleaseNotesDialog.vue';
 import RateLimitNotice from './components/common/RateLimitNotice.vue';
+import SyncExpiredNotice from './components/common/SyncExpiredNotice.vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
@@ -425,6 +426,7 @@ onMounted(() => {
                     @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
 
                 <RateLimitNotice />
+                <SyncExpiredNotice />
 
                 <div class="flex-1 flex overflow-hidden">
                     <!-- Section navigation rail (Visual mode only) -->

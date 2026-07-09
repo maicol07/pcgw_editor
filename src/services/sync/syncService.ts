@@ -155,8 +155,14 @@ export async function push() {
         syncState.status = 'idle';
         syncState.error = '';
     } catch (e: any) {
-        syncState.status = 'error';
-        syncState.error = e?.message || String(e);
+        if (e?.message === 'Token expired') {
+            syncState.connected = false;
+            syncState.status = 'disconnected';
+            syncState.error = 'Reconnect needed';
+        } else {
+            syncState.status = 'error';
+            syncState.error = e?.message || String(e);
+        }
     }
 }
 
@@ -176,14 +182,36 @@ export async function pull() {
         syncState.status = 'idle';
         syncState.error = '';
     } catch (e: any) {
-        syncState.status = 'error';
-        syncState.error = e?.message || String(e);
+        if (e?.message === 'Token expired') {
+            syncState.connected = false;
+            syncState.status = 'disconnected';
+            syncState.error = 'Reconnect needed';
+        } else {
+            syncState.status = 'error';
+            syncState.error = e?.message || String(e);
+        }
     }
 }
 
 export async function syncNow() {
     await pull();
     await push();
+}
+
+export async function reconnectSync() {
+    syncState.status = 'syncing';
+    syncState.error = '';
+    try {
+        await driveProvider.reconnect();
+        syncState.connected = true;
+        syncState.status = 'idle';
+        await pull();
+    } catch (e: any) {
+        syncState.connected = false;
+        syncState.status = 'error';
+        syncState.error = e?.message || String(e);
+        throw e;
+    }
 }
 
 function startWatchers() {

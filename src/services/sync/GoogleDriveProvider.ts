@@ -31,7 +31,6 @@ class GoogleDriveProvider implements SyncProvider {
     private accessToken = '';
     private tokenExpiry = 0;
     private fileId: string | null = null; // re-located each session; not persisted
-    private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         try {
@@ -41,16 +40,6 @@ class GoogleDriveProvider implements SyncProvider {
                 this.tokenExpiry = saved.expiry;
             }
         } catch { /* ignore corrupt entry */ }
-    }
-
-    // Renew silently a bit before expiry so the token never lapses while the
-    // Google session is alive — keeps the consent popup from ever reappearing.
-    private scheduleRefresh() {
-        if (this.refreshTimer) clearTimeout(this.refreshTimer);
-        const delay = Math.max(this.tokenExpiry - Date.now() - 5 * 60_000, 1000);
-        this.refreshTimer = setTimeout(() => {
-            this.requestToken('').catch(() => {/* session gone; ensureToken will surface it */});
-        }, delay);
     }
 
     private async initClient() {
@@ -72,7 +61,6 @@ class GoogleDriveProvider implements SyncProvider {
                 this.accessToken = resp.access_token;
                 this.tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600_000) - 60_000;
                 localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: this.accessToken, expiry: this.tokenExpiry }));
-                this.scheduleRefresh();
                 resolve(this.accessToken);
             };
             try {
@@ -91,10 +79,18 @@ class GoogleDriveProvider implements SyncProvider {
     async ensureToken(): Promise<string> {
         await this.initClient();
         if (this.accessToken && Date.now() < this.tokenExpiry) {
-            if (!this.refreshTimer) this.scheduleRefresh(); // arm refresh for a token restored from storage
             return this.accessToken;
         }
-        return this.requestToken(''); // silent; rejects if consent is required
+        throw new Error('Token expired');
+    }
+
+    async reconnect(): Promise<void> {
+        await this.initClient();
+        try {
+            await this.requestToken('');
+        } catch {
+            await this.requestToken('consent');
+        }
     }
 
     private async locate(token: string): Promise<void> {
@@ -156,7 +152,6 @@ class GoogleDriveProvider implements SyncProvider {
                 (window as any).google.accounts.oauth2.revoke(token);
             } catch { /* best effort */ }
         }
-        if (this.refreshTimer) { clearTimeout(this.refreshTimer); this.refreshTimer = null; }
         this.accessToken = '';
         this.tokenExpiry = 0;
         this.fileId = null;

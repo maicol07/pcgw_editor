@@ -13,7 +13,7 @@ import {
     Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle
 } from 'lucide-vue-next';
 import { pcgwAuth } from '../../services/pcgwAuth';
-import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync } from '../../services/sync/syncService';
+import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
 import { pcgwApi } from '../../services/pcgwApi';
 import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
 import { useToast } from 'primevue/usetoast';
@@ -77,6 +77,15 @@ const handleConnectSync = async () => {
 const handleDisconnectSync = async () => {
     await disconnectSync();
     toast.add({ severity: 'info', summary: 'Sync disabled', detail: 'Disconnected on this device.', life: 3000 });
+};
+
+const handleReconnectSync = async () => {
+    try {
+        await reconnectSync();
+        toast.add({ severity: 'success', summary: 'Sync restored', detail: 'Connected to Google Drive.', life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Reconnection failed', detail: syncState.error || 'Could not reconnect.', life: 4000 });
+    }
 };
 
 const lastSyncedLabel = computed(() =>
@@ -580,15 +589,25 @@ const saveSettings = () => {
                             <div class="flex items-center justify-between p-4 rounded-xl border"
                                 :class="syncState.status === 'error'
                                     ? 'bg-red-500/5 border-red-500/20'
-                                    : 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20'">
+                                    : !syncState.connected
+                                        ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20'
+                                        : 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20'">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center"
-                                        :class="syncState.status === 'error' ? 'bg-red-500/15 text-red-500' : 'bg-emerald-500/15 text-emerald-500'">
-                                        <component :is="syncState.status === 'error' ? AlertCircle : Cloud" class="w-5 h-5" />
+                                        :class="syncState.status === 'error'
+                                            ? 'bg-red-500/15 text-red-500'
+                                            : !syncState.connected
+                                                ? 'bg-amber-500/15 text-amber-500'
+                                                : 'bg-emerald-500/15 text-emerald-500'">
+                                        <component :is="syncState.status === 'error' || !syncState.connected ? AlertCircle : Cloud" class="w-5 h-5" />
                                     </div>
                                     <div class="flex flex-col">
                                         <span class="text-xs font-bold uppercase tracking-wider"
-                                            :class="syncState.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
+                                            :class="syncState.status === 'error'
+                                                ? 'text-red-600 dark:text-red-400'
+                                                : !syncState.connected
+                                                    ? 'text-amber-600 dark:text-amber-400'
+                                                    : 'text-emerald-600 dark:text-emerald-400'">
                                             {{ syncState.status === 'error' ? 'Sync error' : syncState.connected ? 'Sync active' : 'Reconnect needed' }}
                                         </span>
                                         <span class="text-sm text-surface-700 dark:text-surface-200 leading-tight">
@@ -599,7 +618,10 @@ const saveSettings = () => {
                                 <component :is="Loader2" v-if="syncState.status === 'syncing'" class="w-4 h-4 text-primary-500 animate-spin" />
                             </div>
                             <div class="flex gap-2">
-                                <Button label="Sync now" severity="secondary" variant="outlined" size="small" :disabled="syncState.status === 'syncing'" @click="syncNow" class="cursor-pointer">
+                                <Button v-if="!syncState.connected" label="Reconnect" severity="warn" variant="outlined" size="small" :disabled="syncState.status === 'syncing'" @click="handleReconnectSync" class="cursor-pointer">
+                                    <template #icon><LogIn class="w-3.5 h-3.5 mr-1.5" /></template>
+                                </Button>
+                                <Button label="Sync now" severity="secondary" variant="outlined" size="small" :disabled="syncState.status === 'syncing' || !syncState.connected" @click="syncNow" class="cursor-pointer">
                                     <template #icon><RefreshCw class="w-3.5 h-3.5 mr-1.5" :class="{ 'animate-spin': syncState.status === 'syncing' }" /></template>
                                 </Button>
                                 <Button label="Disconnect" severity="danger" variant="outlined" size="small" @click="handleDisconnectSync" class="cursor-pointer">
