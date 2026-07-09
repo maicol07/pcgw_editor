@@ -203,7 +203,8 @@ const selectQuickPath = (value: string) => {
 
     <VueDraggable v-model="localRows" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
       <div v-for="(row, rowIndex) in rows" :key="rowIndex"
-        class="@container rounded-lg border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-700 transition-colors bg-surface-0 dark:bg-surface-900/50 overflow-hidden flex flex-col group">
+        class="@container surface-card overflow-hidden flex flex-col group">
+
 
         <!-- Header: drag · platform · delete -->
         <div class="flex items-center gap-2 px-2.5 py-2 bg-surface-50 dark:bg-surface-800/60 border-b border-surface-200 dark:border-surface-700">

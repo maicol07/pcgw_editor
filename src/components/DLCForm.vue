@@ -91,10 +91,9 @@ function getOsArray(osString: string): string[] {
   <div class="flex flex-col gap-4">
     <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
       <div v-for="(row, index) in dragList" :key="getRowId(row)"
-        class="@container rounded-lg border bg-surface-0 dark:bg-surface-900/50 overflow-hidden flex flex-col transition-all group"
-        :class="duplicateRowIds.has(getRowId(row))
-          ? 'border-red-400 dark:border-red-500'
-          : 'border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-700'">
+        class="@container surface-card overflow-hidden flex flex-col group"
+        :class="{ 'border-red-400! dark:border-red-500!': duplicateRowIds.has(getRowId(row)) }">
+
 
         <!-- Header: drag · name · delete -->
         <div class="flex items-center gap-2 px-2.5 py-2 bg-surface-50 dark:bg-surface-800/60 border-b border-surface-200 dark:border-surface-700">

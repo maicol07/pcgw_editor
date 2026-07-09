@@ -2207,7 +2207,8 @@ defineExpose({
                 :animation="200">
                 <div v-for="(element, index) in displayImages"
                     :key="typeof element === 'string' ? element : element.name"
-                    class="gallery-item border border-surface-200 dark:border-surface-700 rounded p-3 bg-surface-0 dark:bg-surface-800 relative group flex flex-col h-full cursor-move hover:shadow-md transition-shadow">
+                    class="gallery-item surface-card p-3 relative group flex flex-col h-full cursor-move">
+
                     <div class="flex justify-between items-center mb-2 px-1 text-surface-400 group-hover:text-surface-600 dark:group-hover:text-surface-300 transition-colors">
                         <Checkbox :modelValue="isSelected(element)" @update:modelValue="toggleSelection(element)" :binary="true" />
                         <GripHorizontal class="w-5 h-5 cursor-move" />

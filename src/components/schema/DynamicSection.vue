@@ -72,7 +72,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
         <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-6">
                 <div v-for="(group, idx) in section.groups" :key="idx"
-                    class="@container border border-surface-200 dark:border-surface-800 rounded-md overflow-hidden transition-all duration-200">
+                    class="@container surface-card overflow-hidden">
+
                     <div @click="toggleGroup(idx)"
                         role="button"
                         tabindex="0"

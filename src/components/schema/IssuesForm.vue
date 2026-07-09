@@ -49,7 +49,8 @@ const guidelinesOpen = ref(false);
   <div class="flex flex-col gap-4">
     <VueDraggable v-model="dragList" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
       <div v-for="(row, index) in dragList" :key="getRowId(row)"
-        class="p-4 border border-surface-200 dark:border-surface-700 rounded-lg bg-surface-0 dark:bg-surface-900/50 flex flex-col gap-4 relative group transition-all hover:border-primary-300 dark:hover:border-primary-700">
+        class="surface-card p-4 flex flex-col gap-4 relative group">
+
 
         <div class="absolute -left-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
           <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded aria-label="Drag"
