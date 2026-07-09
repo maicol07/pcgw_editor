@@ -332,7 +332,7 @@ const isVisible = computed(() => {
 </script>
 
 <template>
-    <div class="dynamic-field flex flex-col gap-1 w-full" v-if="isVisible">
+    <div class="dynamic-field flex flex-col gap-1.5 w-full" v-if="isVisible">
         <!-- Checkbox rendered as a self-contained toggle card (icon + label + description) -->
         <label v-if="field.component === 'Checkbox'"
             class="flex items-start gap-3 w-full h-full p-3 rounded-lg border cursor-pointer transition-colors select-none"
@@ -357,7 +357,7 @@ const isVisible = computed(() => {
         <label
             v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm', 'WysiwygEditor'].includes(field.component)"
             :for="fieldId"
-            class="text-sm font-medium text-surface-600 dark:text-surface-300 flex items-center gap-2">
+            class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
             {{ field.label }}
@@ -402,11 +402,5 @@ const isVisible = computed(() => {
                 </div>
             </template>
         </component>
-
-        <!-- Inline Helper Text for Disabled IGDB Field -->
-        <span v-if="isIgdbDisabled" class="text-xs text-surface-500 dark:text-surface-400 mt-1">
-            This field is automatically compiled from the IGDB entry in the Reception section.
-        </span>
-
     </div>
 </template>

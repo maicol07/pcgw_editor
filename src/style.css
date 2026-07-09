@@ -252,7 +252,8 @@ body {
 }
 
 /* Refined-console surfaces: elevated/distinct card. Uses light-colored background and soft shadows in light mode,
-   and slate/elevated backdrop with custom border in dark mode to prevent blending with the background. */
+   and slate/elevated backdrop with custom border in dark mode to prevent blending with the background.
+   Use for genuinely interactive/clickable surfaces (hover lift is a click affordance). */
 @utility surface-card {
   @apply bg-surface-0 dark:bg-surface-800/35 backdrop-blur-md border border-surface-200 dark:border-surface-800/70 rounded-xl transition-all duration-300;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -262,6 +263,13 @@ body {
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
     transform: translateY(-0.5px);
   }
+}
+
+/* Same surface language as surface-card, without the hover lift — for static content
+   containers (section/group bodies) where a "clickable" affordance would be misleading. */
+@utility surface-panel {
+  @apply bg-surface-0 dark:bg-surface-800/35 backdrop-blur-md border border-surface-200 dark:border-surface-800/70 rounded-xl;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 

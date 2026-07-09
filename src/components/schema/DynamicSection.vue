@@ -51,7 +51,7 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
 <template>
     <div class="dynamic-section @container flex flex-col gap-6">
         <!-- Top-level Fields -->
-        <div v-if="section.fields && section.fields.length > 0" class="p-5 gap-6" :class="{
+        <div v-if="section.fields && section.fields.length > 0" class="surface-panel p-5 gap-6" :class="{
             'flex flex-col': !section.gridCols,
             'grid grid-cols-1': !!section.gridCols,
             '@md:grid-cols-2': section.gridCols === 2,
@@ -72,7 +72,7 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
         <div v-if="section.groups && section.groups.length > 0">
             <div class="flex flex-col gap-6">
                 <div v-for="(group, idx) in section.groups" :key="idx"
-                    class="@container surface-card overflow-hidden">
+                    class="@container surface-panel overflow-hidden">
 
                     <div @click="toggleGroup(idx)"
                         role="button"
