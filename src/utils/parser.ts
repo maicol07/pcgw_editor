@@ -1375,6 +1375,9 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
                 const match = localFiles.find(f => f.name === img.name);
                 if (match && match.id) {
                     img.localId = match.id;
+                    if (match.combineConfig) {
+                        img.combineConfig = match.combineConfig;
+                    }
                 }
             }
         }

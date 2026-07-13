@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import type { CombineConfig } from '../models/GameData';
 
 export interface LocalFile {
     id?: number;
@@ -11,6 +12,7 @@ export interface LocalFile {
     error?: string;
     pcgwUrl?: string;
     lastModified: number;
+    combineConfig?: CombineConfig;
 }
 
 // Key/value store for cloud-sync per-device state (crypto key, salt, tombstones, ...).

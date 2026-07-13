@@ -60,4 +60,30 @@ RemoteImage.jpg|A remote image
         const data = await parseWikitext(wikitext);
         expect(data.galleries['video'][0].localId).toBeUndefined();
     });
+
+    it('should restore combineConfig from Dexie when parsing wikitext if it exists', async () => {
+        const mockCombineConfig = {
+            orientation: 'vertical' as const,
+            gap: 10,
+            items: [
+                { name: 'part1.png', type: 'local' as const, localId: 1 },
+                { name: 'part2.png', type: 'local' as const, localId: 2 }
+            ]
+        };
+
+        (db.localFiles.toArray as any).mockResolvedValue([
+            { id: 123, name: 'CombinedImage.jpg', combineConfig: mockCombineConfig }
+        ]);
+
+        const wikitext = `
+==Video==
+{{Image|CombinedImage.jpg|A combined image}}
+`;
+
+        const data = await parseWikitext(wikitext);
+
+        const combinedImg = data.galleries['video'].find(img => img.name === 'CombinedImage.jpg');
+        expect(combinedImg?.localId).toBe(123);
+        expect(combinedImg?.combineConfig).toEqual(mockCombineConfig);
+    });
 });

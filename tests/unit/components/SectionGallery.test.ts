@@ -418,6 +418,18 @@ describe('SectionGallery.vue', () => {
             const addedFile = (fileStore.addFile as any).mock.calls[0][0] as File;
             expect(addedFile.name).toContain('.webp');
             expect(addedFile.type).toBe('image/webp');
+
+            // Verify call to updateFileStatus with correct combineConfig
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(200, {
+                combineConfig: {
+                    orientation: 'vertical',
+                    gap: 0,
+                    items: [
+                        { name: 'image1.jpg', type: 'local', localId: undefined },
+                        { name: 'image2.jpg', type: 'local', localId: undefined }
+                    ]
+                }
+            });
         });
     });
 

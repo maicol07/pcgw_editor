@@ -1954,6 +1954,8 @@ const handleConfirmCombine = async () => {
             }))
         };
 
+        await fileStore.updateFileStatus(id, { combineConfig });
+
         const newImages: GalleryImage[] = [{
             name: combinedFile.name,
             caption: '',
