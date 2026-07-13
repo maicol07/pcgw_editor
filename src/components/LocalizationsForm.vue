@@ -60,6 +60,9 @@ const commonLanguages = [
     { label: 'Norwegian', value: 'Norwegian', code: 'NO' },
     { label: 'Danish', value: 'Danish', code: 'DK' },
     { label: 'Finnish', value: 'Finnish', code: 'FI' },
+    { label: 'Chuvash', value: 'Chuvash' },
+    { label: 'Gothic', value: 'Gothic' },
+    { label: 'Võro', value: 'Võro' },
 ];
 
 const getFlagCode = (lang: string) => {
@@ -168,7 +171,8 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                                 </template>
                                 <template #option="slotProps">
                                     <div class="flex items-center gap-2">
-                                        <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
+                                        <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" v-if="slotProps.option.code" />
+                                        <span v-else>🏳️</span>
                                         <span>{{ slotProps.option.label }}</span>
                                     </div>
                                 </template>
@@ -241,7 +245,8 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                     optionValue="value" filter placeholder="Select languages..." class="w-full" :maxSelectedLabels="3">
                     <template #option="slotProps">
                         <div class="flex items-center gap-2">
-                            <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" />
+                            <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" v-if="slotProps.option.code" />
+                            <span v-else>🏳️</span>
                             <span>{{ slotProps.option.label }}</span>
                         </div>
                     </template>

@@ -144,4 +144,15 @@ describe('LocalizationsForm.vue', () => {
         const model = (wrapper.vm as any).localizations as LocalizationRow[];
         expect(model[0].interface).toBe('false');
     });
+
+    it('includes Chuvash, Gothic, and Võro in the supported languages list', () => {
+        const { wrapper } = setupWrapper();
+        const selects = wrapper.findAllComponents(SelectStub);
+        const langSelect = selects.find(s => s.vm.options?.some((opt: any) => opt.value === 'English'));
+        expect(langSelect).toBeTruthy();
+        const values = langSelect!.vm.options.map((opt: any) => opt.value);
+        expect(values).toContain('Chuvash');
+        expect(values).toContain('Gothic');
+        expect(values).toContain('Võro');
+    });
 });
