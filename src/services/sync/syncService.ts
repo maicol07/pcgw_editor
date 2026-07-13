@@ -232,6 +232,13 @@ function startWatchers() {
     const pullOnFocus = () => { if (syncState.unlocked && !document.hidden) pull(); };
     useEventListener(window, 'focus', pullOnFocus);
     useEventListener(document, 'visibilitychange', pullOnFocus);
+
+    const pullOnClick = () => {
+        if (syncState.unlocked && !syncState.connected && syncState.status !== 'syncing') {
+            pull().catch(() => {});
+        }
+    };
+    useEventListener(window, 'click', pullOnClick);
 }
 
 // ---- public lifecycle ----
@@ -285,11 +292,11 @@ export async function start() {
         syncState.status = 'disconnected';
         return;
     }
+    startWatchers();
     try {
         await driveProvider.ensureToken(); // silent
         syncState.connected = true;
         await pull();
-        startWatchers();
     } catch {
         // Token expired/revoked: stay configured but ask the user to reconnect.
         syncState.connected = false;
