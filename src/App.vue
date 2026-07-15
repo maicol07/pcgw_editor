@@ -124,13 +124,18 @@ const diffMergerOnlineRevid = ref<number | undefined>();
 const diffMergerPageTitle = ref('');
 const workspaceSidebarRef = ref();
 
-const handleUpdateFromPcgw = async (page: any) => {
+const handleUpdateFromPcgw = async (page: any, _force: boolean = false) => {
     if (!page.pcgwPageTitle) return;
 
     // Fetch online wikitext
     const result = await pcgwApi.fetchWikitext(page.pcgwPageTitle);
     if (!result) {
-        alert('Failed to fetch online page content from PCGW.');
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to fetch online page content from PCGW.',
+            life: 5000
+        });
         return;
     }
 
@@ -421,7 +426,7 @@ onMounted(() => {
                 <EditorToolbar :title="pageTitle" @update:title="pageTitle = $event" :editorMode="editorMode"
                     @update:editorMode="handleModeChange" :isGeneratingSummary="isGeneratingSummary"
                     @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary"
-                    @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage)"
+                    @updatePcgw="workspaceStore.activePage && handleUpdateFromPcgw(workspaceStore.activePage, $event)"
                     @publishPcgw="handleOpenPublishDialog"
                     @linkPcgw="workspaceStore.activePage && workspaceSidebarRef?.openLinkDialog(workspaceStore.activePage)" />
 

@@ -5,7 +5,7 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2 } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2, CloudSync } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
@@ -24,7 +24,7 @@ const emit = defineEmits<{
     (e: 'update:editorMode', value: EditorMode): void;
     (e: 'toggleSidebar'): void;
     (e: 'generateSummary'): void;
-    (e: 'updatePcgw'): void;
+    (e: 'updatePcgw', force?: boolean): void;
     (e: 'publishPcgw'): void;
     (e: 'linkPcgw'): void;
 }>();
@@ -206,12 +206,19 @@ const pcgwMenuItems = computed(() => {
                                 <!-- The two verbs: pull (Update) and push (Publish) -->
                                 <div v-else-if="item.type === 'sync-actions'" class="flex gap-1.5 px-2 pt-1.5 pb-1">
                                     <Button size="small" severity="secondary" variant="outlined" class="flex-1 py-1.5! text-xs!"
-                                        :disabled="!item.hasUpdate" @click="emit('updatePcgw')"
+                                        :disabled="!item.hasUpdate" @click="emit('updatePcgw', false)"
                                         v-tooltip.bottom="'Merge newer version from PCGW'">
                                         <template #icon>
                                             <RefreshCw class="w-3.5 h-3.5 mr-1.5" />
                                         </template>
                                         Update
+                                    </Button>
+                                    <Button size="small" severity="secondary" variant="outlined" class="py-1.5! px-2! text-xs!"
+                                        @click="emit('updatePcgw', true)"
+                                        v-tooltip.bottom="'Force re-sync with latest online revision'">
+                                        <template #icon>
+                                            <CloudSync class="w-3.5 h-3.5" />
+                                        </template>
                                     </Button>
                                     <Button size="small" severity="primary" class="flex-1 py-1.5! text-xs!"
                                         @click="emit('publishPcgw')" v-tooltip.bottom="'Publish your changes to PCGW'">

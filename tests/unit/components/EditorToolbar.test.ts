@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import EditorToolbar from '../../../src/components/editor/EditorToolbar.vue';
 import { useUiStore } from '../../../src/stores/ui';
+import { useWorkspaceStore } from '../../../src/stores/workspace';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
@@ -26,7 +27,8 @@ vi.mock('lucide-vue-next', () => ({
     Search: { template: '<span class="search-icon"></span>' },
     UploadCloud: { template: '<span class="upload-cloud-icon"></span>' },
     Eye: { template: '<span class="eye-icon"></span>' },
-    Code2: { template: '<span class="code2-icon"></span>' }
+    Code2: { template: '<span class="code2-icon"></span>' },
+    CloudSync: { template: '<span class="cloud-sync-icon"></span>' }
 }));
 
 describe('EditorToolbar.vue', () => {
@@ -40,6 +42,7 @@ describe('EditorToolbar.vue', () => {
         const pinia = createPinia();
         setActivePinia(pinia);
         const store = useUiStore();
+        const workspaceStore = useWorkspaceStore();
 
         return {
             wrapper: mount(EditorToolbar, {
@@ -51,11 +54,22 @@ describe('EditorToolbar.vue', () => {
                         ripple: Ripple
                     },
                     stubs: {
-                        Toolbar: { template: '<div><slot name="start" /><slot name="end" /></div>' }
+                        Toolbar: { template: '<div><slot name="start" /><slot name="end" /></div>' },
+                        Menu: {
+                            template: `
+                                <div class="stubbed-menu">
+                                    <template v-for="item in model">
+                                        <slot name="item" :item="item" :props="{}"></slot>
+                                    </template>
+                                </div>
+                            `,
+                            props: ['model']
+                        }
                     }
                 }
             }),
-            store
+            store,
+            workspaceStore
         };
     };
 
@@ -109,5 +123,41 @@ describe('EditorToolbar.vue', () => {
 
         expect(wrapper.emitted('update:editorMode')).toBeTruthy();
         expect(wrapper.emitted('update:editorMode')![0]).toEqual(['Code']);
+    });
+
+    it('emits updatePcgw with force parameter when update or force-re-sync buttons are clicked', async () => {
+        const { wrapper, workspaceStore } = setupWrapper();
+        
+        workspaceStore.pages = [{
+            id: 'page-1',
+            title: 'Test Page',
+            wikitext: 'local wikitext',
+            baseWikitext: 'base wikitext',
+            pcgwPageTitle: 'PCGW Page Title',
+            localRevisionId: 1,
+            onlineRevisionId: 2,
+            lastModified: Date.now()
+        }];
+        workspaceStore.activePageId = 'page-1';
+
+        await wrapper.vm.$nextTick();
+
+        const buttons = wrapper.findAll('.stubbed-menu button');
+        
+        // Update button
+        const updateBtn = buttons.find(b => b.text().includes('Update'));
+        expect(updateBtn?.exists()).toBe(true);
+        expect(updateBtn?.attributes('disabled')).toBeUndefined();
+        
+        await updateBtn?.trigger('click');
+        expect(wrapper.emitted('updatePcgw')).toBeTruthy();
+        expect(wrapper.emitted('updatePcgw')![0]).toEqual([false]);
+
+        // Force re-sync button (uses CloudSync icon, rendered as .cloud-sync-icon)
+        const forceBtn = buttons.find(b => b.find('.cloud-sync-icon').exists());
+        expect(forceBtn?.exists()).toBe(true);
+        
+        await forceBtn?.trigger('click');
+        expect(wrapper.emitted('updatePcgw')![1]).toEqual([true]);
     });
 });
