@@ -31,7 +31,6 @@ class GoogleDriveProvider implements SyncProvider {
     private accessToken = '';
     private tokenExpiry = 0;
     private fileId: string | null = null; // re-located each session; not persisted
-    private lastSilentAttempt = 0;
 
     constructor() {
         try {
@@ -61,7 +60,6 @@ class GoogleDriveProvider implements SyncProvider {
                 if (resp.error) return reject(new Error(resp.error));
                 this.accessToken = resp.access_token;
                 this.tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600_000) - 60_000;
-                this.lastSilentAttempt = 0; // reset cooldown on success
                 localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: this.accessToken, expiry: this.tokenExpiry }));
                 resolve(this.accessToken);
             };
@@ -86,19 +84,7 @@ class GoogleDriveProvider implements SyncProvider {
         if (this.accessToken && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
-        
-        // Cooldown of 5 minutes after a failure to avoid spamming/popup blocker warnings
-        const now = Date.now();
-        if (now - this.lastSilentAttempt < 5 * 60 * 1000) {
-            throw new Error('Token expired');
-        }
-
-        try {
-            this.lastSilentAttempt = now;
-            return await this.requestToken('');
-        } catch {
-            throw new Error('Token expired');
-        }
+        throw new Error('Token expired');
     }
 
     async reconnect(): Promise<void> {
