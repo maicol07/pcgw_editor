@@ -167,7 +167,7 @@ class PCGWApiService {
     }
 
     async searchMonetizations(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Monetizations', query);
+        return this.cargoQuery('Infobox_game.Monetization', query);
     }
 
     async searchMicrotransactions(query?: string): Promise<string[]> {
