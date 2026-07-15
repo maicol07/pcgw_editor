@@ -13,6 +13,8 @@ export interface LocalFile {
     pcgwUrl?: string;
     lastModified: number;
     combineConfig?: CombineConfig;
+    originalBlob?: Blob;
+    croppedBlob?: Blob;
 }
 
 // Key/value store for cloud-sync per-device state (crypto key, salt, tombstones, ...).

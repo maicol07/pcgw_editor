@@ -28,7 +28,7 @@ import WysiwygEditor from './common/WysiwygEditor.vue';
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
-    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling
+    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw
 } from 'lucide-vue-next';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
@@ -411,6 +411,22 @@ const actionMenuItems = computed<any[]>(() => {
             icon: Crop,
             command: () => initiateCrop({ type: 'gallery', galleryItem: element })
         });
+        const localFile = fileStore.files.find(f => f.id === element.localId);
+        if (localFile && !element.combineConfig) {
+            if (localFile.croppedBlob) {
+                items.push({
+                    label: 'Redo crop',
+                    icon: RotateCcw,
+                    command: () => openRevertConfirmDialog(element.localId!, 'redo')
+                });
+            } else if (localFile.originalBlob) {
+                items.push({
+                    label: 'Undo crop',
+                    icon: RotateCcw,
+                    command: () => openRevertConfirmDialog(element.localId!, 'undo')
+                });
+            }
+        }
         if (element.combineConfig) {
             items.push({
                 label: 'Edit layout combination',
@@ -719,6 +735,7 @@ const batchCombine = () => {
                     id: 'gallery-batch-' + Math.random().toString(36).substring(2, 9),
                     type: 'gallery',
                     galleryImage: itemObj,
+                    localId: itemObj.localId,
                     url,
                     name: itemObj.name
                 });
@@ -1404,6 +1421,8 @@ const getOriginalFormatForCrop = (job: CropJob): string => {
             if (file?.type) return file.type;
         }
         if (combineItem.file?.type) return combineItem.file.type;
+    } else if (job.type === 'combine-result') {
+        return selectedCombineFormat.value;
     }
     
     const name = job.galleryItem?.name || job.combineItem?.name || '';
@@ -1456,7 +1475,7 @@ const replaceExtension = (filename: string, newMime: string): string => {
 };
 
 interface CropJob {
-    type: 'gallery' | 'combine';
+    type: 'gallery' | 'combine' | 'combine-result';
     galleryItem?: GalleryImage;
     combineItem?: CombineItem;
 }
@@ -1481,6 +1500,15 @@ const initiateCrop = (job: CropJob) => {
             position: 'gallery',
             localId: job.combineItem.localId || 0
         };
+    } else if (job.type === 'combine-result') {
+        if (!uncroppedCombinePreviewUrl.value) return;
+        cropImageUrl.value = uncroppedCombinePreviewUrl.value;
+        croppingImage.value = {
+            name: (combineFileName.value || 'combined') + '.' + (selectedCombineFormat.value === 'image/jpeg' ? 'jpg' : (selectedCombineFormat.value === 'image/webp' ? 'webp' : 'png')),
+            caption: '',
+            position: 'gallery',
+            localId: -999
+        };
     } else {
         return;
     }
@@ -1503,22 +1531,44 @@ const handleConfirmCrop = async () => {
     if (!cropperRef.value || !croppingImage.value) return;
 
     isCropping.value = true;
-    const { canvas } = cropperRef.value.getResult();
+    const result = cropperRef.value.getResult();
+    const { canvas } = result;
     if (!canvas) {
         isCropping.value = false;
         return;
     }
 
     const targetMime = selectedCropFormat.value;
+    const currentJob = croppingQueue.value[0] || currentManualCropJob.value;
+    if (!currentJob) {
+        isCropping.value = false;
+        return;
+    }
+
+    if (currentJob.type === 'combine-result') {
+        if (result.coordinates) {
+            combineCrop.value = {
+                left: Math.round(result.coordinates.left),
+                top: Math.round(result.coordinates.top),
+                width: Math.round(result.coordinates.width),
+                height: Math.round(result.coordinates.height)
+            };
+            await generatePreview();
+            
+            toast.add({
+                severity: 'success',
+                summary: 'Combined Image Cropped',
+                detail: 'Crop has been applied to the combined image.',
+                life: 3000
+            });
+        }
+        isCropping.value = false;
+        showCropDialog.value = false;
+        return;
+    }
 
     canvas.toBlob(async (blob: Blob | null) => {
         if (!blob) {
-            isCropping.value = false;
-            return;
-        }
-
-        const currentJob = croppingQueue.value[0] || currentManualCropJob.value;
-        if (!currentJob) {
             isCropping.value = false;
             return;
         }
@@ -1528,12 +1578,17 @@ const handleConfirmCrop = async () => {
             if (localFile) {
                 const newName = replaceExtension(localFile.name, targetMime);
                 const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
+                
+                // Keep the original blob if this is the first crop
+                const originalBlob = localFile.originalBlob || localFile.blob;
+
                 await fileStore.updateFileStatus(localFile.id!, {
                     name: newName,
                     blob: newFile,
                     size: newFile.size,
                     type: targetMime,
-                    lastModified: newFile.lastModified
+                    lastModified: newFile.lastModified,
+                    originalBlob: originalBlob
                 });
                 
                 // Update the gallery item's name in modelValue so it updates in the gallery
@@ -1551,22 +1606,38 @@ const handleConfirmCrop = async () => {
             }
         } else if (currentJob.type === 'combine' && currentJob.combineItem) {
             const item = currentJob.combineItem;
+
+            // Back up original state if not already backed up
+            if (!item.originalState) {
+                item.originalState = {
+                    name: item.name,
+                    url: item.url || '',
+                    type: item.type,
+                    localId: item.localId,
+                    file: item.file
+                };
+            }
+            item.croppedState = undefined; // Clear redo on new crop
+
             const newName = replaceExtension(item.name, targetMime);
             const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
             
             // If it's a local file, also update it in the file store so it persists
             if (item.localId) {
+                const localFile = fileStore.files.find(f => f.id === item.localId);
+                const originalBlob = localFile ? (localFile.originalBlob || localFile.blob) : undefined;
                 await fileStore.updateFileStatus(item.localId, {
                     name: newName,
                     blob: newFile,
                     size: newFile.size,
                     type: targetMime,
-                    lastModified: newFile.lastModified
+                    lastModified: newFile.lastModified,
+                    originalBlob: originalBlob,
+                    croppedBlob: undefined
                 });
             } else {
                 item.localId = await fileStore.addFile(newFile);
                 item.type = 'local';
-                item.id = 'local-' + item.localId;
             }
             
             item.name = newName;
@@ -1575,10 +1646,11 @@ const handleConfirmCrop = async () => {
             item.url = URL.createObjectURL(newFile);
             
             // Force reactivity by re-assigning the item in the queue if possible
-            const qIdx = combineQueue.value.indexOf(item);
+            const qIdx = combineQueue.value.findIndex(q => q.id === item.id);
             if (qIdx !== -1) {
                 combineQueue.value[qIdx] = { ...item };
             }
+            await generatePreview();
         }
 
         toast.add({
@@ -1614,6 +1686,370 @@ const closeCropDialog = () => {
     showCropDialog.value = false;
 };
 
+const undoResultCrop = async () => {
+    combineCropBackup.value = combineCrop.value ? { ...combineCrop.value } : null;
+    combineCrop.value = null;
+    await generatePreview();
+    toast.add({
+        severity: 'success',
+        summary: 'Combined Crop Reverted',
+        detail: 'Crop has been removed from the combined image.',
+        life: 3000
+    });
+};
+
+const redoResultCrop = async () => {
+    if (!combineCropBackup.value) return;
+    combineCrop.value = { ...combineCropBackup.value };
+    combineCropBackup.value = null;
+    await generatePreview();
+    toast.add({
+        severity: 'success',
+        summary: 'Combined Crop Redone',
+        detail: 'Crop has been re-applied to the combined image.',
+        life: 3000
+    });
+};
+
+
+
+const openRevertConfirmDialog = (target: number | string, type: 'undo' | 'redo') => {
+    revertConfirmType.value = type;
+
+    if (typeof target === 'string') {
+        const item = combineQueue.value.find(q => q.id === target);
+        if (!item) return;
+
+        const state = type === 'undo' ? item.originalState : item.croppedState;
+        if (!state) return;
+
+        let previewUrl = '';
+        if (state.type === 'gallery') {
+            previewUrl = state.url;
+        } else if (state.file) {
+            previewUrl = URL.createObjectURL(state.file);
+        } else if (state.localId) {
+            const localFile = fileStore.files.find(f => f.id === state.localId);
+            if (localFile) {
+                const targetBlob = type === 'undo' ? (localFile.originalBlob || localFile.blob) : (localFile.croppedBlob || localFile.blob);
+                previewUrl = URL.createObjectURL(targetBlob);
+            }
+        }
+
+        if (!previewUrl) return;
+
+        revertConfirmQueueItemId.value = target;
+        revertConfirmLocalId.value = null;
+        if (revertConfirmPreviewUrl.value && revertConfirmPreviewUrl.value.startsWith('blob:')) {
+            URL.revokeObjectURL(revertConfirmPreviewUrl.value);
+        }
+        revertConfirmPreviewUrl.value = previewUrl;
+    } else {
+        const localFile = fileStore.files.find(f => f.id === target);
+        if (!localFile) return;
+
+        const targetBlob = type === 'undo' ? localFile.originalBlob : localFile.croppedBlob;
+        if (!targetBlob) return;
+
+        revertConfirmQueueItemId.value = null;
+        revertConfirmLocalId.value = target;
+        if (revertConfirmPreviewUrl.value && revertConfirmPreviewUrl.value.startsWith('blob:')) {
+            URL.revokeObjectURL(revertConfirmPreviewUrl.value);
+        }
+        revertConfirmPreviewUrl.value = URL.createObjectURL(targetBlob);
+    }
+    showRevertConfirmDialog.value = true;
+};
+
+const closeRevertConfirmDialog = () => {
+    showRevertConfirmDialog.value = false;
+    if (revertConfirmPreviewUrl.value) {
+        // Revoke the preview blob URL if we created it dynamically
+        const isQueueUrl = combineQueue.value.some(q => q.url === revertConfirmPreviewUrl.value);
+        if (revertConfirmPreviewUrl.value.startsWith('blob:') && !isQueueUrl) {
+            URL.revokeObjectURL(revertConfirmPreviewUrl.value);
+        }
+        revertConfirmPreviewUrl.value = '';
+    }
+    revertConfirmLocalId.value = null;
+    revertConfirmQueueItemId.value = null;
+};
+
+const confirmRevertAction = async () => {
+    if (revertConfirmQueueItemId.value !== null) {
+        await handleApplyQueueItemRevert(revertConfirmQueueItemId.value, revertConfirmType.value);
+    } else if (revertConfirmLocalId.value !== null) {
+        await handleApplyRevert(revertConfirmLocalId.value, revertConfirmType.value);
+    }
+    closeRevertConfirmDialog();
+};
+
+const handleApplyQueueItemRevert = async (queueItemId: string, type: 'undo' | 'redo') => {
+    const item = combineQueue.value.find(q => q.id === queueItemId);
+    if (!item) return;
+
+    if (type === 'undo') {
+        if (!item.originalState) return;
+
+        // Backup current cropped state for redo
+        item.croppedState = {
+            name: item.name,
+            url: item.url || '',
+            type: item.type,
+            localId: item.localId,
+            file: item.file
+        };
+
+        // Revert to original state
+        item.name = item.originalState.name;
+        item.type = item.originalState.type;
+        item.localId = item.originalState.localId;
+        item.file = item.originalState.file;
+
+        // Revoke the current cropped URL and assign a fresh URL
+        if (item.url && item.url.startsWith('blob:')) {
+            URL.revokeObjectURL(item.url);
+        }
+
+        if (item.type === 'gallery') {
+            item.url = item.originalState.url; // online URL, doesn't expire
+        } else if (item.file) {
+            item.url = URL.createObjectURL(item.file);
+        }
+
+        // If it was a local file, also restore the database version
+        if (item.localId) {
+            const localFile = fileStore.files.find(f => f.id === item.localId);
+            if (localFile && localFile.originalBlob) {
+                const croppedBlobBackup = localFile.blob;
+                const originalBlob = localFile.originalBlob;
+                const originalType = originalBlob.type;
+                const restoredFile = new File([originalBlob], item.name, { type: originalType, lastModified: Date.now() });
+                
+                await fileStore.updateFileStatus(item.localId, {
+                    name: item.name,
+                    blob: restoredFile,
+                    size: restoredFile.size,
+                    type: originalType,
+                    lastModified: restoredFile.lastModified,
+                    croppedBlob: croppedBlobBackup
+                });
+                
+                localFile.name = item.name;
+                localFile.blob = restoredFile;
+                localFile.size = restoredFile.size;
+                localFile.type = originalType;
+                localFile.croppedBlob = croppedBlobBackup;
+                item.file = restoredFile;
+                
+                // Update URL to match this freshly restored file
+                if (item.url && item.url.startsWith('blob:')) {
+                    URL.revokeObjectURL(item.url);
+                }
+                item.url = URL.createObjectURL(restoredFile);
+            }
+        }
+        
+        toast.add({
+            severity: 'success',
+            summary: 'Crop Undone',
+            detail: 'Queue image reverted to its uncropped state.',
+            life: 3000
+        });
+    } else {
+        if (!item.croppedState) return;
+
+        // Restore cropped state
+        item.name = item.croppedState.name;
+        item.type = item.croppedState.type;
+        item.localId = item.croppedState.localId;
+        item.file = item.croppedState.file;
+
+        // Revoke the current uncropped URL and assign a fresh URL
+        if (item.url && item.url.startsWith('blob:')) {
+            URL.revokeObjectURL(item.url);
+        }
+
+        if (item.type === 'gallery') {
+            item.url = item.croppedState.url;
+        } else if (item.file) {
+            item.url = URL.createObjectURL(item.file);
+        }
+
+        // If it's a local file, also update database version
+        if (item.localId) {
+            const localFile = fileStore.files.find(f => f.id === item.localId);
+            if (localFile && localFile.croppedBlob) {
+                const croppedBlob = localFile.croppedBlob;
+                const croppedType = croppedBlob.type;
+                const restoredFile = new File([croppedBlob], item.name, { type: croppedType, lastModified: Date.now() });
+
+                await fileStore.updateFileStatus(item.localId, {
+                    name: item.name,
+                    blob: restoredFile,
+                    size: restoredFile.size,
+                    type: croppedType,
+                    lastModified: restoredFile.lastModified,
+                    croppedBlob: undefined
+                });
+
+                localFile.name = item.name;
+                localFile.blob = restoredFile;
+                localFile.size = restoredFile.size;
+                localFile.type = croppedType;
+                localFile.croppedBlob = undefined;
+                item.file = restoredFile;
+
+                // Update URL to match this freshly restored file
+                if (item.url && item.url.startsWith('blob:')) {
+                    URL.revokeObjectURL(item.url);
+                }
+                item.url = URL.createObjectURL(restoredFile);
+            }
+        }
+
+        item.croppedState = undefined;
+
+        toast.add({
+            severity: 'success',
+            summary: 'Crop Redone',
+            detail: 'Queue image crop has been re-applied.',
+            life: 3000
+        });
+    }
+    
+    // Reactively update queue list
+    const idx = combineQueue.value.findIndex(q => q.id === item.id);
+    if (idx !== -1) {
+        combineQueue.value[idx] = { ...item };
+    }
+    await generatePreview();
+};
+
+const handleApplyRevert = async (localId: number, type: 'undo' | 'redo') => {
+    const localFile = fileStore.files.find(f => f.id === localId);
+    if (!localFile) return;
+
+    if (type === 'undo') {
+        const originalBlob = localFile.originalBlob;
+        if (!originalBlob) return;
+
+        const croppedBlobBackup = localFile.blob;
+        const originalType = originalBlob.type;
+        const newName = replaceExtension(localFile.name, originalType);
+        const restoredFile = new File([originalBlob], newName, { type: originalType, lastModified: Date.now() });
+
+        await fileStore.updateFileStatus(localId, {
+            name: newName,
+            blob: restoredFile,
+            size: restoredFile.size,
+            type: originalType,
+            lastModified: restoredFile.lastModified,
+            croppedBlob: croppedBlobBackup
+        });
+
+        localFile.name = newName;
+        localFile.blob = restoredFile;
+        localFile.size = restoredFile.size;
+        localFile.type = originalType;
+        localFile.croppedBlob = croppedBlobBackup;
+
+        // Update the gallery item's name in modelValue so it updates in the gallery
+        const newValue = [...(props.modelValue || [])];
+        const itemIdx = newValue.findIndex(img => (typeof img === 'string' ? img : img.localId) === localId);
+        if (itemIdx !== -1) {
+            const item = newValue[itemIdx];
+            if (typeof item === 'string') {
+                newValue[itemIdx] = newName;
+            } else {
+                newValue[itemIdx] = { ...item, name: newName };
+            }
+            emit('update:modelValue', newValue);
+        }
+
+        // Update combiner queue
+        const qIdx = combineQueue.value.findIndex(q => q.localId === localId);
+        if (qIdx !== -1) {
+            const item = combineQueue.value[qIdx];
+            item.name = newName;
+            item.file = restoredFile;
+            if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
+            item.url = URL.createObjectURL(restoredFile);
+            combineQueue.value[qIdx] = { ...item };
+            await generatePreview();
+        }
+
+        toast.add({
+            severity: 'success',
+            summary: 'Crop Undone',
+            detail: 'The image has been reverted to its uncropped state.',
+            life: 3000
+        });
+    } else {
+        const croppedBlob = localFile.croppedBlob;
+        if (!croppedBlob) return;
+
+        const croppedType = croppedBlob.type;
+        const newName = replaceExtension(localFile.name, croppedType);
+        const restoredFile = new File([croppedBlob], newName, { type: croppedType, lastModified: Date.now() });
+
+        await fileStore.updateFileStatus(localId, {
+            name: newName,
+            blob: restoredFile,
+            size: restoredFile.size,
+            type: croppedType,
+            lastModified: restoredFile.lastModified,
+            croppedBlob: undefined
+        });
+
+        localFile.name = newName;
+        localFile.blob = restoredFile;
+        localFile.size = restoredFile.size;
+        localFile.type = croppedType;
+        localFile.croppedBlob = undefined;
+
+        // Update the gallery item's name in modelValue so it updates in the gallery
+        const newValue = [...(props.modelValue || [])];
+        const itemIdx = newValue.findIndex(img => (typeof img === 'string' ? img : img.localId) === localId);
+        if (itemIdx !== -1) {
+            const item = newValue[itemIdx];
+            if (typeof item === 'string') {
+                newValue[itemIdx] = newName;
+            } else {
+                newValue[itemIdx] = { ...item, name: newName };
+            }
+            emit('update:modelValue', newValue);
+        }
+
+        // Update combiner queue
+        const qIdx = combineQueue.value.findIndex(q => q.localId === localId);
+        if (qIdx !== -1) {
+            const item = combineQueue.value[qIdx];
+            item.name = newName;
+            item.file = restoredFile;
+            if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
+            item.url = URL.createObjectURL(restoredFile);
+            combineQueue.value[qIdx] = { ...item };
+            await generatePreview();
+        }
+
+        toast.add({
+            severity: 'success',
+            summary: 'Crop Redone',
+            detail: 'The image crop has been re-applied.',
+            life: 3000
+        });
+    }
+};
+
+const handleUndoSingleCrop = async (localId: number) => {
+    await handleApplyRevert(localId, 'undo');
+};
+
+const handleRedoSingleCrop = async (localId: number) => {
+    await handleApplyRevert(localId, 'redo');
+};
+
 // Combine Images Logic
 const showCombineDialog = ref(false);
 
@@ -1637,13 +2073,36 @@ interface CombineItem {
     localId?: number;
     url?: string;
     name: string;
+    originalState?: {
+        name: string;
+        url: string;
+        type: 'local' | 'gallery';
+        localId?: number;
+        file?: File;
+    };
+    croppedState?: {
+        name: string;
+        url: string;
+        type: 'local' | 'gallery';
+        localId?: number;
+        file?: File;
+    };
 }
 
 const combineQueue = ref<CombineItem[]>([]);
 const combinePreviewUrl = ref<string>('');
+const uncroppedCombinePreviewUrl = ref<string>('');
+const combineCrop = ref<{ left: number; top: number; width: number; height: number } | null>(null);
+const combineCropBackup = ref<{ left: number; top: number; width: number; height: number } | null>(null);
 const isCombining = ref(false);
 const isGeneratingPreview = ref(false);
 const combineUploadRef = ref<any>(null);
+
+const showRevertConfirmDialog = ref(false);
+const revertConfirmType = ref<'undo' | 'redo'>('undo');
+const revertConfirmLocalId = ref<number | null>(null);
+const revertConfirmQueueItemId = ref<string | null>(null);
+const revertConfirmPreviewUrl = ref<string>('');
 
 const combineFileName = ref('');
 const isCombineFileNameManuallyEdited = ref(false);
@@ -1714,6 +2173,7 @@ const handleCombineTempSelect = async () => {
                     id: 'gallery-' + Math.random().toString(36).substring(2, 9),
                     type: 'gallery',
                     galleryImage: itemObj,
+                    localId: itemObj.localId,
                     url,
                     name: itemObj.name
                 });
@@ -1837,6 +2297,8 @@ const generatePreview = async () => {
     if (combineQueue.value.length === 0) {
         if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
         combinePreviewUrl.value = '';
+        if (uncroppedCombinePreviewUrl.value) URL.revokeObjectURL(uncroppedCombinePreviewUrl.value);
+        uncroppedCombinePreviewUrl.value = '';
         previewObjUrlBlob = null;
         return;
     }
@@ -1891,9 +2353,37 @@ const generatePreview = async () => {
         const targetMime = selectedCombineFormat.value || 'image/png';
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, targetMime));
         if (blob) {
-            if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
-            combinePreviewUrl.value = URL.createObjectURL(blob);
-            previewObjUrlBlob = blob;
+            if (uncroppedCombinePreviewUrl.value) URL.revokeObjectURL(uncroppedCombinePreviewUrl.value);
+            uncroppedCombinePreviewUrl.value = URL.createObjectURL(blob);
+
+            // Apply crop if exists
+            let outputCanvas: HTMLCanvasElement | HTMLImageElement = canvas;
+            if (combineCrop.value) {
+                const crop = combineCrop.value;
+                const croppedCanvas = document.createElement('canvas');
+                // Ensure coordinates are within canvas boundaries
+                const left = Math.max(0, Math.min(crop.left, canvas.width));
+                const top = Math.max(0, Math.min(crop.top, canvas.height));
+                const width = Math.max(1, Math.min(crop.width, canvas.width - left));
+                const height = Math.max(1, Math.min(crop.height, canvas.height - top));
+
+                croppedCanvas.width = width;
+                croppedCanvas.height = height;
+                const croppedCtx = croppedCanvas.getContext('2d');
+                if (croppedCtx) {
+                    croppedCtx.drawImage(canvas, left, top, width, height, 0, 0, width, height);
+                    outputCanvas = croppedCanvas;
+                }
+            }
+
+            const finalBlob = outputCanvas === canvas ? blob : await new Promise<Blob | null>(resolve => (outputCanvas as HTMLCanvasElement).toBlob(resolve, targetMime));
+            if (finalBlob) {
+                if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
+                combinePreviewUrl.value = URL.createObjectURL(finalBlob);
+                previewObjUrlBlob = finalBlob;
+            } else {
+                previewObjUrlBlob = null;
+            }
         } else {
             previewObjUrlBlob = null;
         }
@@ -1929,6 +2419,7 @@ const triggerEditCombine = async (index: number) => {
 
     combineOrientation.value = config.orientation;
     combineGap.value = config.gap;
+    combineCrop.value = config.crop ? { ...config.crop } : null;
 
     const newQueue: CombineItem[] = [];
     for (const cfgItem of config.items) {
@@ -1960,6 +2451,7 @@ const triggerEditCombine = async (index: number) => {
                 id: 'restored-gallery-' + Math.random().toString(36).substring(2, 9),
                 type: 'gallery',
                 galleryImage: galleryImg,
+                localId: cfgItem.localId,
                 url: url,
                 name: cfgItem.name
             });
@@ -1981,11 +2473,14 @@ const openUrl = (url?: string) => {
 const closeCombineDialog = () => {
     showCombineDialog.value = false;
     combineQueue.value.forEach(item => {
-        if (item.type === 'local' && item.url && item.id.startsWith('local-')) URL.revokeObjectURL(item.url);
+        if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
     });
     combineQueue.value = [];
     if (combinePreviewUrl.value) URL.revokeObjectURL(combinePreviewUrl.value);
     combinePreviewUrl.value = '';
+    if (uncroppedCombinePreviewUrl.value) URL.revokeObjectURL(uncroppedCombinePreviewUrl.value);
+    uncroppedCombinePreviewUrl.value = '';
+    combineCrop.value = null;
     previewObjUrlBlob = null;
     combineTempGallerySelection.value = [];
     editingCombineIndex.value = null;
@@ -2045,7 +2540,8 @@ const handleConfirmCombine = async () => {
                 name: q.name,
                 type: q.type,
                 localId: q.localId || q.galleryImage?.localId
-            }))
+            })),
+            crop: combineCrop.value ? { ...combineCrop.value } : undefined
         };
 
         await fileStore.updateFileStatus(id, { combineConfig });
@@ -2137,7 +2633,21 @@ defineExpose({
     handleMpKeepOriginal,
     handleMpCancel,
     largeImages,
-    triggerResizeForLocalItem
+    triggerResizeForLocalItem,
+    undoResultCrop,
+    redoResultCrop,
+    handleUndoSingleCrop,
+    handleRedoSingleCrop,
+    combineCrop,
+    uncroppedCombinePreviewUrl,
+    openRevertConfirmDialog,
+    closeRevertConfirmDialog,
+    confirmRevertAction,
+    showRevertConfirmDialog,
+    revertConfirmType,
+    revertConfirmLocalId,
+    revertConfirmQueueItemId,
+    revertConfirmPreviewUrl
 });
 </script>
 
@@ -2745,15 +3255,60 @@ defineExpose({
             </div>
         </Dialog>
 
+        <!-- Crop Revert Confirmation Dialog -->
+        <Dialog v-model:visible="showRevertConfirmDialog" modal class="w-full max-w-md mx-4 border border-surface-200/50 dark:border-surface-800/50 shadow-2xl rounded-2xl overflow-hidden" :draggable="false" @hide="closeRevertConfirmDialog">
+            <template #header>
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="revertConfirmType === 'undo' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' : 'bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400'">
+                        <RotateCcw class="w-4 h-4" />
+                    </div>
+                    <span class="font-bold text-lg text-surface-900 dark:text-surface-0">{{ revertConfirmType === 'undo' ? 'Undo Image Crop' : 'Redo Image Crop' }}</span>
+                </div>
+            </template>
+            <div class="flex flex-col gap-4 py-1">
+                <p class="text-sm text-surface-600 dark:text-surface-400 leading-relaxed">
+                    Are you sure you want to {{ revertConfirmType === 'undo' ? 'revert this image to its original uncropped version' : 're-apply the cropped version to this image' }}?
+                </p>
+                <div v-if="revertConfirmPreviewUrl" class="relative group rounded-xl overflow-hidden border border-surface-200/80 dark:border-surface-800/80 bg-surface-100/40 dark:bg-surface-900/40 p-2 shadow-inner transition-all duration-300 hover:border-surface-300 dark:hover:border-surface-700">
+                    <div class="w-full h-56 rounded-lg overflow-hidden flex items-center justify-center bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] bg-white dark:bg-slate-950 relative shadow-sm">
+                        <img :src="revertConfirmPreviewUrl" class="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-102" />
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2.5 mt-5">
+                    <Button label="Cancel" text class="hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" @click="showRevertConfirmDialog = false" />
+                    <Button :label="revertConfirmType === 'undo' ? 'Undo Crop' : 'Redo Crop'" :severity="revertConfirmType === 'undo' ? 'warn' : 'primary'" class="px-4 shadow-sm" @click="confirmRevertAction" />
+                </div>
+            </div>
+        </Dialog>
+
         <!-- Combine Images Dialog -->
         <Dialog v-model:visible="showCombineDialog" header="Image Combiner" modal class="w-full max-w-3xl mx-4" :draggable="false" @hide="closeCombineDialog">
             <div class="flex flex-col gap-6 py-4">
                 
                 <!-- Live Preview -->
-                <div v-if="combinePreviewUrl" class="w-full h-64 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-center overflow-hidden bg-white dark:bg-black relative shadow-inner">
-                    <img :src="combinePreviewUrl" class="w-full h-full object-contain" />
-                    <div v-if="isGeneratingPreview" class="absolute inset-0 bg-surface-0/50 dark:bg-surface-900/50 flex items-center justify-center">
-                        <Loader2 class="w-8 h-8 animate-spin text-primary" />
+                <div v-if="combinePreviewUrl" class="flex flex-col gap-2">
+                    <div class="w-full h-64 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-center overflow-hidden bg-white dark:bg-black relative shadow-inner">
+                        <img :src="combinePreviewUrl" class="w-full h-full object-contain" />
+                        <div v-if="isGeneratingPreview" class="absolute inset-0 bg-surface-0/50 dark:bg-surface-900/50 flex items-center justify-center">
+                            <Loader2 class="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2">
+                        <Button v-if="combineCrop" label="Undo Result Crop" severity="warn" outlined size="small" @click="undoResultCrop">
+                            <template #icon>
+                                <RotateCcw class="w-4 h-4 mr-1.5" />
+                            </template>
+                        </Button>
+                        <Button v-if="combineCropBackup && !combineCrop" label="Redo Result Crop" severity="info" outlined size="small" @click="redoResultCrop">
+                            <template #icon>
+                                <RotateCcw class="w-4 h-4 mr-1.5" />
+                            </template>
+                        </Button>
+                        <Button label="Crop Result" outlined size="small" @click="initiateCrop({ type: 'combine-result' })" :disabled="combineQueue.length < 2">
+                            <template #icon>
+                                <Crop class="w-4 h-4 mr-1.5" />
+                            </template>
+                        </Button>
                     </div>
                 </div>
                 <div v-else class="w-full h-32 border border-dashed border-surface-300 dark:border-surface-600 rounded-lg flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-surface-500 text-sm italic">
@@ -2844,6 +3399,20 @@ defineExpose({
                                 <span class="text-xs uppercase tracking-widest px-1.5 py-0.5 rounded bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-300 ml-2 shrink-0">{{ item.type }}</span>
                             </div>
                             <div class="flex items-center gap-0.5 shrink-0 ml-2">
+                                <template v-if="item.croppedState">
+                                    <Button text severity="primary" @click="openRevertConfirmDialog(item.id, 'redo')" class="p-1" v-tooltip.bottom="'Redo Crop'">
+                                        <template #icon>
+                                            <RotateCw class="w-5 h-5" />
+                                        </template>
+                                    </Button>
+                                </template>
+                                <template v-else-if="item.originalState">
+                                    <Button text severity="warn" @click="openRevertConfirmDialog(item.id, 'undo')" class="p-1" v-tooltip.bottom="'Undo Crop'">
+                                        <template #icon>
+                                            <RotateCcw class="w-5 h-5" />
+                                        </template>
+                                    </Button>
+                                </template>
                                 <Button text severity="secondary" @click="initiateCrop({ type: 'combine', combineItem: item })" class="p-1" v-tooltip.bottom="'Crop Image'">
                                     <template #icon>
                                         <Crop class="w-5 h-5" />

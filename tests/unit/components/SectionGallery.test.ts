@@ -55,20 +55,19 @@ describe('SectionGallery.vue', () => {
         });
 
         // Mock window.Image globally to resolve onload immediately by default with safe dimensions
-        const defaultMockImage = {
-            width: 100,
-            height: 100,
-            onload: null as any,
-            onerror: null as any,
-            set src(_val: string) {
-                setTimeout(() => {
-                    if (this.onload) this.onload();
-                }, 0);
-            }
-        };
         vi.spyOn(window, 'Image').mockImplementation(function() {
-            return defaultMockImage;
-        } as any);
+            return {
+                width: 100,
+                height: 100,
+                onload: null as any,
+                onerror: null as any,
+                set src(_val: string) {
+                    setTimeout(() => {
+                        if (this.onload) this.onload();
+                    }, 0);
+                }
+            } as any;
+        });
 
         // Mock HTMLCanvasElement.prototype.toBlob globally
         vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, callback: any) {
@@ -767,6 +766,257 @@ describe('SectionGallery.vue', () => {
             expect(vm.largeImages[5].mp).toBe(16);
             expect(vm.largeImages[5].width).toBe(4000);
             expect(vm.largeImages[5].height).toBe(4000);
+        });
+    });
+
+    describe('Crop and Undo Crop Logic', () => {
+        it('backs up original blob when cropping a single image and reverts it on undo crop and handles redo', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            const fileStore = useFileStore();
+
+            // Mock fileStore files
+            const originalBlob = new Blob(['original_image_data'], { type: 'image/png' });
+            fileStore.files = [
+                {
+                    id: 10,
+                    blob: originalBlob,
+                    size: 19,
+                    name: 'image.png',
+                    type: 'image/png',
+                    status: 'local' as const,
+                    lastModified: 100
+                }
+            ];
+
+            // Trigger crop confirmation
+            vm.cropperRef = {
+                getResult: () => ({
+                    canvas: {
+                        toBlob: (callback: any, mime: string) => {
+                            callback(new Blob(['cropped_image_data'], { type: mime }));
+                        }
+                    }
+                })
+            };
+            vm.croppingImage = { name: 'image.png', localId: 10, position: 'gallery' };
+            vm.selectedCropFormat = 'image/png';
+            
+            // Set mock queue or manual job
+            vm.initiateCrop({ type: 'gallery', galleryItem: vm.croppingImage });
+            await vm.handleConfirmCrop();
+
+            // Check that updateFileStatus was called and stored the originalBlob
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(10, expect.objectContaining({
+                name: 'image.png',
+                type: 'image/png',
+                originalBlob: originalBlob
+            }));
+
+            // Mock file store state after crop
+            const croppedBlob = new Blob(['cropped_image_data'], { type: 'image/png' });
+            fileStore.files = [
+                {
+                    id: 10,
+                    blob: croppedBlob,
+                    size: 18,
+                    name: 'image.png',
+                    type: 'image/png',
+                    status: 'local' as const,
+                    lastModified: 100,
+                    originalBlob: originalBlob
+                }
+            ];
+
+            // Trigger undo via confirmation dialog flow
+            vm.openRevertConfirmDialog(10, 'undo');
+            expect(vm.showRevertConfirmDialog).toBe(true);
+            expect(vm.revertConfirmType).toBe('undo');
+            expect(vm.revertConfirmLocalId).toBe(10);
+            expect(vm.revertConfirmPreviewUrl).toContain('blob:');
+
+            await vm.confirmRevertAction();
+
+            // Revert crop should call updateFileStatus to restore the original blob and backup cropped blob
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(10, expect.objectContaining({
+                name: 'image.png',
+                type: 'image/png',
+                croppedBlob: croppedBlob
+            }));
+
+            // Mock state after undo
+            fileStore.files = [
+                {
+                    id: 10,
+                    blob: originalBlob,
+                    size: 19,
+                    name: 'image.png',
+                    type: 'image/png',
+                    status: 'local' as const,
+                    lastModified: 100,
+                    originalBlob: originalBlob,
+                    croppedBlob: croppedBlob
+                }
+            ];
+
+            // Now redo
+            vm.openRevertConfirmDialog(10, 'redo');
+            expect(vm.showRevertConfirmDialog).toBe(true);
+            expect(vm.revertConfirmType).toBe('redo');
+
+            await vm.confirmRevertAction();
+
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(10, expect.objectContaining({
+                name: 'image.png',
+                type: 'image/png',
+                croppedBlob: undefined
+            }));
+        });
+
+        it('saves crop coordinates in combineConfig and handles redo/uncrop for image combiner', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(200);
+
+            // Setup combined result preview URL and output filename
+            vm.uncroppedCombinePreviewUrl = 'blob:uncropped-mock';
+            vm.combineFileName = 'test_combined';
+            vm.selectedCombineFormat = 'image/png';
+
+            // Initiate result crop
+            vm.initiateCrop({ type: 'combine-result' });
+            
+            expect(vm.cropImageUrl).toBe('blob:uncropped-mock');
+
+            // Mock cropper result coordinates
+            vm.cropperRef = {
+                getResult: () => ({
+                    canvas: {},
+                    coordinates: { left: 10, top: 20, width: 200, height: 100 }
+                })
+            };
+
+            await vm.handleConfirmCrop();
+
+            // Crop coordinates should be saved in combineCrop state
+            expect(vm.combineCrop).toEqual({ left: 10, top: 20, width: 200, height: 100 });
+
+            // Test undo combined crop while combiner dialog is active
+            await vm.undoResultCrop();
+            expect(vm.combineCrop).toBeNull();
+
+            // Test redo combined crop while combiner dialog is active
+            await vm.redoResultCrop();
+            expect(vm.combineCrop).toEqual({ left: 10, top: 20, width: 200, height: 100 });
+
+            // Confirm combine should save combineConfig with crop parameters
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'image1.png', file: new File([], 'image1.png') },
+                { id: '2', type: 'local' as const, name: 'image2.png', file: new File([], 'image2.png') }
+            ];
+            vm.setPreviewObjUrlBlob(new Blob(['preview_cropped']));
+
+            await vm.handleConfirmCombine();
+
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(expect.any(Number), expect.objectContaining({
+                combineConfig: expect.objectContaining({
+                    crop: { left: 10, top: 20, width: 200, height: 100 }
+                })
+            }));
+        });
+
+        it('handles undo and redo crop for combiner queue items (both local and gallery items)', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(55);
+
+            // Populate combineQueue with a gallery item and a local item
+            const originalBlob = new Blob(['original_data'], { type: 'image/png' });
+            fileStore.files = [
+                {
+                    id: 30,
+                    blob: originalBlob,
+                    size: 13,
+                    name: 'local_item.png',
+                    type: 'image/png',
+                    status: 'local',
+                    lastModified: 100
+                }
+            ];
+
+            const itemLocal = {
+                id: 'local-30',
+                type: 'local' as const,
+                localId: 30,
+                url: 'blob:local-url',
+                name: 'local_item.png',
+                file: new File([originalBlob], 'local_item.png', { type: 'image/png' })
+            };
+
+            const itemGallery = {
+                id: 'gallery-40',
+                type: 'gallery' as const,
+                url: 'https://pcgw.example.com/gallery_item.png',
+                name: 'gallery_item.png'
+            };
+
+            vm.combineQueue = [itemLocal, itemGallery];
+
+            // 1. Crop the gallery item inside the combiner
+            vm.cropperRef = {
+                getResult: () => ({
+                    canvas: {
+                        toBlob: (callback: any, mime: string) => {
+                            callback(new Blob(['cropped_data_gallery'], { type: mime }));
+                        }
+                    }
+                })
+            };
+            vm.croppingImage = { name: 'gallery_item.png', position: 'combine' };
+            vm.selectedCropFormat = 'image/png';
+            vm.initiateCrop({ type: 'combine', combineItem: itemGallery });
+
+            await vm.handleConfirmCrop();
+
+            // The online item should now have originalState set and be a local cropped item
+            const croppedItemGallery = vm.combineQueue[1];
+            expect(croppedItemGallery.originalState).toEqual({
+                name: 'gallery_item.png',
+                url: 'https://pcgw.example.com/gallery_item.png',
+                type: 'gallery',
+                localId: undefined,
+                file: undefined
+            });
+            expect(croppedItemGallery.type).toBe('local');
+            expect(croppedItemGallery.localId).toBe(55); // mock resolved value
+
+            // 2. Undo crop for this gallery item
+            vm.openRevertConfirmDialog('gallery-40', 'undo');
+            expect(vm.showRevertConfirmDialog).toBe(true);
+            expect(vm.revertConfirmQueueItemId).toBe('gallery-40');
+            expect(vm.revertConfirmPreviewUrl).toBe('https://pcgw.example.com/gallery_item.png');
+
+            await vm.confirmRevertAction();
+
+            // Reverted back to online gallery item properties
+            const undoneItem = vm.combineQueue[1];
+            expect(undoneItem.type).toBe('gallery');
+            expect(undoneItem.localId).toBeUndefined();
+            expect(undoneItem.name).toBe('gallery_item.png');
+            expect(undoneItem.url).toBe('https://pcgw.example.com/gallery_item.png');
+            expect(undoneItem.croppedState).toBeDefined();
+
+            // 3. Redo crop for this gallery item
+            vm.openRevertConfirmDialog('gallery-40', 'redo');
+            await vm.confirmRevertAction();
+
+            // Cropped version re-applied
+            const redoneItem = vm.combineQueue[1];
+            expect(redoneItem.type).toBe('local');
+            expect(redoneItem.localId).toBe(55);
+            expect(redoneItem.croppedState).toBeUndefined();
         });
     });
 });

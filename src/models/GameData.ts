@@ -680,6 +680,12 @@ export interface CombineConfig {
     orientation: 'horizontal' | 'vertical';
     gap: number;
     items: CombineConfigItem[];
+    crop?: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    };
 }
 
 export interface GalleryImage {
