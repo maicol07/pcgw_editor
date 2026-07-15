@@ -1645,6 +1645,52 @@ const isCombining = ref(false);
 const isGeneratingPreview = ref(false);
 const combineUploadRef = ref<any>(null);
 
+const combineFileName = ref('');
+const isCombineFileNameManuallyEdited = ref(false);
+
+const getSuggestedCombinedName = (names: string[]): string => {
+    if (!names || names.length === 0) return '';
+    
+    // Strip extensions
+    const baseNames = names.map(name => {
+        const lastDot = name.lastIndexOf('.');
+        return lastDot > 0 ? name.substring(0, lastDot) : name;
+    });
+
+    if (baseNames.length === 1) return baseNames[0];
+
+    // Find longest common prefix
+    let lcp = baseNames[0];
+    for (let i = 1; i < baseNames.length; i++) {
+        while (baseNames[i].indexOf(lcp) !== 0) {
+            lcp = lcp.substring(0, lcp.length - 1);
+            if (lcp === '') break;
+        }
+    }
+
+    // Find longest common suffix
+    let lcs = baseNames[0];
+    for (let i = 1; i < baseNames.length; i++) {
+        while (!baseNames[i].endsWith(lcs)) {
+            lcs = lcs.substring(1);
+            if (lcs === '') break;
+        }
+    }
+
+    // Clean up trailing/leading separators
+    const cleanPrefix = lcp.replace(/[\s-_]+$/, '');
+    const cleanSuffix = lcs.replace(/^[\s-_]+/, '');
+
+    if (cleanPrefix.length >= 2) {
+        return cleanPrefix;
+    }
+    if (cleanSuffix.length >= 2) {
+        return cleanSuffix;
+    }
+    
+    return `combined_${Date.now()}`;
+};
+
 // For selecting existing images into the queue
 const combineTempGallerySelection = ref<any[]>([]);
 
@@ -1866,6 +1912,9 @@ watch(combineQueue, (newQueue) => {
     if (!isCombineFormatManuallySelected.value) {
         selectedCombineFormat.value = getDefaultCombineFormat(newQueue);
     }
+    if (!isCombineFileNameManuallyEdited.value) {
+        combineFileName.value = getSuggestedCombinedName(newQueue.map(item => item.name));
+    }
 }, { deep: true });
 
 const editingCombineIndex = ref<number | null>(null);
@@ -1917,6 +1966,10 @@ const triggerEditCombine = async (index: number) => {
         }
     }
     
+    const lastDot = item.name.lastIndexOf('.');
+    combineFileName.value = lastDot > 0 ? item.name.substring(0, lastDot) : item.name;
+    isCombineFileNameManuallyEdited.value = true;
+
     combineQueue.value = newQueue;
     showCombineDialog.value = true;
 };
@@ -1937,6 +1990,8 @@ const closeCombineDialog = () => {
     combineTempGallerySelection.value = [];
     editingCombineIndex.value = null;
     isCombineFormatManuallySelected.value = false;
+    combineFileName.value = '';
+    isCombineFileNameManuallyEdited.value = false;
 };
 
 const handleConfirmCombine = async () => {
@@ -1953,7 +2008,34 @@ const handleConfirmCombine = async () => {
         if (targetMime === 'image/jpeg') ext = 'jpg';
         else if (targetMime === 'image/webp') ext = 'webp';
         
-        const combinedFile = new File([blob], `combined_${Date.now()}.${ext}`, { type: targetMime, lastModified: Date.now() });
+        let rawName = combineFileName.value.trim();
+        if (!rawName) {
+            rawName = `combined_${Date.now()}`;
+        }
+        
+        // Sanitize: remove path characters and other invalid characters, and strip leading dots/spaces
+        rawName = rawName.replace(/[/\\]/g, '');
+        rawName = rawName.replace(/[^a-zA-Z0-9.\-_ ]/g, '');
+        rawName = rawName.replace(/^[.\s]+/, '');
+        
+        // Strip existing extension if user typed it, to prevent double extension
+        if (rawName.toLowerCase().endsWith('.' + ext)) {
+            rawName = rawName.substring(0, rawName.length - ext.length - 1);
+        } else if (rawName.toLowerCase().endsWith('.jpeg') && ext === 'jpg') {
+            rawName = rawName.substring(0, rawName.length - 5);
+        } else {
+            const possibleExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
+            for (const pExt of possibleExtensions) {
+                if (rawName.toLowerCase().endsWith(pExt)) {
+                    rawName = rawName.substring(0, rawName.length - pExt.length);
+                    break;
+                }
+            }
+        }
+        
+        const finalFilename = `${rawName}.${ext}`;
+        
+        const combinedFile = new File([blob], finalFilename, { type: targetMime, lastModified: Date.now() });
         const id = await fileStore.addFile(combinedFile);
 
         const combineConfig = {
@@ -2032,6 +2114,8 @@ defineExpose({
     showSearchDialog,
     showCombineDialog,
     combineQueue,
+    combineFileName,
+    isCombineFileNameManuallyEdited,
     handleConfirmCombine,
     setPreviewObjUrlBlob: (blob: Blob | null) => previewObjUrlBlob = blob,
     selectedCropFormat,
@@ -2674,6 +2758,15 @@ defineExpose({
                 </div>
                 <div v-else class="w-full h-32 border border-dashed border-surface-300 dark:border-surface-600 rounded-lg flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-surface-500 text-sm italic">
                     Add at least 2 images to generate a preview
+                </div>
+
+                <!-- Output Filename -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-bold text-xs text-surface-500 uppercase tracking-wider" for="combineFileName">Output Filename</label>
+                    <div class="flex items-center gap-2">
+                        <InputText id="combineFileName" v-model="combineFileName" placeholder="Enter output filename" class="flex-1" @input="isCombineFileNameManuallyEdited = true" />
+                        <span class="text-surface-500 dark:text-surface-400 font-bold text-sm shrink-0">.{{ selectedCombineFormat === 'image/jpeg' ? 'jpg' : (selectedCombineFormat === 'image/webp' ? 'webp' : 'png') }}</span>
+                    </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 sm:gap-8">

@@ -525,6 +525,83 @@ describe('SectionGallery.vue', () => {
                 }
             });
         });
+
+        it('suggests filename based on common prefix or suffix of queue items', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            // Test common prefix: GTA_V_1.png, GTA_V_2.jpg
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'GTA_V_1.png', file: new File([], 'GTA_V_1.png', { type: 'image/png' }) },
+                { id: '2', type: 'local' as const, name: 'GTA_V_2.jpg', file: new File([], 'GTA_V_2.jpg', { type: 'image/jpeg' }) }
+            ];
+            await wrapper.vm.$nextTick();
+            expect(vm.combineFileName).toBe('GTA_V');
+
+            // Test common suffix: 1_Skyrim.png, 2_Skyrim.jpg
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: '1_Skyrim.png', file: new File([], '1_Skyrim.png', { type: 'image/png' }) },
+                { id: '2', type: 'local' as const, name: '2_Skyrim.jpg', file: new File([], '2_Skyrim.jpg', { type: 'image/jpeg' }) }
+            ];
+            await wrapper.vm.$nextTick();
+            expect(vm.combineFileName).toBe('Skyrim');
+
+            // Test no common prefix/suffix
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'GTA_V_1.png', file: new File([], 'GTA_V_1.png', { type: 'image/png' }) },
+                { id: '2', type: 'local' as const, name: 'Skyrim.jpg', file: new File([], 'Skyrim.jpg', { type: 'image/jpeg' }) }
+            ];
+            await wrapper.vm.$nextTick();
+            expect(vm.combineFileName).toContain('combined_');
+        });
+
+        it('does not override manual filename changes on queue updates', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'GTA_V_1.png', file: new File([], 'GTA_V_1.png', { type: 'image/png' }) }
+            ];
+            await wrapper.vm.$nextTick();
+            expect(vm.combineFileName).toBe('GTA_V_1');
+
+            // Manually edit the filename
+            vm.combineFileName = 'CustomName';
+            vm.isCombineFileNameManuallyEdited = true;
+
+            // Update queue
+            vm.combineQueue = [
+                ...vm.combineQueue,
+                { id: '2', type: 'local' as const, name: 'GTA_V_2.png', file: new File([], 'GTA_V_2.png', { type: 'image/png' }) }
+            ];
+            await wrapper.vm.$nextTick();
+            expect(vm.combineFileName).toBe('CustomName');
+        });
+
+        it('sanitizes filename and strips double/incorrect extensions when confirming combination', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(201);
+
+            vm.combineQueue = [
+                { id: '1', type: 'local' as const, name: 'GTA_V_1.png', file: new File([], 'GTA_V_1.png', { type: 'image/png' }) },
+                { id: '2', type: 'local' as const, name: 'GTA_V_2.png', file: new File([], 'GTA_V_2.png', { type: 'image/png' }) }
+            ];
+            vm.setPreviewObjUrlBlob(new Blob(['preview']));
+            vm.selectedCombineFormat = 'image/png';
+
+            // Custom name with weird characters, path traversal attempt, and extension suffix
+            vm.combineFileName = '../../My Game Image.png';
+            await vm.handleConfirmCombine();
+
+            expect(fileStore.addFile).toHaveBeenCalled();
+            const addedFile = (fileStore.addFile as any).mock.calls[0][0] as File;
+            // The extension '.png' from target format is appended.
+            // "../../" will be stripped completely because '/' is not allowed.
+            expect(addedFile.name).toBe('My Game Image.png');
+        });
     });
 
     describe('Image Megapixel Validation & Auto-resizing', () => {
