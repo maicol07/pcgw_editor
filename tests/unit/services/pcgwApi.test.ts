@@ -69,4 +69,63 @@ describe('pcgwApi', () => {
             fetchSpy.mockRestore();
         });
     });
+
+    describe('prewarmCargoInitialValues', () => {
+        it('should fetch all taxonomy fields in a single query and cache them correctly', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue({
+                cargoquery: [
+                    {
+                        title: {
+                            Developers: 'Valve, Gearbox Software',
+                            Publishers: 'Valve, Sierra Entertainment',
+                            Engines: 'Source, GoldSrc',
+                            Series: 'Half-Life',
+                            Genres: 'First-person shooter',
+                            Themes: 'Sci-fi',
+                            Perspectives: 'First-person',
+                            Pacing: 'Real-time',
+                            Controls: 'Keyboard and mouse',
+                            Sports: '',
+                            Vehicles: '',
+                            'Art styles': 'Realistic',
+                            Monetization: 'One-time game purchase',
+                            Microtransactions: 'None',
+                            Modes: 'Single-player, Multiplayer'
+                        }
+                    }
+                ]
+            });
+
+            // Make sure cache is clean before test
+            pcgwApi.resetCache();
+
+            await pcgwApi.prewarmCargoInitialValues();
+
+            expect(fetchSpy).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'cargoquery',
+                tables: 'Infobox_game',
+                order_by: 'Infobox_game._pageID DESC'
+            }));
+
+            // Verify cached values by calling the public methods
+            fetchSpy.mockClear();
+
+            const genres = await pcgwApi.searchGenres();
+            expect(genres).toEqual(['First-person shooter']);
+
+            const companies = await pcgwApi.searchCompanies();
+            expect(companies).toContain('Valve');
+            expect(companies).toContain('Gearbox Software');
+            expect(companies).toContain('Sierra Entertainment');
+
+            // Verify a common search cache was warmed
+            const devSearch = await pcgwApi.searchCompanies('Valve');
+            expect(devSearch).toEqual(['Valve']);
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+
+            fetchSpy.mockRestore();
+        });
+    });
 });
+

@@ -557,18 +557,120 @@ class PCGWApiService {
         }
     }
 
-    async prewarmCache(): Promise<void> {
-        // Implementation simplified or removed if less critical, but kept for parity
-        const commonSearches = [
-            { fn: this.searchCompanies.bind(this), queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
-            { fn: this.searchEngines.bind(this), queries: ['Unreal', 'Unity', 'Source', 'id Tech'] },
-        ];
+    async prewarmCargoInitialValues(): Promise<void> {
+        const fieldsMap: Record<string, string> = {
+            'Developers': 'Infobox_game.Developers',
+            'Publishers': 'Infobox_game.Publishers',
+            'Engines': 'Infobox_game.Engines',
+            'Series': 'Infobox_game.Series',
+            'Genres': 'Infobox_game.Genres',
+            'Themes': 'Infobox_game.Themes',
+            'Perspectives': 'Infobox_game.Perspectives',
+            'Pacing': 'Infobox_game.Pacing',
+            'Controls': 'Infobox_game.Controls',
+            'Sports': 'Infobox_game.Sports',
+            'Vehicles': 'Infobox_game.Vehicles',
+            'Art styles': 'Infobox_game.Art_styles',
+            'Monetization': 'Infobox_game.Monetization',
+            'Microtransactions': 'Infobox_game.Microtransactions',
+            'Modes': 'Infobox_game.Modes'
+        };
 
-        for (const { fn, queries } of commonSearches) {
-            for (const query of queries) {
-                await fn(query);
-            }
+        const checkKey = 'cargo:Infobox_game.Genres:__initial__';
+        if (this.getFromCache(checkKey)) {
+            return;
         }
+
+        try {
+            const fieldsQueryList = [
+                'Developers',
+                'Publishers',
+                'Engines',
+                'Series',
+                'Genres',
+                'Themes',
+                'Perspectives',
+                'Pacing',
+                'Controls',
+                'Sports',
+                'Vehicles',
+                'Art_styles',
+                'Monetization',
+                'Microtransactions',
+                'Modes'
+            ].join(',');
+
+            const queryParams: Record<string, string> = {
+                action: 'cargoquery',
+                tables: 'Infobox_game',
+                fields: fieldsQueryList,
+                order_by: 'Infobox_game._pageID DESC',
+                limit: '500',
+            };
+
+            const result = await this.fetchApi<{ cargoquery?: { title: Record<string, string> }[] }>(queryParams);
+
+            if (!result?.cargoquery || !Array.isArray(result.cargoquery)) {
+                return;
+            }
+
+            const sets: Record<string, Set<string>> = {};
+            Object.values(fieldsMap).forEach(field => {
+                sets[field] = new Set<string>();
+            });
+
+            result.cargoquery.forEach((item) => {
+                const title = item.title;
+                if (!title) return;
+
+                Object.entries(fieldsMap).forEach(([jsonKey, fieldName]) => {
+                    const value = title[jsonKey];
+                    if (value) {
+                        value.split(',').forEach(v => {
+                            let trimmed = v.trim();
+                            trimmed = trimmed.replace(/^(Company|Engine|Series):/i, '');
+                            
+                            const lower = trimmed.toLowerCase();
+                            if (lower === 'select...' || lower === 'select' || lower === 'search...' || !trimmed) {
+                                return;
+                            }
+                            sets[fieldName].add(trimmed);
+                        });
+                    }
+                });
+            });
+
+            Object.entries(sets).forEach(([fieldName, valSet]) => {
+                const cacheKey = `cargo:${fieldName}:__initial__`;
+                const suggestions = Array.from(valSet).slice(0, 50);
+                this.setCache(cacheKey, suggestions);
+            });
+
+            const commonSearches = [
+                { field: 'Infobox_game.Developers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
+                { field: 'Infobox_game.Publishers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
+                { field: 'Infobox_game.Engines', queries: ['Unreal', 'Unity', 'Source', 'id Tech'] }
+            ];
+
+            commonSearches.forEach(({ field, queries }) => {
+                const sourceSet = sets[field] || new Set<string>();
+                const values = Array.from(sourceSet);
+                queries.forEach(query => {
+                    const cacheKey = `cargo:${field}:${query.toLowerCase()}`;
+                    const matches = values
+                        .filter(v => v.toLowerCase().includes(query.toLowerCase()))
+                        .slice(0, 10);
+                    this.setCache(cacheKey, matches);
+                });
+            });
+
+        } catch (error) {
+            console.error('Failed to prewarm Cargo initial values:', error);
+        }
+    }
+
+    async prewarmCache(): Promise<void> {
+        await this.prewarmCargoInitialValues().catch(console.warn);
     }
 
     async getPageContent(title: string): Promise<string | null> {
