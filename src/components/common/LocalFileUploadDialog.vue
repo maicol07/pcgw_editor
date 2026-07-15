@@ -98,6 +98,15 @@ const handleRemoveFile = async (id: number) => {
 };
 
 const initiateUpload = (file: LocalFile) => {
+    if (isUploading.value || showConfirmUpload.value || showOverwriteConfirm.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Upload in Progress',
+            detail: 'Please wait for the current upload to finish or close the current upload dialog.',
+            life: 3000
+        });
+        return;
+    }
     if (!pcgwAuth.isLoggedIn) {
         isLoginDialogVisible.value = true;
         return;
@@ -112,17 +121,19 @@ const processUpload = async (force: boolean = false) => {
     if (!selectedFile.value) return;
     
     const file = selectedFile.value;
+    const targetFilename = editFilename.value;
+    const targetDescription = editDescription.value;
     
     try {
         // 1. Pre-check if not forced
         if (!force) {
             isChecking.value = true;
             // Check if file exists before showing the full-screen upload overlay
-            const exists = await pcgwMedia.checkFileExists(editFilename.value);
+            const exists = await pcgwMedia.checkFileExists(targetFilename);
             isChecking.value = false;
             
             if (exists) {
-                duplicateInfo.value = { filename: editFilename.value, type: 'pre-check' };
+                duplicateInfo.value = { filename: targetFilename, type: 'pre-check' };
                 showOverwriteConfirm.value = true;
                 return;
             }
@@ -139,8 +150,8 @@ const processUpload = async (force: boolean = false) => {
         // 2. Attempt Upload
         const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
         const result = await pcgwMedia.uploadFile(file.blob, {
-            filename: editFilename.value,
-            comment: (editDescription.value || '') + attribution,
+            filename: targetFilename,
+            comment: (targetDescription || '') + attribution,
             ignorewarnings: force
         });
 
@@ -148,8 +159,8 @@ const processUpload = async (force: boolean = false) => {
         if (result?.upload?.result === 'Success') {
             await fileStore.updateFileStatus(file.id!, { 
                 status: 'uploaded',
-                name: editFilename.value,
-                description: editDescription.value,
+                name: targetFilename,
+                description: targetDescription,
                 pcgwUrl: result.upload.imageinfo.descriptionurl
             });
             toast.add({
@@ -163,7 +174,7 @@ const processUpload = async (force: boolean = false) => {
             const warnings = result.upload?.warnings || result.warnings;
             if (warnings?.duplicate || warnings?.exists || warnings?.['exists-normalized'] || warnings?.['was-deleted'] || warnings?.['duplicate-archive']) {
                 isUploading.value = false;
-                duplicateInfo.value = { filename: editFilename.value, type: 'warning' };
+                duplicateInfo.value = { filename: targetFilename, type: 'warning' };
                 showOverwriteConfirm.value = true;
                 return;
             }
@@ -185,7 +196,9 @@ const processUpload = async (force: boolean = false) => {
         });
     } finally {
         isUploading.value = false;
-        selectedFile.value = null;
+        if (!showOverwriteConfirm.value) {
+            selectedFile.value = null;
+        }
     }
 };
 
@@ -343,7 +356,7 @@ const openPcgwPage = (url: string) => {
                                         <Button v-if="file.status === 'uploaded'" label="Select" size="small" class="flex-1 text-xs!" severity="success" @click="selectFile(file)">
                                             <template #icon><CheckCircle2 class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
-                                        <Button v-else label="Upload to Select" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
+                                        <Button v-else label="Upload to Select" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading || showConfirmUpload || showOverwriteConfirm">
                                             <template #icon><Upload class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
                                     </template>
@@ -351,12 +364,12 @@ const openPcgwPage = (url: string) => {
                                         <Button v-if="file.status === 'uploaded'" label="View on PCGW" size="small" class="flex-1 text-xs!" severity="success" underlined @click="openPcgwPage(file.pcgwUrl!)">
                                             <template #icon><Globe class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
-                                        <Button v-else label="Upload to PCGW" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading">
+                                        <Button v-else label="Upload to PCGW" size="small" class="flex-1 text-xs!" severity="primary" @click="initiateUpload(file)" :disabled="isUploading || showConfirmUpload || showOverwriteConfirm">
                                             <template #icon><Upload class="w-3.5 h-3.5 mr-1" /></template>
                                         </Button>
                                     </template>
                                     
-                                    <Button size="small" severity="danger" text class="w-9 h-9 p-0!" @click="handleRemoveFile(file.id!)" :disabled="isUploading" v-tooltip.bottom="'Delete Local'">
+                                    <Button size="small" severity="danger" text class="w-9 h-9 p-0!" @click="handleRemoveFile(file.id!)" :disabled="isUploading || showConfirmUpload || showOverwriteConfirm" v-tooltip.bottom="'Delete Local'">
                                         <template #icon><Trash2 class="w-4 h-4" /></template>
                                     </Button>
                                 </div>

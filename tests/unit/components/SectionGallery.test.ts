@@ -291,6 +291,100 @@ describe('SectionGallery.vue', () => {
         });
     });
 
+    describe('Upload Concurrency and Race Condition Safety', () => {
+        it('prevents initiating a new upload when an upload is in progress or dialog is showing', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            
+            const fileA = { id: 1, blob: new Blob(['A']), name: 'imageA.jpg' };
+            const fileB = { id: 2, blob: new Blob(['B']), name: 'imageB.jpg' };
+            
+            // Initial upload
+            vm.initiateUpload(fileA);
+            expect(vm.selectedFile).toEqual(fileA);
+            expect(vm.showConfirmUpload).toBe(true);
+            
+            // Attempt to upload fileB while confirm upload is open
+            vm.initiateUpload(fileB);
+            expect(vm.selectedFile).toEqual(fileA); // Should NOT have changed to fileB!
+            
+            // Reset and simulate active upload
+            vm.showConfirmUpload = false;
+            vm.isUploading = true;
+            vm.initiateUpload(fileB);
+            expect(vm.selectedFile).toEqual(fileA); // Should NOT have changed!
+            
+            // Reset and simulate overwrite warning open
+            vm.isUploading = false;
+            vm.showOverwriteConfirm = true;
+            vm.initiateUpload(fileB);
+            expect(vm.selectedFile).toEqual(fileA); // Should NOT have changed!
+        });
+
+        it('captures filename and description locally during processUpload to prevent race conditions', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            
+            const { pcgwMedia } = await import('../../../src/services/pcgwMedia');
+            
+            // Mock a slow upload using a promise we control
+            let resolveUpload: any;
+            const uploadPromise = new Promise((resolve) => {
+                resolveUpload = resolve;
+            });
+            pcgwMedia.uploadFile = vi.fn().mockReturnValue(uploadPromise);
+            pcgwMedia.checkFileExists = vi.fn().mockResolvedValue(false);
+            
+            const fileA = { id: 1, blob: new Blob(['A']), name: 'imageA.jpg', status: 'local' };
+            vm.selectedFile = fileA;
+            vm.editFilename = 'imageA.jpg';
+            vm.editDescription = 'Desc A';
+            
+            // Start uploading A
+            const processPromise = vm.processUpload();
+            
+            // Simulate user opening dialog for image B, changing refs while A is in progress
+            vm.editFilename = 'imageB.jpg';
+            vm.editDescription = 'Desc B';
+            
+            // Resolve upload of A with success
+            resolveUpload({
+                upload: {
+                    result: 'Success',
+                    imageinfo: {
+                        url: 'https://pcgw.example.com/imageA.jpg',
+                        size: 100,
+                        width: 50,
+                        height: 50,
+                        descriptionurl: 'https://pcgw.example.com/File:imageA.jpg'
+                    }
+                }
+            });
+            
+            await processPromise;
+            
+            // Verification:
+            // 1. pcgwMedia.uploadFile should have been called with A's filename and description
+            expect(pcgwMedia.uploadFile).toHaveBeenCalledWith(expect.any(Blob), expect.objectContaining({
+                filename: 'imageA.jpg',
+                comment: expect.stringContaining('Desc A')
+            }));
+            
+            // 2. resolvedInfos should have been updated with A's details under 'imageA.jpg' (normalized A)
+            // and NOT 'imageB.jpg' (normalized B)
+            expect(vm.resolvedInfos['imageA.jpg']).toBeDefined();
+            expect(vm.resolvedInfos['imageB.jpg']).toBeUndefined();
+            
+            // 3. fileStore.updateFileStatus should have been called with targetFilename ('imageA.jpg') and targetDescription ('Desc A')
+            const fileStore = useFileStore();
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(1, expect.objectContaining({
+                status: 'uploaded',
+                name: 'imageA.jpg',
+                description: 'Desc A'
+            }));
+        });
+    });
+
     describe('Image Format Selection Logic', () => {
         it('correctly retrieves MIME type from file extension', () => {
             const wrapper = createWrapper();

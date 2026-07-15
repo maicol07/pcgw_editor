@@ -845,6 +845,16 @@ const batchDeletePcgw = async () => {
 
 
 const initiateUpload = (file: LocalFile | GalleryImage) => {
+    if (isUploading.value || showConfirmUpload.value || showOverwriteConfirm.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Upload in Progress',
+            detail: 'Please wait for the current upload to finish or close the current upload dialog.',
+            life: 3000
+        });
+        return;
+    }
+
     if (!pcgwAuth.isLoggedIn) {
         isLoginDialogVisible.value = true;
         return;
@@ -869,6 +879,8 @@ const processUpload = async (force: boolean = false) => {
     if (!selectedFile.value) return;
 
     const file = selectedFile.value;
+    const targetFilename = editFilename.value;
+    const targetDescription = editDescription.value;
 
     try {
         let uploadBlob: Blob = file.blob;
@@ -892,11 +904,11 @@ const processUpload = async (force: boolean = false) => {
         // 1. Pre-check if not forced
         if (!force) {
             isChecking.value = true;
-            const exists = await pcgwMedia.checkFileExists(editFilename.value);
+            const exists = await pcgwMedia.checkFileExists(targetFilename);
             isChecking.value = false;
 
             if (exists) {
-                duplicateInfo.value = { filename: editFilename.value, type: 'pre-check' };
+                duplicateInfo.value = { filename: targetFilename, type: 'pre-check' };
                 showOverwriteConfirm.value = true;
                 return;
             }
@@ -913,27 +925,27 @@ const processUpload = async (force: boolean = false) => {
         // 2. Attempt Upload
         const attribution = uiStore.autoUploadDescription ? '\n\nUploaded via [https://github.com/maicol07/pcgw_editor PCGW Editor]' : '';
         const result = await pcgwMedia.uploadFile(uploadBlob, {
-            filename: editFilename.value,
-            comment: (editDescription.value || '') + attribution,
+            filename: targetFilename,
+            comment: (targetDescription || '') + attribution,
             ignorewarnings: force
         });
 
         // 3. Handle Results
         if (result?.upload?.result === 'Success') {
             // Update resolved info immediately for reactivity
-            resolvedInfos[normalizeFilename(editFilename.value)] = {
+            resolvedInfos[normalizeFilename(targetFilename)] = {
                 url: result.upload.imageinfo.url,
                 user: pcgwAuth.username || '',
                 size: result.upload.imageinfo.size,
                 width: result.upload.imageinfo.width,
                 height: result.upload.imageinfo.height,
-                canonicalName: normalizeFilename(editFilename.value)
+                canonicalName: normalizeFilename(targetFilename)
             };
 
             await fileStore.updateFileStatus(file.id!, {
                 status: 'uploaded',
-                name: editFilename.value,
-                description: editDescription.value,
+                name: targetFilename,
+                description: targetDescription,
                 pcgwUrl: result.upload.imageinfo.descriptionurl
             });
 
@@ -947,7 +959,7 @@ const processUpload = async (force: boolean = false) => {
                 const item = newValue[placeholderIndex] as GalleryImage;
                 newValue[placeholderIndex] = {
                     ...item,
-                    name: editFilename.value,
+                    name: targetFilename,
                     localId: undefined // No longer a local placeholder
                 };
                 emit('update:modelValue', newValue);
@@ -963,7 +975,7 @@ const processUpload = async (force: boolean = false) => {
             const warnings = result.upload?.warnings || result.warnings;
             if (warnings?.duplicate || warnings?.exists || warnings?.['exists-normalized'] || warnings?.['was-deleted'] || warnings?.['duplicate-archive']) {
                 isUploading.value = false;
-                duplicateInfo.value = { filename: editFilename.value, type: 'warning' };
+                duplicateInfo.value = { filename: targetFilename, type: 'warning' };
                 showOverwriteConfirm.value = true;
                 return;
             }
@@ -2316,7 +2328,8 @@ defineExpose({
                             <!-- Local file: Primary Upload Action -->
                             <Button v-if="element.localId !== undefined" size="small" text rounded severity="primary"
                                 v-tooltip="'Upload to PCGW'" @click="initiateUpload(element)"
-                                :loading="getLocalFile(element.localId)?.status === 'uploading'">
+                                :loading="getLocalFile(element.localId)?.status === 'uploading'"
+                                :disabled="isUploading || showConfirmUpload || showOverwriteConfirm">
                                 <template #icon>
                                     <Upload />
                                 </template>
