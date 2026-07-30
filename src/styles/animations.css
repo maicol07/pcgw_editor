@@ -1,71 +1,69 @@
-/* Custom Animations for Micro-Interactions */
+/* Custom Animations for Micro-Interactions (GPU Accelerated) */
 
 /* Fade Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
+        transform: translateZ(0);
     }
-
     to {
         opacity: 1;
+        transform: translateZ(0);
     }
 }
 
 @keyframes fadeOut {
     from {
         opacity: 1;
+        transform: translateZ(0);
     }
-
     to {
         opacity: 0;
+        transform: translateZ(0);
     }
 }
 
 /* Slide Animations */
 @keyframes slideInUp {
     from {
-        transform: translateY(10px);
+        transform: translate3d(0, 10px, 0);
         opacity: 0;
     }
-
     to {
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
         opacity: 1;
     }
 }
 
 @keyframes slideInDown {
     from {
-        transform: translateY(-10px);
+        transform: translate3d(0, -10px, 0);
         opacity: 0;
     }
-
     to {
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
         opacity: 1;
     }
 }
 
 @keyframes slideInLeft {
     from {
-        transform: translateX(-10px);
+        transform: translate3d(-10px, 0, 0);
         opacity: 0;
     }
-
     to {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
         opacity: 1;
     }
 }
 
 @keyframes slideInRight {
     from {
-        transform: translateX(10px);
+        transform: translate3d(10px, 0, 0);
         opacity: 0;
     }
-
     to {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
         opacity: 1;
     }
 }
@@ -73,48 +71,40 @@
 /* Scale Animations */
 @keyframes scaleIn {
     from {
-        transform: scale(0.95);
+        transform: scale3d(0.95, 0.95, 1);
         opacity: 0;
     }
-
     to {
-        transform: scale(1);
+        transform: scale3d(1, 1, 1);
         opacity: 1;
     }
 }
 
 @keyframes scaleOut {
     from {
-        transform: scale(1);
+        transform: scale3d(1, 1, 1);
         opacity: 1;
     }
-
     to {
-        transform: scale(0.95);
+        transform: scale3d(0.95, 0.95, 1);
         opacity: 0;
     }
 }
 
 /* Pulse Animations */
 @keyframes pulseSoft {
-
-    0%,
-    100% {
+    0%, 100% {
         opacity: 1;
     }
-
     50% {
         opacity: 0.8;
     }
 }
 
 @keyframes pulseGlow {
-
-    0%,
-    100% {
+    0%, 100% {
         box-shadow: 0 0 10px -3px rgba(51, 122, 190, 0.3);
     }
-
     50% {
         box-shadow: 0 0 20px -5px rgba(51, 122, 190, 0.5);
     }
@@ -125,7 +115,6 @@
     0% {
         background-position: -1000px 0;
     }
-
     100% {
         background-position: 1000px 0;
     }
@@ -138,6 +127,8 @@
             rgba(203, 213, 225, 0.4) 50%,
             rgba(203, 213, 225, 0.2) 100%);
     background-size: 1000px 100%;
+    will-change: background-position;
+    transform: translateZ(0);
 }
 
 .dark .skeleton {
@@ -150,114 +141,134 @@
 /* Bounce Animations */
 @keyframes bounceIn {
     0% {
-        transform: scale(0.8);
+        transform: scale3d(0.8, 0.8, 1);
         opacity: 0;
     }
-
     50% {
-        transform: scale(1.05);
+        transform: scale3d(1.05, 1.05, 1);
     }
-
     100% {
-        transform: scale(1);
+        transform: scale3d(1, 1, 1);
         opacity: 1;
     }
 }
 
 /* Shake Animation (for errors) */
 @keyframes shake {
-
-    0%,
-    100% {
-        transform: translateX(0);
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
     }
-
     25% {
-        transform: translateX(-5px);
+        transform: translate3d(-5px, 0, 0);
     }
-
     75% {
-        transform: translateX(5px);
+        transform: translate3d(5px, 0, 0);
     }
 }
 
 /* Spin Animation */
 @keyframes spin {
     from {
-        transform: rotate(0deg);
+        transform: rotate(0deg) translateZ(0);
     }
-
     to {
-        transform: rotate(360deg);
+        transform: rotate(360deg) translateZ(0);
     }
 }
 
-/* Utility Classes */
+/* Utility Classes with GPU Hardware Acceleration */
 .animate-fade-in {
     animation: fadeIn 0.2s ease-out;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .animate-fade-out {
     animation: fadeOut 0.2s ease-out;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .animate-slide-in-up {
     animation: slideInUp 0.2s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .animate-slide-in-down {
     animation: slideInDown 0.2s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .animate-scale-in {
     animation: scaleIn 0.15s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .animate-bounce-in {
     animation: bounceIn 0.3s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .animate-shake {
     animation: shake 0.3s ease-in-out;
+    will-change: transform;
 }
 
 .animate-pulse-glow {
     animation: pulseGlow 2s ease-in-out infinite;
+    will-change: box-shadow;
 }
 
 /* Transition Utilities */
 .transition-fast {
     transition: all 0.15s ease-out;
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .transition-smooth {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .transition-bounce {
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
-/* Hover Effects */
+/* Hover Effects with GPU compositing */
 .hover-lift {
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .hover-lift:hover {
-    transform: translateY(-2px);
+    transform: translate3d(0, -2px, 0);
     box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 }
 
 .hover-scale {
     transition: transform 0.15s ease-out;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .hover-scale:hover {
-    transform: scale(1.02);
+    transform: scale3d(1.02, 1.02, 1);
 }
 
 .hover-glow {
     transition: box-shadow 0.2s ease-out;
+    will-change: box-shadow;
 }
 
 .hover-glow:hover {
@@ -309,15 +320,61 @@
     overflow: hidden;
 }
 
-/* Scale Fade Vue Transition */
+/* Global Vue Transitions (GPU Accelerated) */
+.scale-fade-enter-active,
+.scale-fade-leave-active,
+.fade-enter-active,
+.fade-leave-active,
+.fade-fast-enter-active,
+.fade-fast-leave-active,
+.slide-down-enter-active,
+.slide-down-leave-active,
+.slide-up-enter-active,
+.slide-up-leave-active {
+    will-change: opacity, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
 .scale-fade-enter-active,
 .scale-fade-leave-active {
     transition: opacity 0.2s ease, transform 0.2s ease;
-    will-change: opacity, transform;
 }
 
 .scale-fade-enter-from,
 .scale-fade-leave-to {
     opacity: 0;
-    transform: scale(0.9) translateZ(0);
+    transform: scale3d(0.9, 0.9, 1);
+}
+
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+    transition: opacity 0.12s ease-out;
+}
+
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+    opacity: 0;
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
 }
