@@ -536,8 +536,13 @@ class PCGWApiService {
 
     extractTitleFromUrl(url: string): string | null {
         try {
-            const parsedUrl = new URL(url);
-            if (parsedUrl.hostname !== 'www.pcgamingwiki.com') return null;
+            let cleanUrl = url.trim();
+            if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+            const parsedUrl = new URL(cleanUrl);
+            const hostname = parsedUrl.hostname.replace(/^www\./, '');
+            if (hostname !== 'pcgamingwiki.com') return null;
 
             // Handle both /wiki/Title and /w/index.php?title=Title
             const pathParts = parsedUrl.pathname.split('/');
