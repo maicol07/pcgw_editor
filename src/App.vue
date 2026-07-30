@@ -459,10 +459,8 @@ onMounted(() => {
 
                         <div v-else-if="editorMode === 'Visual'"
                             class="p-4 md:p-6 max-w-6xl xl:max-w-7xl 2xl:max-w-none mx-auto flex flex-col gap-9" key="visual">
-                            <QuickActions v-model:searchQuery="searchQuery" />
-
-                            <!-- Sections -->
-                            <ModernPanel id="sec-articleState"
+                            <QuickActions v-model:searchQuery="searchQuery" />                            <!-- Sections -->
+                            <ModernPanel id="sec-articleState" sectionKey="articleState"
                                 v-show="panelVisibility.articleState">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -474,7 +472,7 @@ onMounted(() => {
                                     :section="schemas.articleState.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-infobox"
+                            <ModernPanel id="sec-infobox" sectionKey="infobox"
                                 v-show="panelVisibility.infobox">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -487,7 +485,7 @@ onMounted(() => {
                                     @update:modelValue="val => updateGameData('infobox', val)" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-introduction"
+                            <ModernPanel id="sec-introduction" sectionKey="introduction"
                                 v-show="panelVisibility.introduction">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -507,7 +505,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-availability"
+                            <ModernPanel id="sec-availability" sectionKey="availability"
                                 v-show="panelVisibility.availability">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -519,7 +517,7 @@ onMounted(() => {
                                     :section="schemas.availability.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-monetization"
+                            <ModernPanel id="sec-monetization" sectionKey="monetization"
                                 v-show="panelVisibility.monetization">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -548,7 +546,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-dlc" v-show="panelVisibility.dlc">
+                            <ModernPanel id="sec-dlc" sectionKey="dlc" v-show="panelVisibility.dlc">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-primary-500 w-4 h-4" /><span
@@ -559,7 +557,7 @@ onMounted(() => {
                                     :section="schemas.dlc.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-essentialImprovements"
+                            <ModernPanel id="sec-essentialImprovements" sectionKey="essentialImprovements"
                                 v-show="panelVisibility.essentialImprovements">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -581,7 +579,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-gameData"
+                            <ModernPanel id="sec-gameData" sectionKey="gameData"
                                 v-show="panelVisibility.gameData">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -593,7 +591,7 @@ onMounted(() => {
                                     :section="schemas.gameData.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-video" v-show="panelVisibility.video">
+                            <ModernPanel id="sec-video" sectionKey="video" v-show="panelVisibility.video">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" /><span
@@ -604,7 +602,7 @@ onMounted(() => {
                                     :section="schemas.video.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-input" v-show="panelVisibility.input">
+                            <ModernPanel id="sec-input" sectionKey="input" v-show="panelVisibility.input">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" /><span
@@ -615,7 +613,7 @@ onMounted(() => {
                                     :section="schemas.input.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-audio" v-show="panelVisibility.audio">
+                            <ModernPanel id="sec-audio" sectionKey="audio" v-show="panelVisibility.audio">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-primary-500 w-4 h-4" /><span
@@ -626,7 +624,7 @@ onMounted(() => {
                                     :section="schemas.audio.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-network"
+                            <ModernPanel id="sec-network" sectionKey="network"
                                 v-show="panelVisibility.network">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -638,7 +636,7 @@ onMounted(() => {
                                     :section="schemas.network.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-vr" v-show="panelVisibility.vr">
+                            <ModernPanel id="sec-vr" sectionKey="vr" v-show="panelVisibility.vr">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Eye class="text-pink-500 w-4 h-4" /><span class="section-eyebrow">VR
@@ -649,7 +647,7 @@ onMounted(() => {
                                     :section="schemas.vr.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-issues" v-show="panelVisibility.issues">
+                            <ModernPanel id="sec-issues" sectionKey="issues" v-show="panelVisibility.issues">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlertCircle class="text-red-500 w-4 h-4" /><span
@@ -660,7 +658,7 @@ onMounted(() => {
                                     :section="schemas.issues.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-other" v-show="panelVisibility.other">
+                            <ModernPanel id="sec-other" sectionKey="other" v-show="panelVisibility.other">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
@@ -675,7 +673,7 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-systemReq"
+                            <ModernPanel id="sec-systemReq" sectionKey="systemReq"
                                 v-show="panelVisibility.systemReq">
                                 <template #header>
                                     <div class="flex items-center gap-2">
@@ -687,9 +685,7 @@ onMounted(() => {
                                     :section="schemas.systemReq.value" v-model="gameData" />
                             </ModernPanel>
 
-
-
-                            <ModernPanel id="sec-l10n" v-show="panelVisibility.l10n">
+                            <ModernPanel id="sec-l10n" sectionKey="l10n" v-show="panelVisibility.l10n">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Globe class="text-teal-400 w-4 h-4" /><span

@@ -263,3 +263,61 @@
 .hover-glow:hover {
     box-shadow: 0 0 15px -3px rgba(51, 122, 190, 0.4);
 }
+
+/* Grid-based Smooth Accordion & Collapse Transitions (GPU Accelerated) */
+.section-collapse-wrapper {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-out;
+    opacity: 1;
+    will-change: grid-template-rows, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.section-collapse-wrapper.is-collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.section-collapse-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Grid-based Smooth Section Hide Transitions (GPU Accelerated) */
+.section-hide-wrapper {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out, transform 0.3s ease-out;
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+    will-change: grid-template-rows, opacity, transform;
+    backface-visibility: hidden;
+}
+
+.section-hide-wrapper.is-hidden {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-8px) translateZ(0);
+    pointer-events: none;
+}
+
+.section-hide-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Scale Fade Vue Transition */
+.scale-fade-enter-active,
+.scale-fade-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    will-change: opacity, transform;
+}
+
+.scale-fade-enter-from,
+.scale-fade-leave-to {
+    opacity: 0;
+    transform: scale(0.9) translateZ(0);
+}

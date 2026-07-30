@@ -98,6 +98,63 @@ export const useUiStore = defineStore('ui', () => {
         editorMode.value = mode;
     };
 
+    const loadStoredMap = (key: string): Record<string, boolean> => {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : {};
+        } catch {
+            return {};
+        }
+    };
+
+    const collapsedSections = ref<Record<string, boolean>>(loadStoredMap('collapsedSections'));
+    const hiddenSections = ref<Record<string, boolean>>(loadStoredMap('hiddenSections'));
+
+    watch(collapsedSections, (val) => {
+        localStorage.setItem('collapsedSections', JSON.stringify(val));
+    }, { deep: true });
+
+    watch(hiddenSections, (val) => {
+        localStorage.setItem('hiddenSections', JSON.stringify(val));
+    }, { deep: true });
+
+    const toggleSectionCollapse = (key: string) => {
+        collapsedSections.value = {
+            ...collapsedSections.value,
+            [key]: !collapsedSections.value[key]
+        };
+    };
+
+    const toggleSectionHide = (key: string) => {
+        hiddenSections.value = {
+            ...hiddenSections.value,
+            [key]: !hiddenSections.value[key]
+        };
+    };
+
+    const isSectionCollapsed = (key: string): boolean => !!collapsedSections.value[key];
+    const isSectionHidden = (key: string): boolean => !!hiddenSections.value[key];
+
+    const collapseAllSections = (keys: string[]) => {
+        const next: Record<string, boolean> = {};
+        keys.forEach(k => { next[k] = true; });
+        collapsedSections.value = next;
+    };
+
+    const expandAllSections = () => {
+        collapsedSections.value = {};
+    };
+
+    const hideAllSections = (keys: string[]) => {
+        const next: Record<string, boolean> = {};
+        keys.forEach(k => { next[k] = true; });
+        hiddenSections.value = next;
+    };
+
+    const showAllSections = () => {
+        hiddenSections.value = {};
+    };
+
     return {
         sidebarVisible,
         editorMode,
@@ -122,6 +179,17 @@ export const useUiStore = defineStore('ui', () => {
         isTourActive,
         startTour,
         completeTour,
+
+        collapsedSections,
+        hiddenSections,
+        toggleSectionCollapse,
+        toggleSectionHide,
+        isSectionCollapsed,
+        isSectionHidden,
+        collapseAllSections,
+        expandAllSections,
+        hideAllSections,
+        showAllSections,
 
         toggleSidebar,
         setEditorMode,
