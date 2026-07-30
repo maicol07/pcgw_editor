@@ -700,3 +700,14 @@ body {
 .compact-mode .local-files-area .p-fileupload-basic {
   margin-bottom: 0.5rem !important;
 }
+
+/* Fix PrimeVue IconField padding for nested input elements (e.g., AutocompleteField inside IconField) */
+.p-iconfield:has(.p-inputicon:first-child) .p-inputtext,
+.p-iconfield:has(.p-inputicon:first-child) input {
+  padding-left: 2.5rem !important;
+}
+
+.p-iconfield:has(.p-inputicon:last-child) .p-inputtext,
+.p-iconfield:has(.p-inputicon:last-child) input {
+  padding-right: 2.5rem !important;
+}

@@ -606,7 +606,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                             <Search class="w-4 h-4" />
                         </InputIcon>
                         <AutocompleteField v-model="linkSearch" dataSource="pages" :multiple="false"
-                            placeholder="Type game title..." class="w-full" autofocus />
+                            placeholder="Type game title..." class="w-full" inputClass="pl-10!" autofocus />
                     </IconField>
                 </div>
             </Transition>
@@ -682,7 +682,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                 <Search class="w-4 h-4" />
                             </InputIcon>
                             <AutocompleteField v-model="importSearch" dataSource="pages" :multiple="false"
-                                placeholder="Type game title..." class="w-full" />
+                                placeholder="Type game title..." class="w-full" inputClass="pl-10!" />
                         </IconField>
                     </div>
 
