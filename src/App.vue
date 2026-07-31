@@ -139,11 +139,29 @@ const handleUpdateFromPcgw = async (page: any, _force: boolean = false) => {
         return;
     }
 
-    diffMergerLocalWikitext.value = page.wikitext;
-    // ponytail: base = baseWikitext; se diverge dall'antenato reale, fetchare il testo di
-    // onlineRevisionId via pcgwApi.fetchWikitext(title, revid) come base — upgrade path se i conflitti risultano imprecisi.
-    diffMergerBaseWikitext.value = page.baseWikitext || page.wikitext;
-    diffMergerOnlineWikitext.value = result.content;
+    const local = (page.wikitext || '').replace(/\r\n/g, '\n');
+    const online = (result.content || '').replace(/\r\n/g, '\n');
+
+    // The merge ancestor is the revision the local copy was synced from. page.baseWikitext is not it:
+    // the store overwrites it with the current wikitext on every parse (it doubles as the generation
+    // skeleton), so it drifts to equal `local` and every local change disappears from the merge.
+    const ancestor = page.localRevisionId ? await pcgwApi.fetchRevisionWikitext(page.localRevisionId) : null;
+    const stored = (page.baseWikitext || '').replace(/\r\n/g, '\n');
+    // Last resort: base = online. That degrades to a 2-way diff where your edits show as your changes
+    // and can be dropped one by one. Using a base equal to local would instead default to discarding
+    // all of your work.
+    const base = ancestor ?? (stored && stored !== local ? stored : online);
+    if (!ancestor) {
+        toast.add({
+            severity: 'warn', summary: 'No merge ancestor',
+            detail: 'The original revision could not be fetched, so changes are compared directly against the online version.',
+            life: 6000,
+        });
+    }
+
+    diffMergerLocalWikitext.value = local;
+    diffMergerBaseWikitext.value = base;
+    diffMergerOnlineWikitext.value = online;
     diffMergerOnlineRevid.value = result.revid;
     diffMergerPageTitle.value = page.pcgwPageTitle;
     isDiffMergerVisible.value = true;
@@ -176,8 +194,8 @@ const handleOpenPublishDialog = async () => {
         return;
     }
     
-    publishDiffOnlineWikitext.value = result.content;
-    publishDiffLocalWikitext.value = workspaceStore.activePage.wikitext;
+    publishDiffOnlineWikitext.value = (result.content || '').replace(/\r\n/g, '\n');
+    publishDiffLocalWikitext.value = (workspaceStore.activePage.wikitext || '').replace(/\r\n/g, '\n');
     suggestedEditSummary.value = ''; // Reset suggested summary
     isPublishDiffDialogVisible.value = true;
 };

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult, allResolved,
+    findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult,
 } from '@/components/common/diff/merge3';
 
 const base = 'line1\nbase\nline3';
@@ -48,12 +48,33 @@ describe('hunk model', () => {
         expect(buildResult(hunks, choices).text).toBe(base);
     });
 
-    it('conflicts start unresolved; resolving all flips allResolved', () => {
+    it('conflicts start unresolved and render markers until a side is picked', () => {
         const hunks = computeHunks('line1\nMINE\nline3', base, 'line1\nTHEIRS\nline3');
         const choices = defaultChoices(hunks);
-        expect(allResolved(hunks, choices)).toBe(false); // conflict pending
-        hunks.forEach((h, i) => { if (h.type === 'conflict') choices[i] = 'left'; });
-        expect(allResolved(hunks, choices)).toBe(true);
+        const ci = hunks.findIndex((h) => h.type === 'conflict');
+        expect(choices[ci]).toBe('unresolved');
+        expect(findConflicts(buildResult(hunks, choices).text)).toHaveLength(1);
+        choices[ci] = 'left';
+        expect(findConflicts(buildResult(hunks, choices).text)).toHaveLength(0);
+    });
+
+    it('only conflicts start unresolved — one-sided changes are pre-applied', () => {
+        const hunks = computeHunks('LOCAL\nbase\nline3', base, 'line1\nbase\nONLINE');
+        const choices = defaultChoices(hunks);
+        hunks.forEach((h, i) => expect(choices[i]).toBe(h.type === 'conflict' ? 'unresolved' : 'include'));
+    });
+
+    it('keeps a zero-width range for a deletion so the gutter can anchor to it', () => {
+        const local = 'line1\nline3'; // deleted the middle line
+        const hunks = computeHunks(local, base, base);
+        const li = hunks.findIndex((h) => h.type === 'left');
+        expect(li).toBeGreaterThanOrEqual(0);
+
+        const { text, ranges } = buildResult(hunks, defaultChoices(hunks));
+        expect(text).toBe(local); // the empty piece must not inject a blank line
+        expect(ranges).toHaveLength(hunks.length);
+        const deleted = ranges.find((r) => r.hunk === li)!;
+        expect(deleted.from).toBe(deleted.to);
     });
 
     it('smart resolves conflicts to both sides', () => {

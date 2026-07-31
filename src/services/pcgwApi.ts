@@ -49,7 +49,7 @@ class PCGWApiService {
             delete this.cache.value[key];
             return null;
         }
-        return entry.data;
+        return entry.data.map(item => typeof item === 'string' ? item.replace(/\r/g, '') : item);
     }
 
     private setCache(key: string, data: string[]): void {
@@ -441,14 +441,44 @@ class PCGWApiService {
             const pages = Object.values(result.query.pages);
             const page = pages[0];
 
-            const content = page?.revisions?.[0]?.slots?.main?.['*'];
+            const rawContent = page?.revisions?.[0]?.slots?.main?.['*'];
             const revid = page?.revisions?.[0]?.revid;
-            if (content === undefined || revid === undefined) return null;
+            if (rawContent === undefined || revid === undefined) return null;
 
+            const content = rawContent.replace(/\r\n/g, '\n');
             this.setCache(cacheKey, [content, revid.toString()]);
             return { content, revid };
         } catch (error) {
             console.error(`Failed to fetch wikitext for ${title}:`, error);
+            return null;
+        }
+    }
+
+    // Wikitext of one specific revision — the true merge ancestor. Revisions are immutable, so this
+    // is always cache-safe.
+    async fetchRevisionWikitext(revid: number): Promise<string | null> {
+        const cacheKey = `wikitext:rev:${revid}`;
+        const cached = this.getFromCache(cacheKey);
+        if (cached && cached.length >= 1) return cached[0];
+
+        try {
+            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { slots?: { main?: { '*'?: string } } }[] }> } }>({
+                action: 'query',
+                prop: 'revisions',
+                revids: String(revid),
+                rvprop: 'content',
+                rvslots: 'main',
+            });
+
+            const page = Object.values(result?.query?.pages || {})[0];
+            const rawContent = page?.revisions?.[0]?.slots?.main?.['*'];
+            if (rawContent === undefined) return null;
+
+            const content = rawContent.replace(/\r\n/g, '\n');
+            this.setCache(cacheKey, [content]);
+            return content;
+        } catch (error) {
+            console.error(`Failed to fetch wikitext for revision ${revid}:`, error);
             return null;
         }
     }

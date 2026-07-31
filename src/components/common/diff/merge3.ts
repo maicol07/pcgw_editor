@@ -108,14 +108,9 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
     return hunks;
 }
 
-// Non-conflicting edits (left/right) default to 'include'. Only true conflicts start unresolved.
+// One-sided changes apply automatically (JetBrains-style); only conflicts need a decision.
 export function defaultChoices(hunks: Hunk[]): Choice[] {
     return hunks.map((h) => (h.type === 'conflict' ? 'unresolved' : 'include'));
-}
-
-// True once no non-stable hunk is left pending.
-export function allResolved(hunks: Hunk[], choices: Choice[]): boolean {
-    return hunks.every((h, i) => h.type === 'stable' || choices[i] !== 'unresolved');
 }
 
 // Heuristic auto-resolution: keep both sides of a conflict, preferring the non-empty one.
@@ -146,21 +141,26 @@ function hunkText(h: Hunk, c: Choice): string {
 }
 
 // Build the merged document plus the char range of every hunk in the result (for decorations).
+// Hunks whose text is empty (a pure deletion) still get a zero-width range so the UI can anchor
+// a gutter button and a marker there — otherwise they'd be invisible and unresolvable.
 export function buildResult(hunks: Hunk[], choices: Choice[]): {
     text: string;
     ranges: { from: number; to: number; hunk: number }[];
 } {
-    const pieces = hunks
-        .map((h, i) => ({ text: hunkText(h, choices[i]), hunk: i }))
-        .filter((p) => p.text !== '');
-
     let text = '';
+    let first = true;
     const ranges: { from: number; to: number; hunk: number }[] = [];
-    pieces.forEach((p, idx) => {
-        if (idx > 0) text += '\n';
+    hunks.forEach((h, i) => {
+        const piece = hunkText(h, choices[i]);
+        if (piece === '') {
+            ranges.push({ from: text.length, to: text.length, hunk: i });
+            return;
+        }
+        if (!first) text += '\n';
+        first = false;
         const from = text.length;
-        text += p.text;
-        ranges.push({ from, to: text.length, hunk: p.hunk });
+        text += piece;
+        ranges.push({ from, to: text.length, hunk: i });
     });
     return { text, ranges };
 }

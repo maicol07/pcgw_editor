@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { MergeView } from '@codemirror/merge';
 import { EditorState } from '@codemirror/state';
 import Button from 'openvue/button';
@@ -20,17 +20,21 @@ const container = ref<HTMLDivElement | null>(null);
 const collapseOn = ref(true);
 let view: MergeView | null = null;
 
+const cleanOriginal = computed(() => (props.original || '').replace(/\r/g, ''));
+const cleanModified = computed(() => (props.modified || '').replace(/\r/g, ''));
+
 const build = () => {
     if (!container.value) return;
     view?.destroy();
     const readOnly = [...wikitextExtensions(isDark()), EditorState.readOnly.of(true)];
     view = new MergeView({
-        a: { doc: props.original, extensions: readOnly },
-        b: { doc: props.modified, extensions: readOnly },
+        a: { doc: cleanOriginal.value, extensions: readOnly },
+        b: { doc: cleanModified.value, extensions: readOnly },
         parent: container.value,
         collapseUnchanged: collapseOn.value ? { margin: 3, minSize: 6 } : undefined,
         highlightChanges: true,
         gutter: true,
+        diffConfig: { scanLimit: 50000 },
     });
 };
 
@@ -44,7 +48,7 @@ onMounted(() => {
     onUnmounted(() => observer.disconnect());
 });
 
-watch(() => [props.original, props.modified], build);
+watch(() => [cleanOriginal.value, cleanModified.value], build);
 
 onUnmounted(() => view?.destroy());
 </script>
