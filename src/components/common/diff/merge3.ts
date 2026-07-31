@@ -108,9 +108,9 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
     return hunks;
 }
 
-// Every change starts unresolved — the user must explicitly include/discard/pick each one.
+// Non-conflicting edits (left/right) default to 'include'. Only true conflicts start unresolved.
 export function defaultChoices(hunks: Hunk[]): Choice[] {
-    return hunks.map((h) => (h.type === 'stable' ? 'include' : 'unresolved'));
+    return hunks.map((h) => (h.type === 'conflict' ? 'unresolved' : 'include'));
 }
 
 // True once no non-stable hunk is left pending.

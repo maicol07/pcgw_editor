@@ -147,7 +147,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             id,
             title,
             wikitext,
-            baseWikitext: initialWikitext || '',
+            baseWikitext: initialWikitext || wikitext || '',
             lastModified: Date.now(),
             template,
             pcgwPageTitle,

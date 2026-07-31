@@ -417,13 +417,15 @@ class PCGWApiService {
         return result?.content || null;
     }
 
-    async fetchWikitext(title: string, cacheKeyBase?: string): Promise<{ content: string; revid: number } | null> {
+    async fetchWikitext(title: string, cacheKeyBase?: string, bypassCache: boolean = false): Promise<{ content: string; revid: number } | null> {
         const cacheKey = cacheKeyBase || `wikitext:${title}`;
-        const cached = this.getFromCache(cacheKey);
-        // If cached and cache is a simple string array (old format), we might need to handle it.
-        // For simplicity, let's just clear cache or handle the new format.
-        if (cached && cached.length >= 2) {
-            return { content: cached[0], revid: parseInt(cached[1]) };
+        if (!bypassCache) {
+            const cached = this.getFromCache(cacheKey);
+            // If cached and cache is a simple string array (old format), we might need to handle it.
+            // For simplicity, let's just clear cache or handle the new format.
+            if (cached && cached.length >= 2) {
+                return { content: cached[0], revid: parseInt(cached[1]) };
+            }
         }
 
         try {

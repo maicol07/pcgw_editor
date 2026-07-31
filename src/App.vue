@@ -127,8 +127,8 @@ const workspaceSidebarRef = ref();
 const handleUpdateFromPcgw = async (page: any, _force: boolean = false) => {
     if (!page.pcgwPageTitle) return;
 
-    // Fetch online wikitext
-    const result = await pcgwApi.fetchWikitext(page.pcgwPageTitle);
+    // Fetch online wikitext (bypass local cache to get live revision)
+    const result = await pcgwApi.fetchWikitext(page.pcgwPageTitle, undefined, true);
     if (!result) {
         toast.add({
             severity: 'error',
@@ -142,7 +142,7 @@ const handleUpdateFromPcgw = async (page: any, _force: boolean = false) => {
     diffMergerLocalWikitext.value = page.wikitext;
     // ponytail: base = baseWikitext; se diverge dall'antenato reale, fetchare il testo di
     // onlineRevisionId via pcgwApi.fetchWikitext(title, revid) come base — upgrade path se i conflitti risultano imprecisi.
-    diffMergerBaseWikitext.value = page.baseWikitext ?? page.wikitext;
+    diffMergerBaseWikitext.value = page.baseWikitext || page.wikitext;
     diffMergerOnlineWikitext.value = result.content;
     diffMergerOnlineRevid.value = result.revid;
     diffMergerPageTitle.value = page.pcgwPageTitle;
@@ -169,7 +169,7 @@ const handleOpenPublishDialog = async () => {
     }
     
     toast.add({ severity: 'info', summary: 'Loading Diff', detail: 'Fetching latest online version...', life: 2000 });
-    const result = await pcgwApi.fetchWikitext(workspaceStore.activePage.pcgwPageTitle);
+    const result = await pcgwApi.fetchWikitext(workspaceStore.activePage.pcgwPageTitle, undefined, true);
     
     if (!result) {
         toast.add({ severity: 'error', summary: 'Fetch Error', detail: 'Failed to fetch online page content from PCGW.' });

@@ -6,7 +6,7 @@ import { history } from '@codemirror/commands';
 import Button from 'primevue/button';
 import {
     ChevronsLeft, ChevronsRight, FoldHorizontal, Wand2, Bot, ArrowLeft, ArrowRight, X, Plus,
-    Undo2, Redo2, UnfoldVertical, FoldVertical,
+    Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check,
 } from 'lucide-vue-next';
 import {
     computeHunks, defaultChoices, smartChoices, buildResult, findConflicts, allResolved,
@@ -35,6 +35,8 @@ const expanded = new Set<number>(); // stable hunks the user expanded
 const collapseOn = ref(true);
 const aiLoading = ref(false);
 const aiError = ref('');
+const unresolvedCount = ref(0);
+const currentConflictIndex = ref(-1);
 
 const markers = ref<{ i: number; type: Hunk['type']; top: number }[]>([]);
 
@@ -139,9 +141,51 @@ const bodyEl = ref<HTMLDivElement>();
 let left: EditorView | null = null, center: EditorView | null = null, right: EditorView | null = null;
 
 const emitState = (doc: string) => {
+    unresolvedCount.value = hunks.filter((h, i) => h.type !== 'stable' && choices[i] === 'unresolved').length;
     emit('update:result', doc);
     emit('update:conflictsResolved', allResolved(hunks, choices) && findConflicts(doc).length === 0);
 };
+
+function goToNextConflict() {
+    const unresolvedHunkIndices = ranges.filter(r => hunks[r.hunk].type !== 'stable' && choices[r.hunk] === 'unresolved').map(r => r.hunk);
+    if (!unresolvedHunkIndices.length || !center) return;
+    
+    let nextIndex = unresolvedHunkIndices.findIndex(idx => idx > currentConflictIndex.value);
+    if (nextIndex === -1) nextIndex = 0; // wrap around
+    
+    currentConflictIndex.value = unresolvedHunkIndices[nextIndex];
+    expanded.add(currentConflictIndex.value); // expand if collapsed
+    refreshDecos();
+    
+    const range = ranges.find(r => r.hunk === currentConflictIndex.value);
+    if (range) {
+        center.dispatch({
+            selection: { anchor: range.from },
+            scrollIntoView: true
+        });
+    }
+}
+
+function goToPrevConflict() {
+    const unresolvedHunkIndices = ranges.filter(r => hunks[r.hunk].type !== 'stable' && choices[r.hunk] === 'unresolved').map(r => r.hunk);
+    if (!unresolvedHunkIndices.length || !center) return;
+    
+    let prevIndex = unresolvedHunkIndices.slice().reverse().findIndex(idx => idx < currentConflictIndex.value);
+    if (prevIndex === -1) prevIndex = 0; // wrap around
+    
+    const targetIdx = unresolvedHunkIndices.slice().reverse()[prevIndex];
+    currentConflictIndex.value = targetIdx;
+    expanded.add(currentConflictIndex.value);
+    refreshDecos();
+    
+    const range = ranges.find(r => r.hunk === currentConflictIndex.value);
+    if (range) {
+        center.dispatch({
+            selection: { anchor: range.from },
+            scrollIntoView: true
+        });
+    }
+}
 
 function recomputeMarkers() {
     if (!center || !bodyEl.value) { markers.value = []; return; }
@@ -310,6 +354,20 @@ onUnmounted(() => {
             <Button size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
                 <template #icon><Bot class="w-4 h-4" /></template>
             </Button>
+            <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
+            <div v-if="unresolvedCount > 0" class="flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-xs font-semibold">
+                <span>{{ unresolvedCount }} unresolved</span>
+                <Button size="small" severity="secondary" text rounded @click="goToPrevConflict" v-tooltip.bottom="'Previous conflict'">
+                    <template #icon><ChevronUp class="w-3.5 h-3.5" /></template>
+                </Button>
+                <Button size="small" severity="secondary" text rounded @click="goToNextConflict" v-tooltip.bottom="'Next conflict'">
+                    <template #icon><ChevronDown class="w-3.5 h-3.5" /></template>
+                </Button>
+            </div>
+            <div v-else class="flex items-center gap-1 text-green-600 dark:text-green-400 px-2 py-0.5 rounded text-xs font-semibold">
+                <Check class="w-3.5 h-3.5" />
+                <span>All resolved</span>
+            </div>
             <div class="flex-1" />
             <Button size="small" severity="secondary" text rounded @click="toggleCollapse" v-tooltip.bottom="collapseOn ? 'Expand all unchanged sections' : 'Collapse unchanged sections'">
                 <template #icon><UnfoldVertical v-if="collapseOn" class="w-4 h-4" /><FoldVertical v-else class="w-4 h-4" /></template>
