@@ -46,6 +46,16 @@ const toggleGroup = (idx: number) => {
 
 const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog', undefined);
 
+const getFieldKey = (field: FieldDefinition, index: number): string => {
+    if (field.componentProps?.field) {
+        return `${field.key}.${field.componentProps.field}`;
+    }
+    if (field.wikitextParam) {
+        return `${field.key}.${field.wikitextParam}`;
+    }
+    return field.label ? `${field.key}.${field.label}` : `${field.key}-${index}`;
+};
+
 </script>
 
 <template>
@@ -57,8 +67,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
             '@md:grid-cols-2': section.gridCols === 2,
             '@md:grid-cols-2 @3xl:grid-cols-3': section.gridCols === 3
         }">
-            <template v-for="field in section.fields" :key="field.key">
-                <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
+            <template v-for="(field, index) in section.fields" :key="getFieldKey(field, index)">
+                <DynamicField v-memo="[getDeep(modelValue, field.key), getFieldKey(field, index)]" :field="field"
                     :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                     @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                         'col-span-1': true,
@@ -119,8 +129,8 @@ const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog'
                                 'grid gap-5': typeof group.gridCols === 'string'
                             }"
                                 :style="typeof group.gridCols === 'string' ? { gridTemplateColumns: group.gridCols } : {}">
-                                <template v-for="field in group.fields" :key="field.key">
-                                    <DynamicField v-memo="[modelValue[field.key], field.key]" :field="field"
+                                <template v-for="(field, index) in group.fields" :key="getFieldKey(field, index)">
+                                    <DynamicField v-memo="[getDeep(modelValue, field.key), getFieldKey(field, index)]" :field="field"
                                         :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                                         @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                                             'col-span-1': true,

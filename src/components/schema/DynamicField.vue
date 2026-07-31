@@ -91,7 +91,11 @@ const resolvedComponent = computed(() => {
 });
 
 // Stable id derived from the field key for label/input association
-const fieldId = computed(() => `field-${props.field.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`);
+const fieldId = computed(() => {
+    const subField = props.field.componentProps?.field || props.field.wikitextParam;
+    const keyPath = subField ? `${props.field.key}.${subField}` : props.field.key;
+    return `field-${keyPath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+});
 
 const isIgdbField = computed(() => props.field.key === 'links.igdb');
 
