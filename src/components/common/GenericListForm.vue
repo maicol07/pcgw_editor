@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AutocompleteField, { DataSource } from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import { Info, Copy } from 'lucide-vue-next';
 
 export interface ListItem {

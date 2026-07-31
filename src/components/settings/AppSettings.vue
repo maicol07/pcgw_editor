@@ -2,11 +2,11 @@
 import { ref, inject, computed, type Ref, watch } from 'vue';
 import { aiConfig, MODELS, PROVIDERS, PROVIDER_LABELS, PROVIDER_KEY_LINKS, type AIProvider } from '../../services/ai/aiConfig';
 import { useUiStore } from '../../stores/ui';
-import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import ToggleSwitch from 'primevue/toggleswitch';
+import Dialog from 'openvue/dialog';
+import Select from 'openvue/select';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import ToggleSwitch from 'openvue/toggleswitch';
 import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
@@ -16,7 +16,7 @@ import { pcgwAuth } from '../../services/pcgwAuth';
 import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
 import { pcgwApi } from '../../services/pcgwApi';
 import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'openvue/usetoast';
 
 const uiStore = useUiStore();
 

@@ -2,8 +2,8 @@
 import { ref } from 'vue';
 import { syncState, reconnectSync } from '../../services/sync/syncService';
 import { Cloud, AlertCircle, Loader2 } from 'lucide-vue-next';
-import Button from 'primevue/button';
-import { useToast } from 'primevue/usetoast';
+import Button from 'openvue/button';
+import { useToast } from 'openvue/usetoast';
 
 const toast = useToast();
 const isReconnecting = ref(false);

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from '../stores/workspace';
 import { useUiStore } from '../stores/ui';
-import Drawer from 'primevue/drawer';
-import Button from 'primevue/button';
-import FileUpload from 'primevue/fileupload';
+import Drawer from 'openvue/drawer';
+import Button from 'openvue/button';
+import FileUpload from 'openvue/fileupload';
 import { computed, ref } from 'vue';
 import {
     Plus, Pencil, Download, Trash2, Loader2, Github, AlertCircle,
@@ -11,18 +11,18 @@ import {
     File, FilePenLine, User, Users, Link, Unlink,
     Layout, SortAsc, SortDesc
 } from 'lucide-vue-next';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import SelectButton from 'primevue/selectbutton';
-import Message from 'primevue/message';
-import ConfirmPopup from 'primevue/confirmpopup';
-import { useConfirm } from 'primevue/useconfirm';
+import Dialog from 'openvue/dialog';
+import InputText from 'openvue/inputtext';
+import Select from 'openvue/select';
+import SelectButton from 'openvue/selectbutton';
+import Message from 'openvue/message';
+import ConfirmPopup from 'openvue/confirmpopup';
+import { useConfirm } from 'openvue/useconfirm';
 import AutocompleteField from './AutocompleteField.vue';
 import { pcgwApi } from '../services/pcgwApi';
 import { formatDistanceToNow } from 'date-fns';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
+import IconField from 'openvue/iconfield';
+import InputIcon from 'openvue/inputicon';
 
 const store = useWorkspaceStore();
 const ui = useUiStore();

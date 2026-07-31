@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import InputText from 'primevue/inputtext';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
+import InputText from 'openvue/inputtext';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
 import NotesButton from '../NotesButton.vue';
 
 const props = defineProps<{

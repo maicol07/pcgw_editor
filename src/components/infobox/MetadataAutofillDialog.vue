@@ -4,11 +4,11 @@ import { useWorkspaceStore } from '../../stores/workspace';
 import { useUiStore } from '../../stores/ui';
 import { hasGoogleKey } from '../../services/ai/aiConfig';
 import { metadataFillerService, ExtractedMetadata, IGDBGameCandidate } from '../../services/MetadataFillerService';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import ToggleSwitch from 'primevue/toggleswitch';
+import Dialog from 'openvue/dialog';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import Checkbox from 'openvue/checkbox';
+import ToggleSwitch from 'openvue/toggleswitch';
 import { 
     Sparkles, Search, AlertCircle, Info, Database, 
     Twitch, Cpu

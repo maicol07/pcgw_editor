@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import Select from 'primevue/select';
-import MultiSelect from 'primevue/multiselect';
-import InputText from 'primevue/inputtext';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
+import Select from 'openvue/select';
+import MultiSelect from 'openvue/multiselect';
+import InputText from 'openvue/inputtext';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
 import NotesButton from './NotesButton.vue';
 import { Info } from 'lucide-vue-next';
 import { computed } from 'vue';

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref, nextTick } from 'vue';
 import DynamicField from '../../../src/components/schema/DynamicField.vue';
-import InputText from 'primevue/inputtext';
-import Tooltip from 'primevue/tooltip';
+import InputText from 'openvue/inputtext';
+import Tooltip from 'openvue/tooltip';
 
 vi.mock('lucide-vue-next', () => ({
     Info: { template: '<span class="icon-info"></span>' }

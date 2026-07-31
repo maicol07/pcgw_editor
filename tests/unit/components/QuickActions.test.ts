@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import QuickActions from '../../../src/components/layout/QuickActions.vue';
-import InputText from 'primevue/inputtext';
+import InputText from 'openvue/inputtext';
 
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { ofetch } from 'ofetch';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
 import { Sparkles, ExternalLink } from 'lucide-vue-next';
 import { useUiStore } from '../../stores/ui';
 import { sanitizeHtml } from '../../utils/sanitize';

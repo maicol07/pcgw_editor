@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { AvailabilityRow } from '../models/GameData';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Select from 'primevue/select';
-import SelectButton from 'primevue/selectbutton';
-import MultiSelect from 'primevue/multiselect';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import Select from 'openvue/select';
+import SelectButton from 'openvue/selectbutton';
+import MultiSelect from 'openvue/multiselect';
 import { getIconSrc } from '../utils/icons';
 import {
     Box, Code, Building2, Plus, Trash2, GripVertical, ShoppingCart, Store, Globe

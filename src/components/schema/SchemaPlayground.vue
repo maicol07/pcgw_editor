@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import { fieldsConfig } from '../../config/fields';
 import { SchemaService } from '../../services/SchemaService';
 import DynamicSection from './DynamicSection.vue';
-import Button from 'primevue/button';
-import Textarea from 'primevue/textarea';
+import Button from 'openvue/button';
+import Textarea from 'openvue/textarea';
 
 const wikitext = ref<string>(`{{Infobox game
 |cover = MyGameCover.jpg

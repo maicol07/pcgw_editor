@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import WysiwygEditor from '../../../../src/components/common/WysiwygEditor.vue';
-import Editor from 'primevue/editor';
+import Editor from 'openvue/editor';
 
 describe('WysiwygEditor Bullet', () => {
     it('shows HTML for bullet list', async () => {

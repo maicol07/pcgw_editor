@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRegisterSW } from 'virtual:pwa-register/vue';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import { RefreshCw, DownloadCloud } from 'lucide-vue-next';
 
 const {

@@ -10,7 +10,7 @@ vi.mock('../../../src/services/pcgwApi', () => ({
 }));
 
 // The component calls useConfirm() in setup; provide a stub so it doesn't throw.
-vi.mock('primevue/useconfirm', () => ({
+vi.mock('openvue/useconfirm', () => ({
     useConfirm: () => ({ require: vi.fn(), close: vi.fn() })
 }));
 

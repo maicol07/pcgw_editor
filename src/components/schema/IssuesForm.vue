@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Issue } from '../../models/GameData';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Select from 'primevue/select';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import Select from 'openvue/select';
 import { X, Plus, Info, GripVertical, ChevronDown } from 'lucide-vue-next';
 import WysiwygEditor from '../common/WysiwygEditor.vue';
 import { VueDraggable } from 'vue-draggable-plus';

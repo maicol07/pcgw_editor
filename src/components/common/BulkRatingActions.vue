@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import type { RatingValue } from '../../utils/ratings';
 
 const emit = defineEmits<{

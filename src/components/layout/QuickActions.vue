@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
-import InputText from 'primevue/inputtext';
+import IconField from 'openvue/iconfield';
+import InputIcon from 'openvue/inputicon';
+import InputText from 'openvue/inputtext';
 import { Search, FoldVertical, UnfoldVertical } from 'lucide-vue-next';
 import { usePlatform } from '../../composables/usePlatform';
 import { useUiStore } from '../../stores/ui';

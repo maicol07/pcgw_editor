@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
-import Button from 'primevue/button';
-import Message from 'primevue/message';
-import { useToast } from 'primevue/usetoast';
+import Dialog from 'openvue/dialog';
+import InputText from 'openvue/inputtext';
+import Password from 'openvue/password';
+import Button from 'openvue/button';
+import Message from 'openvue/message';
+import { useToast } from 'openvue/usetoast';
 import { LogIn, ShieldAlert } from 'lucide-vue-next';
 import { pcgwAuth } from '../../services/pcgwAuth';
 

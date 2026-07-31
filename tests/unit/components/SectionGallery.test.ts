@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SectionGallery from '../../../src/components/SectionGallery.vue';
 import { createTestingPinia } from '@pinia/testing';
-import Tooltip from 'primevue/tooltip';
-import ToastService from 'primevue/toastservice';
+import Tooltip from 'openvue/tooltip';
+import ToastService from 'openvue/toastservice';
 import type { GalleryImage } from '../../../src/models/GameData';
 import { useFileStore } from '../../../src/stores/files';
 
 // Mock primevue/usetoast
-vi.mock('primevue/usetoast', () => ({
+vi.mock('openvue/usetoast', () => ({
     useToast: () => ({
         add: vi.fn(),
         remove: vi.fn(),

@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { MergeView } from '@codemirror/merge';
 import { EditorState } from '@codemirror/state';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import { UnfoldVertical, FoldVertical } from 'lucide-vue-next';
 import { wikitextExtensions, isDark } from './cmWikitext';
 

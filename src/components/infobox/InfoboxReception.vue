@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { GameInfobox } from '../../models/GameData';
-import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
+import Select from 'openvue/select';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
 import { Trash2, Plus } from 'lucide-vue-next';
 
 const model = defineModel<GameInfobox['reception']>({ default: () => [] });

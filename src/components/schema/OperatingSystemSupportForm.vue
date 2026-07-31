@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Select from 'primevue/select';
+import Select from 'openvue/select';
 import NotesButton from '../NotesButton.vue';
 
 // Icons for ratings

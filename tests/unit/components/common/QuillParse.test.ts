@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import { mount } from '@vue/test-utils';
-import Editor from 'primevue/editor';
+import Editor from 'openvue/editor';
 
 describe('Quill Parsing', () => {
     it('shows how primevue Editor parses raw HTML', async () => {

@@ -44,9 +44,9 @@ vi.mock('dexie', () => {
 // Define global constants that are injected by Vite
 (globalThis as any).__APP_VERSION__ = 'test-version';
 (globalThis as any).__COMMIT_HASH__ = 'test-hash';
-import PrimeVue from 'primevue/config';
-import Aura from '@primeuix/themes/aura';
-import Tooltip from 'primevue/tooltip';
+import PrimeVue from 'openvue/config';
+import Aura from '@openvue/themes/aura';
+import Tooltip from 'openvue/tooltip';
 
 // Mock localStorage if it's broken in the environment
 if (typeof window !== 'undefined') {

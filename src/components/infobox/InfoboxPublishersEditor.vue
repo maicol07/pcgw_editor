@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import GenericListForm, { ListItem } from '../common/GenericListForm.vue';
 import { DataSource } from '../AutocompleteField.vue';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
 import { ArrowDownAZ } from 'lucide-vue-next';
 
 const model = defineModel<ListItem[]>({ default: () => [] });

@@ -4,15 +4,15 @@ import { ref, watch, computed, defineAsyncComponent } from 'vue';
 defineOptions({
     inheritAttrs: false
 });
-import Editor from 'primevue/editor';
-import Dialog from 'primevue/dialog';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
-import InputText from 'primevue/inputtext';
-import AutoComplete from 'primevue/autocomplete';
-import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import Textarea from 'primevue/textarea';
+import Editor from 'openvue/editor';
+import Dialog from 'openvue/dialog';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
+import InputText from 'openvue/inputtext';
+import AutoComplete from 'openvue/autocomplete';
+import Button from 'openvue/button';
+import Checkbox from 'openvue/checkbox';
+import Textarea from 'openvue/textarea';
 import { VueDraggable } from 'vue-draggable-plus';
 
 import {

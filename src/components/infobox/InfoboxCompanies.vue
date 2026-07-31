@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { inject, ref } from 'vue';
 import GenericListForm from '../common/GenericListForm.vue';
-import Checkbox from 'primevue/checkbox';
-import InputText from 'primevue/inputtext';
+import Checkbox from 'openvue/checkbox';
+import InputText from 'openvue/inputtext';
 import { GameInfobox } from '../../models/GameData';
 
 const props = defineProps<{

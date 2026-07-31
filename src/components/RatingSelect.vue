@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import Select from 'primevue/select';
+import Select from 'openvue/select';
 import { type RatingValue, ratingMetadata } from '../utils/ratings';
 
 interface Props {

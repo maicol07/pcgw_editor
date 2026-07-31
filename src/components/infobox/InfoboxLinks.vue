@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, ref } from 'vue';
 import { GameInfobox } from '../../models/GameData';
-import InputText from 'primevue/inputtext';
+import InputText from 'openvue/inputtext';
 import { Link, ShoppingBag, Terminal, Box } from 'lucide-vue-next';
 
 const model = defineModel<GameInfobox['links']>({ required: true });

@@ -145,15 +145,15 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { SystemRequirements, SystemRequirementsOS, SystemSpecs } from '../models/GameData';
-import Message from 'primevue/message';
-import Button from 'primevue/button';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
-import InputText from 'primevue/inputtext';
-import Textarea from 'primevue/textarea';
+import Message from 'openvue/message';
+import Button from 'openvue/button';
+import Tabs from 'openvue/tabs';
+import TabList from 'openvue/tablist';
+import Tab from 'openvue/tab';
+import TabPanels from 'openvue/tabpanels';
+import TabPanel from 'openvue/tabpanel';
+import InputText from 'openvue/inputtext';
+import Textarea from 'openvue/textarea';
 import { MinusCircle, PlusCircle, FileText, Copy } from 'lucide-vue-next';
 import { useVModel } from '@vueuse/core';
 

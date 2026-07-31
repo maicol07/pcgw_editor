@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { GameDataConfig } from '../models/GameData';
-import Select from 'primevue/select';
+import Select from 'openvue/select';
 import GameDataPathForm from './GameDataPathForm.vue';
 import { Settings2 } from 'lucide-vue-next';
 

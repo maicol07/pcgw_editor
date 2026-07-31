@@ -5,12 +5,12 @@ import { createPinia, setActivePinia } from 'pinia';
 import EditorToolbar from '../../../src/components/editor/EditorToolbar.vue';
 import { useUiStore } from '../../../src/stores/ui';
 import { useWorkspaceStore } from '../../../src/stores/workspace';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import SelectButton from 'primevue/selectbutton';
-import Toolbar from 'primevue/toolbar';
-import ToastService from 'primevue/toastservice';
-import Ripple from 'primevue/ripple';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import SelectButton from 'openvue/selectbutton';
+import Toolbar from 'openvue/toolbar';
+import ToastService from 'openvue/toastservice';
+import Ripple from 'openvue/ripple';
 
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({

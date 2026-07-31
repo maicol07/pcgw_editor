@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import Toolbar from 'primevue/toolbar';
-import Menu from 'primevue/menu';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import SelectButton from 'primevue/selectbutton';
+import Toolbar from 'openvue/toolbar';
+import Menu from 'openvue/menu';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import SelectButton from 'openvue/selectbutton';
 import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2, CloudSync } from 'lucide-vue-next';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
@@ -29,7 +29,7 @@ const emit = defineEmits<{
     (e: 'linkPcgw'): void;
 }>();
 
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'openvue/usetoast';
 
 const uiStore = useUiStore();
 const workspaceStore = useWorkspaceStore();

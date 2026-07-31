@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import PublishDiffDialog from '../../../../src/components/common/PublishDiffDialog.vue';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Checkbox from 'primevue/checkbox';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import Checkbox from 'openvue/checkbox';
 
 // Mock Lucide icons
 vi.mock('lucide-vue-next', () => ({

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
-import Textarea from 'primevue/textarea';
-import Toolbar from 'primevue/toolbar';
-import Button from 'primevue/button';
+import Textarea from 'openvue/textarea';
+import Toolbar from 'openvue/toolbar';
+import Button from 'openvue/button';
 import { Link, List, Code } from 'lucide-vue-next';
 import { useWikitextEditor } from '../../composables/useWikitextEditor';
 import { renderWikitextToHtml } from '../../utils/renderer';

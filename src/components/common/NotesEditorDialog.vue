@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import Textarea from 'primevue/textarea';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
-import InputText from 'primevue/inputtext';
-import AutoComplete from 'primevue/autocomplete';
-import Checkbox from 'primevue/checkbox';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import Textarea from 'openvue/textarea';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
+import InputText from 'openvue/inputtext';
+import AutoComplete from 'openvue/autocomplete';
+import Checkbox from 'openvue/checkbox';
 import { VueDraggable } from 'vue-draggable-plus';
 import {
     Check, Link, CircleHelp,
     CheckCircle, AlignLeft, X,
     Globe, Keyboard, GripVertical, Plus, Copy
 } from 'lucide-vue-next';
-import { useToast } from 'primevue/usetoast';
+import { useToast } from 'openvue/usetoast';
 
 import { useReferences } from '../../composables/useReferences';
 import WysiwygEditor from './WysiwygEditor.vue';

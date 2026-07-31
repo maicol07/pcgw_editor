@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import Tabs from 'openvue/tabs';
+import TabList from 'openvue/tablist';
+import Tab from 'openvue/tab';
+import TabPanels from 'openvue/tabpanels';
+import TabPanel from 'openvue/tabpanel';
 import ThreeWayMerge from './diff/ThreeWayMerge.vue';
 import { usePreview } from '../../composables/usePreview';
 import { Monitor, Code, AlertTriangle } from 'lucide-vue-next';

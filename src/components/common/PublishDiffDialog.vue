@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Checkbox from 'primevue/checkbox';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import Checkbox from 'openvue/checkbox';
 import CodeDiffView from './diff/CodeDiffView.vue';
 import { UploadCloud, GitCompare, Wand2 } from 'lucide-vue-next';
 

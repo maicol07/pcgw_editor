@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GameMiddleware } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
-import Panel from 'primevue/panel';
+import Panel from 'openvue/panel';
 import { 
   Zap, Volume2, Layout, Gamepad2, Film, Users, Shield
 } from 'lucide-vue-next';

@@ -2,12 +2,12 @@
 import { GameDataPathRow } from '../models/GameData';
 import PathInputField from './ui/PathInputField.vue';
 import { specialPaths, SpecialPath, commonPathTokens } from '../utils/specialPaths';
-import Button from 'primevue/button';
-import Select from 'primevue/select';
-import Popover from 'primevue/popover';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
-import InputText from 'primevue/inputtext';
+import Button from 'openvue/button';
+import Select from 'openvue/select';
+import Popover from 'openvue/popover';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
+import InputText from 'openvue/inputtext';
 import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ref, computed } from 'vue';

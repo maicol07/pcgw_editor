@@ -3,13 +3,13 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import AppSettings from '../../../src/components/settings/AppSettings.vue';
 import { useUiStore } from '../../../src/stores/ui';
-import Dialog from 'primevue/dialog';
-import SelectButton from 'primevue/selectbutton';
-import Select from 'primevue/select';
-import Slider from 'primevue/slider';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import ToggleSwitch from 'primevue/toggleswitch';
+import Dialog from 'openvue/dialog';
+import SelectButton from 'openvue/selectbutton';
+import Select from 'openvue/select';
+import Slider from 'openvue/slider';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import ToggleSwitch from 'openvue/toggleswitch';
 import { ref } from 'vue';
 
 // Mock Lucide icons. Must enumerate every icon the component imports (Vitest
@@ -32,7 +32,7 @@ vi.mock('lucide-vue-next', () => {
 const mockToast = {
     add: vi.fn()
 };
-vi.mock('primevue/usetoast', () => ({
+vi.mock('openvue/usetoast', () => ({
     useToast: () => mockToast
 }));
 

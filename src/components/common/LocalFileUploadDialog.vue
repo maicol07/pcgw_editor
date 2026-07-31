@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import FileUpload from 'primevue/fileupload';
-import DataView from 'primevue/dataview';
-import ProgressBar from 'primevue/progressbar';
-import { useToast } from 'primevue/usetoast';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import FileUpload from 'openvue/fileupload';
+import DataView from 'openvue/dataview';
+import ProgressBar from 'openvue/progressbar';
+import { useToast } from 'openvue/usetoast';
 import { 
     FileUp, 
     Upload, 
@@ -19,8 +19,8 @@ import {
     FileText,
     PencilLine
 } from 'lucide-vue-next';
-import Textarea from 'primevue/textarea';
-import InputText from 'primevue/inputtext';
+import Textarea from 'openvue/textarea';
+import InputText from 'openvue/inputtext';
 import { useFileStore, LocalFile } from '../../stores/files';
 import { useUiStore } from '../../stores/ui';
 import { pcgwAuth } from '../../services/pcgwAuth';

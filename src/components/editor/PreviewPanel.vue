@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { PreviewMode } from '../../composables/usePreview';
-import SelectButton from 'primevue/selectbutton';
+import SelectButton from 'openvue/selectbutton';
 import { Monitor, AlertTriangle, Globe } from 'lucide-vue-next';
 import PreviewLegend from './PreviewLegend.vue';
 

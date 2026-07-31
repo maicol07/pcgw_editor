@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Textarea from 'primevue/textarea';
+import Textarea from 'openvue/textarea';
 import { Download, Info, ChevronDown } from 'lucide-vue-next';
 
 defineProps<{

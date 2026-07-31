@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { SettingsAPI } from '../models/GameData';
 import RatingRow from './RatingRow.vue';
-import InputText from 'primevue/inputtext';
-import Panel from 'primevue/panel';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
+import InputText from 'openvue/inputtext';
+import Panel from 'openvue/panel';
+import InputGroup from 'openvue/inputgroup';
+import InputGroupAddon from 'openvue/inputgroupaddon';
 import NotesButton from './NotesButton.vue';
 import { 
   Monitor, Pencil, Globe, Zap, Send, AppWindow, Cpu, Box, 

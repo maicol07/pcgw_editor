@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import WysiwygEditor from '../../../../src/components/common/WysiwygEditor.vue';
-import Editor from 'primevue/editor';
+import Editor from 'openvue/editor';
 
 describe('WysiwygEditor.vue', () => {
     it('initializes with correct html from wikitext', async () => {

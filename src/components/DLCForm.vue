@@ -2,9 +2,9 @@
 import { computed } from 'vue';
 import { DLCRow } from '../models/GameData';
 import { useWorkspaceStore } from '../stores/workspace';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import MultiSelect from 'primevue/multiselect';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
+import MultiSelect from 'openvue/multiselect';
 import { X, Plus, Info, GripVertical, MonitorCheck } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 import { getIconSrc } from '../utils/icons';

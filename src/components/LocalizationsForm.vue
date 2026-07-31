@@ -2,11 +2,11 @@
 import { ref } from 'vue';
 import { LocalizationRow, RatingValue } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import MultiSelect from 'primevue/multiselect';
-import Popover from 'primevue/popover';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import Select from 'openvue/select';
+import MultiSelect from 'openvue/multiselect';
+import Popover from 'openvue/popover';
 import { Trash2, Plus, GripVertical, Languages } from 'lucide-vue-next';
 import { FlagIcon } from '@placetopay/flagicons-vue';
 import { VueDraggable } from 'vue-draggable-plus';

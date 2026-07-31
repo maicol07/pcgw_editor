@@ -3,10 +3,10 @@ import { computed, inject, ref } from 'vue';
 import { useInfoboxDates, ReleaseDate } from '../../composables/useInfoboxDates';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import DatePicker from 'primevue/datepicker';
-import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
+import DatePicker from 'openvue/datepicker';
+import Select from 'openvue/select';
+import InputText from 'openvue/inputtext';
+import Button from 'openvue/button';
 import { Calendar, Trash2, Plus } from 'lucide-vue-next';
 import { getIconSrc } from '../../utils/icons';
 

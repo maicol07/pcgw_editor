@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { EditorView, Decoration, WidgetType, keymap, type DecorationSet } from '@codemirror/view';
 import { EditorState, StateField, StateEffect, Prec, type Range } from '@codemirror/state';
 import { history } from '@codemirror/commands';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import {
     ChevronsLeft, ChevronsRight, FoldHorizontal, Wand2, Bot, ArrowLeft, ArrowRight, X, Plus,
     Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check,

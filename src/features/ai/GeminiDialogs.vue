@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Textarea from 'primevue/textarea';
+import Dialog from 'openvue/dialog';
+import Button from 'openvue/button';
+import InputText from 'openvue/inputtext';
+import Textarea from 'openvue/textarea';
 import { Key, TriangleAlert, Trash, X, Check, Sparkles, Loader2, Copy, Settings } from 'lucide-vue-next';
 
 defineProps<{

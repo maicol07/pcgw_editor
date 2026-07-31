@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import MultiSelect from 'primevue/multiselect';
-import AutoComplete from 'primevue/autocomplete';
-import Button from 'primevue/button';
+import MultiSelect from 'openvue/multiselect';
+import AutoComplete from 'openvue/autocomplete';
+import Button from 'openvue/button';
 import { pcgwApi } from '../services/pcgwApi';
 
 export type DataSource = 'companies' | 'engines' | 'series' | 'genres' | 'themes' | 'perspectives' | 'files' | 'pacing' | 'controls' | 'sports' | 'vehicles' | 'artStyles' | 'monetization' | 'microtransactions' | 'modes' | 'pages';

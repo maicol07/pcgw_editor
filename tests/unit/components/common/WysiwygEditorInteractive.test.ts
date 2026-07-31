@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import WysiwygEditor from '../../../../src/components/common/WysiwygEditor.vue';
-import Editor from 'primevue/editor';
+import Editor from 'openvue/editor';
 import { describe, it, expect } from 'vitest';
 
 // Define a stub for CodeEditor to easily check its modelValue in tests

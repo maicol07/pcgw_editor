@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import Chip from 'primevue/chip';
+import Chip from 'openvue/chip';
 import { getSpecialPathByValue, suggestTokenForRawEnvVar } from '../../utils/specialPaths';
 
 // Two root nodes (input container + suggestion) make a fragment; route inherited attrs (class) to the container.

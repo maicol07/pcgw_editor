@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { pcgwApi } from '../../services/pcgwApi';
 import AutocompleteField from '../AutocompleteField.vue';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 
 import { Image, Upload, Loader2, ExternalLink, TriangleAlert } from 'lucide-vue-next';
 

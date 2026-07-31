@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { SettingsVideo } from '../../models/GameData';
-import Button from 'primevue/button';
+import Button from 'openvue/button';
 import { 
   Upload, Sparkles as SparklesIcon, X
 } from 'lucide-vue-next';

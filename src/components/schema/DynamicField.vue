@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { FieldDefinition } from '../../types/schema';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
-import MultiSelect from 'primevue/multiselect';
-import Checkbox from 'primevue/checkbox';
+import InputText from 'openvue/inputtext';
+import Select from 'openvue/select';
+import MultiSelect from 'openvue/multiselect';
+import Checkbox from 'openvue/checkbox';
 import RatingRow from '../RatingRow.vue';
 import GenericListForm from '../common/GenericListForm.vue';
 import CoverImageField from '../common/CoverImageField.vue';
@@ -28,9 +28,9 @@ import InfoboxReleaseDates from '../infobox/InfoboxReleaseDates.vue';
 const InfoboxReception = defineAsyncComponent(() => import('../infobox/InfoboxReception.vue'));
 import TaxonomyField from '../infobox/TaxonomyField.vue';
 import CompoundRatingField from './CompoundRatingField.vue';
-import Textarea from 'primevue/textarea';
+import Textarea from 'openvue/textarea';
 import { Info } from 'lucide-vue-next';
-import AutoComplete from 'primevue/autocomplete';
+import AutoComplete from 'openvue/autocomplete';
 import StubValidator from '../StubValidator.vue';
 // (AvailabilityForm moved to async above)
 import VideoAnalysis from '../video/VideoAnalysis.vue';

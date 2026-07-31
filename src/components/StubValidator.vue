@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { GameData } from '../models/GameData';
-import Message from 'primevue/message';
+import Message from 'openvue/message';
 import { TriangleAlert } from 'lucide-vue-next';
 
 // This component receives the whole GameData object (or at least articleState + others)
