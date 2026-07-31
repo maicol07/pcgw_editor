@@ -1,21 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import QuickActions from '../../../src/components/layout/QuickActions.vue';
 import InputText from 'openvue/inputtext';
 
-// Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
-    Search: { template: '<span class="search-icon"></span>' }
-}));
-
 describe('QuickActions.vue', () => {
     const setupWrapper = (props = {}) => {
+        const pinia = createPinia();
+        setActivePinia(pinia);
         return mount(QuickActions, {
             props: {
                 searchQuery: '',
                 ...props
             },
             global: {
+                plugins: [pinia],
                 stubs: {
                     IconField: { template: '<div><slot></slot></div>' },
                     InputIcon: { template: '<span><slot></slot></span>' }

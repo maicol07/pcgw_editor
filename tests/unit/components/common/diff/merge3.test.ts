@@ -48,11 +48,11 @@ describe('hunk model', () => {
         expect(buildResult(hunks, choices).text).toBe(base);
     });
 
-    it('every change starts unresolved; resolving all flips allResolved', () => {
-        const hunks = computeHunks('LOCAL\nbase\nline3', base, 'line1\nbase\nONLINE');
+    it('conflicts start unresolved; resolving all flips allResolved', () => {
+        const hunks = computeHunks('line1\nMINE\nline3', base, 'line1\nTHEIRS\nline3');
         const choices = defaultChoices(hunks);
-        expect(allResolved(hunks, choices)).toBe(false); // two one-sided changes pending
-        hunks.forEach((h, i) => { if (h.type !== 'stable') choices[i] = 'include'; });
+        expect(allResolved(hunks, choices)).toBe(false); // conflict pending
+        hunks.forEach((h, i) => { if (h.type === 'conflict') choices[i] = 'left'; });
         expect(allResolved(hunks, choices)).toBe(true);
     });
 
