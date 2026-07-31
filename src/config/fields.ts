@@ -9,7 +9,7 @@ import {
     Keyboard, Move, MousePointerClick, ArrowUpDown, Tablet, Settings, Plug, Smartphone, Search, Hand, Wifi, Headset,
     Pencil, Send, AppWindow, Cpu, Shield, Layout, Film, Server, MessageCircle, Cloud,
     Disc, Music
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { FIELD_DEFINITIONS } from './fieldDefinitions';
 import * as h from './fieldHelpers';
 

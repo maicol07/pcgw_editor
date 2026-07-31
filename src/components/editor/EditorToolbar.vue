@@ -5,7 +5,7 @@ import Menu from 'openvue/menu';
 import Button from 'openvue/button';
 import InputText from 'openvue/inputtext';
 import SelectButton from 'openvue/selectbutton';
-import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2, CloudSync } from 'lucide-vue-next';
+import { Wand2, Loader2, Settings, RefreshCw, Unlink, Link, Globe, Menu as MenuIcon, FileClock, History, UploadCloud, Eye, Code2, CloudSync } from '@lucide/vue';
 import pcgwLogo from '../../assets/pcgw_logo.webp';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';

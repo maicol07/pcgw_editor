@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useUiStore } from '../../stores/ui';
 import { useWorkspaceStore } from '../../stores/workspace';
 import Button from 'openvue/button';
-import { X, ChevronLeft, ChevronRight, Play } from 'lucide-vue-next';
+import { X, ChevronLeft, ChevronRight, Play } from '@lucide/vue';
 
 const uiStore = useUiStore();
 const workspaceStore = useWorkspaceStore();

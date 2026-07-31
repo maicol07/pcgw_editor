@@ -12,7 +12,7 @@ const InputTextStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     DollarSign: { template: '<span class="icon-dollar"></span>' },
     ShoppingCart: { template: '<span class="icon-cart"></span>' }
 }));

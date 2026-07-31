@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { ofetch } from 'ofetch';
 import Dialog from 'openvue/dialog';
 import Button from 'openvue/button';
-import { Sparkles, ExternalLink } from 'lucide-vue-next';
+import { Sparkles, ExternalLink } from '@lucide/vue';
 import { useUiStore } from '../../stores/ui';
 import { sanitizeHtml } from '../../utils/sanitize';
 

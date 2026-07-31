@@ -7,7 +7,7 @@ import DatePicker from 'openvue/datepicker';
 import Select from 'openvue/select';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
-import { Calendar, Trash2, Plus } from 'lucide-vue-next';
+import { Calendar, Trash2, Plus } from '@lucide/vue';
 import { getIconSrc } from '../../utils/icons';
 
 // Platform options

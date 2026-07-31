@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { sectionGroups, sectionKeysInOrder } from '../../config/sections';
 import { useUiStore } from '../../stores/ui';
-import { PanelLeftClose, PanelLeftOpen, ChevronDown, Eye, EyeOff, FoldVertical, UnfoldVertical } from 'lucide-vue-next';
+import { PanelLeftClose, PanelLeftOpen, ChevronDown, Eye, EyeOff, FoldVertical, UnfoldVertical } from '@lucide/vue';
 
 defineProps<{
     activeKey: string;

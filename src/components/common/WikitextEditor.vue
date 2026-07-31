@@ -3,7 +3,7 @@ import { ref, watch, nextTick } from 'vue';
 import Textarea from 'openvue/textarea';
 import Toolbar from 'openvue/toolbar';
 import Button from 'openvue/button';
-import { Link, List, Code } from 'lucide-vue-next';
+import { Link, List, Code } from '@lucide/vue';
 import { useWikitextEditor } from '../../composables/useWikitextEditor';
 import { renderWikitextToHtml } from '../../utils/renderer';
 

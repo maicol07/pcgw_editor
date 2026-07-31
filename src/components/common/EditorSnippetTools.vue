@@ -2,7 +2,7 @@
 // Shared snippet-tool buttons for the WYSIWYG and Source toolbars.
 // Emits a descriptor; the parent (WysiwygEditor) opens the matching dialog.
 // `.custom-action-btn` is styled globally by WysiwygEditor's <style> block.
-import { ListChecks, Link2, MessageSquareWarning, FileText, Globe, Keyboard, Wrench } from 'lucide-vue-next';
+import { ListChecks, Link2, MessageSquareWarning, FileText, Globe, Keyboard, Wrench } from '@lucide/vue';
 
 export type SnippetAction = { kind: 'ref'; type: string } | { kind: 'fixbox' };
 

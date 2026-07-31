@@ -4,7 +4,7 @@ import { pcgwApi } from '../../services/pcgwApi';
 import AutocompleteField from '../AutocompleteField.vue';
 import Button from 'openvue/button';
 
-import { Image, Upload, Loader2, ExternalLink, TriangleAlert } from 'lucide-vue-next';
+import { Image, Upload, Loader2, ExternalLink, TriangleAlert } from '@lucide/vue';
 
 const props = defineProps<{
   modelValue: string;

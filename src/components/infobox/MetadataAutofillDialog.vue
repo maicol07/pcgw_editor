@@ -9,10 +9,7 @@ import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import Checkbox from 'openvue/checkbox';
 import ToggleSwitch from 'openvue/toggleswitch';
-import { 
-    Sparkles, Search, AlertCircle, Info, Database, 
-    Twitch, Cpu
-} from 'lucide-vue-next';
+import { Sparkles, Search, AlertCircle, Info, Database, Cpu } from '@lucide/vue';
 
 const visible = defineModel<boolean>('visible', { default: false });
 
@@ -459,7 +456,7 @@ const handleApply = () => {
                 <div class="flex items-start justify-between gap-4 py-0.5">
                     <div class="flex flex-col gap-0.5">
                         <div class="flex items-center gap-2 text-xs font-semibold text-surface-900 dark:text-surface-100">
-                            <Twitch class="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-purple-500 shrink-0"><path d="M21 2H3v16h5v4l4-4h4l5-5V2zm-10 9V7m5 4V7"></path></svg>
                             <span>IGDB API</span>
                         </div>
                         <p class="text-xs text-surface-500 leading-normal max-w-[480px]">

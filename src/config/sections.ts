@@ -1,13 +1,13 @@
+import type { Component } from 'vue';
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
-    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, AlertCircle,
-    type Icon,
-} from 'lucide-vue-next';
+    Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, AlertCircle
+} from '@lucide/vue';
 
 export interface SectionItem {
     key: string;       // matches uiStore.panelState key + DOM anchor id `sec-<key>`
     label: string;
-    icon: Icon;
+    icon: Component;
 }
 
 export interface SectionGroup {

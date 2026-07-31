@@ -36,7 +36,7 @@ const TabPanelStub = {
 };
 
 // Mock Icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     MinusCircle: { template: '<span class="icon-minus"></span>' },
     PlusCircle: { template: '<span class="icon-plus"></span>' },
     FileText: { template: '<span class="icon-filetext"></span>' },

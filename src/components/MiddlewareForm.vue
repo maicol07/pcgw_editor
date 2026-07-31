@@ -4,7 +4,7 @@ import RatingRow from './RatingRow.vue';
 import Panel from 'openvue/panel';
 import { 
   Zap, Volume2, Layout, Gamepad2, Film, Users, Shield
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 defineProps<{
   middleware: GameMiddleware;

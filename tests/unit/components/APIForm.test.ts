@@ -36,7 +36,7 @@ const NotesButtonStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Monitor: { template: '<span class="icon-monitor"></span>' },
     Pencil: { template: '<span class="icon-pencil"></span>' },
     Globe: { template: '<span class="icon-globe"></span>' },

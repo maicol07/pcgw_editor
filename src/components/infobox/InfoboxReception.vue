@@ -4,7 +4,7 @@ import { GameInfobox } from '../../models/GameData';
 import Select from 'openvue/select';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
-import { Trash2, Plus } from 'lucide-vue-next';
+import { Trash2, Plus } from '@lucide/vue';
 
 const model = defineModel<GameInfobox['reception']>({ default: () => [] });
 

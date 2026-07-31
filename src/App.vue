@@ -50,7 +50,7 @@ import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
     Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock,
     Plus, Download
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 // Async Components
 const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));

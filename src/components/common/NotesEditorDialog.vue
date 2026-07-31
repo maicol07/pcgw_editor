@@ -13,7 +13,7 @@ import {
     Check, Link, CircleHelp,
     CheckCircle, AlignLeft, X,
     Globe, Keyboard, GripVertical, Plus, Copy
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { useToast } from 'openvue/usetoast';
 
 import { useReferences } from '../../composables/useReferences';

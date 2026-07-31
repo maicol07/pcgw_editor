@@ -19,7 +19,7 @@ import {
     ListChecks, Link2, MessageSquareWarning,
     Code, X,
     BookOpen, GripVertical, Plus, Info
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
 import { useReferences } from '../../composables/useReferences';
 import { pcgwApi } from '../../services/pcgwApi';

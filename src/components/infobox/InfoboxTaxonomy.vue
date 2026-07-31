@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GameInfobox } from '../../models/GameData';
 import AutocompleteField from '../AutocompleteField.vue';
-import { Tag, Gamepad2, Settings2, ShieldCheck, DollarSign } from 'lucide-vue-next';
+import { Tag, Gamepad2, Settings2, ShieldCheck, DollarSign } from '@lucide/vue';
 
 const model = defineModel<GameInfobox['taxonomy']>({ required: true });
 

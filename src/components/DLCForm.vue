@@ -5,7 +5,7 @@ import { useWorkspaceStore } from '../stores/workspace';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import MultiSelect from 'openvue/multiselect';
-import { X, Plus, Info, GripVertical, MonitorCheck } from 'lucide-vue-next';
+import { X, Plus, Info, GripVertical, MonitorCheck } from '@lucide/vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { getIconSrc } from '../utils/icons';
 

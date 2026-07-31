@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Button from 'openvue/button';
-import { Book, MessageSquare } from 'lucide-vue-next';
+import { Book, MessageSquare } from '@lucide/vue';
 import NotesEditorDialog from './common/NotesEditorDialog.vue';
 
 const props = defineProps<{

@@ -29,7 +29,7 @@ import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
     X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { calculateSha1 } from '../utils/crypto';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';

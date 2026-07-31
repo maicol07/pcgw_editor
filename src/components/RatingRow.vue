@@ -5,7 +5,7 @@ import InputText from 'openvue/inputtext';
 import InputGroup from 'openvue/inputgroup';
 import InputGroupAddon from 'openvue/inputgroupaddon';
 import NotesButton from './NotesButton.vue';
-import { Info } from 'lucide-vue-next';
+import { Info } from '@lucide/vue';
 import { computed } from 'vue';
 
 import { getIconSrc } from '../utils/icons';

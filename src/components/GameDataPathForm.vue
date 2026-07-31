@@ -8,7 +8,7 @@ import Popover from 'openvue/popover';
 import InputGroup from 'openvue/inputgroup';
 import InputGroupAddon from 'openvue/inputgroupaddon';
 import InputText from 'openvue/inputtext';
-import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical } from 'lucide-vue-next';
+import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical } from '@lucide/vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ref, computed } from 'vue';
 

@@ -11,7 +11,7 @@ import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
     Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
 import { pcgwApi } from '../../services/pcgwApi';

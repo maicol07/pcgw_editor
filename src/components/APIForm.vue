@@ -9,7 +9,7 @@ import NotesButton from './NotesButton.vue';
 import { 
   Monitor, Pencil, Globe, Zap, Send, AppWindow, Cpu, Box, 
   Terminal, Settings, Smartphone 
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 defineProps<{
   api: SettingsAPI;

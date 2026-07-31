@@ -4,7 +4,7 @@ import { SettingsVideo } from '../../models/GameData';
 import Button from 'openvue/button';
 import { 
   Upload, Sparkles as SparklesIcon, X
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { analyzeImageJSON } from '../../services/ai/AIService';
 import { hasActiveKey } from '../../services/ai/aiConfig';
 import { videoAnalysisSchema } from '../../features/video/useVideoAnalysis';

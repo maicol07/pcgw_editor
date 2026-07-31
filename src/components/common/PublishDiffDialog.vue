@@ -5,7 +5,7 @@ import Button from 'openvue/button';
 import InputText from 'openvue/inputtext';
 import Checkbox from 'openvue/checkbox';
 import CodeDiffView from './diff/CodeDiffView.vue';
-import { UploadCloud, GitCompare, Wand2 } from 'lucide-vue-next';
+import { UploadCloud, GitCompare, Wand2 } from '@lucide/vue';
 
 const props = defineProps<{
     visible: boolean;

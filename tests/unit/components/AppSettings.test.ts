@@ -14,7 +14,7 @@ import { ref } from 'vue';
 
 // Mock Lucide icons. Must enumerate every icon the component imports (Vitest
 // validates named exports against this object), including the Cloud-sync set.
-vi.mock('lucide-vue-next', () => {
+vi.mock('@lucide/vue', () => {
     const icons = [
         'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key',
         'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn',

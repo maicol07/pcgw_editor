@@ -4,7 +4,7 @@ import { DataSource } from '../AutocompleteField.vue';
 import Checkbox from 'openvue/checkbox';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
-import { ArrowDownAZ } from 'lucide-vue-next';
+import { ArrowDownAZ } from '@lucide/vue';
 
 const model = defineModel<ListItem[]>({ default: () => [] });
 

@@ -5,7 +5,7 @@ import DynamicField from '../../../src/components/schema/DynamicField.vue';
 import InputText from 'openvue/inputtext';
 import Tooltip from 'openvue/tooltip';
 
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Info: { template: '<span class="icon-info"></span>' }
 }));
 

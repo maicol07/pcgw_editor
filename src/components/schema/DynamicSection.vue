@@ -35,7 +35,7 @@ const handleFieldUpdate = (key: string, value: any) => {
 
 // Collapsible state
 import { ref, inject } from 'vue';
-import { ChevronDown, Sparkles } from 'lucide-vue-next';
+import { ChevronDown, Sparkles } from '@lucide/vue';
 import Button from 'openvue/button';
 
 const collapsedGroups = ref<Record<number, boolean>>({});

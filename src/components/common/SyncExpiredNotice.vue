@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { syncState, reconnectSync } from '../../services/sync/syncService';
-import { Cloud, AlertCircle, Loader2 } from 'lucide-vue-next';
+import { Cloud, AlertCircle, Loader2 } from '@lucide/vue';
 import Button from 'openvue/button';
 import { useToast } from 'openvue/usetoast';
 

@@ -2,7 +2,7 @@
 import AutocompleteField, { DataSource } from '../AutocompleteField.vue';
 import NotesButton from '../NotesButton.vue';
 import Button from 'openvue/button';
-import { Info, Copy } from 'lucide-vue-next';
+import { Info, Copy } from '@lucide/vue';
 
 export interface ListItem {
     name: string;

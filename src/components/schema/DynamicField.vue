@@ -29,7 +29,7 @@ const InfoboxReception = defineAsyncComponent(() => import('../infobox/InfoboxRe
 import TaxonomyField from '../infobox/TaxonomyField.vue';
 import CompoundRatingField from './CompoundRatingField.vue';
 import Textarea from 'openvue/textarea';
-import { Info } from 'lucide-vue-next';
+import { Info } from '@lucide/vue';
 import AutoComplete from 'openvue/autocomplete';
 import StubValidator from '../StubValidator.vue';
 // (AvailabilityForm moved to async above)

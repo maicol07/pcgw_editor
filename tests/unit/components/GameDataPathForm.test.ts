@@ -41,7 +41,7 @@ const PopoverStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Plus: { template: '<span class="icon-plus"></span>' },
     Trash: { template: '<span class="icon-trash"></span>' },
     X: { template: '<span class="icon-x"></span>' },

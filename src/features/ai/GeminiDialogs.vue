@@ -3,7 +3,7 @@ import Dialog from 'openvue/dialog';
 import Button from 'openvue/button';
 import InputText from 'openvue/inputtext';
 import Textarea from 'openvue/textarea';
-import { Key, TriangleAlert, Trash, X, Check, Sparkles, Loader2, Copy, Settings } from 'lucide-vue-next';
+import { Key, TriangleAlert, Trash, X, Check, Sparkles, Loader2, Copy, Settings } from '@lucide/vue';
 
 defineProps<{
     showApiKeyDialog: boolean;

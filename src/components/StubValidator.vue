@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { GameData } from '../models/GameData';
 import Message from 'openvue/message';
-import { TriangleAlert } from 'lucide-vue-next';
+import { TriangleAlert } from '@lucide/vue';
 
 // This component receives the whole GameData object (or at least articleState + others)
 // But DynamicField passes `formModel` which is `modelValue` of DynamicSection.

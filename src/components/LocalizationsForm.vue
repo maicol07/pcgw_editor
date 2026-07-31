@@ -7,7 +7,7 @@ import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
 import MultiSelect from 'openvue/multiselect';
 import Popover from 'openvue/popover';
-import { Trash2, Plus, GripVertical, Languages } from 'lucide-vue-next';
+import { Trash2, Plus, GripVertical, Languages } from '@lucide/vue';
 import { FlagIcon } from '@placetopay/flagicons-vue';
 import { VueDraggable } from 'vue-draggable-plus';
 

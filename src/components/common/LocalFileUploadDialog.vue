@@ -18,7 +18,7 @@ import {
     Globe,
     FileText,
     PencilLine
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import Textarea from 'openvue/textarea';
 import InputText from 'openvue/inputtext';
 import { useFileStore, LocalFile } from '../../stores/files';

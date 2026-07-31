@@ -3,7 +3,7 @@ import GenericListForm, { ListItem } from '../common/GenericListForm.vue';
 import { DataSource } from '../AutocompleteField.vue';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
-import { ArrowDownAZ } from 'lucide-vue-next';
+import { ArrowDownAZ } from '@lucide/vue';
 
 const model = defineModel<ListItem[]>({ default: () => [] });
 

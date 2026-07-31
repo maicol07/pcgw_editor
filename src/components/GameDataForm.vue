@@ -2,7 +2,7 @@
 import { GameDataConfig } from '../models/GameData';
 import Select from 'openvue/select';
 import GameDataPathForm from './GameDataPathForm.vue';
-import { Settings2 } from 'lucide-vue-next';
+import { Settings2 } from '@lucide/vue';
 
 import { inject, reactive, watch } from 'vue';
 

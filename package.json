@@ -34,7 +34,7 @@
     "date-fns": "^4.4.0",
     "dexie": "^4.4.4",
     "dompurify": "^3.4.12",
-    "lucide-vue-next": "^1.0.0",
+    "@lucide/vue": "^1.0.0",
     "mwn": "^3.0.3",
     "node-diff3": "^3.2.1",
     "ofetch": "^1.5.1",

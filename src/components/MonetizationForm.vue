@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GameMonetization, GameMicrotransactions } from '../models/GameData';
 import InputText from 'openvue/inputtext';
-import { DollarSign, ShoppingCart } from 'lucide-vue-next';
+import { DollarSign, ShoppingCart } from '@lucide/vue';
 
 defineProps<{
   monetization: GameMonetization;

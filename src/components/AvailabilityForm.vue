@@ -9,7 +9,7 @@ import MultiSelect from 'openvue/multiselect';
 import { getIconSrc } from '../utils/icons';
 import {
     Box, Code, Building2, Plus, Trash2, GripVertical, ShoppingCart, Store, Globe
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import { VueDraggable } from 'vue-draggable-plus';
 
 const dragList = defineModel<AvailabilityRow[]>({ default: () => [] });

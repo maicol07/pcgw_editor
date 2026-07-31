@@ -154,7 +154,7 @@ import TabPanels from 'openvue/tabpanels';
 import TabPanel from 'openvue/tabpanel';
 import InputText from 'openvue/inputtext';
 import Textarea from 'openvue/textarea';
-import { MinusCircle, PlusCircle, FileText, Copy } from 'lucide-vue-next';
+import { MinusCircle, PlusCircle, FileText, Copy } from '@lucide/vue';
 import { useVModel } from '@vueuse/core';
 
 // Icons

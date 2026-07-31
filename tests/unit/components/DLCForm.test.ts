@@ -34,7 +34,7 @@ const MultiSelectStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     X: { template: '<span class="icon-x"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
     Info: { template: '<span class="icon-info"></span>' },

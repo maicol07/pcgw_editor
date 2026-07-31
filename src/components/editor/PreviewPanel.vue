@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { PreviewMode } from '../../composables/usePreview';
 import SelectButton from 'openvue/selectbutton';
-import { Monitor, AlertTriangle, Globe } from 'lucide-vue-next';
+import { Monitor, AlertTriangle, Globe } from '@lucide/vue';
 import PreviewLegend from './PreviewLegend.vue';
 
 // This component accepts the logic from usePreview as props or we can bind v-models?

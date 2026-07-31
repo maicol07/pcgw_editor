@@ -16,7 +16,7 @@ const PanelStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Zap: { template: '<span class="icon-zap"></span>' },
     Volume2: { template: '<span class="icon-volume2"></span>' },
     Layout: { template: '<span class="icon-layout"></span>' },

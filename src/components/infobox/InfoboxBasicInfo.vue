@@ -4,7 +4,7 @@ import { pcgwApi } from '../../services/pcgwApi';
 import Select from 'openvue/select';
 import Button from 'openvue/button';
 import AutocompleteField from '../AutocompleteField.vue';
-import { Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, IdCard } from 'lucide-vue-next';
+import { Image, Info, Upload, Loader2, ExternalLink, TriangleAlert, IdCard } from '@lucide/vue';
 
 // License options
 const licenseOptions = [

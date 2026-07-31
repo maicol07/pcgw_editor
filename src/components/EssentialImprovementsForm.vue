@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import Textarea from 'openvue/textarea';
-import { Download, Info, ChevronDown } from 'lucide-vue-next';
+import { Download, Info, ChevronDown } from '@lucide/vue';
 
 defineProps<{
   modelValue: string;

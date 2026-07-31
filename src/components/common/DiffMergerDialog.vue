@@ -9,7 +9,7 @@ import TabPanels from 'openvue/tabpanels';
 import TabPanel from 'openvue/tabpanel';
 import ThreeWayMerge from './diff/ThreeWayMerge.vue';
 import { usePreview } from '../../composables/usePreview';
-import { Monitor, Code, AlertTriangle } from 'lucide-vue-next';
+import { Monitor, Code, AlertTriangle } from '@lucide/vue';
 
 const props = defineProps<{
     visible: boolean;

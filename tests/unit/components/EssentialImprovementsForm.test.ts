@@ -12,7 +12,7 @@ const TextareaStub = {
 };
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Download: { template: '<span class="icon-download"></span>' },
     Info: { template: '<span class="icon-info"></span>' },
     ChevronDown: { template: '<span class="icon-chevron-down"></span>' }

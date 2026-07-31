@@ -7,7 +7,7 @@ import InputText from 'openvue/inputtext';
 import Checkbox from 'openvue/checkbox';
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     UploadCloud: { template: '<span class="upload-cloud-icon"></span>' },
     GitCompare: { template: '<span class="git-compare-icon"></span>' },
     Wand2: { template: '<span class="wand-icon"></span>' }

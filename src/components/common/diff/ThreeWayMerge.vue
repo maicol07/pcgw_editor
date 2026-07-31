@@ -7,7 +7,7 @@ import Button from 'openvue/button';
 import {
     ChevronsLeft, ChevronsRight, FoldHorizontal, Wand2, Bot, ArrowLeft, ArrowRight, X, Plus,
     Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import {
     computeHunks, defaultChoices, smartChoices, buildResult, findConflicts, allResolved,
     type Hunk, type Choice,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { CircleHelp } from 'lucide-vue-next';
+import { CircleHelp } from '@lucide/vue';
 
 defineProps<{
   text?: string;

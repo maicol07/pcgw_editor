@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUiStore } from '../../stores/ui';
-import { ChevronDown, Eye, EyeOff } from 'lucide-vue-next';
+import { ChevronDown, Eye, EyeOff } from '@lucide/vue';
 
 const uiStore = useUiStore();
 

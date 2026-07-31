@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue';
 import { rateLimitState } from '../../config/api';
-import { Hourglass, Loader2 } from 'lucide-vue-next';
+import { Hourglass, Loader2 } from '@lucide/vue';
 
 const remainingSeconds = ref(0);
 let timerId: any = null;

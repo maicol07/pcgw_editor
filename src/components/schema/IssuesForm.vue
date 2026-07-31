@@ -4,7 +4,7 @@ import { Issue } from '../../models/GameData';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import Select from 'openvue/select';
-import { X, Plus, Info, GripVertical, ChevronDown } from 'lucide-vue-next';
+import { X, Plus, Info, GripVertical, ChevronDown } from '@lucide/vue';
 import WysiwygEditor from '../common/WysiwygEditor.vue';
 import { VueDraggable } from 'vue-draggable-plus';
 

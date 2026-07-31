@@ -13,7 +13,7 @@ import ToastService from 'openvue/toastservice';
 import Ripple from 'openvue/ripple';
 
 // Mock Lucide icons
-vi.mock('lucide-vue-next', () => ({
+vi.mock('@lucide/vue', () => ({
     Menu: { template: '<span class="menu-icon"></span>' },
     Wand2: { template: '<span class="wand-icon"></span>' },
     Loader2: { template: '<span class="loader-icon"></span>' },

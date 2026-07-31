@@ -6,7 +6,7 @@ import Password from 'openvue/password';
 import Button from 'openvue/button';
 import Message from 'openvue/message';
 import { useToast } from 'openvue/usetoast';
-import { LogIn, ShieldAlert } from 'lucide-vue-next';
+import { LogIn, ShieldAlert } from '@lucide/vue';
 import { pcgwAuth } from '../../services/pcgwAuth';
 
 const props = defineProps<{
