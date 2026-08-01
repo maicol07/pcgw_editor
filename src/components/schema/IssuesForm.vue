@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, defineAsyncComponent } from 'vue';
 import { Issue } from '../../models/GameData';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import Select from 'openvue/select';
 import { X, Plus, Info, GripVertical, ChevronDown } from '@lucide/vue';
-import WysiwygEditor from '../common/WysiwygEditor.vue';
+// Async: a static import puts Quill (~200 kB) in whichever chunk reaches this component,
+// even when the editor is never opened.
+const WysiwygEditor = defineAsyncComponent(() => import('../common/WysiwygEditor.vue'));
 import { VueDraggable } from 'vue-draggable-plus';
 
 const dragList = defineModel<Issue[]>({ default: () => [] });

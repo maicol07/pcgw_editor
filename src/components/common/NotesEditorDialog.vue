@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, defineAsyncComponent } from 'vue';
 import Dialog from 'openvue/dialog';
 import Button from 'openvue/button';
 import Textarea from 'openvue/textarea';
@@ -17,7 +17,9 @@ import {
 import { useToast } from 'openvue/usetoast';
 
 import { useReferences } from '../../composables/useReferences';
-import WysiwygEditor from './WysiwygEditor.vue';
+// Async: a static import puts Quill (~200 kB) in whichever chunk reaches this component,
+// even when the editor is never opened.
+const WysiwygEditor = defineAsyncComponent(() => import('./WysiwygEditor.vue'));
 import type { ReferenceItem } from '../../types/references';
 
 const props = defineProps<{

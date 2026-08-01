@@ -13,7 +13,8 @@ import { usePreview } from './composables/usePreview';
 import { useEditor } from './features/editor/useEditor';
 import { useGeminiSummary } from './features/ai/useGeminiSummary';
 import { hasActiveKey } from './services/ai/aiConfig';
-import { generateEditSummary } from './services/ai/AIService';
+// AIService is imported lazily at its call site: a static import pulls in the three @ai-sdk
+// providers (~700 kB) on startup, for a feature most sessions never trigger.
 
 // Layout & UI
 import Splitter from 'openvue/splitter';
@@ -32,8 +33,11 @@ import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import SectionNav from './components/layout/SectionNav.vue';
 import { sectionKeysInOrder } from './config/sections';
 import DynamicSection from './components/schema/DynamicSection.vue';
-import DiffMergerDialog from './components/common/DiffMergerDialog.vue';
-import PublishDiffDialog from './components/common/PublishDiffDialog.vue';
+// Async: DiffMergerDialog pulls CodeDiffView -> @codemirror/merge, which otherwise loads
+// CodeMirror at startup even though CodeEditor itself is already lazy.
+const DiffMergerDialog = defineAsyncComponent(() => import('./components/common/DiffMergerDialog.vue'));
+// Async for the same reason as DiffMergerDialog: it reaches CodeDiffView -> CodeMirror.
+const PublishDiffDialog = defineAsyncComponent(() => import('./components/common/PublishDiffDialog.vue'));
 import ReloadPrompt from './components/common/ReloadPrompt.vue';
 import ReleaseNotesDialog from './components/common/ReleaseNotesDialog.vue';
 import RateLimitNotice from './components/common/RateLimitNotice.vue';
@@ -209,6 +213,7 @@ const handleGenerateEditSummary = async () => {
     isGeneratingEditSummary.value = true;
     suggestedEditSummary.value = '';
     try {
+        const { generateEditSummary } = await import('./services/ai/AIService');
         // Stream so the summary fills in progressively.
         suggestedEditSummary.value = await generateEditSummary(
             publishDiffOnlineWikitext.value,

@@ -5,7 +5,8 @@ import Button from 'openvue/button';
 import { 
   Upload, Sparkles as SparklesIcon, X
 } from '@lucide/vue';
-import { analyzeImageJSON } from '../../services/ai/AIService';
+// AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
+// providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { hasActiveKey } from '../../services/ai/aiConfig';
 import { videoAnalysisSchema } from '../../features/video/useVideoAnalysis';
 
@@ -117,6 +118,8 @@ const analyzeScreenshot = async (file: File) => {
             For boolean fields, use 'true', 'false', or 'unknown' (string).
             Be conservative. If not visible, use 'unknown'.
         `;
+
+        const { analyzeImageJSON } = await import('../../services/ai/AIService');
 
         const result = await analyzeImageJSON(base64, videoAnalysisSchema, prompt) as any;
         

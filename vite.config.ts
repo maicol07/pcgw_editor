@@ -70,6 +70,26 @@ export default defineConfig({
     },
     build: {
         cssMinify: 'lightningcss',
+        // Vite 8 bundles with rolldown, so this is rolldownOptions — not rollupOptions.
+        // Without it everything heavy (Quill, the AI SDKs, CodeMirror, Dexie) landed in the single
+        // entry chunk, which meant a ~3 MB download before the app was usable and forced
+        // workbox's precache limit up to 4 MB just to fit it.
+        rolldownOptions: {
+            output: {
+                // Only group libraries that genuinely sit in the *static* startup graph.
+                // A named group is linked eagerly from the entry, so grouping a dependency that is
+                // only reached through a dynamic import (Quill, the AI SDKs) drags it back into
+                // startup and undoes the lazy loading — measured, not assumed. Everything
+                // dynamic-only is left to rolldown's own splitting.
+                advancedChunks: {
+                    groups: [
+                        { name: 'vendor-wikiparser', test: /node_modules[\\/]wikiparser-node/ },
+                        { name: 'vendor-db', test: /node_modules[\\/](dexie|node-diff3)/ },
+                        { name: 'vendor-vue', test: /node_modules[\\/](@vue|vue|pinia|@vueuse)[\\/]/ },
+                    ],
+                },
+            },
+        },
     },
     define: {
         __APP_VERSION__: JSON.stringify(version),
@@ -86,9 +106,10 @@ export default defineConfig({
             devOptions: {
                 enabled: true
             },
-            workbox: {
-                maximumFileSizeToCacheInBytes: 4194304 // 4 MB
-            },
+            // maximumFileSizeToCacheInBytes was raised to 4 MB purely to fit the old 3.1 MB entry
+            // chunk into the precache. With the entry split, the largest asset is well under
+            // workbox's 2 MiB default, so the override is gone — if it ever needs raising again,
+            // that is a signal a chunk grew too big, not something to paper over.
             includeAssets: ['favicon.png', 'apple-touch-icon.png', 'maskable-icon.png'],
             manifest: {
                 name: 'PCGamingWiki Editor',

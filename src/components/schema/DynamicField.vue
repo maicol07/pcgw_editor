@@ -37,7 +37,9 @@ import VideoAnalysis from '../video/VideoAnalysis.vue';
 import SectionGallery from '../SectionGallery.vue';
 import InputWithNotes from './InputWithNotes.vue';
 import WikitextEditor from '../common/WikitextEditor.vue';
-import WysiwygEditor from '../common/WysiwygEditor.vue';
+// Async like the forms above: a static import drags Quill (~200 kB) into the entry chunk even
+// for a page whose schema never renders a WYSIWYG field.
+const WysiwygEditor = defineAsyncComponent(() => import('../common/WysiwygEditor.vue'));
 
 // (Async components moved to top)
 

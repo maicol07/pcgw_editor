@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
-import { generateShareSummary } from '../../services/ai/AIService';
+// AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
+// providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { aiConfig, activeKey, hasActiveKey } from '../../services/ai/aiConfig';
 import { GameData } from '../../models/GameData';
 
@@ -35,6 +36,7 @@ export function useGeminiSummary(pageTitle: Ref<string>, gameData: Ref<GameData>
 
         try {
             // Stream so the summary fills in progressively.
+            const { generateShareSummary } = await import('../../services/ai/AIService');
             await generateShareSummary(pageTitle.value, gameData.value, (full) => {
                 shareSummaryText.value = full;
             });

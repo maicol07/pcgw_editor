@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { generateJSONWithSearch } from './ai/AIService';
+// AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
+// providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { getExtProxyUrl } from '../config/api';
 
 // Zod schema mirroring ExtractedMetadata (all optional strings), for grounded search.
@@ -574,6 +575,7 @@ Rules:
 `;
 
         try {
+            const { generateJSONWithSearch } = await import('./ai/AIService');
             const result = await generateJSONWithSearch(prompt, metadataSchema);
             // Clean empty strings to undefined
             const cleaned: ExtractedMetadata = {};

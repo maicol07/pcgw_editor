@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, reactive, watch, toRaw } from 'vue';
+import { ref, computed, watchEffect, reactive, watch, toRaw, defineAsyncComponent } from 'vue';
 import { useFileStore, LocalFile } from '../stores/files';
 import { useUiStore } from '../stores/ui';
 import { useToast } from 'openvue/usetoast';
@@ -24,15 +24,19 @@ import RadioButton from 'openvue/radiobutton';
 import ToggleSwitch from 'openvue/toggleswitch';
 import Checkbox from 'openvue/checkbox';
 import PcgwLoginDialog from './common/PcgwLoginDialog.vue';
-import WysiwygEditor from './common/WysiwygEditor.vue';
+// Quill and the cropper are only needed once the user actually edits a caption or crops an image,
+// so both load on demand instead of riding along in whatever chunk imports this gallery.
+const WysiwygEditor = defineAsyncComponent(() => import('./common/WysiwygEditor.vue'));
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
     X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw
 } from '@lucide/vue';
 import { calculateSha1 } from '../utils/crypto';
-import { Cropper } from 'vue-advanced-cropper';
-import 'vue-advanced-cropper/dist/style.css';
+const Cropper = defineAsyncComponent(async () => {
+    await import('vue-advanced-cropper/dist/style.css');
+    return (await import('vue-advanced-cropper')).Cropper;
+});
 
 interface Props {
     modelValue: (GalleryImage | string)[];

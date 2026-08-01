@@ -12,7 +12,8 @@ import {
     computeHunks, defaultChoices, smartChoices, buildResult, findConflicts, hunkText, wordDiff,
     type Hunk, type Choice,
 } from './merge3';
-import { resolveMerge } from '../../../services/ai/AIService';
+// AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
+// providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { wikitextExtensions, isDark } from './cmWikitext';
 
 const props = defineProps<{
@@ -413,6 +414,7 @@ function toggleCollapse() {
 async function aiResolve() {
     aiLoading.value = true; aiError.value = '';
     try {
+        const { resolveMerge } = await import('../../../services/ai/AIService');
         const merged = await resolveMerge(props.local, props.base, props.online);
         pushUndo();
         hunks = []; choices = []; ranges = []; // AI output isn't model-tracked → nothing left to decide

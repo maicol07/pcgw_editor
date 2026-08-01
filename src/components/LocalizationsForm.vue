@@ -8,7 +8,7 @@ import Select from 'openvue/select';
 import MultiSelect from 'openvue/multiselect';
 import Popover from 'openvue/popover';
 import { Trash2, Plus, GripVertical, Languages } from '@lucide/vue';
-import { FlagIcon } from '@placetopay/flagicons-vue';
+import FlagIcon from './common/FlagIcon.vue';
 import { VueDraggable } from 'vue-draggable-plus';
 
 const localizations = defineModel<LocalizationRow[]>('localizations', { required: true });
