@@ -337,8 +337,12 @@ const editDescription = ref('');
 
 // Matching Wiki Files State
 const matchingWikiFiles = reactive<Record<number, string[]>>({});
+const checkedLocalIds = new Set<number>();
 
 const checkMatch = async (localId: number) => {
+    if (checkedLocalIds.has(localId)) return;
+    checkedLocalIds.add(localId);
+
     const file = fileStore.files.find(f => f.id === localId);
     if (!file) return;
 
@@ -348,13 +352,14 @@ const checkMatch = async (localId: number) => {
         matchingWikiFiles[localId] = matches;
     } catch (e) {
         console.error('Failed to check match for local file:', e);
+        checkedLocalIds.delete(localId);
     }
 };
 
 // Watch for local images and check matches
 watchEffect(() => {
     displayImages.value.forEach(img => {
-        if (img.localId !== undefined && matchingWikiFiles[img.localId] === undefined) {
+        if (img.localId !== undefined && matchingWikiFiles[img.localId] === undefined && !checkedLocalIds.has(img.localId)) {
             checkMatch(img.localId);
         }
     });
@@ -1298,6 +1303,9 @@ watch(() => props.modelValue, async (newVal) => {
         Object.keys(infos).forEach(key => {
             const normKey = normalizeFilename(key);
             resolvedInfos[normKey] = infos[key];
+            if (infos[key]?.canonicalName) {
+                resolvedInfos[normalizeFilename(infos[key].canonicalName)] = infos[key];
+            }
         });
 
         // 3. Sync model if any item is a redirect

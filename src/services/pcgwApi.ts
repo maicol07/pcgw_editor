@@ -10,6 +10,15 @@ const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
 const normalizeFilename = (name: string) => name.replace(/_/g, ' ').trim();
 
+export interface ImageInfo {
+    url: string;
+    user: string;
+    size: number;
+    width: number;
+    height: number;
+    canonicalName: string;
+}
+
 interface CacheEntry<T> {
     data: T;
     timestamp: number;
@@ -24,6 +33,13 @@ interface CargoResult {
 class PCGWApiService {
     // Persist cache using VueUse's useStorage
     private cache = useStorage<Record<string, CacheEntry<string[]>>>(CACHE_KEY, {});
+
+    // In-flight deduplication and batching state
+    private pendingSha1Requests = new Map<string, Promise<string[]>>();
+    private pendingImageInfoRequests = new Map<string, Promise<ImageInfo | null>>();
+    private batchQueue = new Set<string>();
+    private batchTimer: any = null;
+    private batchCallbacks = new Map<string, Array<(info: ImageInfo | null) => void>>();
 
     private async fetchApi<T = any>(params: Record<string, string>): Promise<T | null> {
         try {
@@ -186,24 +202,45 @@ class PCGWApiService {
     async getImagesByHash(sha1: string): Promise<string[]> {
         if (!sha1) return [];
 
-        try {
-            const result = await this.fetchApi<{ 
-                query?: { 
-                    allimages?: { title: string }[] 
-                } 
-            }>({
-                action: 'query',
-                list: 'allimages',
-                aisha1: sha1,
-                ailimit: '10'
-            });
+        const cacheKey = `hash:${sha1}`;
+        const cached = this.getFromCache(cacheKey);
+        if (cached) return cached;
 
-            if (!result?.query?.allimages) return [];
-            return result.query.allimages.map(img => img.title.replace(/^File:/, ''));
-        } catch (error) {
-            console.error('Failed to get images by hash:', error);
-            return [];
+        if (this.pendingSha1Requests.has(sha1)) {
+            return this.pendingSha1Requests.get(sha1)!;
         }
+
+        const requestPromise = (async () => {
+            try {
+                const result = await this.fetchApi<{ 
+                    query?: { 
+                        allimages?: { title: string }[] 
+                    } 
+                }>({
+                    action: 'query',
+                    list: 'allimages',
+                    aisha1: sha1,
+                    ailimit: '10'
+                });
+
+                if (!result?.query?.allimages) {
+                    this.setCache(cacheKey, []);
+                    return [];
+                }
+
+                const titles = result.query.allimages.map(img => img.title.replace(/^File:/, ''));
+                this.setCache(cacheKey, titles);
+                return titles;
+            } catch (error) {
+                console.error('Failed to get images by hash:', error);
+                return [];
+            } finally {
+                this.pendingSha1Requests.delete(sha1);
+            }
+        })();
+
+        this.pendingSha1Requests.set(sha1, requestPromise);
+        return requestPromise;
     }
 
     async searchFiles(query?: string): Promise<string[]> {
@@ -313,42 +350,55 @@ class PCGWApiService {
     }
 
     async getImageUrl(filename: string): Promise<string | null> {
+        if (!filename) return null;
         const info = await this.getImageInfo(filename);
         return getProxiedImageUrl(info?.url || null);
     }
 
-    async getImageInfo(filename: string): Promise<{ url: string; user: string; size: number; width: number; height: number; canonicalName: string } | null> {
+    async getImageInfo(filename: string): Promise<ImageInfo | null> {
+        if (!filename) return null;
         const infos = await this.getImagesInfo([filename]);
-        return infos[filename] || null;
+        const normKey = normalizeFilename(filename);
+        return infos[normKey] || infos[filename] || null;
     }
 
-    async getImagesInfo(filenames: string[]): Promise<Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }>> {
-        if (!filenames.length) return {};
+    private queueImageInfoFetch(filename: string): Promise<ImageInfo | null> {
+        const normKey = normalizeFilename(filename);
 
-        const results: Record<string, { url: string; user: string; size: number; width: number; height: number; canonicalName: string }> = {};
-        const toFetch: string[] = [];
+        if (this.pendingImageInfoRequests.has(normKey)) {
+            return this.pendingImageInfoRequests.get(normKey)!;
+        }
 
-        filenames.forEach(filename => {
-            const key = normalizeFilename(filename);
-            const cacheKey = `image_info:${key}`;
-            const cached = this.cache.value[cacheKey];
-            if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-                try {
-                    const info = JSON.parse(cached.data[0]);
-                    info.url = getProxiedImageUrl(info.url) || '';
-                    results[key] = info;
-                } catch (e) {
-                    toFetch.push(filename);
-                }
-            } else {
-                toFetch.push(filename);
+        const promise = new Promise<ImageInfo | null>((resolve) => {
+            if (!this.batchCallbacks.has(normKey)) {
+                this.batchCallbacks.set(normKey, []);
+            }
+            this.batchCallbacks.get(normKey)!.push(resolve);
+
+            this.batchQueue.add(filename);
+
+            if (!this.batchTimer) {
+                this.batchTimer = setTimeout(() => {
+                    void this.flushImageInfoBatch();
+                }, 20);
             }
         });
 
-        if (!toFetch.length) return results;
+        this.pendingImageInfoRequests.set(normKey, promise);
+        return promise;
+    }
+
+    private async flushImageInfoBatch(): Promise<void> {
+        this.batchTimer = null;
+        const toFetch = Array.from(this.batchQueue);
+        const callbacksMap = new Map(this.batchCallbacks);
+
+        this.batchQueue.clear();
+        this.batchCallbacks.clear();
+
+        if (!toFetch.length) return;
 
         try {
-            // MediaWiki query limit is usually 50 for normal users, let's chunk if needed
             const CHUNK_SIZE = 50;
             for (let i = 0; i < toFetch.length; i += CHUNK_SIZE) {
                 const chunk = toFetch.slice(i, i + CHUNK_SIZE);
@@ -365,8 +415,9 @@ class PCGWApiService {
                     redirects: '1'
                 });
 
+                const chunkResults: Record<string, ImageInfo> = {};
+
                 if (response?.query?.pages) {
-                    // Create redirect map (original title -> canonical title)
                     const redirectMap: Record<string, string> = {};
                     response.query.redirects?.forEach(r => {
                         redirectMap[r.from] = r.to;
@@ -378,7 +429,7 @@ class PCGWApiService {
                             const canonicalName = canonicalTitle.replace(/^File:/, '');
                             const normalizedCanonicalName = normalizeFilename(canonicalName);
 
-                            const info = {
+                            const info: ImageInfo = {
                                 url: getProxiedImageUrl(page.imageinfo[0].url) || '',
                                 user: page.imageinfo[0].user,
                                 size: page.imageinfo[0].size,
@@ -387,27 +438,83 @@ class PCGWApiService {
                                 canonicalName: normalizedCanonicalName
                             };
 
-                            // Map this info to all original keys that point to this page
-                            chunk.forEach(originalName => {
-                                const originalTitle = `File:${originalName}`;
-                                // Either it's the title itself, or it redirects to it
-                                if (originalTitle === canonicalTitle || redirectMap[originalTitle] === canonicalTitle) {
-                                    results[normalizeFilename(originalName)] = info;
-                                }
-                            });
-                            
-                            // Also cache by canonical name for future direct lookups
-                            const cacheKey = `image_info:${normalizedCanonicalName}`;
-                            this.cache.value[cacheKey] = {
+                            // Cache by canonical name
+                            const canonicalCacheKey = `image_info:${normalizedCanonicalName}`;
+                            this.cache.value[canonicalCacheKey] = {
                                 data: [JSON.stringify(info)],
                                 timestamp: Date.now()
                             };
+
+                            chunk.forEach(originalName => {
+                                const originalTitle = `File:${originalName}`;
+                                const normOrig = normalizeFilename(originalName);
+                                if (originalTitle === canonicalTitle || redirectMap[originalTitle] === canonicalTitle || normOrig === normalizedCanonicalName) {
+                                    chunkResults[normOrig] = info;
+                                    // Also cache by original requested name
+                                    const origCacheKey = `image_info:${normOrig}`;
+                                    this.cache.value[origCacheKey] = {
+                                        data: [JSON.stringify(info)],
+                                        timestamp: Date.now()
+                                    };
+                                }
+                            });
                         }
                     });
                 }
+
+                chunk.forEach(originalName => {
+                    const normKey = normalizeFilename(originalName);
+                    const info = chunkResults[normKey] || null;
+                    const cbs = callbacksMap.get(normKey);
+                    if (cbs) {
+                        cbs.forEach(cb => cb(info));
+                    }
+                    this.pendingImageInfoRequests.delete(normKey);
+                });
             }
         } catch (error) {
-            console.error('Failed to get batch image info:', error);
+            console.error('Failed to flush batch image info:', error);
+            toFetch.forEach(filename => {
+                const normKey = normalizeFilename(filename);
+                const cbs = callbacksMap.get(normKey);
+                if (cbs) {
+                    cbs.forEach(cb => cb(null));
+                }
+                this.pendingImageInfoRequests.delete(normKey);
+            });
+        }
+    }
+
+    async getImagesInfo(filenames: string[]): Promise<Record<string, ImageInfo>> {
+        if (!filenames.length) return {};
+
+        const results: Record<string, ImageInfo> = {};
+        const fetchPromises: Promise<{ key: string; info: ImageInfo | null }>[] = [];
+
+        filenames.forEach(filename => {
+            const key = normalizeFilename(filename);
+            const cacheKey = `image_info:${key}`;
+            const cached = this.cache.value[cacheKey];
+            if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                try {
+                    const info = JSON.parse(cached.data[0]);
+                    info.url = getProxiedImageUrl(info.url) || '';
+                    results[key] = info;
+                } catch (e) {
+                    fetchPromises.push(this.queueImageInfoFetch(filename).then(info => ({ key, info })));
+                }
+            } else {
+                fetchPromises.push(this.queueImageInfoFetch(filename).then(info => ({ key, info })));
+            }
+        });
+
+        if (fetchPromises.length > 0) {
+            const fetched = await Promise.all(fetchPromises);
+            fetched.forEach(({ key, info }) => {
+                if (info) {
+                    results[key] = info;
+                }
+            });
         }
 
         return results;
