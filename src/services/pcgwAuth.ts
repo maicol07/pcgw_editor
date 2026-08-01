@@ -18,17 +18,20 @@ class PCGWAuthService {
         isLoggedIn: false
     });
 
-    // Password is kept in memory only (never written to disk). Survives session-cookie
-    // expiry within a tab session for auto-relogin, but a full reload requires logging in again.
+    // Password is kept in sessionPassword (memory ref). If autoReLogin is enabled,
+    // it is also persisted to disk (authData) to survive page reloads.
     private sessionPassword = ref<string | undefined>();
 
     private _isInitializing = ref(false);
 
     constructor() {
-        // Migrate away any password persisted by older versions: keep it for this session, wipe from storage.
+        const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
         if (this.authData.value.password) {
-            this.sessionPassword.value = this.authData.value.password;
-            delete this.authData.value.password;
+            if (autoReLogin) {
+                this.sessionPassword.value = this.authData.value.password;
+            } else {
+                delete this.authData.value.password;
+            }
         }
     }
 
@@ -154,6 +157,13 @@ class PCGWAuthService {
                 this.sessionPassword.value = password;
                 this.authData.value.isLoggedIn = true;
                 
+                const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
+                if (autoReLogin) {
+                    this.authData.value.password = password;
+                } else {
+                    delete this.authData.value.password;
+                }
+                
                 // Get CSRF token for future edits/uploads
                 // This might need to go through the proxy as well
                 await this.refreshCsrfToken();
@@ -167,6 +177,16 @@ class PCGWAuthService {
             return false;
         } finally {
             this._isInitializing.value = false;
+        }
+    }
+
+    onAutoReLoginChanged(enabled: boolean) {
+        if (enabled) {
+            if (this.sessionPassword.value) {
+                this.authData.value.password = this.sessionPassword.value;
+            }
+        } else {
+            delete this.authData.value.password;
         }
     }
 
@@ -198,13 +218,18 @@ class PCGWAuthService {
         
         const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
         const preservedUsername = autoReLogin ? this.authData.value.username : '';
-        const preservedPassword = autoReLogin ? this.sessionPassword.value : undefined;
+        const preservedPassword = autoReLogin ? (this.sessionPassword.value || this.authData.value.password) : undefined;
 
         this.authData.value.username = preservedUsername;
         this.authData.value.isLoggedIn = false;
         this.authData.value.csrfToken = undefined;
         this.authData.value.sessionCookies = undefined;
         this.sessionPassword.value = preservedPassword;
+        if (!autoReLogin) {
+            delete this.authData.value.password;
+        } else if (preservedPassword) {
+            this.authData.value.password = preservedPassword;
+        }
     }
 
     async getCsrfToken(): Promise<string | null> {

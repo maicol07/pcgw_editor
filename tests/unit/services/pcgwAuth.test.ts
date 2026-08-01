@@ -369,4 +369,34 @@ describe('PCGWAuthService', () => {
         expect(lastBody.get('cookies')).toBe('newcookie=1');
         expect(lastBody.get('token')).toBe('newtoken');
     });
+
+    it('should persist password in authData when autoReLogin is true on login', async () => {
+        localStorage.setItem('autoReLogin', 'true');
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            success: true,
+            username: 'TestUser',
+            sessionCookies: 'cookies'
+        });
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            query: { tokens: { csrftoken: 'token' } }
+        });
+
+        await pcgwAuth.login('TestUser', 'SecretPass');
+
+        // @ts-ignore
+        expect(pcgwAuth['authData'].value.password).toBe('SecretPass');
+    });
+
+    it('should clear stored password when onAutoReLoginChanged is called with false', () => {
+        // @ts-ignore
+        pcgwAuth['authData'].value.password = 'SecretPass';
+        // @ts-ignore
+        pcgwAuth['sessionPassword'].value = 'SecretPass';
+
+        pcgwAuth.onAutoReLoginChanged(false);
+
+        // @ts-ignore
+        expect(pcgwAuth['authData'].value.password).toBeUndefined();
+        expect(pcgwAuth.password).toBe('SecretPass');
+    });
 });

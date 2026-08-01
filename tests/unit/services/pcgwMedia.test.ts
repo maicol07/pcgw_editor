@@ -38,6 +38,7 @@ describe('PCGWMediaService', () => {
         const file = new Blob(['test content'], { type: 'text/plain' });
         await pcgwMedia.uploadFile(file, { filename: 'test.txt' });
 
+        expect(mockPcgwAuth.getCsrfToken).toHaveBeenCalledTimes(1);
         expect(mockPcgwAuth.apiPost).toHaveBeenCalledTimes(1);
         const [formData, method] = mockPcgwAuth.apiPost.mock.calls[0];
 
@@ -45,6 +46,7 @@ describe('PCGWMediaService', () => {
         expect(method).toBe('POST');
         expect((formData as FormData).get('action')).toBe('upload');
         expect((formData as FormData).get('filename')).toBe('test.txt');
+        expect((formData as FormData).get('token')).toBe('testtoken');
     });
 
     it('should use pcgwAuth.apiPost for editPage', async () => {

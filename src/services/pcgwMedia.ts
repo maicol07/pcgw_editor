@@ -14,12 +14,16 @@ class PCGWMediaService {
             throw new Error('User not authenticated with PCGW');
         }
 
+        const token = await pcgwAuth.getCsrfToken();
+        if (!token) throw new Error('Could not obtain CSRF token for file upload');
+
         const formData = new FormData();
         formData.append('action', 'upload');
         formData.append('filename', options.filename);
         if (options.comment) formData.append('comment', options.comment);
         if (options.text) formData.append('text', options.text);
         if (options.ignorewarnings) formData.append('ignorewarnings', '1');
+        formData.append('token', token);
         formData.append('file', file, options.filename);
 
         try {

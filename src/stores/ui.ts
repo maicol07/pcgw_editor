@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
+import { pcgwAuth } from '../services/pcgwAuth';
 
 export const useUiStore = defineStore('ui', () => {
     const isSettingsOpen = ref(false);
@@ -41,6 +42,7 @@ export const useUiStore = defineStore('ui', () => {
 
     watch(autoReLogin, (val: boolean) => {
         localStorage.setItem('autoReLogin', val.toString());
+        pcgwAuth.onAutoReLoginChanged(val);
     });
 
     watch(tourPart1Seen, (val: boolean) => {
