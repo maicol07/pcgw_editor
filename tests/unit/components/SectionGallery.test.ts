@@ -382,6 +382,42 @@ describe('SectionGallery.vue', () => {
                 description: 'Desc A'
             }));
         });
+
+        it('preserves localId after upload so Local/PCGW switch is available immediately', async () => {
+            const wrapper = createWrapper([
+                { name: 'imageA.jpg', position: 'gallery', localId: 1 }
+            ]);
+            const vm = wrapper.vm as any;
+            
+            const { pcgwMedia } = await import('../../../src/services/pcgwMedia');
+            pcgwMedia.uploadFile = vi.fn().mockResolvedValue({
+                upload: {
+                    result: 'Success',
+                    imageinfo: {
+                        url: 'https://pcgw.example.com/imageA.jpg',
+                        size: 100,
+                        width: 50,
+                        height: 50,
+                        descriptionurl: 'https://pcgw.example.com/File:imageA.jpg'
+                    }
+                }
+            });
+            pcgwMedia.checkFileExists = vi.fn().mockResolvedValue(false);
+            
+            const fileA = { id: 1, blob: new Blob(['A']), name: 'imageA.jpg', status: 'local' };
+            vm.selectedFile = fileA;
+            vm.editFilename = 'imageA.jpg';
+            vm.editDescription = 'Desc A';
+            
+            await vm.processUpload();
+            
+            // Verify modelValue updated with localId preserved
+            const emitted = wrapper.emitted('update:modelValue');
+            expect(emitted).toBeTruthy();
+            const updatedModel = emitted![emitted!.length - 1][0] as any[];
+            expect(updatedModel[0].localId).toBe(1);
+            expect(vm.isAlsoOnPcgw(updatedModel[0])).toBe(true);
+        });
     });
 
     describe('Image Format Selection Logic', () => {

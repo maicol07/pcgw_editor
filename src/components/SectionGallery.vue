@@ -496,10 +496,11 @@ const linkToWiki = (localId: number, wikiFilename: string) => {
 
     if (index !== -1) {
         const item = newValue[index] as GalleryImage;
+        fileStore.updateFileStatus(localId, { status: 'uploaded', name: wikiFilename }).catch(console.error);
         newValue[index] = {
             ...item,
             name: wikiFilename,
-            localId: undefined // Link complete
+            localId: localId
         };
         emit('update:modelValue', newValue);
         
@@ -810,7 +811,7 @@ const batchUpload = async () => {
                 const placeholderIndex = newValue.findIndex(img => typeof img !== 'string' && img.localId === file.id);
                 if (placeholderIndex !== -1) {
                     const existing = newValue[placeholderIndex] as GalleryImage;
-                    newValue[placeholderIndex] = { ...existing, name: file.name, localId: undefined };
+                    newValue[placeholderIndex] = { ...existing, name: file.name, localId: file.id };
                     emit('update:modelValue', newValue);
                 }
                 successCount++;
@@ -977,7 +978,7 @@ const processUpload = async (force: boolean = false) => {
                 newValue[placeholderIndex] = {
                     ...item,
                     name: targetFilename,
-                    localId: undefined // No longer a local placeholder
+                    localId: file.id
                 };
                 emit('update:modelValue', newValue);
             }
