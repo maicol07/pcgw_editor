@@ -238,13 +238,21 @@ class MetadataFillerService {
         }
 
         try {
-            // Twitch client-credentials POST via CORS proxy
-            // We pass parameters in query string to be safe with corsproxy.io POST behavior
-            const tokenUrl = `${getExtProxyUrl()}?url=${encodeURIComponent(
-                `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`
-            )}`;
-            
-            const response = await fetch(tokenUrl, { method: 'POST' });
+            // Twitch client-credentials POST via our worker relay.
+            // The credentials go in the request body, never in the query string: a URL ends up in
+            // Cloudflare's access logs (and any intermediary's), and client_secret is a real secret
+            // unlike the public client_id.
+            const tokenUrl = `${getExtProxyUrl()}?url=${encodeURIComponent('https://id.twitch.tv/oauth2/token')}`;
+
+            const response = await fetch(tokenUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    grant_type: 'client_credentials',
+                }).toString(),
+            });
             if (!response.ok) {
                 throw new Error(`Twitch OAuth failed: ${response.statusText}`);
             }

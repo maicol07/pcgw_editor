@@ -66,10 +66,12 @@ export const getProxiedImageUrl = (url: string | null): string | null => {
 // Hook for adding required headers for certain proxies (like cors-anywhere)
 export const getApiHeaders = () => {
     const headers: Record<string, string> = {};
-    if (API_CONFIG.proxyPrefix.includes('cors-anywhere')) {
-        headers['X-Requested-With'] = 'XMLHttpRequest';
-    }
-    
+    // Always sent, not just for cors-anywhere: the worker requires this header on any request
+    // that relies on the ambient httpOnly session cookie. A cross-origin form post cannot set a
+    // custom header, so demanding it forces a preflight that a foreign origin fails — which is
+    // what stops CSRF-driven edits and uploads.
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+
     const userAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
     headers['User-Agent'] = userAgent;
     headers['Api-User-Agent'] = userAgent;

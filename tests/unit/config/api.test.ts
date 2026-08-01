@@ -16,7 +16,10 @@ describe('src/config/api.ts', () => {
 
         expect(headers).toHaveProperty('User-Agent', expectedUserAgent);
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
-        expect(headers).not.toHaveProperty('X-Requested-With');
+        // X-Requested-With is now sent unconditionally, not only for cors-anywhere: the worker
+        // rejects any request that leans on the ambient httpOnly session without it. That is the
+        // CSRF barrier, so dropping this header would silently reopen the hole.
+        expect(headers).toHaveProperty('X-Requested-With', 'XMLHttpRequest');
     });
 
     it('should add X-Requested-With header when using cors-anywhere proxy', () => {

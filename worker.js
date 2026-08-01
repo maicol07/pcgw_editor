@@ -41,13 +41,35 @@ export default {
         const url = new URL(request.url);
         const PCGW_API = 'https://www.pcgamingwiki.com/w/api.php';
 
-        // Reads the MediaWiki session cookies, preferring the httpOnly `mw` cookie (#6 mode) and
-        // falling back to the legacy body-supplied value.
+        // Reads the MediaWiki session cookies from the httpOnly `mw` cookie (#6 mode).
+        //
+        // SECURITY: only ever honoured for an allowlisted Origin. The cookie is SameSite=None, so
+        // the browser attaches it to cross-site requests too; a multipart/form-data POST is a
+        // "simple request" and gets no preflight. Without this Origin check an attacker's page
+        // could POST to /api/proxy, have the worker pick up the victim's session here and fetch a
+        // fresh csrftoken server-side — performing arbitrary edits/uploads. The response stays
+        // unreadable to them, but the write already happened.
         const cookieFromHeader = () => {
+            if (!credentialed) return '';
             const raw = request.headers.get('Cookie') || '';
             const m = raw.match(/(?:^|;\s*)mw=([^;]+)/);
             return m ? decodeURIComponent(m[1]) : '';
         };
+
+        // Second, independent CSRF barrier: a custom header cannot be set by a cross-origin form
+        // post, so requiring it forces a preflight that a non-allowlisted Origin fails.
+        const hasCsrfHeader = () => (request.headers.get('X-Requested-With') || '') !== '';
+
+        // MediaWiki actions the app actually uses. Without this the proxy forwards any action the
+        // account is entitled to (delete, block, …), widening the blast radius of any CSRF or
+        // stolen-session bug well beyond editing.
+        // Enumerated from the client, not guessed: edit/upload/move/logout/query go through
+        // pcgwAuth.apiPost (this proxy); cargoquery/opensearch/parse are listed too because they
+        // are read-only and cheap to allow if a caller is ever routed here.
+        const ALLOWED_MW_ACTIONS = new Set([
+            'query', 'parse', 'cargoquery', 'opensearch',   // read-only
+            'edit', 'upload', 'move', 'logout',             // state-changing
+        ]);
 
         // ==========================================
         // 1. LOGIN ENDPOINT (Unchanged and working)
@@ -136,9 +158,23 @@ export default {
                     if (!params.format) params.format = 'json';
                 }
 
-                // #6: in httpOnly mode the client sends no body cookies — read them from the httpOnly cookie.
+                // #6: in httpOnly mode the client sends no body cookies — read them from the
+                // httpOnly cookie (only for an allowlisted Origin; see cookieFromHeader).
+                const usingAmbientSession = !cookies;
                 cookies = cookies || cookieFromHeader();
                 if (!cookies) return new Response(JSON.stringify({ error: 'No cookies provided' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+
+                // When the session comes from the ambient cookie rather than the request body, the
+                // browser attached it automatically — so this request must also prove it was made
+                // by our own page and not by a cross-site form.
+                if (usingAmbientSession && !hasCsrfHeader()) {
+                    return new Response(JSON.stringify({ error: 'Missing X-Requested-With header' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+                }
+
+                const requestedAction = params.action || '';
+                if (!ALLOWED_MW_ACTIONS.has(requestedAction)) {
+                    return new Response(JSON.stringify({ error: `Action not allowed: ${requestedAction}` }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+                }
 
                 let mwResponse;
 
@@ -230,10 +266,27 @@ export default {
                 return new Response(JSON.stringify({ error: 'Invalid url parameter' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
             }
 
-            const allowedHosts = ['api.rawg.io', 'api.vndb.org', 'id.twitch.tv', 'api.igdb.com', 'store.steampowered.com'];
-            if (target.protocol !== 'https:' || !allowedHosts.includes(target.hostname)) {
+            // Per-host method allowlist: without it this endpoint relays any verb to the upstream
+            // API on behalf of any caller on the internet.
+            const allowedHosts = {
+                'api.rawg.io': ['GET'],
+                'api.vndb.org': ['GET', 'POST'],
+                'id.twitch.tv': ['POST'],          // OAuth token exchange
+                'api.igdb.com': ['POST'],
+                'store.steampowered.com': ['GET'],
+            };
+            const allowedMethods = allowedHosts[target.hostname];
+            if (target.protocol !== 'https:' || !allowedMethods) {
                 return new Response(JSON.stringify({ error: 'Host not allowed' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
             }
+            if (!allowedMethods.includes(request.method)) {
+                return new Response(JSON.stringify({ error: `Method ${request.method} not allowed for ${target.hostname}` }), { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            }
+
+            // NOTE: there is no rate limiting on any endpoint of this worker. /api/ext is an
+            // unauthenticated CORS relay and /api/login allows password guessing against PCGW,
+            // both at the owner's Cloudflare quota. Add Cloudflare Rate Limiting rules (dashboard
+            // config, not code) for /api/login and /api/ext.
 
             try {
                 // Forward only the headers these APIs need (e.g. IGDB's Client-ID / Authorization).
@@ -301,10 +354,16 @@ export default {
                     console.warn('Cache API not available in this environment:', e);
                 }
 
-                // The request URL (with search params) uniquely identifies this image
+                // The request URL (with search params) uniquely identifies this image.
+                // Origin is part of the key because the response carries a per-origin
+                // Access-Control-Allow-Origin in credentialed mode — without it a value cached for
+                // one origin gets served to another and the image fails to load.
                 const cacheKey = new Request(request.url, {
                     method: 'GET',
-                    headers: { 'Accept': request.headers.get('Accept') || '*/*' }
+                    headers: {
+                        'Accept': request.headers.get('Accept') || '*/*',
+                        'X-Cache-Origin': credentialed ? reqOrigin : '*',
+                    }
                 });
 
                 if (cache) {

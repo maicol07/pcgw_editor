@@ -828,6 +828,8 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
         <div class="wiki-content">${bodyText}</div>
     </div>`);
     } catch (e: any) {
-        return `<div style="color: red; border: 2px solid red; padding: 10px;"><b>Render Error:</b><br><pre>${e.stack || e}</pre></div>`;
+        // Also sanitized: the stack can quote the wikitext that caused the failure, and this
+        // string is rendered with v-html like the success path.
+        return sanitizeHtml(`<div style="color: red; border: 2px solid red; padding: 10px;"><b>Render Error:</b><br><pre>${e.stack || e}</pre></div>`);
     }
 };

@@ -18,17 +18,41 @@ const commitHash = execSync('git rev-parse --short HEAD').toString().trim()
 // it stops injected markup (e.g. from wiki content rendered via v-html) from executing.
 // Injected via <meta> because the app deploys as static files (no header control on the host).
 // Not applied in dev — Vite's HMR relies on inline/eval scripts. Verify the prod build after changes.
+// Hosts the app actually talks to. connect-src used to be `https:`, which allowed exfiltration to
+// any HTTPS host and so cancelled most of the CSP's value as an XSS mitigation — the stored AI keys
+// and wiki session are exactly what an injected script would want to POST somewhere.
+const CONNECT_HOSTS = [
+    'https://www.pcgamingwiki.com',
+    'https://pcgw-proxy-login.maicol07.workers.dev',
+    'https://accounts.google.com',
+    'https://www.googleapis.com',
+    'https://oauth2.googleapis.com',
+    'https://generativelanguage.googleapis.com',
+    'https://api.openai.com',
+    'https://api.anthropic.com',
+    'https://api.github.com',
+].join(' ')
+
+// Images come from the wiki and its thumbnail hosts, via the worker proxy or directly.
+const IMG_HOSTS = [
+    'https://pcgw-proxy-login.maicol07.workers.dev',
+    'https://www.pcgamingwiki.com',
+    'https://images.pcgamingwiki.com',
+    'https://thumbnails.pcgamingwiki.com',
+].join(' ')
+
 const CSP = [
     "default-src 'self'",
     "script-src 'self' https://accounts.google.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https:",
-    "connect-src 'self' https: blob:",
+    `img-src 'self' data: blob: ${IMG_HOSTS}`,
+    `connect-src 'self' blob: ${CONNECT_HOSTS}`,
     "frame-src 'self' https://accounts.google.com",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
+    "form-action 'self'",
 ].join('; ')
 
 const cspPlugin = {

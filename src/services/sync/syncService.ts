@@ -7,6 +7,7 @@ import { db } from '../../db';
 import { GOOGLE_CLIENT_ID } from '../../config/api';
 import { deriveKey, encrypt, decrypt, randomSalt } from './crypto';
 import { driveProvider } from './GoogleDriveProvider';
+import { snapshotSchema, MIN_PASSPHRASE_LENGTH } from './snapshotSchema';
 
 const AUTH_KEY = 'pcgw_auth_data_v2';
 const PRUNE_MS = 30 * 24 * 3600 * 1000; // drop tombstones after 30 days
@@ -55,6 +56,9 @@ function gatherSnapshot() {
     const ui = useUiStore();
     let auth: any = null;
     try { auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch { /* ignore */ }
+    // Never let the PCGW password leave the device, even inside the encrypted envelope: the blob
+    // lands in Google Drive and gets decrypted onto every other device the user syncs.
+    if (auth && typeof auth === 'object') { auth = { ...auth }; delete auth.password; }
     return {
         v: 1,
         updatedAt: Date.now(),
@@ -78,7 +82,17 @@ function gatherSnapshot() {
     };
 }
 
-function applySnapshot(remote: any) {
+function applySnapshot(rawRemote: unknown) {
+    // Decryption proves possession of the passphrase, not that the payload is well-formed.
+    // Validate before writing any of it into stores, aiConfig or localStorage.
+    const parsed = snapshotSchema.safeParse(rawRemote);
+    if (!parsed.success) {
+        syncState.error = 'Remote snapshot is malformed and was ignored';
+        console.error('Rejected malformed sync snapshot:', parsed.error.issues);
+        return;
+    }
+    const remote = parsed.data;
+
     applying = true;
     try {
         const ws = useWorkspaceStore();
@@ -108,7 +122,7 @@ function applySnapshot(remote: any) {
         ws.pages = merged;
         if (merged.length && (!ws.activePageId || !merged.find(p => p.id === ws.activePageId))) {
             const remoteActive = merged.find(p => p.id === remote.activePageId);
-            ws.activePageId = remoteActive ? remote.activePageId : merged[0].id;
+            ws.activePageId = remoteActive ? remoteActive.id : merged[0].id;
         }
         cachedKnownIds = merged.map(p => p.id);
 
@@ -249,6 +263,13 @@ function startWatchers() {
 
 /** First connect on a device (or a new device): OAuth, then unlock with the passphrase. */
 export async function connectAndUnlock(passphrase: string) {
+    // PBKDF2 at 200k iterations buys nothing against a guessable passphrase, and this one protects
+    // the wiki session plus all three AI keys.
+    if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+        syncState.status = 'error';
+        syncState.error = `Passphrase must be at least ${MIN_PASSPHRASE_LENGTH} characters`;
+        throw new Error(syncState.error);
+    }
     syncState.status = 'syncing';
     syncState.error = '';
     try {
