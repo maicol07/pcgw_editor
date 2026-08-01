@@ -390,22 +390,25 @@ const isVisible = computed(() => {
                 <!-- Default placeholder handling if needed, though PrimeVue usually handles it -->
                 <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
             </template>
-            <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
-                #option="slotProps">
-                <div class="flex items-center">
+            <!--
+                One #option template, branching inside. There used to be two, with mutually
+                exclusive v-if conditions — but a component cannot receive two templates for the
+                same slot name: the compiler keeps one and the other never renders. The
+                MultiSelect-with-icons variant was the one being silently dropped.
+            -->
+            <template v-if="['MultiSelect', 'Select'].includes(field.component)" #option="slotProps">
+                <div v-if="field.component === 'MultiSelect' && (field.componentProps as any)?.showIcons"
+                    class="flex items-center">
                     <img v-if="getIconSrc(slotProps.option)" :src="getIconSrc(slotProps.option)" :alt="slotProps.option"
                         class="w-4 h-4 mr-2" />
                     <span class="text-sm">{{ slotProps.option }}</span>
                 </div>
-            </template>
-
-            <!-- Pass children slots if any (e.g. for Select options) -->
-            <template v-if="['Select'].includes(field.component)" #option="slotProps">
-                <div class="flex flex-col gap-1 py-1">
+                <div v-else-if="field.component === 'Select'" class="flex flex-col gap-1 py-1">
                     <span class="font-medium">{{ slotProps.option.label || slotProps.option }}</span>
                     <span v-if="slotProps.option.description" class="text-xs text-surface-500 dark:text-surface-400">{{
                         slotProps.option.description }}</span>
                 </div>
+                <span v-else class="text-sm">{{ slotProps.option?.label ?? slotProps.option }}</span>
             </template>
         </component>
     </div>

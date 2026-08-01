@@ -84,7 +84,8 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
             pos = r.be; ri++;
         } else {
             // Overlapping changes → conflict. Expand to cover all chained overlaps.
-            let bs = Math.min(l.bs, r.bs), be = Math.max(l.be, r.be);
+            const bs = Math.min(l.bs, r.bs);
+            let be = Math.max(l.be, r.be); // grows below as chained overlaps are absorbed
             stable(pos, bs);
             const cl: Diff[] = [], cr: Diff[] = [];
             for (let grew = true; grew;) {

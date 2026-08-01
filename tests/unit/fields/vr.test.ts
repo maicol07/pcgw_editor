@@ -64,7 +64,7 @@ describe('Field Group: VR', () => {
             if (hasNotes) wikitext += `|${template} notes = Note for ${template}\n`;
             if (extraParams) {
                 for (const [key, val] of Object.entries(extraParams)) {
-                    let paramName = `${template} ${key}`;
+                    const paramName = `${template} ${key}`;
                     wikitext += `|${paramName} = ${val}\n`;
                 }
             }
@@ -120,7 +120,7 @@ describe('Field Group: VR', () => {
 
             if (extraParams) {
                 for (const [key, val] of Object.entries(extraParams)) {
-                    let paramName = `${template} ${key}`;
+                    const paramName = `${template} ${key}`;
                     expect(output).toContain(`|${paramName} = ${val}`);
                 }
             }

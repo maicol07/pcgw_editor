@@ -300,7 +300,7 @@ const insertFixbox = () => {
             localWikitext.value = localWikitext.value.replace(editingFixboxWikitext.value, template);
         } else {
             // Fuzzy match by description if whitespace normalization caused the split
-            let escapedDesc = oldFixboxParams.value.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedDesc = oldFixboxParams.value.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             // Prevent greedy bleeding between adjacent Fixboxes by ensuring we do not cross `}}`
             const innerMatch = '(?:(?!\\}\\})[\\s\\S])*?';
             const regexStr = escapedDesc

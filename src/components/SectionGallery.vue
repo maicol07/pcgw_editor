@@ -701,7 +701,7 @@ const batchRemove = () => {
 const batchTogglePosition = () => {
     const newValue = [...(props.modelValue || [])].map(item => {
         if (!selectedKeys.value.has(getItemKey(item))) return item;
-        let galleryItem: GalleryImage = typeof item === 'string' ? { name: item, caption: '', position: 'gallery' } : { ...item };
+        const galleryItem: GalleryImage = typeof item === 'string' ? { name: item, caption: '', position: 'gallery' } : { ...item };
         galleryItem.position = galleryItem.position === 'lateral' ? 'gallery' : 'lateral';
         return galleryItem;
     });
@@ -849,7 +849,7 @@ const batchDeletePcgw = async () => {
     for (const item of wikiItems) {
         try {
             const title = `File:${item.name}`;
-            let currentContent = await pcgwApi.getPageContent(title) || '';
+            const currentContent = await pcgwApi.getPageContent(title) || '';
             const deleteTemplate = '{{delete|reason=Batch deletion via PCGW Editor}}';
             const deleteRegex = /\{\{delete(?:\s*\|\s*reason\s*=\s*[^}]*)?\}\}/gi;
 
@@ -1241,7 +1241,7 @@ const handleConfirmDelete = async () => {
     isSavingDelete.value = true;
     try {
         const title = `File:${pcgwDeletingImage.value.name}`;
-        let currentContent = await pcgwApi.getPageContent(title) || '';
+        const currentContent = await pcgwApi.getPageContent(title) || '';
 
         const deleteTemplate = pcgwDeletionReason.value.trim()
             ? `{{delete|reason=${pcgwDeletionReason.value.trim()}}}`

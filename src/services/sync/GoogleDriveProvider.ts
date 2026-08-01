@@ -131,7 +131,7 @@ class GoogleDriveProvider {
     private async authedFetch(build: (token: string) => { url: string; init?: RequestInit }): Promise<Response> {
         let token = await this.ensureToken();
         const first = build(token);
-        let res = await fetch(first.url, first.init);
+        const res = await fetch(first.url, first.init);
         if (res.status !== 401) return res;
 
         this.accessToken = '';

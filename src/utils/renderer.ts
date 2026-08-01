@@ -223,7 +223,7 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
             // Clean up nested sub-templates like {{Infobox game/row/taxonomy/monetization | One-time game purchase }}
             const cleanValue = (val: string) => {
                 if (!val) return '';
-                return val.replace(/{{\s*Infobox\s+game\/row\/[^\/|]+\/[^|]+\|\s*([^|}]+)[^}]*}}/gi, '$1')
+                return val.replace(/{{\s*Infobox\s+game\/row\/[^/|]+\/[^|]+\|\s*([^|}]+)[^}]*}}/gi, '$1')
                     .replace(/{{\s*Infobox\s+game\/row\/[^|]+\|\s*([^|}]+)[^}]*}}/gi, '$1')
                     .trim();
             };
@@ -782,7 +782,7 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
         // Formatting
         const anchorify = (text: string) => {
             // Strip internal links for ID generation: [[Link|Text]] -> Text, [[Link]] -> Link
-            let clean = text.replace(/\[\[(?:[^|\]]+\|)?([^\]]+)\]\]/g, '$1');
+            const clean = text.replace(/\[\[(?:[^|\]]+\|)?([^\]]+)\]\]/g, '$1');
             return clean.trim().replace(/ /g, '_');
         };
 

@@ -101,7 +101,7 @@ describe('Field Group: System Requirements', () => {
                 for (const [key, val] of Object.entries(templateArgs)) {
                     if (key !== 'OSfamily') {
                         // Regex to match |key = value, handling whitespace
-                        const regex = new RegExp(`\\|${key}\\s*=\\s*${val.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`);
+                        const regex = new RegExp(`\\|${key}\\s*=\\s*${val.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}`);
                         expect(output).toMatch(regex);
                     }
                 }

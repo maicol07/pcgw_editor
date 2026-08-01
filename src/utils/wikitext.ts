@@ -26,7 +26,7 @@ export class PCGWEditor {
     setTemplateParam(templateName: string, paramName: string, newValue: string | boolean | number | undefined | null) {
         if (newValue === undefined || newValue === null) return;
 
-        let strValue = String(newValue);
+        const strValue = String(newValue);
 
         if (paramName === 'igdb' && strValue.trim() === '') {
             this.parser.removeParameter(templateName, paramName);
@@ -410,7 +410,7 @@ export class PCGWEditor {
         }
         const formattedItems = items.map(item => {
             let type = 'developer';
-            let name = item.name;
+            const name = item.name;
             let extra: string | undefined;
             const params: Record<string, string | undefined> = {};
 
@@ -669,9 +669,9 @@ export class PCGWEditor {
         }
 
         for (const [key, param] of Object.entries(cloudMap)) {
-            // @ts-expect-error
+            // @ts-expect-error indexing CloudSync with a runtime key from cloudMap
             const status = cloud[key];
-            // @ts-expect-error
+            // @ts-expect-error indexing CloudSync with a computed `${key}Notes` key
             const notes = cloud[key + 'Notes'];
 
             if (status) {
@@ -1067,7 +1067,7 @@ export class PCGWEditor {
         // If no templates exist, we might need to insert the header and the missing templates
         if (!multiTpl && !connTpl && !portsTpl) {
             // Check for header
-            let headerRegex = /^={2,}\s*Network\s*={2,}/im;
+            const headerRegex = /^={2,}\s*Network\s*={2,}/im;
             if (!headerRegex.test(this.parser.getText())) {
                 // Insert Header + Templates
                 let block = `== Network ==\n`;

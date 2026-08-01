@@ -487,7 +487,7 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
 
     // Helper to extract rows from either a direct list of nodes OR a nested {{Game data|...}} template
     const extractGameDataRows = (sectionNodes: readonly ASTNode[], rowTemplateNames: string[]): any[] => {
-        let candidateNodes: readonly ASTNode[] = sectionNodes;
+        const candidateNodes: readonly ASTNode[] = sectionNodes;
 
         // Note: We deliberately do NOT look for a wrapper first, because {{Game data|config|...}}
         // can appear as a single template in the section, and we want to iterate IT, not its content (which is just 'config').
@@ -996,7 +996,7 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
     const sysReqs = findAllTemplates(rootNodes, 'System requirements');
     sysReqs.forEach(req => {
         // Try to get OS from 'OSfamily' parameter (legacy 'OS' support removed)
-        let os = getParam(req, 'OSfamily');
+        const os = getParam(req, 'OSfamily');
         // console.log(`SysReqs: Parsing OSfamily=${os}`);
         if (req.childNodes) {
             // console.log('SysReqs children:', req.childNodes.map(c => c.name).join(', '));

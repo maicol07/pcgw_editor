@@ -4,13 +4,28 @@ import Select from 'openvue/select';
 import GameDataPathForm from './GameDataPathForm.vue';
 import { Settings2 } from '@lucide/vue';
 
-import { inject, reactive, watch } from 'vue';
-
-// ... other imports
+import { computed, inject, reactive, watch } from 'vue';
 
 const props = defineProps<{
   modelValue: GameDataConfig;
 }>();
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: GameDataConfig): void;
+}>();
+
+// This component used to write straight into modelValue.* from the template. It happened to work
+// because the object is reactive, but it bypasses the parent's update:modelValue contract — so a
+// parent holding an immutable copy (DynamicSection rebuilds state with updateDeep) could silently
+// miss the change. Each field now round-trips through the emit.
+const field = <K extends keyof GameDataConfig>(key: K) => computed({
+  get: () => props.modelValue?.[key],
+  set: (value) => emit('update:modelValue', { ...props.modelValue, [key]: value }),
+});
+
+const configFiles = field('configFiles');
+const saveData = field('saveData');
+const xdg = field('xdg');
 const xdgOptions = [
   { label: 'Supported', value: true },
   { label: 'Not Supported', value: false },
@@ -42,7 +57,7 @@ if (uiBus) {
   <div class="flex flex-col gap-6">
     <!-- Game Data Paths -->
     <div class="flex flex-col gap-8">
-      <GameDataPathForm v-model:rows="modelValue.configFiles" title="Configuration Locations" icon="folder"
+      <GameDataPathForm v-model:rows="configFiles" title="Configuration Locations" icon="folder"
         description="Where the game stores its configuration files (ini, xml, cfg, etc.)" />
 
       <div
@@ -56,11 +71,11 @@ if (uiBus) {
           </label>
           <p class="text-xs text-surface-500 dark:text-surface-400">Does the game respect XDG standards on Linux?</p>
         </div>
-        <Select v-model="modelValue.xdg" :options="xdgOptions" optionLabel="label" optionValue="value"
+        <Select v-model="xdg" :options="xdgOptions" optionLabel="label" optionValue="value"
           placeholder="Select..." class="w-48" />
       </div>
 
-      <GameDataPathForm v-model:rows="modelValue.saveData" title="Save Game Locations" icon="save"
+      <GameDataPathForm v-model:rows="saveData" title="Save Game Locations" icon="save"
         description="Where the game stores its save files." />
     </div>
 

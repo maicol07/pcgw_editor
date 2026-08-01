@@ -68,8 +68,11 @@ const getFieldKey = (field: FieldDefinition, index: number): string => {
             '@md:grid-cols-2': section.gridCols === 2,
             '@md:grid-cols-2 @3xl:grid-cols-3': section.gridCols === 3
         }">
+            <!-- No v-memo here: Vue documents it as a no-op inside v-for, so the memoisation that
+                 used to sit on DynamicField never actually did anything. The :key above is what
+                 drives reconciliation. -->
             <template v-for="(field, index) in section.fields" :key="getFieldKey(field, index)">
-                <DynamicField v-memo="[getDeep(modelValue, field.key), getFieldKey(field, index)]" :field="field"
+                <DynamicField :field="field"
                     :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                     @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                         'col-span-1': true,
@@ -131,7 +134,7 @@ const getFieldKey = (field: FieldDefinition, index: number): string => {
                             }"
                                 :style="typeof group.gridCols === 'string' ? { gridTemplateColumns: group.gridCols } : {}">
                                 <template v-for="(field, index) in group.fields" :key="getFieldKey(field, index)">
-                                    <DynamicField v-memo="[getDeep(modelValue, field.key), getFieldKey(field, index)]" :field="field"
+                                    <DynamicField :field="field"
                                         :modelValue="getDeep(modelValue, field.key)" :formModel="modelValue"
                                         @update:modelValue="(val) => handleFieldUpdate(field.key, val)" :class="{
                                             'col-span-1': true,

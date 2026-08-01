@@ -22,8 +22,19 @@ jobs:
         node-version: '24'
         cache: 'pnpm'
 
+    # --frozen-lockfile so CI cannot silently resolve versions the lockfile does not pin
+    # (deploy.yml already did this; ci.yml did not).
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
+
+    # The type check only ran inside `pnpm build`, i.e. at release time — and until recently it was
+    # a no-op anyway (vue-tsc with neither -b nor -p on a solution-style tsconfig checks nothing).
+    # Running it here means a type error fails the PR, not the release.
+    - name: Type check
+      run: pnpm typecheck
+
+    - name: Lint
+      run: pnpm lint
 
     - name: Run tests
       run: pnpm test -- run

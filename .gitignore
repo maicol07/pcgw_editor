@@ -50,3 +50,4 @@ test-*.js
 Thumbs.db
 
 dev-dist
+coverage/

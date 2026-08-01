@@ -16,6 +16,14 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         include: ['tests/**/*.test.ts'],
+        coverage: {
+            // No thresholds yet: coverage was never measured, so any number here would be invented
+            // rather than agreed. This makes the baseline visible first (pnpm test:coverage).
+            provider: 'v8',
+            reporter: ['text-summary', 'html'],
+            include: ['src/**/*.{ts,vue}'],
+            exclude: ['src/assets/flags.ts', 'src/**/*.d.ts', 'src/main.ts'],
+        },
         setupFiles: ['./tests/setup.ts'],
         server: {
             deps: {
