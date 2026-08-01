@@ -8,6 +8,8 @@ vi.mock('../../../src/config/api', () => ({
     getWorkerProxyUrl: () => 'http://proxy-worker.test',
     getDirectApiUrl: () => 'http://direct-api.test',
     getApiHeaders: () => ({}),
+    // Worker-bound requests use these; X-Requested-With must not leak onto direct MediaWiki calls.
+    getWorkerHeaders: () => ({ 'X-Requested-With': 'XMLHttpRequest' }),
     HTTPONLY_AUTH: false,
     apiFetch: vi.fn()
 }));

@@ -1,6 +1,6 @@
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
-import { getWorkerLoginUrl, getWorkerProxyUrl, getApiHeaders, apiFetch, HTTPONLY_AUTH } from '../config/api';
+import { getWorkerLoginUrl, getWorkerProxyUrl, getWorkerHeaders, apiFetch, HTTPONLY_AUTH } from '../config/api';
 
 const AUTH_STORAGE_KEY = 'pcgw_auth_data_v2';
 
@@ -108,7 +108,9 @@ class PCGWAuthService {
         const res = await apiFetch(getWorkerProxyUrl(), {
             method: 'POST',
             body,
-            headers: getApiHeaders()
+            // Worker headers, not plain API headers: this is the request that carries the ambient
+            // session, so it must include X-Requested-With for the worker's CSRF check.
+            headers: getWorkerHeaders()
         });
 
         // Handle MediaWiki auth errors reactively
@@ -145,7 +147,7 @@ class PCGWAuthService {
                     username,
                     password
                 },
-                headers: getApiHeaders()
+                headers: getWorkerHeaders()
             });
 
             // In httpOnly mode the session is in a cookie, so no sessionCookies in the body.

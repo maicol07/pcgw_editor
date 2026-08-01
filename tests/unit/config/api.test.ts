@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { getApiHeaders, API_CONFIG, apiFetch, getProxiedImageUrl } from '../../../src/config/api';
+import { getApiHeaders, getWorkerHeaders, API_CONFIG, apiFetch, getProxiedImageUrl } from '../../../src/config/api';
 import pkg from '../../../package.json';
 
 describe('src/config/api.ts', () => {
@@ -10,25 +10,28 @@ describe('src/config/api.ts', () => {
         API_CONFIG.proxyPrefix = originalProxyPrefix;
     });
 
+    const expectedUserAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
+
     it('should generate getApiHeaders with correct User-Agent headers', () => {
         const headers = getApiHeaders();
-        const expectedUserAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
-
         expect(headers).toHaveProperty('User-Agent', expectedUserAgent);
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
-        // X-Requested-With is now sent unconditionally, not only for cors-anywhere: the worker
-        // rejects any request that leans on the ambient httpOnly session without it. That is the
-        // CSRF barrier, so dropping this header would silently reopen the hole.
-        expect(headers).toHaveProperty('X-Requested-With', 'XMLHttpRequest');
     });
 
-    it('should add X-Requested-With header when using cors-anywhere proxy', () => {
-        API_CONFIG.proxyPrefix = 'https://cors-anywhere.herokuapp.com/';
-        const headers = getApiHeaders();
-        const expectedUserAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
+    // Regression guard. These headers go straight to the MediaWiki API, whose anonymous CORS
+    // (`origin=*`) only answers a preflight for the headers it explicitly allows. Api-User-Agent is
+    // allowed; an arbitrary one is not. Adding X-Requested-With here broke *every* direct API call
+    // with "Response to preflight request doesn't pass access control check" — verified in a
+    // browser: Api-User-Agent alone -> 200, plus X-Requested-With -> Failed to fetch.
+    it('must NOT put X-Requested-With on direct MediaWiki requests', () => {
+        expect(getApiHeaders()).not.toHaveProperty('X-Requested-With');
+    });
 
+    // That header belongs only on requests to our own worker, which allows it in its CORS config
+    // and refuses any ambient-session request without it (the CSRF barrier).
+    it('sends X-Requested-With to the worker, along with the user agent', () => {
+        const headers = getWorkerHeaders();
         expect(headers).toHaveProperty('X-Requested-With', 'XMLHttpRequest');
-        expect(headers).toHaveProperty('User-Agent', expectedUserAgent);
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
     });
 

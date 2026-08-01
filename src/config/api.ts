@@ -63,21 +63,35 @@ export const getProxiedImageUrl = (url: string | null): string | null => {
     return url;
 };
 
-// Hook for adding required headers for certain proxies (like cors-anywhere)
+/**
+ * Headers for requests that go straight to the MediaWiki API.
+ *
+ * Must contain nothing beyond Api-User-Agent. Anonymous CORS (`origin=*`) only answers a preflight
+ * for the headers MediaWiki explicitly allows — Api-User-Agent is one of them, arbitrary ones are
+ * not — so any extra custom header turns every direct call into a failed preflight. Verified in a
+ * browser: Api-User-Agent alone -> 200, adding X-Requested-With -> "Failed to fetch".
+ */
 export const getApiHeaders = () => {
     const headers: Record<string, string> = {};
-    // Always sent, not just for cors-anywhere: the worker requires this header on any request
-    // that relies on the ambient httpOnly session cookie. A cross-origin form post cannot set a
-    // custom header, so demanding it forces a preflight that a foreign origin fails — which is
-    // what stops CSRF-driven edits and uploads.
-    headers['X-Requested-With'] = 'XMLHttpRequest';
-
     const userAgent = `${pkg.name}/${pkg.version} (https://github.com/maicol07/pcgw_editor_2; webmaster@maicol07.it) ofetch/1.5.1`;
-    headers['User-Agent'] = userAgent;
+    headers['User-Agent'] = userAgent;   // browsers drop this; harmless, kept for non-browser callers
     headers['Api-User-Agent'] = userAgent;
 
     return headers;
 };
+
+/**
+ * Headers for requests to our own Cloudflare Worker.
+ *
+ * X-Requested-With belongs here and nowhere else: the worker refuses any request that leans on the
+ * ambient httpOnly session cookie without it, because a cross-origin form post cannot set a custom
+ * header — so requiring it forces a preflight a foreign origin fails. That is the CSRF barrier.
+ * The worker allows the header in its own CORS config; MediaWiki does not.
+ */
+export const getWorkerHeaders = () => ({
+    ...getApiHeaders(),
+    'X-Requested-With': 'XMLHttpRequest',
+});
 
 // Queue system to handle the 20 requests/minute rate limit from PCGamingWiki
 class RequestQueue {
