@@ -13,7 +13,9 @@ const sortAZ = () => {
     (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 };
 
-const updateList = (names: string[]) => {
+// AutocompleteField emits string | string[] (it serves both single and multiple mode).
+const updateList = (value: string | string[]) => {
+  const names = Array.isArray(value) ? value : [value];
   const existing = model.value;
   const newList = names.map(name => {
     const found = existing.find(item => item.name === name);

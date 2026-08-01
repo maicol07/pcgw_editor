@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SectionDefinition } from '../../types/schema';
+import { SectionDefinition, FieldDefinition, subFieldOf } from '../../types/schema';
 import DynamicField from './DynamicField.vue';
 
 const props = defineProps<{
@@ -47,8 +47,9 @@ const toggleGroup = (idx: number) => {
 const openAutofillDialog = inject<(() => void) | undefined>('openAutofillDialog', undefined);
 
 const getFieldKey = (field: FieldDefinition, index: number): string => {
-    if (field.componentProps?.field) {
-        return `${field.key}.${field.componentProps.field}`;
+    const sub = subFieldOf(field);
+    if (sub) {
+        return `${field.key}.${sub}`;
     }
     if (field.wikitextParam) {
         return `${field.key}.${field.wikitextParam}`;

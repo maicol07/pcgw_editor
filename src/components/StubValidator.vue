@@ -4,26 +4,11 @@ import { GameData } from '../models/GameData';
 import Message from 'openvue/message';
 import { TriangleAlert } from '@lucide/vue';
 
-// This component receives the whole GameData object (or at least articleState + others)
-// But DynamicField passes `formModel` which is `modelValue` of DynamicSection.
-// For ArticleState section, `formModel` is `gameData` (if mapped to root) or `gameData.articleState`?
-// In DynamicSection usage, `modelValue` passed to it depends on how it's called.
-// In InfoboxForm (Step 629), `DynamicSection` is used for `fieldsConfig` items.
-// If the section ID is `article_state`, what is passed?
-// If `article_state` is a root section, `modelValue` passed to DynamicSection is likely `gameData`.
-// Let's assume it receives the full object needed for validation if we map it correctly. This component might need to inject `gameData` if `formModel` is just `articleState`.
-// But for "Stub" calculation we need `infobox` data too.
-// So this component should probably use `inject('gameData')` or similar if available, OR we assume `formModel` IS `gameData`.
-// Wait, `DynamicSection` gets `modelValue`.
-// In `InfoboxForm.vue`:
-// `<DynamicSection :section="s" v-model="localGameData" ... />`
-// So `modelValue` IS `gameData`.
-// So `formModel` passed to DynamicField IS `gameData`.
-// EXCELLENT.
-
+// Stub completeness needs both articleState and infobox, so this expects the whole
+// GameData: DynamicSection's v-model is the root gameData, which DynamicField forwards
+// down as `formModel`.
 const props = defineProps<{
-    formModel: GameData; // This will be the full gameData
-    // DynamicField passes it as `formModel`
+    formModel: GameData;
 }>();
 
 interface ChecklistItem {

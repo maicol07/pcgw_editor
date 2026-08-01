@@ -20,7 +20,9 @@ const emit = defineEmits<{
 
 // Helper to update a single property in the object and emit the new object
 const updateProperty = (key: string, value: any) => {
-    // Deep clone to ensure we don't mutate props and lose reactivity or cause proxy issues
+    // Deep clone to ensure we don't mutate props and lose reactivity or cause proxy issues.
+    // JSON round-trip, not structuredClone: modelValue is a reactive proxy and
+    // structuredClone throws DataCloneError on those.
     const current = props.modelValue ? JSON.parse(JSON.stringify(props.modelValue)) : {};
     const newState = { ...current, [key]: value };
     emit('update:modelValue', newState);
@@ -38,6 +40,6 @@ const notes = computed({
 </script>
 
 <template>
-    <RatingRow v-bind="$attrs" :label="label" :tooltip="tooltip" :icon="icon" v-model:value="value"
+    <RatingRow v-bind="$attrs" :label="label ?? field" :tooltip="tooltip" :icon="icon" v-model:value="value"
         v-model:notes="notes" :free-text="freeText" :compact="compact" />
 </template>

@@ -4,7 +4,6 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { mediawiki } from '@bhsd/codemirror-wikitext';
 import { oneDark } from '@codemirror/theme-one-dark';
-// @ts-ignore - JSON import
 import config from 'wikiparser-node/config/default.json';
 
 interface Props {

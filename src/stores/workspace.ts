@@ -32,7 +32,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     });
 
     // State for the parsed game data. Using ref + deep watch ensures real-time sync to wikitext.
-    const _activeGameData = ref<GameData>(JSON.parse(JSON.stringify(initialGameData)));
+    const _activeGameData = ref<GameData>(structuredClone(initialGameData));
 
     // Watch for page changes to reset/parse data
     watch(activePageId, async () => {
@@ -41,10 +41,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
                 _activeGameData.value = await parseWikitext(activePage.value.wikitext);
             } catch (e) {
                 console.error('Failed to parse wikitext on page switch:', e);
-                _activeGameData.value = JSON.parse(JSON.stringify(initialGameData));
+                _activeGameData.value = structuredClone(initialGameData);
             }
         } else {
-            _activeGameData.value = JSON.parse(JSON.stringify(initialGameData));
+            _activeGameData.value = structuredClone(initialGameData);
         }
     }, { immediate: true });
 

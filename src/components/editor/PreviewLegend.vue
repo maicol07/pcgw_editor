@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { List, X, ChevronRight, ChevronDown } from '@lucide/vue';
+import { ref } from 'vue';
+import { List, X } from '@lucide/vue';
 
 export interface Heading {
     id: string;

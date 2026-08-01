@@ -25,7 +25,9 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: ListItem[]): void;
 }>();
 
-const updateList = (names: string[]) => {
+// AutocompleteField emits string | string[] (it serves both single and multiple mode).
+const updateList = (value: string | string[]) => {
+    const names = Array.isArray(value) ? value : [value];
     const existing = props.modelValue;
     const newList = names.map(name => {
         // preserve existing extra data if name matches

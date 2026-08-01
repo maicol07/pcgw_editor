@@ -27,6 +27,15 @@ export type FieldDefinition<T = any> = FieldComponent & {
     showIf?: (model: any) => boolean;
 };
 
+/**
+ * Reads the optional `field` sub-key from a field's componentProps.
+ * Only CompoundRatingFieldProps declares it, but callers probe it across the whole
+ * FieldComponent union to build unique keys — hence the single narrowing cast here
+ * instead of one per call site.
+ */
+export const subFieldOf = (field: FieldDefinition): string | undefined =>
+    (field.componentProps as { field?: string } | undefined)?.field;
+
 export interface FieldGroup {
     title: string;
     icon?: any;

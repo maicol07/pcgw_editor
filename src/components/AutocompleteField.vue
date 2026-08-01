@@ -302,11 +302,6 @@ const onFilter = async (event: { value?: string, query?: string }) => {
         <AutoComplete v-else v-model="localValue" :suggestions="suggestions" :loading="loading"
             :placeholder="placeholder" :dropdown="false" :forceSelection="false" completeOnFocus class="w-full"
             @complete="onFilter" :inputClass="['w-full', inputClass]">
-            <template #item="slotProps">
-                <slot name="item" :item="slotProps.item" :index="slotProps.index">
-                    {{ slotProps.item }}
-                </slot>
-            </template>
             <template #option="slotProps">
                 <slot name="option" :option="slotProps.option" :index="slotProps.index">
                     {{ slotProps.option }}

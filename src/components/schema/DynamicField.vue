@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { FieldDefinition } from '../../types/schema';
+import { FieldDefinition, subFieldOf } from '../../types/schema';
 import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
 import MultiSelect from 'openvue/multiselect';
@@ -92,7 +92,7 @@ const resolvedComponent = computed(() => {
 
 // Stable id derived from the field key for label/input association
 const fieldId = computed(() => {
-    const subField = props.field.componentProps?.field || props.field.wikitextParam;
+    const subField = subFieldOf(props.field) || props.field.wikitextParam;
     const keyPath = subField ? `${props.field.key}.${subField}` : props.field.key;
     return `field-${keyPath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 });

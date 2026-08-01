@@ -27,8 +27,9 @@ const arrayValue = computed(() => {
     return val.split(',').map(s => s.trim()).filter(Boolean);
 });
 
-const updateArray = (newValue: string[]) => {
-    const joined = newValue.join(', ');
+// AutocompleteField emits string | string[] (it serves both single and multiple mode).
+const updateArray = (newValue: string | string[]) => {
+    const joined = Array.isArray(newValue) ? newValue.join(', ') : newValue;
     model.value = { ...model.value, value: joined };
 };
 

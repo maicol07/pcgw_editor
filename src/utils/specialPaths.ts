@@ -51,11 +51,6 @@ export function getSpecialPathByValue(value: string): SpecialPath | undefined {
     return specialPaths.find(p => p.value.toLowerCase() === value.toLowerCase());
 }
 
-// Helper to look up a special path by id (e.g. 'appdata')
-export function getSpecialPathById(id: string): SpecialPath | undefined {
-    return specialPaths.find(p => p.id === id);
-}
-
 // Most common starting locations, used for quick-add empty states.
 export const commonPathTokens: { id: string; label: string; value: string }[] = [
     { id: 'appdata', label: '%APPDATA%', value: '{{p|appdata}}' },
@@ -68,7 +63,7 @@ export const commonPathTokens: { id: string; label: string; value: string }[] = 
 
 // Lightweight map of common raw environment variables to their wiki template token.
 // Used to nudge users away from typing %ENVVAR% literally.
-export const rawEnvVarTokenMap: Record<string, string> = {
+const rawEnvVarTokenMap: Record<string, string> = {
     '%APPDATA%': '{{p|appdata}}',
     '%LOCALAPPDATA%': '{{p|localappdata}}',
     '%PROGRAMDATA%': '{{p|programdata}}',

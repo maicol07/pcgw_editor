@@ -2,7 +2,6 @@
 import { EditorView } from '@codemirror/view';
 import { mediawiki } from '@bhsd/codemirror-wikitext';
 import { oneDark } from '@codemirror/theme-one-dark';
-// @ts-ignore - JSON import
 import config from 'wikiparser-node/config/default.json';
 
 export const isDark = () => document.documentElement.classList.contains('dark');

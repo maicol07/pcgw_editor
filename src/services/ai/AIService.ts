@@ -29,7 +29,7 @@ export function getModel(
 }
 
 /** Streams a text completion, invoking onChunk with the cumulative text after each delta. */
-export async function streamPrompt(prompt: string, onChunk?: (full: string) => void): Promise<string> {
+async function streamPrompt(prompt: string, onChunk?: (full: string) => void): Promise<string> {
     try {
         const { textStream } = streamText({ model: getModel(), prompt });
         let full = '';

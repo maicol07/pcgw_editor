@@ -898,7 +898,7 @@ onMounted(() => {
 </template>
 
 <style>
-@import './styles/animations.css';
+/* animations.css is imported globally from style.css — not re-imported here. */
 
 /* Splitter Modern Styling */
 /* Hairline gutter — a quiet surface rule that warms to blue only on interaction. */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed } from 'vue';
 import { useInfoboxDates, ReleaseDate } from '../../composables/useInfoboxDates';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -21,10 +21,6 @@ const model = defineModel<ReleaseDate[]>({ default: () => [] });
 const { structuredDates, addReleaseDate, removeReleaseDate } = useInfoboxDates(model.value, (newDates) => {
   model.value = newDates;
 });
-
-// Search highlight check
-const searchQuery = inject('searchQuery', ref(''));
-const isMatch = (text: string) => false;
 
 // Duplicate-platform detection: flag rows whose platform appears more than once.
 const duplicatePlatformIndexes = computed(() => {

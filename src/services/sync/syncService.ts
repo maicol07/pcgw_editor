@@ -59,6 +59,9 @@ function gatherSnapshot() {
         v: 1,
         updatedAt: Date.now(),
         deviceId: cachedDeviceId,
+        // NB: JSON round-trip, not structuredClone — ws.pages is a Vue reactive proxy and
+        // structuredClone throws DataCloneError on it. It also drops undefined optional
+        // fields exactly as the encrypted JSON payload would, so it is the right primitive here.
         pages: JSON.parse(JSON.stringify(ws.pages)) as Page[],
         activePageId: ws.activePageId,
         settings: {
@@ -83,6 +86,7 @@ function applySnapshot(remote: any) {
 
         // Merge pages by id (newer lastModified wins).
         const byId = new Map<string, Page>();
+        // JSON round-trip for the same reason as in gatherSnapshot: reactive proxy.
         for (const p of JSON.parse(JSON.stringify(ws.pages)) as Page[]) byId.set(p.id, p);
         for (const rp of (remote.pages || []) as Page[]) {
             const ex = byId.get(rp.id);

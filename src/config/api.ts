@@ -44,9 +44,7 @@ export const API_CONFIG = {
 
 export const getWorkerLoginUrl = () => API_CONFIG.workerLoginUrl;
 export const getWorkerProxyUrl = () => API_CONFIG.workerProxyUrl;
-export const getWorkerImageUrl = () => API_CONFIG.workerImageUrl;
 export const getExtProxyUrl = () => API_CONFIG.workerExtUrl;
-export const getProxyApiUrl = () => API_CONFIG.proxyUrl;
 export const getDirectApiUrl = () => API_CONFIG.directUrl;
 
 /**
@@ -60,7 +58,7 @@ export const getProxiedImageUrl = (url: string | null): string | null => {
     }
     // Only proxy pcgamingwiki.com images (including subdomains)
     if (url.includes('pcgamingwiki.com')) {
-        return `${getWorkerImageUrl()}?url=${encodeURIComponent(url)}`;
+        return `${API_CONFIG.workerImageUrl}?url=${encodeURIComponent(url)}`;
     }
     return url;
 };

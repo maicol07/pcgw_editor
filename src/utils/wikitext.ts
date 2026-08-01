@@ -669,9 +669,9 @@ export class PCGWEditor {
         }
 
         for (const [key, param] of Object.entries(cloudMap)) {
-            // @ts-ignore
+            // @ts-expect-error
             const status = cloud[key];
-            // @ts-ignore
+            // @ts-expect-error
             const notes = cloud[key + 'Notes'];
 
             if (status) {

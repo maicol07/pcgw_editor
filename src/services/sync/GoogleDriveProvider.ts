@@ -1,5 +1,4 @@
 import { GOOGLE_CLIENT_ID } from '../../config/api';
-import type { SyncProvider } from './SyncProvider';
 
 // Google Drive appDataFolder: a per-app hidden folder, invisible in the user's Drive file list.
 // Auth is browser-only via Google Identity Services (token flow, no client secret, no backend).
@@ -26,7 +25,9 @@ function loadGis(): Promise<void> {
 
 const TOKEN_KEY = 'pcgw-gdrive-token'; // {token, expiry}; access tokens are short-lived (~1h)
 
-class GoogleDriveProvider implements SyncProvider {
+// The storage backend for the encrypted sync blob. If a second backend is ever needed,
+// extract an interface then — not before.
+class GoogleDriveProvider {
     private tokenClient: any = null;
     private accessToken = '';
     private tokenExpiry = 0;
@@ -198,4 +199,4 @@ class GoogleDriveProvider implements SyncProvider {
     }
 }
 
-export const driveProvider: SyncProvider = new GoogleDriveProvider();
+export const driveProvider = new GoogleDriveProvider();

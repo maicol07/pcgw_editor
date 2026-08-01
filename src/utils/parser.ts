@@ -11,16 +11,11 @@ const ensureParserLoaded = async () => {
     return (globalThis as any).Parser as Parser;
 };
 
-export async function parseRaw(text: string) {
-    const wiki = await ensureParserLoaded();
-    return wiki.parse(text);
-}
-
 export async function parseWikitext(wikitext: string): Promise<GameData> {
     const wiki = await ensureParserLoaded();
 
     // Clone initial data
-    const data: GameData = JSON.parse(JSON.stringify(initialGameData));
+    const data: GameData = structuredClone(initialGameData);
 
     // Parse AST
     let ast: any;
@@ -616,9 +611,8 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
     const cloud = findTemplateGlobal('Save game cloud syncing');
     if (cloud) {
         const mapCloud = (key: string, field: keyof CloudSync) => {
-            // @ts-ignore
             data.config.cloudSync[field] = getParam(cloud, key) as any;
-            // @ts-ignore
+            // @ts-expect-error indexing CloudSync with a computed `${field}Notes` key
             data.config.cloudSync[field + 'Notes'] = getParam(cloud, key + ' notes');
         };
         mapCloud('discord', 'discord');

@@ -58,26 +58,3 @@ export const KEYBOARD_GROUPS = [
         ]
     }
 ];
-
-export const KEY_ALIASES: Record<string, string> = {
-    'right ctrl': 'rctrl',
-    'left ctrl': 'lctrl',
-    'right alt': 'ralt',
-    'left alt': 'lalt',
-    'right shift': 'rshift',
-    'left shift': 'lshift',
-    'command': 'cmd',
-    'option': 'opt',
-    'spacebar': 'space',
-    'super': 'meta',
-    'start': 'win',
-    'logo': 'win',
-    'flag': 'win',
-    'windows': 'win',
-    'escape': 'esc',
-    'delete': 'del',
-    'insert': 'ins',
-    'print screen': 'prt scrn',
-    'page down': 'pgdn',
-    'page up': 'pgup',
-};

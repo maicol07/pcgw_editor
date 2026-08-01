@@ -158,11 +158,8 @@ import { MinusCircle, PlusCircle, FileText, Copy } from '@lucide/vue';
 import { useVModel } from '@vueuse/core';
 
 // Icons
-// @ts-ignore
 import iconWindows from '../assets/icons/os-windows.svg';
-// @ts-ignore
 import iconMac from '../assets/icons/os-osx.svg';
-// @ts-ignore
 import iconLinux from '../assets/icons/os-linux.svg';
 
 const props = defineProps<{
