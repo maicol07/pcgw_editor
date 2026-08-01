@@ -104,7 +104,7 @@ const getFieldKey = (field: FieldDefinition, index: number): string => {
                             <span class="section-eyebrow text-xs">{{ group.title }}</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <Button 
+                            <Button aria-label="Autofill links and scores using IGDB, Steam & Gemini AI" 
                                 v-if="openAutofillDialog && ['Reception', 'External Links'].includes(group.title)"
                                 severity="secondary" 
                                 text 

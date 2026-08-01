@@ -334,7 +334,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                         <Plus class="w-4 h-4 mr-2" />
                     </template>
                 </Button>
-                <FileUpload mode="basic" name="import[]" accept=".json" :maxFileSize="1000000" @select="onImportSelect"
+                <FileUpload aria-label="Import a page from JSON" mode="basic" name="import[]" accept=".json" :maxFileSize="1000000" @select="onImportSelect"
                     customUpload auto chooseLabel="Import" :chooseButtonProps="{ severity: 'secondary', outlined: true }"
                     class="shrink-0" v-tooltip.bottom="'Import a page from JSON'">
                     <template #chooseicon>
@@ -352,7 +352,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                         </InputIcon>
                         <InputText v-model="searchQuery" placeholder="Filter pages..." class="w-full text-sm!" />
                     </IconField>
-                    <Button :severity="hasActiveFilters ? 'primary' : 'secondary'" :outlined="!hasActiveFilters"
+                    <Button aria-label="Filters & sorting" :severity="hasActiveFilters ? 'primary' : 'secondary'" :outlined="!hasActiveFilters"
                         v-tooltip.bottom="'Filters & sorting'" class="shrink-0 relative"
                         @click="showFilters = !showFilters">
                         <template #icon>
@@ -456,7 +456,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                 class="absolute top-2 right-2 flex gap-1 transition-all duration-300 ease-out opacity-100 md:opacity-0 md:translate-x-4 md:group-hover:translate-x-0 md:group-hover:opacity-100">
                                 <template v-if="page.pcgwPageTitle">
 
-                                    <Button severity="secondary" variant="text" size="small"
+                                    <Button aria-label="Unlink PCGW Page" severity="secondary" variant="text" size="small"
                                         v-tooltip.top="'Unlink PCGW Page'"
                                         class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                         @click.stop="store.unlinkPage(page.id)">
@@ -466,7 +466,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                     </Button>
                                 </template>
                                 <template v-else>
-                                    <Button severity="secondary" variant="text" size="small"
+                                    <Button aria-label="Link to PCGW Page" severity="secondary" variant="text" size="small"
                                         v-tooltip.top="'Link to PCGW Page'"
                                         class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                         @click.stop="openLinkDialog(page)">
@@ -475,7 +475,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                         </template>
                                     </Button>
                                 </template>
-                                <Button icon="pi pi-download" severity="secondary" variant="text" size="small"
+                                <Button aria-label="Export JSON" icon="pi pi-download" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Export JSON'"
                                     class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                     @click.stop="store.exportPage(page.id)">
@@ -483,7 +483,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                         <Download class="w-4! h-4!" />
                                     </template>
                                 </Button>
-                                <Button icon="pi pi-pencil" severity="secondary" variant="text" size="small"
+                                <Button aria-label="Rename" icon="pi pi-pencil" severity="secondary" variant="text" size="small"
                                     v-tooltip.top="'Rename'"
                                     class="p-1.5! w-8! h-8! hover:bg-white dark:hover:bg-surface-800"
                                     @click.stop="openRenameDialog(page)">
@@ -491,7 +491,7 @@ defineExpose({ openLinkDialog, openNewPageDialog });
                                         <Pencil class="w-4! h-4!" />
                                     </template>
                                 </Button>
-                                <Button icon="pi pi-trash" severity="danger" variant="text" size="small"
+                                <Button aria-label="Delete" icon="pi pi-trash" severity="danger" variant="text" size="small"
                                     v-tooltip.top="'Delete'"
                                     class="p-1.5! w-8! h-8! hover:bg-red-50 dark:hover:bg-red-900/20"
                                     @click.stop="confirmDelete($event, page)">
@@ -538,12 +538,12 @@ defineExpose({ openLinkDialog, openNewPageDialog });
 
                 <!-- Links -->
                 <div class="flex items-center gap-1 shrink-0">
-                    <a href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
+                    <a aria-label="GitHub Repository" href="https://github.com/maicol07/pcgw_editor" target="_blank" rel="noopener noreferrer"
                         v-tooltip.top="'GitHub Repository'"
                         class="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors no-underline">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
                     </a>
-                    <a href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
+                    <a aria-label="Report an Issue" href="https://github.com/maicol07/pcgw_editor/issues" target="_blank" rel="noopener noreferrer"
                         v-tooltip.top="'Report an Issue'"
                         class="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-200/60 dark:hover:bg-surface-800/50 transition-colors no-underline">
                         <AlertCircle class="w-4 h-4" />

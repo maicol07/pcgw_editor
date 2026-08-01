@@ -164,7 +164,10 @@ function refreshTombstones(currentIds: string[]) {
 // running two concurrently meant one could overwrite the other's merge result.
 let queue: Promise<unknown> = Promise.resolve();
 function serialize<T>(task: () => Promise<T>): Promise<T> {
-    const run = queue.then(task, task);
+    // `.then(task, task)` would hand the *previous* task's resolved value to this one as its first
+    // argument — harmless while everything resolves to undefined, but pushNow(allowMergeRetry) would
+    // silently receive it and disable the merge retry. Wrap so the task is always called with none.
+    const run = queue.then(() => task(), () => task());
     queue = run.catch(() => {}); // a failed task must not poison the chain
     return run;
 }

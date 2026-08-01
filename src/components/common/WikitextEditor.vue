@@ -85,11 +85,11 @@ updatePreview();
                 <div class="flex gap-1 flex-wrap">
                     <Button label="B" text size="small" severity="secondary" @click="applyFormat('bold')" class="font-bold! min-w-8!" />
                     <Button label="I" text size="small" severity="secondary" @click="applyFormat('italic')" class="italic! min-w-8!" />
-                    <Button text size="small" severity="secondary" @click="applyFormat('link')" v-tooltip.top="'Link'"><template #icon><Link class="w-4 h-4" /></template></Button>
+                    <Button aria-label="Link" text size="small" severity="secondary" @click="applyFormat('link')" v-tooltip.top="'Link'"><template #icon><Link class="w-4 h-4" /></template></Button>
                     <div class="h-6 w-px bg-surface-300 dark:bg-surface-600 mx-1"></div>
-                    <Button text size="small" severity="secondary" @click="applyList('*')" v-tooltip.top="'Bullet List'"><template #icon><List class="w-4 h-4" /></template></Button>
-                    <Button label="1." text size="small" severity="secondary" @click="applyList('#')" class="min-w-8!" v-tooltip.top="'Numbered List'" />
-                    <Button text size="small" severity="secondary" @click="applyFormat('code')" v-tooltip.top="'Code'"><template #icon><Code class="w-4 h-4" /></template></Button>
+                    <Button aria-label="Bullet List" text size="small" severity="secondary" @click="applyList('*')" v-tooltip.top="'Bullet List'"><template #icon><List class="w-4 h-4" /></template></Button>
+                    <Button aria-label="Numbered List" label="1." text size="small" severity="secondary" @click="applyList('#')" class="min-w-8!" v-tooltip.top="'Numbered List'" />
+                    <Button aria-label="Code" text size="small" severity="secondary" @click="applyFormat('code')" v-tooltip.top="'Code'"><template #icon><Code class="w-4 h-4" /></template></Button>
                 </div>
             </template>
         </Toolbar>

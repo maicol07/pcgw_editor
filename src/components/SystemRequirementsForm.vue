@@ -82,7 +82,7 @@
                                         <h4
                                             class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
                                             Recommended</h4>
-                                        <Button label="Copy from Minimum" size="small" text severity="secondary"
+                                        <Button aria-label="Copy all Minimum spec fields into Recommended" label="Copy from Minimum" size="small" text severity="secondary"
                                             class="ml-auto px-2! py-1! text-xs!" @click="copyFromMinimum(os.key)"
                                             v-tooltip.top="'Copy all Minimum spec fields into Recommended'">
                                             <template #icon>

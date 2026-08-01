@@ -757,7 +757,7 @@ onMounted(() => {
         <div v-else class="h-screen w-screen flex flex-col items-center justify-center bg-linear-to-b from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 relative px-4 text-center">
             <!-- Settings button on empty state -->
             <div class="absolute top-4 right-4 z-10">
-                <Button text rounded severity="secondary" @click="uiStore.isSettingsOpen = true" data-tour="settings-btn"
+                <Button aria-label="App Settings" text rounded severity="secondary" @click="uiStore.isSettingsOpen = true" data-tour="settings-btn"
                     class="h-10! w-10! p-0! hover-scale" v-tooltip.bottom="'App Settings'">
                     <template #icon>
                         <Settings class="w-5 h-5 text-surface-500 dark:text-surface-400" />

@@ -168,7 +168,7 @@ const pcgwMenuItems = computed(() => {
                     <!-- Unified PCGW Menu next to title -->
                     <div v-if="workspaceStore.activePage" class="flex items-center">
                         <div class="h-7 w-7 absolute right-1.5 flex items-center justify-center">
-                            <Button type="button" text size="small" @click="togglePcgwMenu" severity="secondary"
+                            <Button aria-label="PCGamingWiki Actions" type="button" text size="small" @click="togglePcgwMenu" severity="secondary"
                                 class="h-full w-full p-0! opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center rounded-full"
                                 v-tooltip.bottom="'PCGamingWiki Actions'">
                                 <img :src="pcgwLogo" alt="PCGW" class="h-4.5 w-4.5 object-contain rounded-full border border-surface-200 dark:border-surface-700 shadow-sm" />
@@ -185,7 +185,7 @@ const pcgwMenuItems = computed(() => {
                                 <div v-if="item.type === 'section-header'"
                                     class="flex items-center justify-between px-3 pt-2 pb-1 select-none">
                                     <span class="text-xs font-bold tracking-wider text-surface-400 dark:text-surface-500 uppercase">{{ item.label }}</span>
-                                    <Button text rounded size="small" severity="secondary" class="h-6! w-6! p-0!"
+                                    <Button aria-label="Check for newer versions" text rounded size="small" severity="secondary" class="h-6! w-6! p-0!"
                                         :disabled="item.isChecking" @click="handleCheckUpdates"
                                         v-tooltip.bottom="'Check for newer versions'">
                                         <template #icon>
@@ -205,7 +205,7 @@ const pcgwMenuItems = computed(() => {
 
                                 <!-- The two verbs: pull (Update) and push (Publish) -->
                                 <div v-else-if="item.type === 'sync-actions'" class="flex gap-1.5 px-2 pt-1.5 pb-1">
-                                    <Button size="small" severity="secondary" variant="outlined" class="flex-1 py-1.5! text-xs!"
+                                    <Button aria-label="Merge newer version from PCGW" size="small" severity="secondary" variant="outlined" class="flex-1 py-1.5! text-xs!"
                                         :disabled="!item.hasUpdate" @click="emit('updatePcgw', false)"
                                         v-tooltip.bottom="'Merge newer version from PCGW'">
                                         <template #icon>
@@ -213,14 +213,14 @@ const pcgwMenuItems = computed(() => {
                                         </template>
                                         Update
                                     </Button>
-                                    <Button size="small" severity="secondary" variant="outlined" class="py-1.5! px-2! text-xs!"
+                                    <Button aria-label="Force re-sync with latest online revision" size="small" severity="secondary" variant="outlined" class="py-1.5! px-2! text-xs!"
                                         @click="emit('updatePcgw', true)"
                                         v-tooltip.bottom="'Force re-sync with latest online revision'">
                                         <template #icon>
                                             <CloudSync class="w-3.5 h-3.5" />
                                         </template>
                                     </Button>
-                                    <Button size="small" severity="primary" class="flex-1 py-1.5! text-xs!"
+                                    <Button aria-label="Publish your changes to PCGW" size="small" severity="primary" class="flex-1 py-1.5! text-xs!"
                                         @click="emit('publishPcgw')" v-tooltip.bottom="'Publish your changes to PCGW'">
                                         <template #icon>
                                             <UploadCloud class="w-3.5 h-3.5 mr-1.5" />
@@ -241,7 +241,7 @@ const pcgwMenuItems = computed(() => {
                     </div>
                 </div>
 
-                <Button text size="small" @click="emit('generateSummary')" severity="secondary" data-tour="ai-summary"
+                <Button aria-label="Generate summary with AI" text size="small" @click="emit('generateSummary')" severity="secondary" data-tour="ai-summary"
                     class="h-8! w-8! p-0! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
                     :disabled="isGeneratingSummary">
                     <template #icon>
@@ -254,7 +254,7 @@ const pcgwMenuItems = computed(() => {
 
         <template #end>
             <div class="flex items-center gap-2">
-                <Button text size="small" @click="uiStore.isSettingsOpen = true" severity="secondary" data-tour="settings-btn"
+                <Button aria-label="App Settings" text size="small" @click="uiStore.isSettingsOpen = true" severity="secondary" data-tour="settings-btn"
                     class="h-8! w-8! p-0! hover-scale" v-tooltip.bottom="'App Settings'">
                     <template #icon>
                         <Settings class="w-4 h-4 text-surface-500 dark:text-surface-400" />

@@ -264,7 +264,7 @@ const selectQuickPath = (value: string) => {
                     v-model="row.paths[pathIndex]"
                     placeholder="e.g. {{p|appdata}}\GameName\" class="w-full border-r-0! rounded-r-none" />
                   <InputGroupAddon class="p-0">
-                    <Button icon="pi" severity="secondary" v-tooltip.top="'Insert Special Path'"
+                    <Button aria-label="Insert Special Path" icon="pi" severity="secondary" v-tooltip.top="'Insert Special Path'"
                       @click="(e) => toggleQuickPath(e, rowIndex, pathIndex)">
                       <template #icon>
                         <Bookmark class="w-4 h-4" />

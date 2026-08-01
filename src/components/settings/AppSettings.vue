@@ -215,9 +215,13 @@ const saveSettings = () => {
                 <div v-show="activeTab === 'appearance'" class="flex flex-col gap-6 animate-fade-in">
                     <!-- Theme Selector -->
                     <div class="flex flex-col gap-3">
-                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200">Theme Preference</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <button v-for="opt in themeOptions" :key="opt.value"
+                        <span id="group-theme" class="text-sm font-semibold text-surface-700 dark:text-surface-200">Theme Preference</span>
+                        <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="group-theme">
+                            <!-- Explicit aria-label: the visible text sits behind several decorative
+                                 preview divs, so name-from-content is not dependable here. -->
+                            <button v-for="opt in themeOptions" :key="opt.value" role="radio"
+                                :aria-label="opt.label"
+                                :aria-checked="uiStore.theme === opt.value"
                                 @click="uiStore.theme = opt.value"
                                 class="flex flex-col items-center gap-2.5 p-3 rounded-xl border transition-all duration-250 text-left relative overflow-hidden cursor-pointer"
                                 :class="uiStore.theme === opt.value
@@ -250,10 +254,10 @@ const saveSettings = () => {
 
                     <!-- Font Family Selector -->
                     <div class="flex flex-col gap-2.5">
-                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <label for="setting-font-family" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
                             <Type class="w-4 h-4 text-primary-500" /> Font Family
                         </label>
-                        <Select v-model="uiStore.fontFamily" :options="fontOptions" optionLabel="label" optionValue="value"
+                        <Select v-model="uiStore.fontFamily" :options="fontOptions" inputId="setting-font-family" aria-label="Font family" optionLabel="label" optionValue="value"
                             class="w-full" :style="{ fontFamily: uiStore.fontFamily }">
                             <template #value="slotProps">
                                 <span :style="{ fontFamily: slotProps.value }">
@@ -266,7 +270,7 @@ const saveSettings = () => {
                         </Select>
 
                         <div class="flex flex-col gap-1.5 mt-1">
-                            <label class="text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">Preview text</label>
+                            <span id="group-font-preview" class="text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">Preview text</span>
                             <div class="p-3.5 rounded-xl border border-surface-200/80 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 text-sm font-medium select-none"
                                 :style="{ fontFamily: uiStore.fontFamily }">
                                 The quick brown fox jumps over the lazy dog. 1234567890
@@ -276,11 +280,12 @@ const saveSettings = () => {
 
                     <!-- UI Density Cards -->
                     <div class="flex flex-col gap-3">
-                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <span id="group-density" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
                             <Layout class="w-4 h-4 text-primary-500" /> Layout Spacing (UI Density)
-                        </label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <button v-for="(mode, index) in densityModes" :key="mode"
+                        </span>
+                        <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="group-density">
+                            <button v-for="(mode, index) in densityModes" :key="mode" role="radio"
+                                :aria-checked="uiStore.densityMode === mode"
                                 @click="updateDensity(index); densityValue = index"
                                 class="flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all duration-200 cursor-pointer density-btn"
                                 :class="densityValue === index
@@ -296,9 +301,9 @@ const saveSettings = () => {
 
                     <!-- Guided Tour -->
                     <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
-                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <span id="group-tour" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
                             <Info class="w-4 h-4 text-primary-500" /> Guided Tour
-                        </label>
+                        </span>
                         <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
                             <div class="flex flex-col gap-0.5">
                                 <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Interactive Tour</span>
@@ -347,18 +352,18 @@ const saveSettings = () => {
                         <div class="flex flex-col gap-3 md:pl-9">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Provider</label>
-                                    <Select v-model="aiConfig.provider" :options="providerOptions" optionLabel="label" optionValue="value" class="w-full" />
+                                    <label for="setting-ai-provider" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Provider</label>
+                                    <Select v-model="aiConfig.provider" :options="providerOptions" inputId="setting-ai-provider" aria-label="AI provider" optionLabel="label" optionValue="value" class="w-full" />
                                 </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
-                                    <Select v-model="aiConfig.model" :options="modelOptions" optionLabel="label" optionValue="id" editable class="w-full" />
+                                    <label for="setting-ai-model" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
+                                    <Select v-model="aiConfig.model" :options="modelOptions" inputId="setting-ai-model" aria-label="AI model" optionLabel="label" optionValue="id" editable class="w-full" />
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">{{ PROVIDER_LABELS[aiConfig.provider] }} API Key</label>
+                                <label for="setting-ai-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">{{ PROVIDER_LABELS[aiConfig.provider] }} API Key</label>
                                 <div class="flex relative items-center">
-                                    <InputText v-model="aiConfig.keys[aiConfig.provider]" :type="showGeminiKey ? 'text' : 'password'" placeholder="API key..." class="w-full pr-10 gemini-api-key-input" />
+                                    <InputText v-model="aiConfig.keys[aiConfig.provider]" id="setting-ai-key" :type="showGeminiKey ? 'text' : 'password'" placeholder="API key..." class="w-full pr-10 gemini-api-key-input" />
                                     <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                         <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
                                     </button>
@@ -402,9 +407,9 @@ const saveSettings = () => {
                             </div>
                         </Transition>
                         <div class="flex flex-col gap-2 md:pl-9">
-                            <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
+                            <label for="setting-rawg-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
                             <div class="flex relative items-center">
-                                <InputText v-model="tempRawgApiKey" :type="showRawgKey ? 'text' : 'password'" placeholder="RAWG api key..." class="w-full pr-10" />
+                                <InputText v-model="tempRawgApiKey" id="setting-rawg-key" :type="showRawgKey ? 'text' : 'password'" placeholder="RAWG api key..." class="w-full pr-10" />
                                 <button type="button" @click="showRawgKey = !showRawgKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                     <component :is="showRawgKey ? EyeOff : Eye" class="w-4 h-4" />
                                 </button>
@@ -447,13 +452,13 @@ const saveSettings = () => {
                         <div class="md:pl-9 flex flex-col gap-3">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client ID</label>
-                                    <InputText v-model="tempTwitchClientId" placeholder="Twitch Client ID" class="w-full" />
+                                    <label for="setting-twitch-id" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client ID</label>
+                                    <InputText v-model="tempTwitchClientId" id="setting-twitch-id" placeholder="Twitch Client ID" class="w-full" />
                                 </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client Secret</label>
+                                    <label for="setting-twitch-secret" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Client Secret</label>
                                     <div class="flex relative items-center">
-                                        <InputText v-model="tempTwitchClientSecret" :type="showTwitchSecret ? 'text' : 'password'" placeholder="Twitch Secret" class="w-full pr-10" />
+                                        <InputText v-model="tempTwitchClientSecret" id="setting-twitch-secret" :type="showTwitchSecret ? 'text' : 'password'" placeholder="Twitch Secret" class="w-full pr-10" />
                                         <button type="button" @click="showTwitchSecret = !showTwitchSecret" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                             <component :is="showTwitchSecret ? EyeOff : Eye" class="w-4 h-4" />
                                         </button>
@@ -469,9 +474,9 @@ const saveSettings = () => {
                 <div v-show="activeTab === 'account'" class="flex flex-col gap-5 animate-fade-in">
                     <!-- PCGamingWiki Authentication Status -->
                     <div class="flex flex-col gap-3">
-                        <label class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <span id="group-pcgw-account" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
                             <Globe class="w-4 h-4 text-primary-500" /> PCGamingWiki Account
-                        </label>
+                        </span>
                         
                         <!-- Logged In state card -->
                         <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -485,7 +490,7 @@ const saveSettings = () => {
                                     <span class="font-bold text-surface-800 dark:text-surface-100 text-sm leading-tight">{{ pcgwAuth.username }}</span>
                                 </div>
                             </div>
-                            <Button severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
+                            <Button aria-label="Logout" severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
                                 class="p-2 rounded-lg hover:bg-red-500/10 text-red-500 border-none cursor-pointer">
                                 <LogOut class="w-4 h-4" />
                             </Button>
@@ -574,8 +579,8 @@ const saveSettings = () => {
                                 </p>
                             </div>
                             <div class="flex flex-col gap-2 md:pl-9">
-                                <label class="text-xs font-semibold text-surface-600 dark:text-surface-300">Sync passphrase</label>
-                                <InputText v-model="syncPassphrase" type="password" placeholder="Choose a passphrase..." class="w-full" @keyup.enter="handleConnectSync" />
+                                <label for="setting-sync-passphrase" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Sync passphrase</label>
+                                <InputText v-model="syncPassphrase" id="setting-sync-passphrase" type="password" placeholder="Choose a passphrase..." class="w-full" @keyup.enter="handleConnectSync" />
                                 <Button label="Connect Google Drive" :disabled="!syncPassphrase || syncState.status === 'syncing'" @click="handleConnectSync" class="self-start mt-1 cursor-pointer">
                                     <template #icon>
                                         <component :is="syncState.status === 'syncing' ? Loader2 : Cloud" class="w-4 h-4 mr-2" :class="{ 'animate-spin': syncState.status === 'syncing' }" />

@@ -33,7 +33,7 @@ const handleHeadingClick = (id: string) => {
     <div class="absolute top-4 right-4 z-50 hidden md:flex flex-col items-end gap-2 pointer-events-none">
 
         <!-- FAB -->
-        <button @click="toggleLegend"
+        <button aria-label="Table of Contents" @click="toggleLegend"
             class="pointer-events-auto h-10 w-10 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-600 dark:text-surface-300 hover:text-primary-500 dark:hover:text-primary-400"
             :class="{ 'rotate-90': isOpen }" v-tooltip.left="'Table of Contents'">
             <X v-if="isOpen" class="w-5 h-5" />

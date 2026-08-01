@@ -586,11 +586,11 @@ defineExpose({
                             class="flex flex-col sm:flex-row w-full justify-between gap-2 items-start sm:items-center">
                             <div class="flex flex-wrap items-center">
                                 <span class="ql-formats">
-                                    <button class="ql-bold" v-tooltip.bottom="'Bold'"></button>
-                                    <button class="ql-italic" v-tooltip.bottom="'Italic'"></button>
+                                    <button aria-label="Bold" class="ql-bold" v-tooltip.bottom="'Bold'"></button>
+                                    <button aria-label="Italic" class="ql-italic" v-tooltip.bottom="'Italic'"></button>
                                 </span>
                                 <span class="ql-formats">
-                                    <select class="ql-header" defaultValue="0" v-tooltip.bottom="'Heading'">
+                                    <select aria-label="Heading" class="ql-header" defaultValue="0" v-tooltip.bottom="'Heading'">
                                         <option value="2">Heading 2</option>
                                         <option value="3">Heading 3</option>
                                         <option value="4">Heading 4</option>
@@ -600,15 +600,15 @@ defineExpose({
                                     </select>
                                 </span>
                                 <span class="ql-formats">
-                                    <button class="ql-link" v-tooltip.bottom="'Link'"></button>
-                                    <button class="ql-code" v-tooltip.bottom="'Code'"></button>
+                                    <button aria-label="Link" class="ql-link" v-tooltip.bottom="'Link'"></button>
+                                    <button aria-label="Code" class="ql-code" v-tooltip.bottom="'Code'"></button>
                                 </span>
                                 <span class="ql-formats">
-                                    <button class="ql-list" value="ordered" v-tooltip.bottom="'Ordered List'"></button>
-                                    <button class="ql-list" value="bullet" v-tooltip.bottom="'Bullet List'"></button>
+                                    <button aria-label="Ordered List" class="ql-list" value="ordered" v-tooltip.bottom="'Ordered List'"></button>
+                                    <button aria-label="Bullet List" class="ql-list" value="bullet" v-tooltip.bottom="'Bullet List'"></button>
                                 </span>
                                 <span class="ql-formats">
-                                    <button class="ql-clean" v-tooltip.bottom="'Remove Formatting'"></button>
+                                    <button aria-label="Remove Formatting" class="ql-clean" v-tooltip.bottom="'Remove Formatting'"></button>
                                 </span>
 
                                 <!-- Snippet Tools -->
@@ -798,23 +798,23 @@ defineExpose({
                         <span class="text-[11px] truncate italic text-primary-500 font-mono" :title="tempFixboxParams.ref">
                             {{ tempFixboxParams.ref }}
                         </span>
-                        <Button icon="pi pi-times" severity="danger" text rounded size="small" 
+                        <Button aria-label="Clear reference" icon="pi pi-times" severity="danger" text rounded size="small" 
                             class="w-6! h-6!" @click="tempFixboxParams.ref = ''" v-tooltip.top="'Clear reference'" />
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-2">
-                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refcheck', 'fixbox')" 
+                    <Button aria-label="Add Refcheck" size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refcheck', 'fixbox')" 
                         class="flex-1 gap-2" v-tooltip.top="'Add Refcheck'">
                         <ListChecks class="w-4 h-4" />
                         <span class="text-xs hidden sm:inline">Refcheck</span>
                     </Button>
-                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refurl', 'fixbox')" 
+                    <Button aria-label="Add Refurl" size="small" rounded outlined severity="secondary" @click="openRefParamDialog('Refurl', 'fixbox')" 
                         class="flex-1 gap-2" v-tooltip.top="'Add Refurl'">
                         <Link2 class="w-4 h-4" />
                         <span class="text-xs hidden sm:inline">Refurl</span>
                     </Button>
-                    <Button size="small" rounded outlined severity="secondary" @click="openRefParamDialog('cn', 'fixbox')" 
+                    <Button aria-label="Add Citation Required" size="small" rounded outlined severity="secondary" @click="openRefParamDialog('cn', 'fixbox')" 
                         class="flex-1 gap-2" v-tooltip.top="'Add Citation Required'">
                         <MessageSquareWarning class="w-4 h-4" />
                         <span class="text-xs hidden sm:inline">Citation</span>

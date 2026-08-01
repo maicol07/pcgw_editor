@@ -10,7 +10,7 @@ import pluginA11y from 'eslint-plugin-vuejs-accessibility';
 //   * icon-only buttons whose only name was a v-tooltip
 // Everything stylistic is off, so `pnpm lint` stays a signal rather than noise.
 export default [
-    { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'worker.js', '*.tsbuildinfo'] },
+    { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'coverage/**', 'worker.js', '*.tsbuildinfo'] },
 
     js.configs.recommended,
     ...pluginVue.configs['flat/recommended'],

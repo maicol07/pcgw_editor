@@ -2678,7 +2678,7 @@ defineExpose({
                     <CheckCircle2 class="w-3 h-3 text-green-500" />
                     {{ pcgwAuth.username }}
                 </span>
-                <Button text size="small" @click="handleLogout" severity="secondary" v-tooltip.bottom="'Logout'">
+                <Button aria-label="Logout" text size="small" @click="handleLogout" severity="secondary" v-tooltip.bottom="'Logout'">
                     <template #icon>
                         <LogOut class="w-5 h-5 text-red-500" />
                     </template>
@@ -2715,24 +2715,24 @@ defineExpose({
                     <span class="text-xs font-bold text-primary-600 dark:text-primary-400 px-2">{{ selectedKeys.size }} selected</span>
                     <div class="h-4 w-px bg-primary-200 dark:bg-primary-700/50 mx-1"></div>
 
-                    <Button v-tooltip.top="'Toggle Position'" text size="small" rounded severity="primary" @click="batchTogglePosition" class="p-1!">
+                    <Button aria-label="Toggle Position" v-tooltip.top="'Toggle Position'" text size="small" rounded severity="primary" @click="batchTogglePosition" class="p-1!">
                         <template #icon><ArrowRightLeft class="w-4 h-4" /></template>
                     </Button>
-                    <Button v-tooltip.top="'Crop Selected'" text size="small" rounded severity="primary" @click="batchCrop" class="p-1!">
+                    <Button aria-label="Crop Selected" v-tooltip.top="'Crop Selected'" text size="small" rounded severity="primary" @click="batchCrop" class="p-1!">
                         <template #icon><Crop class="w-4 h-4" /></template>
                     </Button>
-                    <Button v-tooltip.top="'Combine Selected'" text size="small" rounded severity="primary" @click="batchCombine" class="p-1!">
+                    <Button aria-label="Combine Selected" v-tooltip.top="'Combine Selected'" text size="small" rounded severity="primary" @click="batchCombine" class="p-1!">
                         <template #icon><Combine class="w-4 h-4" /></template>
                     </Button>
                     
                     <div class="h-4 w-px bg-primary-200 dark:bg-primary-700/50 mx-1"></div>
-                    <Button v-tooltip.top="'Upload Local to PCGW'" text size="small" rounded severity="success" @click="batchUpload" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('local-'))">
+                    <Button aria-label="Upload Local to PCGW" v-tooltip.top="'Upload Local to PCGW'" text size="small" rounded severity="success" @click="batchUpload" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('local-'))">
                         <template #icon><Upload class="w-4 h-4" /></template>
                     </Button>
-                    <Button v-tooltip.top="'Request Wiki Deletion'" text size="small" rounded severity="warning" @click="batchDeletePcgw" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('wiki-'))">
+                    <Button aria-label="Request Wiki Deletion" v-tooltip.top="'Request Wiki Deletion'" text size="small" rounded severity="warning" @click="batchDeletePcgw" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('wiki-'))">
                         <template #icon><AlertCircle class="w-4 h-4" /></template>
                     </Button>
-                    <Button v-tooltip.top="'Remove from Gallery'" text size="small" rounded severity="danger" @click="batchRemove" class="p-1!">
+                    <Button aria-label="Remove from Gallery" v-tooltip.top="'Remove from Gallery'" text size="small" rounded severity="danger" @click="batchRemove" class="p-1!">
                         <template #icon><Trash2 class="w-4 h-4" /></template>
                     </Button>
                 </div>
@@ -2788,7 +2788,7 @@ defineExpose({
                                         </div>
                                     </div>
                                 </div>
-                                <a :href="`https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(option.replace(/ /g, '_'))}`"
+                                <a aria-label="View on PCGW" :href="`https://www.pcgamingwiki.com/wiki/File:${encodeURIComponent(option.replace(/ /g, '_'))}`"
                                     target="_blank" rel="noreferrer"
                                     class="p-button p-button-icon-only p-button-text p-button-rounded p-button-sm p-1! opacity-0 group-hover/search-item:opacity-100 transition-opacity shrink-0 flex items-center justify-center no-underline"
                                     v-tooltip.top="'View on PCGW'"
@@ -2906,7 +2906,7 @@ defineExpose({
                         class="gallery-actions flex items-center justify-between mt-3 border-t border-surface-200 dark:border-surface-700 pt-2">
                         <!-- Left: Gallery Settings (Always Visible) -->
                         <div class="flex gap-1">
-                            <Button text rounded size="small" v-tooltip="'Edit Caption'"
+                            <Button aria-label="Edit Caption" text rounded size="small" v-tooltip="'Edit Caption'"
                                 :class="element.caption ? 'text-primary-500' : 'text-surface-500'"
                                 @click="openCaptionDialog(element, index)">
                                 <template #icon>
@@ -2922,7 +2922,7 @@ defineExpose({
                                     <Grid v-else />
                                 </template>
                             </Button>
-                            <Button severity="danger" text rounded size="small" @click="removeImage(index)"
+                            <Button aria-label="Remove from Gallery" severity="danger" text rounded size="small" @click="removeImage(index)"
                                 v-tooltip="'Remove from Gallery'">
                                 <template #icon>
                                     <Trash2 />
@@ -2933,7 +2933,7 @@ defineExpose({
                         <!-- Right: Actions & Management -->
                         <div class="flex items-center gap-1">
                             <!-- Local file: Primary Upload Action -->
-                            <Button v-if="element.localId !== undefined" size="small" text rounded severity="primary"
+                            <Button aria-label="Upload to PCGW" v-if="element.localId !== undefined" size="small" text rounded severity="primary"
                                 v-tooltip="'Upload to PCGW'" @click="initiateUpload(element)"
                                 :loading="getLocalFile(element.localId)?.status === 'uploading'"
                                 :disabled="isUploading || showConfirmUpload || showOverwriteConfirm">
@@ -3413,30 +3413,30 @@ defineExpose({
                             </div>
                             <div class="flex items-center gap-0.5 shrink-0 ml-2">
                                 <template v-if="item.croppedState">
-                                    <Button text severity="primary" @click="openRevertConfirmDialog(item.id, 'redo')" class="p-1" v-tooltip.bottom="'Redo Crop'">
+                                    <Button aria-label="Redo Crop" text severity="primary" @click="openRevertConfirmDialog(item.id, 'redo')" class="p-1" v-tooltip.bottom="'Redo Crop'">
                                         <template #icon>
                                             <RotateCw class="w-5 h-5" />
                                         </template>
                                     </Button>
                                 </template>
                                 <template v-else-if="item.originalState">
-                                    <Button text severity="warn" @click="openRevertConfirmDialog(item.id, 'undo')" class="p-1" v-tooltip.bottom="'Undo Crop'">
+                                    <Button aria-label="Undo Crop" text severity="warn" @click="openRevertConfirmDialog(item.id, 'undo')" class="p-1" v-tooltip.bottom="'Undo Crop'">
                                         <template #icon>
                                             <RotateCcw class="w-5 h-5" />
                                         </template>
                                     </Button>
                                 </template>
-                                <Button text severity="secondary" @click="initiateCrop({ type: 'combine', combineItem: item })" class="p-1" v-tooltip.bottom="'Crop Image'">
+                                <Button aria-label="Crop Image" text severity="secondary" @click="initiateCrop({ type: 'combine', combineItem: item })" class="p-1" v-tooltip.bottom="'Crop Image'">
                                     <template #icon>
                                         <Crop class="w-5 h-5" />
                                     </template>
                                 </Button>
-                                <Button text severity="info" @click="openUrl(item.url)" class="p-1" v-tooltip.bottom="'View Image'">
+                                <Button aria-label="View Image" text severity="info" @click="openUrl(item.url)" class="p-1" v-tooltip.bottom="'View Image'">
                                     <template #icon>
                                         <ExternalLink class="w-5 h-5" />
                                     </template>
                                 </Button>
-                                <Button text severity="danger" @click="removeCombineItem(idx)" class="p-1" v-tooltip.bottom="'Remove Image'">
+                                <Button aria-label="Remove Image" text severity="danger" @click="removeCombineItem(idx)" class="p-1" v-tooltip.bottom="'Remove Image'">
                                     <template #icon>
                                         <Trash2 class="w-5 h-5" />
                                     </template>

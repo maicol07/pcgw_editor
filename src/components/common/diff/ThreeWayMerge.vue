@@ -549,27 +549,27 @@ onUnmounted(() => {
     <div class="flex flex-col h-full w-full">
         <!-- Toolbar -->
         <div class="cm-toolbar flex items-center gap-1 px-2 py-1 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900/50">
-            <Button size="small" severity="secondary" text rounded :disabled="!canUndo" @click="undo" v-tooltip.bottom="'Undo (Ctrl+Z)'">
+            <Button aria-label="Undo (Ctrl+Z)" size="small" severity="secondary" text rounded :disabled="!canUndo" @click="undo" v-tooltip.bottom="'Undo (Ctrl+Z)'">
                 <template #icon><Undo2 class="w-4 h-4" /></template>
             </Button>
-            <Button size="small" severity="secondary" text rounded :disabled="!canRedo" @click="redo" v-tooltip.bottom="'Redo (Ctrl+Shift+Z)'">
+            <Button aria-label="Redo (Ctrl+Shift+Z)" size="small" severity="secondary" text rounded :disabled="!canRedo" @click="redo" v-tooltip.bottom="'Redo (Ctrl+Shift+Z)'">
                 <template #icon><Redo2 class="w-4 h-4" /></template>
             </Button>
             <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
-            <Button size="small" severity="secondary" text rounded @click="acceptLeft" v-tooltip.bottom="'Accept all from local (yours) →'">
+            <Button aria-label="Accept all from local (yours) →" size="small" severity="secondary" text rounded @click="acceptLeft" v-tooltip.bottom="'Accept all from local (yours) →'">
                 <template #icon><ChevronsRight class="w-4 h-4" /></template>
             </Button>
-            <Button size="small" severity="secondary" text rounded @click="acceptRight" v-tooltip.bottom="'← Accept all from online (theirs)'">
+            <Button aria-label="← Accept all from online (theirs)" size="small" severity="secondary" text rounded @click="acceptRight" v-tooltip.bottom="'← Accept all from online (theirs)'">
                 <template #icon><ChevronsLeft class="w-4 h-4" /></template>
             </Button>
-            <Button size="small" severity="secondary" text rounded @click="acceptBoth" v-tooltip.bottom="'Apply all non-conflicting changes from both sides'">
+            <Button aria-label="Apply all non-conflicting changes from both sides" size="small" severity="secondary" text rounded @click="acceptBoth" v-tooltip.bottom="'Apply all non-conflicting changes from both sides'">
                 <template #icon><FoldHorizontal class="w-4 h-4" /></template>
             </Button>
             <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
-            <Button size="small" severity="secondary" text rounded @click="smartApply" v-tooltip.bottom="'Smart apply — auto-resolve conflicts (no AI)'">
+            <Button aria-label="Smart apply — auto-resolve conflicts (no AI)" size="small" severity="secondary" text rounded @click="smartApply" v-tooltip.bottom="'Smart apply — auto-resolve conflicts (no AI)'">
                 <template #icon><Wand2 class="w-4 h-4" /></template>
             </Button>
-            <Button size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
+            <Button aria-label="Resolve the merge with AI" size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
                 <template #icon><Bot class="w-4 h-4" /></template>
             </Button>
             <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
@@ -580,10 +580,10 @@ onUnmounted(() => {
             </div>
             <div v-if="unresolvedCount > 0" class="flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-xs font-semibold">
                 <span>{{ unresolvedCount }} to review</span>
-                <Button size="small" severity="secondary" text rounded @click="goToPrevConflict" v-tooltip.bottom="'Previous undecided block'">
+                <Button aria-label="Previous undecided block" size="small" severity="secondary" text rounded @click="goToPrevConflict" v-tooltip.bottom="'Previous undecided block'">
                     <template #icon><ChevronUp class="w-3.5 h-3.5" /></template>
                 </Button>
-                <Button size="small" severity="secondary" text rounded @click="goToNextConflict" v-tooltip.bottom="'Next undecided block'">
+                <Button aria-label="Next undecided block" size="small" severity="secondary" text rounded @click="goToNextConflict" v-tooltip.bottom="'Next undecided block'">
                     <template #icon><ChevronDown class="w-3.5 h-3.5" /></template>
                 </Button>
             </div>
