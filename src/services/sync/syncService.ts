@@ -6,7 +6,7 @@ import { aiConfig, PROVIDERS } from '../ai/aiConfig';
 import { db } from '../../db';
 import { GOOGLE_CLIENT_ID } from '../../config/api';
 import { deriveKey, encrypt, decrypt, randomSalt } from './crypto';
-import { driveProvider } from './GoogleDriveProvider';
+import { driveProvider, PreconditionFailedError } from './GoogleDriveProvider';
 import { snapshotSchema, MIN_PASSPHRASE_LENGTH } from './snapshotSchema';
 
 const AUTH_KEY = 'pcgw_auth_data_v2';
@@ -158,7 +158,33 @@ function refreshTombstones(currentIds: string[]) {
 }
 
 // ---- push / pull ----
-export async function push() {
+
+// Single-file promise chain. pull() and push() both read-modify-write the whole snapshot, and they
+// are triggered from several places at once (an 8s debounced watcher, syncNow, window activity), so
+// running two concurrently meant one could overwrite the other's merge result.
+let queue: Promise<unknown> = Promise.resolve();
+function serialize<T>(task: () => Promise<T>): Promise<T> {
+    const run = queue.then(task, task);
+    queue = run.catch(() => {}); // a failed task must not poison the chain
+    return run;
+}
+
+function reportSyncError(e: any) {
+    if (e?.message === 'Token expired') {
+        syncState.connected = false;
+        syncState.status = 'disconnected';
+        syncState.error = 'Reconnect needed';
+    } else {
+        syncState.status = 'error';
+        syncState.error = e?.message || String(e);
+    }
+}
+
+export function push() {
+    return serialize(pushNow);
+}
+
+async function pushNow(allowMergeRetry = true): Promise<void> {
     if (!syncState.unlocked || !cachedKey || applying) return;
     syncState.status = 'syncing';
     try {
@@ -173,18 +199,28 @@ export async function push() {
         syncState.status = 'idle';
         syncState.error = '';
     } catch (e: any) {
-        if (e?.message === 'Token expired') {
-            syncState.connected = false;
-            syncState.status = 'disconnected';
-            syncState.error = 'Reconnect needed';
-        } else {
-            syncState.status = 'error';
-            syncState.error = e?.message || String(e);
+        if (e instanceof PreconditionFailedError && allowMergeRetry) {
+            // Another device wrote first. Merge its snapshot in, then publish the union — rather
+            // than overwriting their work or dropping ours. Once only: if the second attempt also
+            // collides we surface the error instead of looping against a busy peer.
+            try {
+                await pullNow();
+                await pushNow(false);
+                return;
+            } catch (retryError: any) {
+                reportSyncError(retryError);
+                return;
+            }
         }
+        reportSyncError(e);
     }
 }
 
-export async function pull() {
+export function pull() {
+    return serialize(pullNow);
+}
+
+async function pullNow(): Promise<void> {
     if (!syncState.unlocked || !cachedKey || applying) return;
     syncState.status = 'syncing';
     try {
@@ -200,14 +236,7 @@ export async function pull() {
         syncState.status = 'idle';
         syncState.error = '';
     } catch (e: any) {
-        if (e?.message === 'Token expired') {
-            syncState.connected = false;
-            syncState.status = 'disconnected';
-            syncState.error = 'Reconnect needed';
-        } else {
-            syncState.status = 'error';
-            syncState.error = e?.message || String(e);
-        }
+        reportSyncError(e);
     }
 }
 
@@ -237,26 +266,39 @@ function startWatchers() {
     watchersStarted = true;
     const ws = useWorkspaceStore();
     const ui = useUiStore();
+    // A cheap fingerprint instead of `deep: true` over ws.pages. The deep watcher walked the full
+    // wikitext of every page on every keystroke, before the debounce had a chance to help; page
+    // identity plus lastModified is all the push actually keys off.
     watchDebounced(
         () => [
-            ws.pages, ws.activePageId,
+            ws.pages.map((p: Page) => `${p.id}:${p.lastModified}`).join('|'),
+            ws.activePageId,
             ui.theme, ui.densityMode, ui.fontFamily,
             ui.autoUploadDescription, ui.autoReLogin, ui.navRailCollapsed,
-            aiConfig.provider, aiConfig.model, { ...aiConfig.keys },
-        ],
+            aiConfig.provider, aiConfig.model,
+            // Key *values*, not just presence: editing an existing key must still trigger a push.
+            PROVIDERS.map(p => aiConfig.keys[p] || '').join(' '),
+        ].join(' '),
         () => { if (!applying) push(); },
-        { debounce: 8000, deep: true },
+        { debounce: 8000 },
     );
     const pullOnFocus = () => { if (syncState.unlocked && !document.hidden) pull(); };
     useEventListener(window, 'focus', pullOnFocus);
     useEventListener(document, 'visibilitychange', pullOnFocus);
 
-    const pullOnClick = () => {
-        if (syncState.unlocked && !syncState.connected && syncState.status !== 'syncing') {
-            pull().catch(() => {});
-        }
+    // Reconnect attempt on user activity, throttled. This used to fire a Drive request plus an
+    // AES decrypt on *every* click while disconnected, with the error swallowed so the user saw
+    // nothing. pointerdown+throttle keeps the retry without the storm.
+    let lastReconnectAttempt = 0;
+    const RECONNECT_THROTTLE_MS = 30_000;
+    const pullOnActivity = () => {
+        if (!syncState.unlocked || syncState.connected || syncState.status === 'syncing') return;
+        const now = Date.now();
+        if (now - lastReconnectAttempt < RECONNECT_THROTTLE_MS) return;
+        lastReconnectAttempt = now;
+        pull();
     };
-    useEventListener(window, 'click', pullOnClick);
+    useEventListener(window, 'pointerdown', pullOnActivity);
 }
 
 // ---- public lifecycle ----

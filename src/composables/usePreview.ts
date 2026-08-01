@@ -1,4 +1,5 @@
-import { ref, watch } from 'vue';
+import { ref, watch, onScopeDispose } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
 import { renderWikitextToHtml } from '../utils/renderer';
 import { sanitizeHtml } from '../utils/sanitize';
 import { getProxiedImageUrl } from '../config/api';
@@ -81,18 +82,6 @@ export function usePreview(
     const isPending = ref(false); // True during debounce
     let abortController: AbortController | null = null;
 
-    // Simple Debounce
-    const debounce = (fn: Function, delay: number) => {
-        let timeoutId: any;
-        return (...args: any[]) => {
-            isPending.value = true;
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                isPending.value = false;
-                fn(...args);
-            }, delay);
-        };
-    };
 
     const fetchPreview = async (text: string) => {
         // Cancel any pending request
@@ -161,9 +150,24 @@ export function usePreview(
         }
     };
 
-    const debouncedFetch = debounce((newText: string) => {
+    // useDebounceFn instead of a hand-rolled debounce: the local one leaked its pending timeout
+    // (nothing cleared it on unmount) and left isPending stuck true if the component went away
+    // mid-wait. VueUse ties the timer to the current effect scope.
+    const runFetch = useDebounceFn((newText: string) => {
+        isPending.value = false;
         fetchPreview(newText);
     }, 500);
+
+    const debouncedFetch = (newText: string) => {
+        isPending.value = true;
+        runFetch(newText);
+    };
+
+    // The in-flight request outlived the component too: it was only aborted by the *next* call.
+    onScopeDispose(() => {
+        abortController?.abort();
+        abortController = null;
+    });
 
     // Watchers
     watch(wikitextSource, (newVal) => {

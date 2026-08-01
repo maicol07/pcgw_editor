@@ -19,6 +19,11 @@ const emit = defineEmits<Emits>();
 
 const editorContainer = ref<HTMLDivElement | null>(null);
 let editorView: EditorView | null = null;
+// Held in the setup scope, not on the EditorView. It used to be stashed as
+// editorView._themeObserver, but a theme change replaces editorView with a fresh instance that has
+// no such property — so onUnmounted read undefined, skipped disconnect(), and the observer stayed
+// attached to <html> spawning orphan editors for the rest of the session.
+let themeObserver: MutationObserver | null = null;
 
 // Track if we're updating from external source to prevent loop
 let isExternalUpdate = false;
@@ -76,7 +81,7 @@ onMounted(() => {
     });
 
     // Watch for dark mode changes
-    const observer = new MutationObserver(() => {
+    themeObserver = new MutationObserver(() => {
         const wasDark = isDark.value;
         checkDarkMode();
         
@@ -117,13 +122,10 @@ onMounted(() => {
         }
     });
 
-    observer.observe(document.documentElement, {
+    themeObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['class'],
     });
-
-    // Store observer for cleanup
-    (editorView as any)._themeObserver = observer;
 });
 
 // Watch for external changes to modelValue
@@ -145,13 +147,11 @@ watch(() => props.modelValue, (newValue) => {
 });
 
 onUnmounted(() => {
-    if (editorView) {
-        const observer = (editorView as any)._themeObserver;
-        if (observer) {
-            observer.disconnect();
-        }
-        editorView.destroy();
-    }
+    // Unconditional: the observer must go even if editorView was replaced or never created.
+    themeObserver?.disconnect();
+    themeObserver = null;
+    editorView?.destroy();
+    editorView = null;
 });
 </script>
 

@@ -25,6 +25,14 @@ function loadGis(): Promise<void> {
 
 const TOKEN_KEY = 'pcgw-gdrive-token'; // {token, expiry}; access tokens are short-lived (~1h)
 
+/** Thrown when the remote blob moved on since our last read (Drive answered 412 to If-Match). */
+export class PreconditionFailedError extends Error {
+    constructor() {
+        super('Remote sync data changed since it was last read');
+        this.name = 'PreconditionFailedError';
+    }
+}
+
 // The storage backend for the encrypted sync blob. If a second backend is ever needed,
 // extract an interface then — not before.
 class GoogleDriveProvider {
@@ -33,6 +41,9 @@ class GoogleDriveProvider {
     private tokenExpiry = 0;
     private fileId: string | null = null; // re-located each session; not persisted
     private tokenPromise: Promise<string> | null = null;
+    // Drive's revision of the blob we last read. Sent back as If-Match on write so a concurrent
+    // edit from another device is rejected with 412 instead of being silently overwritten.
+    private headRevisionId: string | null = null;
 
     constructor() {
         try {
@@ -108,36 +119,52 @@ class GoogleDriveProvider {
         }
     }
 
+    /**
+     * Single place that talks to Drive. Retries once on 401 after forcing a fresh token, which is
+     * what the two copies of this logic in readBlob/writeBlob used to do — except writeBlob built
+     * its URL and body *before* the retry, so a re-locate that discovered the file mid-retry still
+     * POSTed to the "create" endpoint and produced a duplicate.
+     *
+     * `build` is therefore a callback: it is re-evaluated after the token refresh, so the retried
+     * request reflects the current fileId.
+     */
+    private async authedFetch(build: (token: string) => { url: string; init?: RequestInit }): Promise<Response> {
+        let token = await this.ensureToken();
+        const first = build(token);
+        let res = await fetch(first.url, first.init);
+        if (res.status !== 401) return res;
+
+        this.accessToken = '';
+        this.tokenExpiry = 0;
+        token = await this.ensureToken();
+        const retry = build(token);
+        return fetch(retry.url, retry.init);
+    }
+
     private async locate(token: string): Promise<void> {
         const q = encodeURIComponent(`name='${FILE_NAME}'`);
         const res = await fetch(
-            `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`,
+            `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,headRevisionId)`,
             { headers: { Authorization: `Bearer ${token}` } },
         );
         if (!res.ok) throw new Error(`Drive list failed: ${res.status}`);
         const data = await res.json();
         this.fileId = data.files?.[0]?.id ?? null;
+        this.headRevisionId = data.files?.[0]?.headRevisionId ?? null;
     }
 
     async readBlob(): Promise<string | null> {
-        let token = await this.ensureToken();
-        if (this.fileId === null) await this.locate(token);
+        if (this.fileId === null) await this.locate(await this.ensureToken());
         if (!this.fileId) return null;
-        let res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 401) {
-            this.accessToken = '';
-            this.tokenExpiry = 0;
-            token = await this.ensureToken();
-            if (this.fileId === null) await this.locate(token);
-            if (!this.fileId) return null;
-            res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-        }
+
+        const res = await this.authedFetch((token) => ({
+            url: `https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`,
+            init: { headers: { Authorization: `Bearer ${token}` } },
+        }));
+
         if (res.status === 404) {
             this.fileId = null;
+            this.headRevisionId = null;
             return null;
         }
         if (!res.ok) throw new Error(`Drive download failed: ${res.status}`);
@@ -145,44 +172,48 @@ class GoogleDriveProvider {
     }
 
     async writeBlob(data: string): Promise<void> {
-        let token = await this.ensureToken();
-        if (this.fileId === null) await this.locate(token); // avoid creating duplicate files
-        const metadata = this.fileId ? {} : { name: FILE_NAME, parents: ['appDataFolder'] };
-        const body =
-            `--${BOUNDARY}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+        if (this.fileId === null) await this.locate(await this.ensureToken()); // avoid duplicate files
+
+        const body = (fileId: string | null) =>
+            `--${BOUNDARY}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+            `${JSON.stringify(fileId ? {} : { name: FILE_NAME, parents: ['appDataFolder'] })}\r\n` +
             `--${BOUNDARY}\r\nContent-Type: application/octet-stream\r\n\r\n${data}\r\n` +
             `--${BOUNDARY}--`;
-        const url = this.fileId
-            ? `https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=multipart&fields=id`
-            : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
-        let res = await fetch(url, {
+
+        const res = await this.authedFetch((token) => ({
             // ponytail: Drive's upload endpoint CORS rejects PATCH preflight; POST + override is the supported path
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': `multipart/related; boundary=${BOUNDARY}`,
-                ...(this.fileId ? { 'X-HTTP-Method-Override': 'PATCH' } : {}),
-            },
-            body,
-        });
-        if (res.status === 401) {
-            this.accessToken = '';
-            this.tokenExpiry = 0;
-            token = await this.ensureToken();
-            if (this.fileId === null) await this.locate(token);
-            res = await fetch(url, {
+            url: this.fileId
+                ? `https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=multipart&fields=id,headRevisionId`
+                : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,headRevisionId`,
+            init: {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': `multipart/related; boundary=${BOUNDARY}`,
                     ...(this.fileId ? { 'X-HTTP-Method-Override': 'PATCH' } : {}),
+                    // Reject the write if another device has published a newer revision since our
+                    // last read. Without this, sync was a blind last-write-wins over the whole
+                    // snapshot: two devices editing in parallel silently discarded each other.
+                    ...(this.fileId && this.headRevisionId ? { 'If-Match': this.headRevisionId } : {}),
                 },
-                body,
-            });
+                body: body(this.fileId),
+            },
+        }));
+
+        if (res.status === 412) {
+            // Stale. Clear fileId as well as the revision: readBlob only refreshes headRevisionId
+            // via locate(), so keeping the id would make the next read leave the revision null and
+            // the following write would go out with no If-Match at all — silently disabling the
+            // guard exactly when it just fired. locate() finds the file by name, so this cannot
+            // create a duplicate.
+            this.fileId = null;
+            this.headRevisionId = null;
+            throw new PreconditionFailedError();
         }
         if (!res.ok) throw new Error(`Drive upload failed: ${res.status}`);
         const out = await res.json();
         if (out.id) this.fileId = out.id;
+        this.headRevisionId = out.headRevisionId ?? null;
     }
 
     disconnect(): void {
