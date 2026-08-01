@@ -14,6 +14,10 @@ dist
 dist-ssr
 *.local
 
+# Build artefacts
+*.tsbuildinfo
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -38,8 +42,9 @@ dist/
 *.temp
 overclocked_skin_temp/
 
-# Test files
+# Ad-hoc scratch test scripts (real tests live in tests/ and run under vitest)
 test_*.js
+test-*.js
 
 # OS files
 Thumbs.db
