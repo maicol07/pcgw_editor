@@ -1,10 +1,21 @@
 import { renderInlineToken, renderMmList, renderInlineMarkup, splitArgs } from './wikiRender';
+import { sanitizeEditorHtml } from './sanitize';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/**
+ * Encodes wikitext for a `data-wikitext` attribute.
+ *
+ * encodeURIComponent leaves apostrophes untouched, so a source containing ''' or '' used to be
+ * rewritten by the bold/italic regexes further down wikitextToHtml() — which run over the whole
+ * string, attribute values included. That silently corrupted the round-trip: the recovered
+ * wikitext came back with literal <strong>/<em> tags in place of the original markup.
+ */
+const encWt = (s: string) => encodeURIComponent(s).replace(/'/g, '%27');
+
 /** Wrap rendered HTML in an atomic, editable-via-dialog inline chip carrying its source. */
 const chip = (wt: string, inner: string) =>
-    `<span class="wiki-token" contenteditable="false" data-wikitext="${encodeURIComponent(wt)}">${inner}</span>`;
+    `<span class="wiki-token" contenteditable="false" data-wikitext="${encWt(wt)}">${inner}</span>`;
 
 /**
  * Replace every top-level `{{Name|…}}` whose name matches `nameRe`, using balanced brace
@@ -62,7 +73,7 @@ const renderFixbox = (full: string): string => {
         refHtml = `<sup class="reference">${renderInlineToken(innerRef) ?? esc(innerRef)}</sup>`;
     }
 
-    let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encodeURIComponent(full)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
+    let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encWt(full)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
     if (collapsed) {
         htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
     }
@@ -83,7 +94,7 @@ export const wikitextToHtml = (wikitext: string): string => {
 
     // {{mm}} "more info" runs -> block embed (verbatim source preserved in data-wikitext)
     html = html.replace(/(?:\{\{\s*mm\s*\}\}[^\n{]*)+/gi, (match) =>
-        `<div class="wiki-mm" contenteditable="false" data-wikitext="${encodeURIComponent(match.trim())}"><dl>${renderMmList(match)}</dl></div>`);
+        `<div class="wiki-mm" contenteditable="false" data-wikitext="${encWt(match.trim())}"><dl>${renderMmList(match)}</dl></div>`);
 
     // <ref>…</ref> citations -> inline chip
     html = html.replace(/<ref(?:\s+name="[^"]*")?>[\s\S]*?<\/ref>/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));
@@ -172,7 +183,9 @@ export const wikitextToHtml = (wikitext: string): string => {
         }
     }).join('');
 
-    return html;
+    // The string above mixes generated markup with raw wikitext, and callers feed it straight
+    // to innerHTML — so it is sanitized here rather than at each of the ~20 interpolation sites.
+    return sanitizeEditorHtml(html);
 };
 
 export const htmlToWikitext = (html: string): string => {

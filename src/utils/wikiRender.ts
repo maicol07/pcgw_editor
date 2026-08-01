@@ -48,10 +48,14 @@ const MORE_INFO_ICON = '<div title="More information" class="svg-icon svg-16 mor
 
 /** Render an external link `[url text]` or plain text fragment to HTML. */
 export const renderInlineFragment = (text: string): string => {
-    return text.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g,
-        (_m, url, label) => `<a rel="nofollow" class="external text" href="${esc(url)}">${esc(label)}</a>`)
+    // Escape FIRST. Escaping only inside the link replacements would leave link-free text
+    // (the common case) to pass through raw into innerHTML. Safe up front because esc()
+    // only touches & < > " while the link syntax below keys off [ ] and whitespace.
+    return esc(text)
+        .replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g,
+            (_m, url, label) => `<a rel="nofollow" class="external text" href="${url}">${label}</a>`)
         .replace(/\[(https?:\/\/[^\s\]]+)\]/g,
-            (_m, url) => `<a rel="nofollow" class="external text" href="${esc(url)}">${esc(url)}</a>`);
+            (_m, url) => `<a rel="nofollow" class="external text" href="${url}">${url}</a>`);
 };
 
 /**
@@ -60,7 +64,10 @@ export const renderInlineFragment = (text: string): string => {
  * that is rendered out of the main converter pipeline.
  */
 export const renderInlineMarkup = (text: string): string => {
-    let h = text;
+    // Escape FIRST: the output goes straight into innerHTML, and wikitext is attacker-controlled
+    // (anyone can edit a PCGW page). Safe to do up front because esc() only touches & < > "
+    // while the wiki markup below keys off ' [ ] |.
+    let h = esc(text);
     h = h.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
     h = h.replace(/''(.*?)''/g, '<em>$1</em>');
     h = h.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]+)\]/g, '<a href="$1" rel="noopener noreferrer" target="_blank">$2</a>');

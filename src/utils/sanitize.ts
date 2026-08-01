@@ -10,3 +10,18 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
 
 /** Sanitizes untrusted HTML before any v-html / innerHTML injection. */
 export const sanitizeHtml = (html: string): string => DOMPurify.sanitize(html);
+
+/**
+ * Sanitizer for the WYSIWYG editor's wikitext->HTML output.
+ *
+ * wikitextToHtml() interleaves generated markup with attacker-controlled wikitext (any wiki
+ * user can edit a page), so the result is HTML of mixed provenance and must be sanitized
+ * before reaching innerHTML. The editor's round-trip depends on `data-wikitext` and
+ * `contenteditable` surviving — a bare DOMPurify.sanitize() call would drop them and silently
+ * break wikitext recovery, so both are allowlisted explicitly here.
+ */
+export const sanitizeEditorHtml = (html: string): string =>
+    DOMPurify.sanitize(html, {
+        ADD_ATTR: ['data-wikitext', 'contenteditable', 'target'],
+        ADD_TAGS: ['dl', 'dd'],
+    });

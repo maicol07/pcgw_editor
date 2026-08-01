@@ -48,6 +48,24 @@ import PrimeVue from 'openvue/config';
 import Aura from '@openvue/themes/aura';
 import Tooltip from 'openvue/tooltip';
 
+// jsdom implements no matchMedia; PrimeVue/openvue components call it on mount.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+    Object.defineProperty(window, 'matchMedia', {
+        value: (query: string) => ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            addListener: vi.fn(),    // deprecated, still used by some libs
+            removeListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        }),
+        configurable: true,
+        writable: true,
+    });
+}
+
 // Mock localStorage if it's broken in the environment
 if (typeof window !== 'undefined') {
     if (!window.localStorage || typeof window.localStorage.getItem !== 'function') {

@@ -10,7 +10,10 @@ export default defineConfig({
         },
     },
     test: {
-        environment: 'happy-dom',
+        // jsdom, not happy-dom: under happy-dom DOMPurify silently drops the first top-level
+        // element, so every sanitization assertion passed vacuously and the XSS-hardening
+        // tests could not be written at all. Verified against a real browser.
+        environment: 'jsdom',
         globals: true,
         include: ['tests/**/*.test.ts'],
         setupFiles: ['./tests/setup.ts'],
