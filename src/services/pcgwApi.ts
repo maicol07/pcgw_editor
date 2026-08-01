@@ -4,6 +4,7 @@
  */
 import { useStorage } from '@vueuse/core';
 import { getDirectApiUrl, getApiHeaders, apiFetch, getProxiedImageUrl } from '../config/api';
+import { getRevisionText, putRevisionText } from '../db';
 const CACHE_KEY = 'pcgw_api_cache_v2';
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -447,6 +448,9 @@ class PCGWApiService {
 
             const content = rawContent.replace(/\r\n/g, '\n');
             this.setCache(cacheKey, [content, revid.toString()]);
+            // This response *is* the text of `revid`: keep it, so when this revision later becomes the
+            // merge ancestor there is nothing left to fetch.
+            void putRevisionText(revid, content);
             return { content, revid };
         } catch (error) {
             console.error(`Failed to fetch wikitext for ${title}:`, error);
@@ -457,9 +461,12 @@ class PCGWApiService {
     // Wikitext of one specific revision — the true merge ancestor. Revisions are immutable, so this
     // is always cache-safe.
     async fetchRevisionWikitext(revid: number): Promise<string | null> {
-        const cacheKey = `wikitext:rev:${revid}`;
-        const cached = this.getFromCache(cacheKey);
-        if (cached && cached.length >= 1) return cached[0];
+        // Revisions are immutable, so this is cached in IndexedDB without expiry — after the first
+        // look-up (usually already primed by the fetchWikitext that synced the page) the merge needs
+        // no network at all. The generic localStorage cache is wrong here: it expires in 24h and these
+        // strings are hundreds of KB.
+        const stored = await getRevisionText(revid);
+        if (stored !== null) return stored;
 
         try {
             const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { slots?: { main?: { '*'?: string } } }[] }> } }>({
@@ -475,7 +482,7 @@ class PCGWApiService {
             if (rawContent === undefined) return null;
 
             const content = rawContent.replace(/\r\n/g, '\n');
-            this.setCache(cacheKey, [content]);
+            await putRevisionText(revid, content);
             return content;
         } catch (error) {
             console.error(`Failed to fetch wikitext for revision ${revid}:`, error);

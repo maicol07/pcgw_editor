@@ -9,7 +9,7 @@ import {
     Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check,
 } from '@lucide/vue';
 import {
-    computeHunks, defaultChoices, smartChoices, buildResult, findConflicts,
+    computeHunks, defaultChoices, smartChoices, buildResult, findConflicts, hunkText, wordDiff,
     type Hunk, type Choice,
 } from './merge3';
 import { resolveMerge } from '../../../services/ai/AIService';
@@ -33,7 +33,8 @@ let choices: Choice[] = [];
 let ranges: { from: number; to: number; hunk: number }[] = []; // char ranges of every hunk in the result
 let resultText = ''; // merged text as last derived from the model
 const expanded = new Set<number>(); // stable hunks the user expanded
-let decided = new Set<number>(); // hunks the user explicitly acted on — nothing is preselected
+// Nothing is preselected: a block is "decided" exactly when it no longer holds the ancestor by default.
+const isDecided = (i: number) => choices[i] !== 'unresolved';
 const collapseOn = ref(true);
 const aiLoading = ref(false);
 const aiError = ref('');
@@ -49,12 +50,12 @@ const bodyHeight = ref(0); // gutter SVG viewBox height, in the same px space as
 const GUTTER_W = 56; // must match the gutter columns' w-14
 
 // ---- model undo/redo (actions are state changes, not just text) ----
-type Snap = { hunks: Hunk[]; choices: Choice[]; decided: number[] };
+type Snap = { hunks: Hunk[]; choices: Choice[] };
 let past: Snap[] = [], futureStk: Snap[] = [];
 const canUndo = ref(false), canRedo = ref(false);
 const syncHist = () => { canUndo.value = past.length > 0; canRedo.value = futureStk.length > 0; };
-const snap = (): Snap => ({ hunks: hunks.slice(), choices: choices.slice(), decided: [...decided] });
-const restore = (s: Snap) => { hunks = s.hunks; choices = s.choices; decided = new Set(s.decided); };
+const snap = (): Snap => ({ hunks: hunks.slice(), choices: choices.slice() });
+const restore = (s: Snap) => { hunks = s.hunks; choices = s.choices; };
 const pushUndo = () => { past.push(snap()); futureStk = []; syncHist(); };
 function undo() {
     if (!past.length) return false;
@@ -109,7 +110,23 @@ function foldRange(doc: any, fromLine: number, toLine: number, hunk: number): Ra
 // Highlight class for a hunk: colour by type, dimmed + dashed outline once the user has decided it.
 function hunkClass(h: Hunk, i: number): string {
     const cls = h.type === 'conflict' ? 'cm-conflict' : h.type === 'left' ? 'cm-changed-local' : 'cm-changed-online';
-    return decided.has(i) ? `${cls} cm-resolved` : cls;
+    return isDecided(i) ? `${cls} cm-resolved` : cls;
+}
+
+// What a hunk reads as in one of the side documents (for a change the other side made, this side
+// still holds the base text).
+function sideText(h: Hunk, side: 'local' | 'online'): string {
+    if (h.type === 'stable') return h.text;
+    if (h.type === 'conflict') return side === 'local' ? h.local : h.online;
+    return h.type === (side === 'local' ? 'left' : 'right') ? (h.type === 'left' ? h.local : h.online) : h.base;
+}
+
+// A side only gets a highlight and controls where it actually differs from the result — otherwise the
+// same change would be offered twice, once per gutter. Exactly one side differs for a settled
+// one-sided change; both do for a pending conflict.
+function differsFromResult(i: number, side: 'local' | 'online'): boolean {
+    const h = hunks[i];
+    return !!h && h.type !== 'stable' && sideText(h, side) !== hunkText(h, choices[i]);
 }
 
 // Is hunk `i` empty in this document? (a deletion has no lines of its own on the side that dropped it)
@@ -144,8 +161,18 @@ function blockLines(state: EditorState, fromLine: number, toLine: number, cls: s
     return out;
 }
 
+// Tint the words that actually changed inside a block: `mine` and `theirs` are the two versions of
+// the same block, `base` is where `mine` starts in its document.
+const wordMark = Decoration.mark({ class: 'cm-word-diff' });
+function wordMarks(mine: string, theirs: string, base: number, docLen: number): Range<Decoration>[] {
+    return wordDiff(mine, theirs).a
+        .filter(([f, t]) => base + t <= docLen && t > f)
+        .map(([f, t]) => wordMark.range(base + f, base + t));
+}
+
 function buildCenterDeco(state: EditorState): DecorationSet {
     const out: Range<Decoration>[] = [];
+    const len = state.doc.length;
     ranges.forEach((r) => {
         const h = hunks[r.hunk];
         if (h.type === 'stable') {
@@ -155,6 +182,10 @@ function buildCenterDeco(state: EditorState): DecorationSet {
         }
         if (r.from === r.to) return; // deletion: nothing to paint, the gutter button marks it
         out.push(...blockLines(state, state.doc.lineAt(r.from).number, state.doc.lineAt(r.to).number, hunkClass(h, r.hunk)));
+        // Compare against whichever side the result no longer matches.
+        const mine = state.doc.sliceString(r.from, r.to);
+        const other = differsFromResult(r.hunk, 'local') ? sideText(h, 'local') : sideText(h, 'online');
+        out.push(...wordMarks(mine, other, r.from, len));
     });
     return Decoration.set(out, true);
 }
@@ -172,9 +203,10 @@ function buildPaneDeco(state: EditorState, side: 'local' | 'online'): Decoration
             }
             return;
         }
-        // Both panes mark every changed block, its own edits and the other side's: what matters to the
-        // reader is "here this pane differs from the result", whichever side caused it. The colour
-        // still says who changed it.
+        // A pane marks a block only where it differs from the result — the colour still says who
+        // changed it, but the same change is never offered from both sides at once.
+        if (!differsFromResult(i, side)) return;
+
         let fromLine = from0 + 1;
         let toLine = Math.min(to0, lines);
 
@@ -182,9 +214,13 @@ function buildPaneDeco(state: EditorState, side: 'local' | 'online'): Decoration
         if (toLine < fromLine) {
             fromLine = Math.max(1, Math.min(from0 + 1, lines));
             toLine = fromLine;
+            out.push(...blockLines(state, fromLine, toLine, hunkClass(h, i)));
+            return;
         }
 
         out.push(...blockLines(state, fromLine, toLine, hunkClass(h, i)));
+        const from = state.doc.line(fromLine).from;
+        out.push(...wordMarks(state.doc.sliceString(from, state.doc.line(toLine).to), hunkText(h, choices[i]), from, state.doc.length));
     });
     return Decoration.set(out, true);
 }
@@ -198,7 +234,7 @@ let left: EditorView | null = null, center: EditorView | null = null, right: Edi
 // Every changed block needs an explicit decision — nothing is preselected, so nothing is settled
 // until the user says so. That, plus no leftover conflict markers, is what unlocks the merge.
 const emitState = (doc: string) => {
-    unresolvedCount.value = hunks.filter((h, i) => h.type !== 'stable' && !decided.has(i)).length;
+    unresolvedCount.value = hunks.filter((h, i) => h.type !== 'stable' && !isDecided(i)).length;
     yoursCount.value = hunks.filter((h) => h.type === 'left').length;
     theirsCount.value = hunks.filter((h) => h.type === 'right').length;
     conflictCount.value = hunks.filter((h) => h.type === 'conflict').length;
@@ -207,7 +243,7 @@ const emitState = (doc: string) => {
 };
 
 const pendingBlocks = () =>
-    ranges.filter((r) => hunks[r.hunk].type !== 'stable' && !decided.has(r.hunk)).map((r) => r.hunk);
+    ranges.filter((r) => hunks[r.hunk].type !== 'stable' && !isDecided(r.hunk)).map((r) => r.hunk);
 
 function goTo(hunkIdx: number) {
     const range = ranges.find((r) => r.hunk === hunkIdx);
@@ -267,17 +303,21 @@ function recomputeMarkers() {
         if (!mid) continue;
         const base = {
             i: r.hunk, type: h.type, top: mid[0],
-            choice: decided.has(r.hunk) ? choices[r.hunk] : null,
+            choice: isDecided(r.hunk) ? choices[r.hunk] : null,
         };
         if (mid[0] < -40 || mid[0] > bodyH) continue;
-        // Every changed block gets controls in both gutters: the result differs from both sides until
-        // each one is settled, so either side must be reachable. The buttons follow the result block
-        // alone — when the counterpart in a side pane can't be measured (scrolled out, or clamped at a
-        // shorter doc's end) we drop the ribbon, never the buttons.
-        const sideL = left && paneY(left, h.lRange, bodyTop);
-        outL.push({ ...base, link: sideL ? linkPath(sideL, mid) : '' });
-        const sideR = right && paneY(right, h.oRange, bodyTop);
-        outR.push({ ...base, link: sideR ? linkPath(mid, sideR) : '' });
+        // Controls appear on the side(s) the result no longer matches: one gutter for a settled
+        // one-sided change, both for a pending conflict. The buttons follow the result block alone —
+        // when the counterpart in a side pane can't be measured (scrolled out, or clamped at a shorter
+        // doc's end) we drop the ribbon, never the buttons.
+        if (differsFromResult(r.hunk, 'local')) {
+            const side = left && paneY(left, h.lRange, bodyTop);
+            outL.push({ ...base, link: side ? linkPath(side, mid) : '' });
+        }
+        if (differsFromResult(r.hunk, 'online')) {
+            const side = right && paneY(right, h.oRange, bodyTop);
+            outR.push({ ...base, link: side ? linkPath(mid, side) : '' });
+        }
     }
     markersL.value = outL;
     markersR.value = outR;
@@ -318,7 +358,7 @@ function rebuild() {
     emitState(res.text);
 }
 
-function setChoice(idx: number, c: Choice) { pushUndo(); decided.add(idx); choices[idx] = c; rebuild(); }
+function setChoice(idx: number, c: Choice) { pushUndo(); choices[idx] = c; rebuild(); }
 
 // Gutter controls. In both gutters the arrow points into the result and means "use this side's text";
 // X means "drop this side's text" (i.e. take the other one). A block is reachable from either gutter,
@@ -346,16 +386,14 @@ function buttons(type: Hunk['type'], side: 'left' | 'right'): Btn[] {
             { icon: 'X', choice: 'include', tip: yours ? 'Use their change' : 'Use your change' },
         ];
 }
-// A bulk action is an explicit decision on every changed block.
-const markAllDecided = () => hunks.forEach((h, i) => { if (h.type !== 'stable') decided.add(i); });
-function applyAll(map: (h: Hunk) => Choice) { pushUndo(); choices = hunks.map(map); markAllDecided(); rebuild(); }
+// A bulk action decides every changed block at once.
+function applyAll(map: (h: Hunk) => Choice) { pushUndo(); choices = hunks.map(map); rebuild(); }
 const acceptLeft = () => applyAll((h) => (h.type === 'conflict' ? 'left' : h.type === 'right' ? 'discard' : 'include'));
 const acceptRight = () => applyAll((h) => (h.type === 'conflict' ? 'right' : h.type === 'left' ? 'discard' : 'include'));
 // Apply every one-sided change, leaving conflict decisions untouched.
 const acceptBoth = () => {
     pushUndo();
     choices = hunks.map((h, i) => (h.type === 'conflict' ? choices[i] : 'include'));
-    hunks.forEach((h, i) => { if (h.type === 'left' || h.type === 'right') decided.add(i); });
     rebuild();
 };
 // Auto-resolve conflicts only — one-sided decisions the user already made are kept.
@@ -363,7 +401,6 @@ const smartApply = () => {
     pushUndo();
     const smart = smartChoices(hunks);
     choices = hunks.map((h, i) => (h.type === 'conflict' ? smart[i] : choices[i]));
-    hunks.forEach((h, i) => { if (h.type === 'conflict') decided.add(i); });
     rebuild();
 };
 
@@ -378,7 +415,7 @@ async function aiResolve() {
     try {
         const merged = await resolveMerge(props.local, props.base, props.online);
         pushUndo();
-        hunks = []; choices = []; ranges = []; decided.clear(); // AI output isn't model-tracked → resolved
+        hunks = []; choices = []; ranges = []; // AI output isn't model-tracked → nothing left to decide
         center!.dispatch({ changes: { from: 0, to: center!.state.doc.length, insert: merged }, scrollIntoView: false });
         center!.dispatch({ effects: setDeco.of(Decoration.none) });
         markersL.value = []; markersR.value = [];
@@ -402,7 +439,7 @@ function computeModel() {
     const res = buildResult(hunks, choices);
     ranges = res.ranges;
     resultText = res.text;
-    past = []; futureStk = []; expanded.clear(); decided.clear(); syncHist();
+    past = []; futureStk = []; expanded.clear(); syncHist();
     currentConflictIndex.value = -1;
 }
 
@@ -621,6 +658,11 @@ onUnmounted(() => {
 :deep(.cm-conflict) { background-color: color-mix(in srgb, var(--p-red-500) 14%, transparent); }
 :deep(.cm-changed-local) { background-color: color-mix(in srgb, var(--p-blue-500) 12%, transparent); }
 :deep(.cm-changed-online) { background-color: color-mix(in srgb, var(--p-green-500) 12%, transparent); }
+/* the exact words that changed inside a block — syntax colours stay readable underneath */
+:deep(.cm-word-diff) {
+    background-color: color-mix(in srgb, var(--p-primary-400) 30%, transparent);
+    border-radius: 0.15rem;
+}
 /* a settled block keeps a dashed outline so you can still see (and revisit) what you resolved */
 :deep(.cm-resolved) {
     --blk-edge: var(--p-text-muted-color);

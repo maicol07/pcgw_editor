@@ -22,10 +22,6 @@ export type Hunk =
 // Per-hunk resolution. left/right use include|discard; conflict uses the rest.
 export type Choice = 'include' | 'discard' | 'left' | 'right' | 'both' | 'base' | 'unresolved';
 
-export function conflictMarker(local: string, online: string): string {
-    return `${HEAD} LOCAL\n${local}\n${SEP}\n${online}\n${TAIL} ONLINE`;
-}
-
 // A change of one side against the base: base lines [bs, be) replaced by `lines`.
 type Diff = { bs: number; be: number; lines: string[] };
 
@@ -108,9 +104,10 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
     return hunks;
 }
 
-// One-sided changes apply automatically (JetBrains-style); only conflicts need a decision.
+// Nothing is applied up front: the result starts as the common ancestor and each block enters it only
+// when the user picks a side.
 export function defaultChoices(hunks: Hunk[]): Choice[] {
-    return hunks.map((h) => (h.type === 'conflict' ? 'unresolved' : 'include'));
+    return hunks.map((h) => (h.type === 'stable' ? 'include' : 'unresolved'));
 }
 
 // Heuristic auto-resolution: keep both sides of a conflict, preferring the non-empty one.
@@ -123,19 +120,19 @@ export function smartChoices(hunks: Hunk[]): Choice[] {
     });
 }
 
-function hunkText(h: Hunk, c: Choice): string {
+// The text a hunk contributes to the merged result under a given choice. Anything still undecided
+// contributes the ancestor's text, so the result reads as "the old page plus what you have accepted".
+export function hunkText(h: Hunk, c: Choice): string {
     switch (h.type) {
         case 'stable': return h.text;
-        // unresolved one-sided changes preview as included (the change applied).
-        case 'left': return c === 'discard' ? h.base : h.local;
-        case 'right': return c === 'discard' ? h.base : h.online;
+        case 'left': return c === 'include' ? h.local : h.base;
+        case 'right': return c === 'include' ? h.online : h.base;
         case 'conflict':
             switch (c) {
                 case 'left': return h.local;
                 case 'right': return h.online;
                 case 'both': return `${h.local}\n${h.online}`;
-                case 'base': return h.base;
-                default: return conflictMarker(h.local, h.online);
+                default: return h.base;
             }
     }
 }
@@ -163,6 +160,36 @@ export function buildResult(hunks: Hunk[], choices: Choice[]): {
         ranges.push({ from, to: text.length, hunk: i });
     });
     return { text, ranges };
+}
+
+// Split into words, punctuation and whitespace runs, keeping each token's char offsets.
+function tokenize(s: string): { text: string; from: number; to: number }[] {
+    const out: { text: string; from: number; to: number }[] = [];
+    for (const m of s.matchAll(/\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g)) {
+        out.push({ text: m[0], from: m.index!, to: m.index! + m[0].length });
+    }
+    return out;
+}
+
+// Char ranges that differ between two versions of the same block, on each side. Used to tint the
+// exact words that changed inside an already highlighted block.
+const WORD_DIFF_LIMIT = 20000; // chars — beyond this the token diff isn't worth the work
+export function wordDiff(a: string, b: string): { a: [number, number][]; b: [number, number][] } {
+    const empty = { a: [] as [number, number][], b: [] as [number, number][] };
+    if (a === b || a.length > WORD_DIFF_LIMIT || b.length > WORD_DIFF_LIMIT) return empty;
+
+    const ta = tokenize(a), tb = tokenize(b);
+    const out = { a: [] as [number, number][], b: [] as [number, number][] };
+    const span = (toks: typeof ta, start: number, len: number): [number, number] | null =>
+        len > 0 ? [toks[start].from, toks[start + len - 1].to] : null;
+
+    for (const d of diffIndices(ta.map((t) => t.text), tb.map((t) => t.text)) as any[]) {
+        const ra = span(ta, d.buffer1[0], d.buffer1[1]);
+        const rb = span(tb, d.buffer2[0], d.buffer2[1]);
+        if (ra) out.a.push(ra);
+        if (rb) out.b.push(rb);
+    }
+    return out;
 }
 
 // 0-based line indices in `side` that differ from `base` (added or modified lines).

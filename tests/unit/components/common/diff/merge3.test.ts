@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult,
+    findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult, wordDiff,
 } from '@/components/common/diff/merge3';
 
 const base = 'line1\nbase\nline3';
@@ -22,12 +22,16 @@ describe('hunk model', () => {
         expect(conflict.online).toBe('THEIRS');
     });
 
-    it('default build auto-merges one-sided changes and leaves conflicts marked', () => {
+    it('starts from the ancestor: nothing is applied until a side is picked', () => {
         const hunks = computeHunks('LOCAL\nbase\nline3', base, 'line1\nbase\nONLINE');
-        const { text } = buildResult(hunks, defaultChoices(hunks));
-        expect(text).toContain('LOCAL');
-        expect(text).toContain('ONLINE');
-        expect(findConflicts(text)).toHaveLength(0);
+        const choices = defaultChoices(hunks);
+        expect(buildResult(hunks, choices).text).toBe(base);
+
+        hunks.forEach((h, i) => { if (h.type === 'left') choices[i] = 'include'; });
+        expect(buildResult(hunks, choices).text).toBe('LOCAL\nbase\nline3');
+
+        hunks.forEach((h, i) => { if (h.type === 'right') choices[i] = 'include'; });
+        expect(buildResult(hunks, choices).text).toBe('LOCAL\nbase\nONLINE');
     });
 
     it('per-hunk choices pick a side and resolve the conflict', () => {
@@ -48,29 +52,33 @@ describe('hunk model', () => {
         expect(buildResult(hunks, choices).text).toBe(base);
     });
 
-    it('conflicts start unresolved and render markers until a side is picked', () => {
+    it('an undecided conflict shows the ancestor, never conflict markers', () => {
         const hunks = computeHunks('line1\nMINE\nline3', base, 'line1\nTHEIRS\nline3');
         const choices = defaultChoices(hunks);
         const ci = hunks.findIndex((h) => h.type === 'conflict');
         expect(choices[ci]).toBe('unresolved');
-        expect(findConflicts(buildResult(hunks, choices).text)).toHaveLength(1);
-        choices[ci] = 'left';
-        expect(findConflicts(buildResult(hunks, choices).text)).toHaveLength(0);
+        const { text } = buildResult(hunks, choices);
+        expect(text).toBe(base);
+        expect(findConflicts(text)).toHaveLength(0);
     });
 
-    it('only conflicts start unresolved — one-sided changes are pre-applied', () => {
+    it('every changed block starts undecided', () => {
         const hunks = computeHunks('LOCAL\nbase\nline3', base, 'line1\nbase\nONLINE');
         const choices = defaultChoices(hunks);
-        hunks.forEach((h, i) => expect(choices[i]).toBe(h.type === 'conflict' ? 'unresolved' : 'include'));
+        hunks.forEach((h, i) => expect(choices[i]).toBe(h.type === 'stable' ? 'include' : 'unresolved'));
     });
 
-    it('keeps a zero-width range for a deletion so the gutter can anchor to it', () => {
+    it('keeps a zero-width range for an accepted deletion so the gutter can anchor to it', () => {
         const local = 'line1\nline3'; // deleted the middle line
         const hunks = computeHunks(local, base, base);
         const li = hunks.findIndex((h) => h.type === 'left');
         expect(li).toBeGreaterThanOrEqual(0);
 
-        const { text, ranges } = buildResult(hunks, defaultChoices(hunks));
+        const choices = defaultChoices(hunks);
+        expect(buildResult(hunks, choices).text).toBe(base); // undecided: the line is still there
+
+        choices[li] = 'include';
+        const { text, ranges } = buildResult(hunks, choices);
         expect(text).toBe(local); // the empty piece must not inject a blank line
         expect(ranges).toHaveLength(hunks.length);
         const deleted = ranges.find((r) => r.hunk === li)!;
@@ -83,6 +91,30 @@ describe('hunk model', () => {
         expect(text).toContain('MINE');
         expect(text).toContain('THEIRS');
         expect(findConflicts(text)).toHaveLength(0);
+    });
+});
+
+describe('word diff', () => {
+    const slice = (s: string, ranges: [number, number][]) => ranges.map(([f, t]) => s.slice(f, t));
+
+    it('marks only the words that changed, on both sides', () => {
+        const a = 'the quick brown fox';
+        const b = 'the slow brown fox';
+        const d = wordDiff(a, b);
+        expect(slice(a, d.a)).toEqual(['quick']);
+        expect(slice(b, d.b)).toEqual(['slow']);
+    });
+
+    it('reports an insertion on one side only', () => {
+        const a = '{{disambig|1=x}}';
+        const b = '{{stub}}\n{{disambig|1=x}}';
+        const d = wordDiff(a, b);
+        expect(d.a).toEqual([]);
+        expect(slice(b, d.b).join('')).toContain('stub');
+    });
+
+    it('is empty for identical text', () => {
+        expect(wordDiff('same text', 'same text')).toEqual({ a: [], b: [] });
     });
 });
 
