@@ -31,6 +31,7 @@ class GoogleDriveProvider implements SyncProvider {
     private accessToken = '';
     private tokenExpiry = 0;
     private fileId: string | null = null; // re-located each session; not persisted
+    private tokenPromise: Promise<string> | null = null;
 
     constructor() {
         try {
@@ -55,8 +56,10 @@ class GoogleDriveProvider implements SyncProvider {
     }
 
     private requestToken(prompt: '' | 'consent'): Promise<string> {
-        return new Promise((resolve, reject) => {
+        if (this.tokenPromise) return this.tokenPromise;
+        this.tokenPromise = new Promise((resolve, reject) => {
             this.tokenClient.callback = (resp: any) => {
+                this.tokenPromise = null;
                 if (resp.error) return reject(new Error(resp.error));
                 this.accessToken = resp.access_token;
                 this.tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600_000) - 60_000;
@@ -64,14 +67,17 @@ class GoogleDriveProvider implements SyncProvider {
                 resolve(this.accessToken);
             };
             this.tokenClient.error_callback = (err: any) => {
+                this.tokenPromise = null;
                 reject(new Error(err?.message || err?.type || 'Token request failed'));
             };
             try {
                 this.tokenClient.requestAccessToken({ prompt });
             } catch (e) {
+                this.tokenPromise = null;
                 reject(e);
             }
         });
+        return this.tokenPromise;
     }
 
     async connect(): Promise<void> {
@@ -84,7 +90,12 @@ class GoogleDriveProvider implements SyncProvider {
         if (this.accessToken && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
-        throw new Error('Token expired');
+        try {
+            // Attempt silent token refresh without interactive prompt
+            return await this.requestToken('');
+        } catch {
+            throw new Error('Token expired');
+        }
     }
 
     async reconnect(): Promise<void> {
@@ -108,12 +119,22 @@ class GoogleDriveProvider implements SyncProvider {
     }
 
     async readBlob(): Promise<string | null> {
-        const token = await this.ensureToken();
+        let token = await this.ensureToken();
         if (this.fileId === null) await this.locate(token);
         if (!this.fileId) return null;
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`, {
+        let res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`, {
             headers: { Authorization: `Bearer ${token}` },
         });
+        if (res.status === 401) {
+            this.accessToken = '';
+            this.tokenExpiry = 0;
+            token = await this.ensureToken();
+            if (this.fileId === null) await this.locate(token);
+            if (!this.fileId) return null;
+            res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        }
         if (res.status === 404) {
             this.fileId = null;
             return null;
@@ -123,7 +144,7 @@ class GoogleDriveProvider implements SyncProvider {
     }
 
     async writeBlob(data: string): Promise<void> {
-        const token = await this.ensureToken();
+        let token = await this.ensureToken();
         if (this.fileId === null) await this.locate(token); // avoid creating duplicate files
         const metadata = this.fileId ? {} : { name: FILE_NAME, parents: ['appDataFolder'] };
         const body =
@@ -133,7 +154,7 @@ class GoogleDriveProvider implements SyncProvider {
         const url = this.fileId
             ? `https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=multipart&fields=id`
             : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
-        const res = await fetch(url, {
+        let res = await fetch(url, {
             // ponytail: Drive's upload endpoint CORS rejects PATCH preflight; POST + override is the supported path
             method: 'POST',
             headers: {
@@ -143,6 +164,21 @@ class GoogleDriveProvider implements SyncProvider {
             },
             body,
         });
+        if (res.status === 401) {
+            this.accessToken = '';
+            this.tokenExpiry = 0;
+            token = await this.ensureToken();
+            if (this.fileId === null) await this.locate(token);
+            res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': `multipart/related; boundary=${BOUNDARY}`,
+                    ...(this.fileId ? { 'X-HTTP-Method-Override': 'PATCH' } : {}),
+                },
+                body,
+            });
+        }
         if (!res.ok) throw new Error(`Drive upload failed: ${res.status}`);
         const out = await res.json();
         if (out.id) this.fileId = out.id;
