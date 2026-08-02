@@ -5,6 +5,20 @@ packages:
 overrides:
   browserslist: 4.28.4
 
+# @bhsd/codemirror-css-color-picker (pulled in by @bhsd/codemirror-wikitext) imports @lezer/common
+# but declares it in neither dependencies nor peerDependencies. Under pnpm's isolated node_modules
+# it therefore cannot resolve it, and `vite build` fails with:
+#   Rolldown failed to resolve import "@lezer/common" from .../codemirror-css-color-picker/dist/css.js
+#
+# This is declared here rather than as a root dependency on purpose: we do not import @lezer/common
+# ourselves, so a root entry looks unused and invites removal — which is exactly how this broke.
+# It only ever appeared to work because a stale copy was left in pnpm's hoisted fallback directory;
+# a clean install (CI, Vercel) has no such copy. Verify dependency removals with a fresh install.
+packageExtensions:
+  '@bhsd/codemirror-css-color-picker':
+    dependencies:
+      '@lezer/common': ^1.5.2
+
 allowBuilds:
   '@google/genai': true
   '@parcel/watcher': true

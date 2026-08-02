@@ -7,6 +7,8 @@ settings:
 overrides:
   browserslist: 4.28.4
 
+packageExtensionsChecksum: sha256-7mms93WW7Ac18BibVBRwaV+WzWarss7PA3je6XLlfGg=
+
 importers:
 
   .:
@@ -4690,6 +4692,7 @@ snapshots:
       '@bhsd/common': 4.0.1(culori@4.0.2)
       '@codemirror/language': 6.12.4
       '@codemirror/view': 6.43.7
+      '@lezer/common': 1.5.2
       culori: 4.0.2
 
   '@bhsd/codemirror-wikitext@0.10.1(@codemirror/autocomplete@6.20.3)(@codemirror/commands@6.10.4)(@codemirror/language@6.12.4)(@codemirror/lint@6.9.7)(@codemirror/search@6.7.1)(@codemirror/state@6.7.1)(@codemirror/view@6.43.7)(ajv@8.20.0)(culori@4.0.2)(stylelint-config-recommended@18.0.0(stylelint@17.14.1(supports-color@10.2.2)(typescript@5.9.3)))(stylelint@17.14.1(supports-color@10.2.2)(typescript@5.9.3))':
