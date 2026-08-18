@@ -5,9 +5,13 @@ import DynamicField from '../../../src/components/schema/DynamicField.vue';
 import InputText from 'openvue/inputtext';
 import Tooltip from 'openvue/tooltip';
 
-vi.mock('@lucide/vue', () => ({
-    Info: { template: '<span class="icon-info"></span>' }
-}));
+vi.mock('@lucide/vue', async (importOriginal) => {
+    const actual = await importOriginal<Record<string, any>>();
+    return {
+        ...actual,
+        Info: { template: '<span class="icon-info"></span>' }
+    };
+});
 
 describe('DynamicField.vue - IGDB Pre-fill and Disable Logic', () => {
     const fieldDef = {
