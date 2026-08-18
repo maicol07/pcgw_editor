@@ -43,6 +43,9 @@ importers:
       '@lucide/vue':
         specifier: ^1.0.0
         version: 1.28.0(vue@3.5.40(typescript@5.9.3))
+      '@mkody/vue3-simple-icons':
+        specifier: ^16.28.0
+        version: 16.28.0(typescript@5.9.3)
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.0(@types/node@26.1.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0))
@@ -1001,6 +1004,10 @@ packages:
 
   '@marijn/find-cluster-break@1.0.3':
     resolution: {integrity: sha512-FY+MKLBoTsLNJF/eLWaOsXGdz6uh3Iu1axjPf6TUq92IYumcTcXWHoS747JARLkcdlJ/Waiaxc5wQfFO8jC6NA==}
+
+  '@mkody/vue3-simple-icons@16.28.0':
+    resolution: {integrity: sha512-JcBefumM1sVT9VrylJjYOxN3WGV0mP/CSVXB3mGMOM8T+JuuTyVyAZRKQ1Kqf8O/nlY6yooZZnFPRNbrK5/uRw==}
+    engines: {node: '>=20.0.0', pnpm: '>=10'}
 
   '@napi-rs/wasm-runtime@1.2.1':
     resolution: {integrity: sha512-KjZdi8Q1wh89gsVmghvbrMgWl6ZWmRmHV6wjB7/g4Zf0dyO+hH3neZUtuDNPO00qq5YE5RITVWvrIZKRaAmzGQ==}
@@ -4976,6 +4983,12 @@ snapshots:
       vue: 3.5.40(typescript@5.9.3)
 
   '@marijn/find-cluster-break@1.0.3': {}
+
+  '@mkody/vue3-simple-icons@16.28.0(typescript@5.9.3)':
+    dependencies:
+      vue: 3.5.40(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
 
   '@napi-rs/wasm-runtime@1.2.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:

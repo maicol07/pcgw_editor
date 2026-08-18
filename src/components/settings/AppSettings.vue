@@ -29,6 +29,7 @@ import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, rec
 import { pcgwApi } from '../../services/pcgwApi';
 import PcgwLoginDialog from '../common/PcgwLoginDialog.vue';
 import { useToast } from 'openvue/usetoast';
+import { PROVIDER_LOGOS } from '../icons/aiLogos';
 
 const uiStore = useUiStore();
 
@@ -430,7 +431,21 @@ const saveSettings = () => {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
                                     <label for="setting-ai-provider" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Provider</label>
-                                    <Select v-model="aiConfig.provider" :options="providerOptions" inputId="setting-ai-provider" aria-label="AI provider" optionLabel="label" optionValue="value" class="w-full" />
+                                    <Select v-model="aiConfig.provider" :options="providerOptions" inputId="setting-ai-provider" aria-label="AI provider" optionLabel="label" optionValue="value" class="w-full">
+                                        <template #value="slotProps">
+                                            <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                <component :is="PROVIDER_LOGOS[slotProps.value as AIProvider]" :size="16" class="w-4 h-4 shrink-0" />
+                                                <span>{{ PROVIDER_LABELS[slotProps.value as AIProvider] }}</span>
+                                            </div>
+                                            <span v-else>{{ slotProps.placeholder }}</span>
+                                        </template>
+                                        <template #option="slotProps">
+                                            <div class="flex items-center gap-2.5 py-0.5">
+                                                <component :is="PROVIDER_LOGOS[slotProps.option.value as AIProvider]" :size="16" class="w-4 h-4 shrink-0" />
+                                                <span class="text-xs font-medium">{{ slotProps.option.label }}</span>
+                                            </div>
+                                        </template>
+                                    </Select>
                                 </div>
                                 <div class="flex flex-col gap-1.5">
                                     <div class="flex items-center justify-between">
