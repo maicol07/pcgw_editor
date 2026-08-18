@@ -317,6 +317,7 @@ export const fieldsConfig: SectionDefinition[] = [
         icon: Volume2,
         order: 10,
         fields: [
+            h.screenshotAnalysis('AI Analysis', { section: 'audio' }, { key: 'audio', description: 'Analyze screenshots to auto-fill audio settings.', wikitextParam: '' }) as FieldDefinition,
             h.gallery('Gallery', { section: 'Audio' }, { key: 'galleries.audio', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [
@@ -383,7 +384,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-blue-500',
         order: 8,
         fields: [
-            h.videoAnalysis('AI Analysis', { key: 'video', description: 'Analyze screenshots to auto-fill settings.', wikitextParam: '' }) as FieldDefinition,
+            h.screenshotAnalysis('AI Analysis', { section: 'video' }, { key: 'video', description: 'Analyze screenshots to auto-fill settings.', wikitextParam: '' }) as FieldDefinition,
             h.gallery('Gallery', { section: 'video' }, { key: 'galleries.video', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [
@@ -447,6 +448,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-primary-500',
         order: 9,
         fields: [
+            h.screenshotAnalysis('AI Analysis', { section: 'input' }, { key: 'input', description: 'Analyze screenshots to auto-fill input & control settings.', wikitextParam: '' }) as FieldDefinition,
             h.gallery('Gallery', { section: 'Input' }, { key: 'galleries.input', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [
@@ -641,6 +643,7 @@ export const fieldsConfig: SectionDefinition[] = [
         iconClass: 'text-primary-500', // Adjust color if needed
         order: 10, // Adjust order
         fields: [
+            h.screenshotAnalysis('AI Analysis', { section: 'network' }, { key: 'network', description: 'Analyze screenshots to auto-fill network & multiplayer settings.', wikitextParam: '' }) as FieldDefinition,
             h.gallery('Gallery', { section: 'Network' }, { key: 'galleries.network', wikitextParam: '' }) as FieldDefinition
         ],
         groups: [

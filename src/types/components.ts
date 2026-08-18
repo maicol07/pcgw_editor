@@ -84,6 +84,10 @@ export interface WikitextEditorProps {
     rows?: number;
 }
 
+export interface ScreenshotAnalysisProps {
+    section?: 'video' | 'input' | 'audio' | 'network';
+}
+
 // Components with no props
 type NoProps = Record<string, never>;
 
@@ -104,6 +108,7 @@ export type FieldComponent =
     | { component: 'TaxonomyField'; componentProps: TaxonomyFieldProps }
     | { component: 'SectionGallery'; componentProps: SectionGalleryProps }
     | { component: 'VideoAnalysis'; componentProps?: NoProps }
+    | { component: 'ScreenshotAnalysis'; componentProps?: ScreenshotAnalysisProps }
     | { component: 'StubValidator'; componentProps?: NoProps }
     | { component: 'WikitextEditor'; componentProps?: WikitextEditorProps }
     | { component: 'AvailabilityForm'; componentProps?: NoProps }

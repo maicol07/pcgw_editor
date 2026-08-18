@@ -39,11 +39,21 @@ export interface VideoAnalysisRecord {
     timestamp: number;
 }
 
+export interface SectionAnalysisRecord {
+    pageId: string;
+    section: string;
+    imageBase64: string;
+    fileName?: string;
+    result: any;
+    timestamp: number;
+}
+
 export class AppDatabase extends Dexie {
     localFiles!: Table<LocalFile>;
     syncMeta!: Table<SyncMeta, string>;
     revisions!: Table<RevisionText, number>;
     videoAnalyses!: Table<VideoAnalysisRecord, string>;
+    sectionAnalyses!: Table<SectionAnalysisRecord, [string, string]>;
 
     constructor() {
         super('PCGWEditorDB');
@@ -64,6 +74,13 @@ export class AppDatabase extends Dexie {
             syncMeta: 'key',
             revisions: 'revid, fetchedAt',
             videoAnalyses: 'pageId, timestamp'
+        });
+        this.version(5).stores({
+            localFiles: '++id, name, status, lastModified',
+            syncMeta: 'key',
+            revisions: 'revid, fetchedAt',
+            videoAnalyses: 'pageId, timestamp',
+            sectionAnalyses: '[pageId+section], pageId, section, timestamp'
         });
     }
 }
@@ -93,27 +110,61 @@ export async function putRevisionText(revid: number, wikitext: string): Promise<
     }
 }
 
-export async function getSavedVideoAnalysis(pageId: string): Promise<VideoAnalysisRecord | null> {
+export async function getSavedSectionAnalysis(pageId: string, section: string): Promise<SectionAnalysisRecord | null> {
     try {
-        return (await db.videoAnalyses.get(pageId)) ?? null;
+        const item = await db.sectionAnalyses.get([pageId, section]);
+        if (item) return item;
+        // Fallback for legacy video analyses if section is video
+        if (section === 'video') {
+            const legacy = await db.videoAnalyses.get(pageId);
+            if (legacy) {
+                return {
+                    pageId: legacy.pageId,
+                    section: 'video',
+                    imageBase64: legacy.imageBase64,
+                    fileName: legacy.fileName,
+                    result: legacy.result,
+                    timestamp: legacy.timestamp
+                };
+            }
+        }
+        return null;
     } catch {
         return null;
     }
 }
 
-export async function saveVideoAnalysisRecord(record: VideoAnalysisRecord): Promise<void> {
+export async function saveSectionAnalysisRecord(record: SectionAnalysisRecord): Promise<void> {
     try {
-        await db.videoAnalyses.put(record);
+        await db.sectionAnalyses.put(record);
     } catch (e) {
-        console.error('Failed to save video analysis record:', e);
+        console.error('Failed to save section analysis record:', e);
     }
 }
 
-export async function deleteSavedVideoAnalysis(pageId: string): Promise<void> {
+export async function deleteSavedSectionAnalysis(pageId: string, section: string): Promise<void> {
     try {
-        await db.videoAnalyses.delete(pageId);
+        await db.sectionAnalyses.delete([pageId, section]);
+        if (section === 'video') {
+            await db.videoAnalyses.delete(pageId);
+        }
     } catch (e) {
-        console.error('Failed to delete video analysis record:', e);
+        console.error('Failed to delete section analysis record:', e);
     }
 }
+
+// Backward-compatibility aliases
+export async function getSavedVideoAnalysis(pageId: string): Promise<VideoAnalysisRecord | null> {
+    const res = await getSavedSectionAnalysis(pageId, 'video');
+    return res ? { pageId: res.pageId, imageBase64: res.imageBase64, fileName: res.fileName, result: res.result, timestamp: res.timestamp } : null;
+}
+
+export async function saveVideoAnalysisRecord(record: VideoAnalysisRecord): Promise<void> {
+    await saveSectionAnalysisRecord({ ...record, section: 'video' });
+}
+
+export async function deleteSavedVideoAnalysis(pageId: string): Promise<void> {
+    await deleteSavedSectionAnalysis(pageId, 'video');
+}
+
 

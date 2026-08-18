@@ -136,6 +136,17 @@ export const videoAnalysis = (label: string, options?: OmitComponent<Partial<Fie
     ...options
 });
 
+export const screenshotAnalysis = (
+    label: string,
+    props?: { section?: 'video' | 'input' | 'audio' | 'network' },
+    options?: OmitComponent<Partial<FieldDefinition>>
+): FieldComponent & OmitComponent<Partial<FieldDefinition>> => ({
+    label,
+    component: 'ScreenshotAnalysis',
+    componentProps: props,
+    ...options
+});
+
 export const stubValidator = (options?: OmitComponent<Partial<FieldDefinition>>): FieldComponent & OmitComponent<Partial<FieldDefinition>> => ({
     component: 'StubValidator',
     ...options,

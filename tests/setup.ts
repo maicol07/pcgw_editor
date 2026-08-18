@@ -32,26 +32,32 @@ vi.mock('dexie', () => {
                         if (typeof prop === 'symbol' || prop === 'then') return undefined;
 
                         const table = (target as any)._getTable(prop);
+                        const serializeKey = (k: any) => Array.isArray(k) ? JSON.stringify(k) : k;
                         return {
                             toArray: vi.fn().mockImplementation(async () => Array.from(table.values())),
                             add: vi.fn().mockImplementation(async (item: any) => {
-                                const id = item.id ?? item.key ?? item.pageId ?? table.size + 1;
+                                const id = item.pageId && item.section 
+                                    ? serializeKey([item.pageId, item.section]) 
+                                    : (item.id ?? item.key ?? item.pageId ?? table.size + 1);
                                 table.set(id, item);
                                 return id;
                             }),
                             delete: vi.fn().mockImplementation(async (key: any) => {
-                                table.delete(key);
+                                table.delete(serializeKey(key));
                             }),
                             update: vi.fn().mockImplementation(async (key: any, updates: any) => {
-                                const existing = table.get(key) || {};
-                                table.set(key, { ...existing, ...updates });
+                                const sKey = serializeKey(key);
+                                const existing = table.get(sKey) || {};
+                                table.set(sKey, { ...existing, ...updates });
                             }),
                             put: vi.fn().mockImplementation(async (item: any) => {
-                                const key = item.pageId ?? item.key ?? item.id ?? item.revid ?? 'default';
+                                const key = item.pageId && item.section
+                                    ? serializeKey([item.pageId, item.section])
+                                    : (item.pageId ?? item.key ?? item.id ?? item.revid ?? 'default');
                                 table.set(key, item);
                                 return key;
                             }),
-                            get: vi.fn().mockImplementation(async (key: any) => table.get(key) ?? undefined),
+                            get: vi.fn().mockImplementation(async (key: any) => table.get(serializeKey(key)) ?? undefined),
                             count: vi.fn().mockImplementation(async () => table.size),
                             orderBy: vi.fn().mockReturnValue({
                                 limit: vi.fn().mockReturnValue({

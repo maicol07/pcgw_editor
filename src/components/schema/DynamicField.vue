@@ -34,6 +34,7 @@ import AutoComplete from 'openvue/autocomplete';
 import StubValidator from '../StubValidator.vue';
 // (AvailabilityForm moved to async above)
 import VideoAnalysis from '../video/VideoAnalysis.vue';
+import ScreenshotAnalysis from '../common/ScreenshotAnalysis.vue';
 import SectionGallery from '../SectionGallery.vue';
 import InputWithNotes from './InputWithNotes.vue';
 import WikitextEditor from '../common/WikitextEditor.vue';
@@ -68,6 +69,7 @@ const componentMap: Record<string, any> = {
     'AvailabilityForm': AvailabilityForm,
     'DLCForm': DLCForm,
     'VideoAnalysis': VideoAnalysis,
+    'ScreenshotAnalysis': ScreenshotAnalysis,
     'SectionGallery': SectionGallery,
     'CompoundRatingField': CompoundRatingField,
     'OperatingSystemSupportForm': OperatingSystemSupportForm,
@@ -283,6 +285,15 @@ const boundProps = computed(() => {
         }
     }
 
+    if (props.field.component === 'ScreenshotAnalysis') {
+        return {
+            section: props.field.componentProps?.section || 'video',
+            label: props.field.label,
+            description: props.field.description,
+            modelValue: props.modelValue
+        }
+    }
+
     if (props.field.component === 'SectionGallery') {
         return {
             section: props.field.componentProps?.section,
@@ -361,7 +372,7 @@ const isVisible = computed(() => {
 
         <!-- Label for simple inputs (RatingRow, CoverImage have their own label handling) -->
         <label
-            v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'IssuesForm', 'WysiwygEditor'].includes(field.component)"
+            v-if="!['GameDataForm', 'AvailabilityForm', 'CompoundRatingField', 'StubValidator', 'Checkbox', 'InfoboxReception', 'SectionGallery', 'VideoAnalysis', 'ScreenshotAnalysis', 'IssuesForm', 'WysiwygEditor'].includes(field.component)"
             :for="fieldId"
             class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
