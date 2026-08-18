@@ -155,4 +155,24 @@ describe('GameDataPathForm.vue', () => {
         const updated = wrapper.findAllComponents(PathInputFieldStub);
         expect(updated[0].props('modelValue')).toBe('New Path');
     });
+
+    it('displays and applies wiki token suggestion for raw env vars', async () => {
+        const { wrapper } = setupWrapper([
+            { platform: 'Windows', paths: ['%APPDATA%\\Game'] }
+        ]);
+
+        expect(wrapper.text()).toContain('Use the wiki token');
+        expect(wrapper.text()).toContain('{{p|appdata}}');
+        expect(wrapper.text()).toContain('instead of %APPDATA%');
+
+        const suggestionBtn = wrapper.findAll('button').find(b => b.text().includes('{{p|appdata}}'));
+        expect(suggestionBtn).toBeTruthy();
+
+        await suggestionBtn!.trigger('click');
+
+        const emitted = wrapper.emitted('update:rows');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![0][0] as GameDataPathRow[];
+        expect(newVal[0].paths[0]).toBe('{{p|appdata}}\\Game');
+    });
 });

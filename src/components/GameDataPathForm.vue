@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GameDataPathRow } from '../models/GameData';
 import PathInputField from './ui/PathInputField.vue';
-import { specialPaths, SpecialPath, commonPathTokens } from '../utils/specialPaths';
+import { specialPaths, SpecialPath, commonPathTokens, suggestTokenForRawEnvVar } from '../utils/specialPaths';
 import Button from 'openvue/button';
 import Select from 'openvue/select';
 import Popover from 'openvue/popover';
@@ -171,6 +171,20 @@ const selectQuickPath = (value: string) => {
     op.value.hide();
   }
 };
+
+const getSuggestion = (val: string) => suggestTokenForRawEnvVar(val);
+
+const applyTokenSuggestion = (rowIndex: number, pathIndex: number) => {
+  const currentVal = props.rows[rowIndex]?.paths?.[pathIndex] || '';
+  const s = suggestTokenForRawEnvVar(currentVal);
+  if (!s) return;
+  const idx = currentVal.toUpperCase().indexOf(s.raw);
+  if (idx < 0) return;
+  const newStr = currentVal.slice(0, idx) + s.token + currentVal.slice(idx + s.raw.length);
+  const newRows = [...props.rows];
+  newRows[rowIndex].paths[pathIndex] = newStr;
+  emit('update:rows', newRows);
+};
 </script>
 
 
@@ -255,8 +269,8 @@ const selectQuickPath = (value: string) => {
           </div>
 
           <div class="grid grid-cols-1 gap-2">
-            <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-center group/path">
-              <div class="flex-1">
+            <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-start group/path">
+              <div class="flex-1 min-w-0">
                 <InputGroup class="min-h-8">
                   <PathInputField
                     :id="`path-input-${rowIndex}-${pathIndex}`"
@@ -272,10 +286,18 @@ const selectQuickPath = (value: string) => {
                     </Button>
                   </InputGroupAddon>
                 </InputGroup>
+                <div v-if="getSuggestion(row.paths[pathIndex])" class="flex items-center gap-1.5 mt-1 text-xs text-amber-600 dark:text-amber-400 flex-wrap">
+                  <span>Use the wiki token</span>
+                  <button type="button" @click="applyTokenSuggestion(rowIndex, pathIndex)"
+                    class="font-mono font-medium underline decoration-dotted hover:text-amber-700 dark:hover:text-amber-300">
+                    {{ getSuggestion(row.paths[pathIndex])?.token }}
+                  </button>
+                  <span>instead of <span class="font-mono">{{ getSuggestion(row.paths[pathIndex])?.raw }}</span></span>
+                </div>
               </div>
 
               <Button v-if="row.paths.length > 1" text rounded severity="danger"
-                class="w-8! h-8! p-0! opacity-0 group-hover/path:opacity-100 transition-opacity"
+                class="w-8! h-8! p-0! opacity-0 group-hover/path:opacity-100 transition-opacity shrink-0"
                 @click="removePath(rowIndex, pathIndex)">
                 <template #icon>
                   <X class="w-4 h-4" />
