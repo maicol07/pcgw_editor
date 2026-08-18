@@ -190,7 +190,7 @@ export async function generateJSONWithSearch<T>(prompt: string, schema: z.ZodTyp
 
     try {
         const google = createGoogleGenerativeAI({ apiKey });
-        const modelId = aiConfig.provider === 'google' ? aiConfig.model : 'gemini-3.5-flash';
+        const modelId = aiConfig.provider === 'google' ? aiConfig.model : 'gemini-3.7-flash';
         const { text } = await generateText({
             model: google(modelId),
             prompt,

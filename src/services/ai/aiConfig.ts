@@ -1,4 +1,5 @@
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
+import { getCachedModels, fetchProviderModels, type AIModelOption } from './modelFetcher';
 
 // ponytail: module singleton, switch to Pinia only if cross-tab sync is ever needed
 export type AIProvider = 'google' | 'openai' | 'anthropic';
@@ -18,27 +19,37 @@ export const PROVIDER_KEY_LINKS: Record<AIProvider, string> = {
     anthropic: 'https://console.anthropic.com/settings/keys',
 };
 
-// Short curated list per provider. The model field is also free-text editable in the UI.
-export const MODELS: Record<AIProvider, { id: string; label: string }[]> = {
-    google: [
-        { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
-        { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
-        { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
-        { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-        { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    ],
-    openai: [
-        { id: 'gpt-5.5', label: 'GPT-5.5' },
-        { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
-        { id: 'gpt-5.4', label: 'GPT-5.4' },
-        { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    ],
-    anthropic: [
-        { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
-        { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
-        { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
-    ],
-};
+export const availableModels = reactive<Record<AIProvider, AIModelOption[]>>({
+    google: getCachedModels('google') || [],
+    openai: getCachedModels('openai') || [],
+    anthropic: getCachedModels('anthropic') || [],
+});
+
+export const isFetchingModels = ref(false);
+export const modelFetchError = ref<string | null>(null);
+
+/** Fetches dynamic models from the provider API if key is present and updates availableModels. */
+export async function refreshAvailableModels(provider: AIProvider = aiConfig.provider): Promise<AIModelOption[]> {
+    const key = aiConfig.keys[provider];
+    if (!key) {
+        return availableModels[provider];
+    }
+    isFetchingModels.value = true;
+    modelFetchError.value = null;
+    try {
+        const fetched = await fetchProviderModels(provider, key);
+        if (fetched && fetched.length > 0) {
+            availableModels[provider] = fetched;
+            return fetched;
+        }
+    } catch (err: any) {
+        console.warn(`Failed to fetch models for ${provider}:`, err);
+        modelFetchError.value = err?.message || 'Failed to fetch models';
+    } finally {
+        isFetchingModels.value = false;
+    }
+    return availableModels[provider];
+}
 
 /** Loads per-provider keys, migrating the legacy single Gemini key into the Google slot. */
 export function loadKeys(): Record<AIProvider, string> {
@@ -58,7 +69,7 @@ const initialProvider: AIProvider =
 
 export const aiConfig = reactive({
     provider: initialProvider,
-    model: localStorage.getItem('ai-model') || MODELS[initialProvider][0].id,
+    model: localStorage.getItem('ai-model') || availableModels[initialProvider][0]?.id || '',
     keys: loadKeys(),
 });
 

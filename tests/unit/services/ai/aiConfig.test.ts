@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadKeys } from '@/services/ai/aiConfig';
-import { getModel } from '@/services/ai/AIService';
-import { aiConfig } from '@/services/ai/aiConfig';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { loadKeys, aiConfig } from '../../../../src/services/ai/aiConfig';
+import { getModel } from '../../../../src/services/ai/AIService';
 
 describe('loadKeys migration', () => {
     beforeEach(() => localStorage.clear());
@@ -24,13 +23,13 @@ describe('getModel provider selection', () => {
         aiConfig.keys.openai = 'o';
         aiConfig.keys.anthropic = 'a';
 
-        expect(getModel('openai', 'gpt-5.4-mini').modelId).toBe('gpt-5.4-mini');
-        expect(getModel('anthropic', 'claude-haiku-4-5').modelId).toBe('claude-haiku-4-5');
-        expect(getModel('google', 'gemini-3.5-flash').modelId).toBe('gemini-3.5-flash');
+        expect((getModel('openai', 'gpt-4o-mini') as any).modelId).toBe('gpt-4o-mini');
+        expect((getModel('anthropic', 'claude-3-5-haiku-latest') as any).modelId).toBe('claude-3-5-haiku-latest');
+        expect((getModel('google', 'gemini-2.5-flash') as any).modelId).toBe('gemini-2.5-flash');
     });
 
     it('throws when the selected provider has no key', () => {
         aiConfig.keys.openai = '';
-        expect(() => getModel('openai', 'gpt-5.4-mini')).toThrow(/No API key/);
+        expect(() => getModel('openai', 'gpt-4o-mini')).toThrow(/No API key/);
     });
 });

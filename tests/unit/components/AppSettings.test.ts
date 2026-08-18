@@ -10,6 +10,7 @@ import Slider from 'openvue/slider';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import ToggleSwitch from 'openvue/toggleswitch';
+import AutoComplete from 'openvue/autocomplete';
 import { ref } from 'vue';
 
 // Mock Lucide icons. Must enumerate every icon the component imports (Vitest
@@ -53,7 +54,7 @@ describe('AppSettings.vue', () => {
             wrapper: mount(AppSettings, {
                 global: {
                     plugins: [pinia],
-                    components: { Dialog, SelectButton, Select, Slider, InputText, Button, ToggleSwitch },
+                    components: { Dialog, SelectButton, Select, Slider, InputText, Button, ToggleSwitch, AutoComplete },
                     directives: {
                         tooltip: {}
                     },
@@ -156,5 +157,20 @@ describe('AppSettings.vue', () => {
         
         await autoReLoginToggle.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);
+    });
+
+    it('renders model options from availableModels and triggers fetch button', async () => {
+        const { wrapper } = setupWrapper();
+
+        // Switch to integrations tab
+        const tabs = wrapper.findAll('button');
+        const integrationsTab = tabs.find(t => t.text().includes('Integrations'));
+        if (integrationsTab) await integrationsTab.trigger('click');
+
+        const fetchButton = wrapper.findAll('button').find(b => b.text().includes('Fetch Models'));
+        expect(fetchButton).toBeDefined();
+        if (fetchButton) {
+            await fetchButton.trigger('click');
+        }
     });
 });

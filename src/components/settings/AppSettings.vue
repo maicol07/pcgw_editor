@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { ref, inject, computed, type Ref, watch } from 'vue';
-import { aiConfig, MODELS, PROVIDERS, PROVIDER_LABELS, PROVIDER_KEY_LINKS, type AIProvider } from '../../services/ai/aiConfig';
+import {
+    aiConfig,
+    availableModels,
+    refreshAvailableModels,
+    isFetchingModels,
+    modelFetchError,
+    PROVIDERS,
+    PROVIDER_LABELS,
+    PROVIDER_KEY_LINKS,
+    type AIProvider
+} from '../../services/ai/aiConfig';
 import { useUiStore } from '../../stores/ui';
 import Dialog from 'openvue/dialog';
 import Select from 'openvue/select';
+import AutoComplete from 'openvue/autocomplete';
 import InputText from 'openvue/inputtext';
 import Button from 'openvue/button';
 import ToggleSwitch from 'openvue/toggleswitch';
@@ -22,10 +33,72 @@ const uiStore = useUiStore();
 
 // AI provider/model/key bind directly to the reactive aiConfig (auto-persisted).
 const providerOptions = PROVIDERS.map((p) => ({ label: PROVIDER_LABELS[p], value: p }));
-const modelOptions = computed(() => MODELS[aiConfig.provider]);
 const keyLink = computed(() => PROVIDER_KEY_LINKS[aiConfig.provider]);
-// On provider switch, default the model to that provider's first option.
-watch(() => aiConfig.provider, (p: AIProvider) => { aiConfig.model = MODELS[p][0].id; });
+const modelSuggestions = ref<any[]>([]);
+
+const searchModel = (event: { query: string }) => {
+    const query = (event.query || '').toLowerCase().trim();
+    const list = availableModels[aiConfig.provider] || [];
+    if (!query) {
+        modelSuggestions.value = [...list];
+    } else {
+        modelSuggestions.value = list.filter(
+            (m) => m.id.toLowerCase().includes(query) || m.label.toLowerCase().includes(query)
+        );
+    }
+};
+
+const onModelSelect = (event: any) => {
+    if (event.value && typeof event.value === 'object') {
+        aiConfig.model = event.value.id;
+    } else if (typeof event.value === 'string') {
+        aiConfig.model = event.value;
+    }
+};
+
+const handleRefreshModels = async (showToast = true) => {
+    const key = aiConfig.keys[aiConfig.provider];
+    if (!key) {
+        if (showToast) {
+            toast.add({
+                severity: 'info',
+                summary: 'API Key Required',
+                detail: `Add an API key for ${PROVIDER_LABELS[aiConfig.provider]} to fetch live models.`,
+                life: 3000,
+            });
+        }
+        return;
+    }
+    const result = await refreshAvailableModels(aiConfig.provider);
+    if (showToast) {
+        if (modelFetchError.value) {
+            toast.add({
+                severity: 'error',
+                summary: 'Failed to fetch models',
+                detail: modelFetchError.value,
+                life: 4000,
+            });
+        } else {
+            toast.add({
+                severity: 'success',
+                summary: 'Models Updated',
+                detail: `Loaded ${result.length} models from ${PROVIDER_LABELS[aiConfig.provider]}.`,
+                life: 3000,
+            });
+        }
+    }
+};
+
+// On provider switch, auto-fetch models if key exists and adjust default model if current is not in list
+watch(() => aiConfig.provider, async (p: AIProvider) => {
+    if (aiConfig.keys[p]) {
+        await handleRefreshModels(false);
+    }
+    const models = availableModels[p];
+    if (!models.some((m) => m.id === aiConfig.model)) {
+        aiConfig.model = models[0]?.id || '';
+    }
+});
 
 const twitchClientId = inject<Ref<string>>('twitchClientId');
 const twitchClientSecret = inject<Ref<string>>('twitchClientSecret');
@@ -107,6 +180,9 @@ watch(() => uiStore.isSettingsOpen, (val) => {
         tempTwitchClientId.value = twitchClientId?.value || '';
         tempTwitchClientSecret.value = twitchClientSecret?.value || '';
         tempRawgApiKey.value = rawgApiKey?.value || '';
+        if (aiConfig.keys[aiConfig.provider]) {
+            handleRefreshModels(false);
+        }
     }
 });
 
@@ -356,14 +432,65 @@ const saveSettings = () => {
                                     <Select v-model="aiConfig.provider" :options="providerOptions" inputId="setting-ai-provider" aria-label="AI provider" optionLabel="label" optionValue="value" class="w-full" />
                                 </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <label for="setting-ai-model" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
-                                    <Select v-model="aiConfig.model" :options="modelOptions" inputId="setting-ai-model" aria-label="AI model" optionLabel="label" optionValue="id" editable class="w-full" />
+                                    <div class="flex items-center justify-between">
+                                        <label for="setting-ai-model" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
+                                        <button
+                                            type="button"
+                                            @click="() => handleRefreshModels(true)"
+                                            :disabled="isFetchingModels"
+                                            title="Fetch latest models from provider API"
+                                            class="flex items-center gap-1 text-[11px] text-primary-500 hover:text-primary-600 font-medium cursor-pointer select-none disabled:opacity-50"
+                                        >
+                                            <component :is="isFetchingModels ? Loader2 : RefreshCw" class="w-3 h-3" :class="{ 'animate-spin': isFetchingModels }" />
+                                            <span>{{ isFetchingModels ? 'Fetching...' : 'Fetch Models' }}</span>
+                                        </button>
+                                    </div>
+                                    <AutoComplete
+                                        v-model="aiConfig.model"
+                                        :suggestions="modelSuggestions"
+                                        optionLabel="label"
+                                        dropdown
+                                        completeOnFocus
+                                        placeholder="Search or enter model ID..."
+                                        inputId="setting-ai-model"
+                                        aria-label="AI model"
+                                        class="w-full"
+                                        @complete="searchModel"
+                                        @item-select="onModelSelect"
+                                    >
+                                        <template #option="slotProps">
+                                            <div class="flex flex-col py-0.5">
+                                                <span class="text-xs font-medium text-surface-900 dark:text-surface-100">
+                                                    {{ typeof slotProps.option === 'object' ? slotProps.option.label : slotProps.option }}
+                                                </span>
+                                                <span
+                                                    v-if="typeof slotProps.option === 'object' && slotProps.option.id !== slotProps.option.label"
+                                                    class="text-[10px] text-surface-400 dark:text-surface-500 font-mono"
+                                                >
+                                                    {{ slotProps.option.id }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                        <template #empty>
+                                            <div class="p-2 text-xs text-surface-500 text-center">
+                                                {{ !availableModels[aiConfig.provider]?.length ? 'No models loaded. Click "Fetch Models".' : 'No matching models found.' }}
+                                            </div>
+                                        </template>
+                                    </AutoComplete>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2">
                                 <label for="setting-ai-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">{{ PROVIDER_LABELS[aiConfig.provider] }} API Key</label>
                                 <div class="flex relative items-center">
-                                    <InputText v-model="aiConfig.keys[aiConfig.provider]" id="setting-ai-key" :type="showGeminiKey ? 'text' : 'password'" placeholder="API key..." class="w-full pr-10 gemini-api-key-input" />
+                                    <InputText
+                                        v-model="aiConfig.keys[aiConfig.provider]"
+                                        id="setting-ai-key"
+                                        :type="showGeminiKey ? 'text' : 'password'"
+                                        placeholder="API key..."
+                                        class="w-full pr-10 gemini-api-key-input"
+                                        @blur="() => { if (aiConfig.keys[aiConfig.provider]) handleRefreshModels(false); }"
+                                        @keyup.enter="() => handleRefreshModels(true)"
+                                    />
                                     <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                         <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
                                     </button>
