@@ -3,7 +3,7 @@ import { config } from '@vue/test-utils';
 
 // Suppress experimental localStorage warnings from Node.js
 const originalEmit = process.emit;
-process.emit = function (name: string, ...args: any[]) {
+process.emit = function (this: any, name: string, ...args: any[]) {
     if (name === 'warning' && args[0]?.name === 'ExperimentalWarning' && args[0]?.message?.includes('localStorage')) {
         return false;
     }
@@ -14,20 +14,51 @@ process.emit = function (name: string, ...args: any[]) {
 vi.mock('dexie', () => {
     return {
         default: class MockDexie {
+            _tables: Record<string, Map<any, any>> = {};
+
+            _getTable(name: string) {
+                if (!this._tables[name]) {
+                    this._tables[name] = new Map();
+                }
+                return this._tables[name];
+            }
+
             constructor() {
                 return new Proxy(this, {
                     get(target, prop) {
-                        if (prop in target && (target as any)[prop] !== undefined) {
+                        if (typeof prop === 'string' && prop in target && (target as any)[prop] !== undefined) {
                             return (target as any)[prop];
                         }
-                        // Return mock table methods for any table property access
+                        if (typeof prop === 'symbol' || prop === 'then') return undefined;
+
+                        const table = (target as any)._getTable(prop);
                         return {
-                            toArray: vi.fn().mockResolvedValue([]),
-                            add: vi.fn().mockResolvedValue(1),
-                            delete: vi.fn().mockResolvedValue(undefined),
-                            update: vi.fn().mockResolvedValue(undefined),
-                            put: vi.fn().mockResolvedValue(1),
-                            get: vi.fn().mockResolvedValue(undefined),
+                            toArray: vi.fn().mockImplementation(async () => Array.from(table.values())),
+                            add: vi.fn().mockImplementation(async (item: any) => {
+                                const id = item.id ?? item.key ?? item.pageId ?? table.size + 1;
+                                table.set(id, item);
+                                return id;
+                            }),
+                            delete: vi.fn().mockImplementation(async (key: any) => {
+                                table.delete(key);
+                            }),
+                            update: vi.fn().mockImplementation(async (key: any, updates: any) => {
+                                const existing = table.get(key) || {};
+                                table.set(key, { ...existing, ...updates });
+                            }),
+                            put: vi.fn().mockImplementation(async (item: any) => {
+                                const key = item.pageId ?? item.key ?? item.id ?? item.revid ?? 'default';
+                                table.set(key, item);
+                                return key;
+                            }),
+                            get: vi.fn().mockImplementation(async (key: any) => table.get(key) ?? undefined),
+                            count: vi.fn().mockImplementation(async () => table.size),
+                            orderBy: vi.fn().mockReturnValue({
+                                limit: vi.fn().mockReturnValue({
+                                    primaryKeys: vi.fn().mockResolvedValue([])
+                                })
+                            }),
+                            bulkDelete: vi.fn().mockResolvedValue(undefined),
                         };
                     }
                 });

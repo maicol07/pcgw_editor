@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { SettingsVideo } from '../../models/GameData';
 import Button from 'openvue/button';
 import Dialog from 'openvue/dialog';
 import Checkbox from 'openvue/checkbox';
 import { 
-  Upload, Sparkles as SparklesIcon, X, Check, ArrowRight, Info
+  Upload, Sparkles as SparklesIcon, X, Check, ArrowRight, Info, Trash2, Maximize2, Clock
 } from '@lucide/vue';
 // AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
 // providers (~700 kB) into the startup bundle for a feature many sessions never use.
@@ -18,6 +18,12 @@ import {
   type VideoFieldComparison
 } from '../../features/video/useVideoAnalysis';
 import { ratingMetadata, type RatingValue } from '../../utils/ratings';
+import { useWorkspaceStore } from '../../stores/workspace';
+import { 
+  getSavedVideoAnalysis, 
+  saveVideoAnalysisRecord, 
+  deleteSavedVideoAnalysis 
+} from '../../db';
 
 const props = defineProps<{
   modelValue: SettingsVideo;
@@ -27,11 +33,17 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: SettingsVideo): void;
 }>();
 
+const workspaceStore = useWorkspaceStore();
+const currentPageId = computed(() => workspaceStore.activePage?.id || 'default');
+
 const isAnalyzing = ref(false);
 const error = ref('');
 const analysisSuccess = ref(false);
 const showReviewDialog = ref(false);
+const showFullImageDialog = ref(false);
 const screenshotPreviewUrl = ref('');
+const savedFileName = ref('');
+const savedTimestamp = ref<number | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 
 const comparisons = ref<VideoFieldComparison[]>([]);
@@ -43,6 +55,20 @@ const changedCount = computed(() => comparisons.value.filter(c => c.status === '
 const unchangedCount = computed(() => comparisons.value.filter(c => c.status === 'unchanged').length);
 const unknownCount = computed(() => comparisons.value.filter(c => c.status === 'unknown').length);
 const selectedCount = computed(() => comparisons.value.filter(c => c.selected).length);
+
+const formattedSavedDate = computed(() => {
+    if (!savedTimestamp.value) return '';
+    try {
+        return new Intl.DateTimeFormat(undefined, { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        }).format(new Date(savedTimestamp.value));
+    } catch {
+        return '';
+    }
+});
 
 const filteredComparisons = computed(() => {
     if (activeFilter.value === 'changed') {
@@ -117,6 +143,64 @@ const handlePaste = async (event: ClipboardEvent) => {
     }
 };
 
+const loadSavedAnalysis = async () => {
+    try {
+        const record = await getSavedVideoAnalysis(currentPageId.value);
+        if (record && record.imageBase64 && record.result) {
+            screenshotPreviewUrl.value = record.imageBase64;
+            lastResult.value = record.result;
+            savedTimestamp.value = record.timestamp;
+            savedFileName.value = record.fileName || 'Screenshot';
+            comparisons.value = computeVideoComparisons(props.modelValue, record.result);
+        } else {
+            screenshotPreviewUrl.value = '';
+            lastResult.value = null;
+            savedTimestamp.value = null;
+            savedFileName.value = '';
+            comparisons.value = [];
+        }
+    } catch (e) {
+        console.error('Failed to load saved video analysis:', e);
+    }
+};
+
+onMounted(() => {
+    loadSavedAnalysis();
+});
+
+watch(currentPageId, () => {
+    loadSavedAnalysis();
+});
+
+// Keep comparisons in sync when form values change externally
+watch(() => props.modelValue, (newVal) => {
+    if (lastResult.value && !showReviewDialog.value) {
+        comparisons.value = computeVideoComparisons(newVal, lastResult.value);
+    }
+}, { deep: true });
+
+const openReviewDialog = () => {
+    if (lastResult.value) {
+        comparisons.value = computeVideoComparisons(props.modelValue, lastResult.value);
+        activeFilter.value = 'all';
+        showReviewDialog.value = true;
+    }
+};
+
+const clearSavedAnalysis = async () => {
+    try {
+        await deleteSavedVideoAnalysis(currentPageId.value);
+    } catch (e) {
+        console.error('Failed to delete saved video analysis:', e);
+    }
+    screenshotPreviewUrl.value = '';
+    lastResult.value = null;
+    savedTimestamp.value = null;
+    savedFileName.value = '';
+    comparisons.value = [];
+    analysisSuccess.value = false;
+};
+
 const analyzeScreenshot = async (file: File) => {
     if (!hasActiveKey()) {
         error.value = "AI API key not found. Please add it in Settings → Integrations.";
@@ -137,6 +221,8 @@ const analyzeScreenshot = async (file: File) => {
         });
 
         screenshotPreviewUrl.value = base64;
+        savedFileName.value = file.name || 'Screenshot';
+        savedTimestamp.value = Date.now();
 
         const prompt = `
             Analyze this game settings screenshot (video/graphics).
@@ -191,6 +277,15 @@ const analyzeScreenshot = async (file: File) => {
         comparisons.value = computeVideoComparisons(props.modelValue, result);
         activeFilter.value = 'all';
         showReviewDialog.value = true;
+
+        // Persist to Dexie (IndexedDB)
+        await saveVideoAnalysisRecord({
+            pageId: currentPageId.value,
+            imageBase64: base64,
+            fileName: savedFileName.value,
+            result,
+            timestamp: savedTimestamp.value
+        });
         
     } catch (e: any) {
         console.error("Analysis failed:", e);
@@ -225,6 +320,9 @@ const getRatingMeta = (val: string) => {
     
     <!-- AI Analysis Section -->
     <div v-if="hasActiveKey()" class="surface-card p-4 flex flex-col gap-3">
+        <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileChange" />
+
+        <!-- Header Row -->
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div class="p-2 rounded-md text-primary-600 dark:text-primary-400 bg-primary-500/10">
@@ -236,31 +334,113 @@ const getRatingMeta = (val: string) => {
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileChange" />
-                
+            <!-- Top Actions when no screenshot is saved -->
+            <div v-if="!screenshotPreviewUrl || !lastResult" class="flex items-center gap-2">
                 <Button 
-                    label="Analyze Image" 
+                    label="Analyze Screenshot" 
                     size="small" 
                     @click="triggerFileInput" 
                     :loading="isAnalyzing"
                     :disabled="isAnalyzing"
                     severity="primary"
-                    outlined
                 >
                     <template #icon>
                         <Upload class="w-4 h-4 mr-2" />
                     </template>
                 </Button>
+            </div>
+        </div>
 
-                <Button
-                    v-if="comparisons.length > 0"
-                    label="Review Last Analysis"
-                    size="small"
-                    severity="secondary"
-                    text
-                    @click="showReviewDialog = true"
-                />
+        <!-- Saved Screenshot & Analysis Preview Card -->
+        <div 
+            v-if="screenshotPreviewUrl && lastResult" 
+            class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 bg-surface-50 dark:bg-surface-900/60 rounded-lg border border-surface-200 dark:border-surface-800"
+        >
+            <div class="flex items-center gap-3 min-w-0">
+                <!-- Thumbnail with hover zoom icon -->
+                <div 
+                    class="relative group shrink-0 cursor-pointer overflow-hidden rounded-lg border border-surface-200 dark:border-surface-700 shadow-xs" 
+                    @click="showFullImageDialog = true"
+                    title="Click to view full screenshot"
+                >
+                    <img 
+                        :src="screenshotPreviewUrl" 
+                        alt="Uploaded Screenshot" 
+                        class="w-16 h-16 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                        <Maximize2 class="w-4 h-4" />
+                    </div>
+                </div>
+
+                <!-- Info & Badges -->
+                <div class="flex flex-col gap-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-surface-900 dark:text-surface-100 truncate max-w-[220px]">
+                            {{ savedFileName || 'Saved Screenshot' }}
+                        </span>
+                        <span v-if="formattedSavedDate" class="text-[11px] text-surface-500 font-normal flex items-center gap-1">
+                            <Clock class="w-3 h-3 text-surface-400" />
+                            {{ formattedSavedDate }}
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                            <SparklesIcon class="w-3 h-3" />
+                            {{ changedCount }} {{ changedCount === 1 ? 'Changed' : 'Changed' }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium bg-surface-200/70 dark:bg-surface-800 text-surface-600 dark:text-surface-400">
+                            <Check class="w-3 h-3" />
+                            {{ unchangedCount }} Unchanged
+                        </span>
+                        <span v-if="unknownCount > 0" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-surface-400 dark:text-surface-500">
+                            {{ unknownCount }} Not detected
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Analysis Action Buttons -->
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                <Button 
+                    label="Review Changes" 
+                    size="small" 
+                    severity="primary" 
+                    @click="openReviewDialog"
+                >
+                    <template #icon>
+                        <SparklesIcon class="w-3.5 h-3.5 mr-1.5" />
+                    </template>
+                </Button>
+
+                <Button 
+                    label="New Image" 
+                    size="small" 
+                    severity="secondary" 
+                    outlined 
+                    @click="triggerFileInput"
+                    :loading="isAnalyzing"
+                    :disabled="isAnalyzing"
+                >
+                    <template #icon>
+                        <Upload class="w-3.5 h-3.5 mr-1.5" />
+                    </template>
+                </Button>
+
+                <Button 
+                    size="small" 
+                    severity="secondary" 
+                    text 
+                    rounded
+                    aria-label="Remove saved analysis"
+                    title="Remove saved analysis"
+                    @click="clearSavedAnalysis"
+                >
+                    <template #icon>
+                        <Trash2 class="w-4 h-4 text-surface-400 hover:text-red-500 transition-colors" />
+                    </template>
+                </Button>
             </div>
         </div>
 
@@ -285,6 +465,23 @@ const getRatingMeta = (val: string) => {
         <span class="text-xs font-medium text-surface-500">Add Gemini API Key to enable AI screenshot analysis</span>
     </div>
 
+    <!-- Full Image Preview Modal -->
+    <Dialog 
+        v-model:visible="showFullImageDialog" 
+        modal 
+        header="Screenshot Preview" 
+        :draggable="false" 
+        class="p-fluid w-full max-w-5xl mx-4"
+    >
+        <div class="flex flex-col items-center justify-center p-2">
+            <img 
+                :src="screenshotPreviewUrl" 
+                alt="Full resolution screenshot" 
+                class="max-h-[75vh] w-auto object-contain rounded-lg border border-surface-200 dark:border-surface-800 shadow-md"
+            />
+        </div>
+    </Dialog>
+
     <!-- Review Dialog / Modal -->
     <Dialog 
         v-model:visible="showReviewDialog" 
@@ -307,12 +504,21 @@ const getRatingMeta = (val: string) => {
             <!-- Top Summary Card with Image Thumbnail & Stats -->
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 bg-surface-50 dark:bg-surface-900/50 rounded-lg border border-surface-200 dark:border-surface-800">
                 <div class="flex items-center gap-3 min-w-0">
-                    <img 
+                    <div 
                         v-if="screenshotPreviewUrl" 
-                        :src="screenshotPreviewUrl" 
-                        alt="Screenshot thumbnail" 
-                        class="w-14 h-14 object-cover rounded-md border border-surface-200 dark:border-surface-700 shrink-0 shadow-xs"
-                    />
+                        class="relative group shrink-0 cursor-pointer overflow-hidden rounded-md border border-surface-200 dark:border-surface-700 shadow-xs"
+                        @click="showFullImageDialog = true"
+                        title="Click to view full screenshot"
+                    >
+                        <img 
+                            :src="screenshotPreviewUrl" 
+                            alt="Screenshot thumbnail" 
+                            class="w-14 h-14 object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <Maximize2 class="w-3.5 h-3.5" />
+                        </div>
+                    </div>
                     <div class="flex flex-col gap-1 min-w-0">
                         <span class="text-xs font-semibold text-surface-900 dark:text-surface-100">
                             Screenshot Analyzed

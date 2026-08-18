@@ -146,5 +146,37 @@ describe('VideoAnalysis diffing and apply logic', () => {
         expect(upscaling?.techField).toBe('upscalingTech');
         expect(upscaling?.notesField).toBe('upscalingNotes');
     });
+
+    it('persists, retrieves, and deletes video analysis records in IndexedDB', async () => {
+        const { 
+            saveVideoAnalysisRecord, 
+            getSavedVideoAnalysis, 
+            deleteSavedVideoAnalysis 
+        } = await import('../../../src/db');
+
+        const testRecord = {
+            pageId: 'test-page-123',
+            imageBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            fileName: 'game_settings.png',
+            result: {
+                widescreenResolution: 'true' as const,
+                fps60: 'true' as const
+            },
+            timestamp: Date.now()
+        };
+
+        await saveVideoAnalysisRecord(testRecord);
+
+        const loaded = await getSavedVideoAnalysis('test-page-123');
+        expect(loaded).toBeDefined();
+        expect(loaded?.pageId).toBe('test-page-123');
+        expect(loaded?.fileName).toBe('game_settings.png');
+        expect(loaded?.result.widescreenResolution).toBe('true');
+
+        await deleteSavedVideoAnalysis('test-page-123');
+        const afterDelete = await getSavedVideoAnalysis('test-page-123');
+        expect(afterDelete).toBeNull();
+    });
 });
+
 

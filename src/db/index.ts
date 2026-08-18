@@ -31,10 +31,19 @@ export interface RevisionText {
     fetchedAt: number;
 }
 
+export interface VideoAnalysisRecord {
+    pageId: string;
+    imageBase64: string;
+    fileName?: string;
+    result: any;
+    timestamp: number;
+}
+
 export class AppDatabase extends Dexie {
     localFiles!: Table<LocalFile>;
     syncMeta!: Table<SyncMeta, string>;
     revisions!: Table<RevisionText, number>;
+    videoAnalyses!: Table<VideoAnalysisRecord, string>;
 
     constructor() {
         super('PCGWEditorDB');
@@ -49,6 +58,12 @@ export class AppDatabase extends Dexie {
             localFiles: '++id, name, status, lastModified',
             syncMeta: 'key',
             revisions: 'revid, fetchedAt'
+        });
+        this.version(4).stores({
+            localFiles: '++id, name, status, lastModified',
+            syncMeta: 'key',
+            revisions: 'revid, fetchedAt',
+            videoAnalyses: 'pageId, timestamp'
         });
     }
 }
@@ -77,3 +92,28 @@ export async function putRevisionText(revid: number, wikitext: string): Promise<
         // best effort: losing the cache only costs one refetch
     }
 }
+
+export async function getSavedVideoAnalysis(pageId: string): Promise<VideoAnalysisRecord | null> {
+    try {
+        return (await db.videoAnalyses.get(pageId)) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+export async function saveVideoAnalysisRecord(record: VideoAnalysisRecord): Promise<void> {
+    try {
+        await db.videoAnalyses.put(record);
+    } catch (e) {
+        console.error('Failed to save video analysis record:', e);
+    }
+}
+
+export async function deleteSavedVideoAnalysis(pageId: string): Promise<void> {
+    try {
+        await db.videoAnalyses.delete(pageId);
+    } catch (e) {
+        console.error('Failed to delete video analysis record:', e);
+    }
+}
+
