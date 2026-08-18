@@ -20,7 +20,7 @@ vi.mock('@lucide/vue', () => {
         'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key',
         'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn',
         'Info', 'RotateCcw', 'Eye', 'EyeOff', 'Cloud', 'RefreshCw',
-        'Loader2', 'AlertCircle'
+        'Loader2', 'AlertCircle', 'Check'
     ];
     const mock: any = {};
     icons.forEach(icon => {

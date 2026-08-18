@@ -21,7 +21,8 @@ import ToggleSwitch from 'openvue/toggleswitch';
 import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
-    Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle
+    Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle,
+    Check
 } from '@lucide/vue';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
@@ -771,7 +772,11 @@ const saveSettings = () => {
 
         <template #footer>
             <div class="flex justify-end gap-2 w-full">
-                <Button label="Done" @click="saveSettings" icon="pi pi-check" class="cursor-pointer" />
+                <Button label="Done" @click="saveSettings" class="cursor-pointer">
+                    <template #icon>
+                        <Check class="w-4 h-4 mr-2" />
+                    </template>
+                </Button>
             </div>
         </template>
     </Dialog>
