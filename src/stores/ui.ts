@@ -4,6 +4,11 @@ import { pcgwAuth } from '../services/pcgwAuth';
 
 export const useUiStore = defineStore('ui', () => {
     const isSettingsOpen = ref(false);
+    const settingsTab = ref('appearance');
+    const openSettings = (tab: string = 'appearance') => {
+        settingsTab.value = tab;
+        isSettingsOpen.value = true;
+    };
     const sidebarVisible = ref(false);
     const editorMode = ref<'Visual' | 'Code'>('Visual');
     const isModeSwitching = ref(false);
@@ -169,6 +174,8 @@ export const useUiStore = defineStore('ui', () => {
         autoReLogin,
         navRailCollapsed,
         isSettingsOpen,
+        settingsTab,
+        openSettings,
 
         releaseNotesOpen,
         isNewBuild,

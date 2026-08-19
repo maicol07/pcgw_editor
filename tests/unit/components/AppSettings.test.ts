@@ -119,7 +119,7 @@ describe('AppSettings.vue', () => {
         expect(store.densityMode).toBe('comfortable');
     });
 
-    it('syncs gemini key and closes dialog on save', async () => {
+    it('syncs AI key and closes dialog on save', async () => {
         const { wrapper, store } = setupWrapper();
 
         // Switch to integrations tab so the key input is active
@@ -128,7 +128,7 @@ describe('AppSettings.vue', () => {
         if (integrationsTab) await integrationsTab.trigger('click');
 
         // Find input text by class
-        const inputText = wrapper.findComponent('.gemini-api-key-input');
+        const inputText = wrapper.findComponent('.ai-api-key-input');
         await inputText.setValue('new-test-key');
 
         // Key now binds directly to aiConfig (auto-persisted), not the legacy injected ref.

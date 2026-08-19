@@ -11,7 +11,7 @@ import { useAutoTheme } from './composables/useAutoTheme';
 import { useSearch } from './composables/useSearch';
 import { usePreview } from './composables/usePreview';
 import { useEditor } from './features/editor/useEditor';
-import { useGeminiSummary } from './features/ai/useGeminiSummary';
+import { useAISummary } from './features/ai/useAISummary';
 import { hasActiveKey } from './services/ai/aiConfig';
 // AIService is imported lazily at its call site: a static import pulls in the three @ai-sdk
 // providers (~700 kB) on startup, for a feature most sessions never trigger.
@@ -26,7 +26,7 @@ import Toast from 'openvue/toast';
 import { useToast } from 'openvue/usetoast';
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
-import GeminiDialogs from './features/ai/GeminiDialogs.vue';
+import AISummaryDialog from './features/ai/AISummaryDialog.vue';
 import AppSettings from './components/settings/AppSettings.vue';
 import GuidedTour from './components/layout/GuidedTour.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
@@ -115,9 +115,8 @@ provide('searchQuery', searchQuery);
 
 const {
     isGeneratingSummary, shareSummaryVisible, shareSummaryText,
-    showApiKeyDialog, tempApiKey, activeKey, saveApiKey, clearApiKey,
     generateShareSummary, copyShareSummary
-} = useGeminiSummary(pageTitle, gameData);
+} = useAISummary(pageTitle, gameData);
 
 // --- Diff Merger Logic ---
 const isDiffMergerVisible = ref(false);
@@ -206,7 +205,13 @@ const handleOpenPublishDialog = async () => {
 
 const handleGenerateEditSummary = async () => {
     if (!hasActiveKey()) {
-        showApiKeyDialog.value = true;
+        toast.add({
+            severity: 'warn',
+            summary: 'API Key Required',
+            detail: 'Please configure your AI provider and API key in Settings → Integrations.',
+            life: 4000
+        });
+        uiStore.openSettings('integrations');
         return;
     }
 
@@ -222,9 +227,6 @@ const handleGenerateEditSummary = async () => {
         );
     } catch (e: any) {
         toast.add({ severity: 'error', summary: 'AI Error', detail: 'Error generating summary: ' + e.message, life: 5000 });
-        if (e.message.includes('API key') || e.message.includes('API_KEY')) {
-            clearApiKey();
-        }
     } finally {
         isGeneratingEditSummary.value = false;
     }
@@ -819,10 +821,10 @@ onMounted(() => {
             </div>
         </div>
 
-        <GeminiDialogs v-model:showApiKeyDialog="showApiKeyDialog" v-model:shareSummaryVisible="shareSummaryVisible"
-            v-model:tempApiKey="tempApiKey" :isGeneratingSummary="isGeneratingSummary" :geminiApiKey="activeKey()"
-            :shareSummaryText="shareSummaryText" @saveApiKey="saveApiKey" @clearApiKey="clearApiKey"
-            @copyShareSummary="copyShareSummary" @openApiKeyDialog="showApiKeyDialog = true" />
+        <AISummaryDialog v-model:shareSummaryVisible="shareSummaryVisible"
+            :isGeneratingSummary="isGeneratingSummary"
+            :shareSummaryText="shareSummaryText"
+            @copyShareSummary="copyShareSummary" />
     </div>
 
     <!-- Global Modals -->

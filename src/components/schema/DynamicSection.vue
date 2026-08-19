@@ -104,14 +104,14 @@ const getFieldKey = (field: FieldDefinition, index: number): string => {
                             <span class="section-eyebrow text-xs">{{ group.title }}</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <Button aria-label="Autofill links and scores using IGDB, Steam & Gemini AI" 
+                            <Button aria-label="Autofill links and scores using IGDB, Steam & AI" 
                                 v-if="openAutofillDialog && ['Reception', 'External Links'].includes(group.title)"
                                 severity="secondary" 
                                 text 
                                 size="small" 
                                 class="h-7 py-0 px-2 text-xs font-semibold flex items-center gap-1.5 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors mr-1.5 text-surface-600 dark:text-surface-300 border border-surface-250 dark:border-surface-700 bg-surface-0/60 dark:bg-surface-900/40"
                                 @click.stop="openAutofillDialog()"
-                                v-tooltip.top="'Autofill links and scores using IGDB, Steam & Gemini AI'"
+                                v-tooltip.top="'Autofill links and scores using IGDB, Steam & AI'"
                             >
                                 <Sparkles class="w-3 h-3 text-primary-500 animate-pulse shrink-0" />
                                 <span>Autofill</span>

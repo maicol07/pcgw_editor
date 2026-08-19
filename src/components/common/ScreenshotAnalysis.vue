@@ -18,6 +18,7 @@ import {
 } from '../../features/analysis/useSectionAnalysis';
 import { ratingMetadata, type RatingValue } from '../../utils/ratings';
 import { useWorkspaceStore } from '../../stores/workspace';
+import { useUiStore } from '../../stores/ui';
 import { 
   getSavedSectionAnalysis, 
   saveSectionAnalysisRecord, 
@@ -40,6 +41,7 @@ const emit = defineEmits<{
 }>();
 
 const workspaceStore = useWorkspaceStore();
+const uiStore = useUiStore();
 const currentPageId = computed(() => workspaceStore.activePage?.id || 'default');
 const sectionTitle = computed(() => props.section.charAt(0).toUpperCase() + props.section.slice(1));
 
@@ -421,11 +423,14 @@ const getRatingMeta = (val: string) => {
     </div>
 
     <!-- Fallback if no Key -->
-    <div v-else class="surface-card p-3 flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity">
-        <div class="p-2 bg-surface-100 dark:bg-surface-800 rounded-md">
-            <SparklesIcon class="w-4 h-4 text-surface-400" />
+    <div v-else class="surface-card p-3 flex items-center justify-between gap-3 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" @click="uiStore.openSettings('integrations')">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-surface-100 dark:bg-surface-800 rounded-md">
+                <SparklesIcon class="w-4 h-4 text-surface-400" />
+            </div>
+            <span class="text-xs font-medium text-surface-500">Configure AI API Key in Settings to enable screenshot analysis</span>
         </div>
-        <span class="text-xs font-medium text-surface-500">Add Gemini API Key to enable AI screenshot analysis</span>
+        <Button label="Configure" size="small" text severity="secondary" class="text-xs py-1 px-2" />
     </div>
 
     <!-- Full Image Preview Modal -->

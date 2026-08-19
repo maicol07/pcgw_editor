@@ -112,11 +112,16 @@ const tempRawgApiKey = ref(rawgApiKey?.value || '');
 
 const toast = useToast();
 const isLoginVisible = ref(false);
-
-const activeTab = ref('appearance');
+const activeTab = ref(uiStore.settingsTab || 'appearance');
+watch(() => uiStore.settingsTab, (tab) => {
+    if (tab) activeTab.value = tab;
+});
+watch(activeTab, (tab) => {
+    uiStore.settingsTab = tab;
+});
 
 // Password visibility toggles
-const showGeminiKey = ref(false);
+const showAiKey = ref(false);
 const showTwitchSecret = ref(false);
 const showRawgKey = ref(false);
 
@@ -501,14 +506,14 @@ const saveSettings = () => {
                                     <InputText
                                         v-model="aiConfig.keys[aiConfig.provider]"
                                         id="setting-ai-key"
-                                        :type="showGeminiKey ? 'text' : 'password'"
+                                        :type="showAiKey ? 'text' : 'password'"
                                         placeholder="API key..."
-                                        class="w-full pr-10 gemini-api-key-input"
+                                        class="w-full pr-10 ai-api-key-input"
                                         @blur="() => { if (aiConfig.keys[aiConfig.provider]) handleRefreshModels(false); }"
                                         @keyup.enter="() => handleRefreshModels(true)"
                                     />
-                                    <button type="button" @click="showGeminiKey = !showGeminiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
-                                        <component :is="showGeminiKey ? EyeOff : Eye" class="w-4 h-4" />
+                                    <button type="button" @click="showAiKey = !showAiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
+                                        <component :is="showAiKey ? EyeOff : Eye" class="w-4 h-4" />
                                     </button>
                                 </div>
                                 <span class="text-[11px] text-surface-500 leading-normal">
