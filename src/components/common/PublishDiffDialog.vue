@@ -6,6 +6,7 @@ import InputText from 'openvue/inputtext';
 import Checkbox from 'openvue/checkbox';
 import CodeDiffView from './diff/CodeDiffView.vue';
 import { UploadCloud, GitCompare, Wand2 } from '@lucide/vue';
+import { aiConfig } from '../../services/ai/aiConfig';
 
 const props = defineProps<{
     visible: boolean;
@@ -88,7 +89,7 @@ const publish = () => {
                     <label class="text-xs font-bold text-surface-500 uppercase">Edit Summary</label>
                     <div class="flex gap-2">
                         <InputText v-model="summary" placeholder="What did you change?" class="w-full" :disabled="isPublishing || isGeneratingSummary" @keyup.enter="publish" />
-                        <Button aria-label="Generate summary with AI" @click="emit('requestAiSummary')" :loading="isGeneratingSummary" :disabled="isPublishing" severity="secondary" v-tooltip.top="'Generate summary with AI'">
+                        <Button v-if="!aiConfig.hideAi" aria-label="Generate summary with AI" @click="emit('requestAiSummary')" :loading="isGeneratingSummary" :disabled="isPublishing" severity="secondary" v-tooltip.top="'Generate summary with AI'">
                             <template #icon>
                                 <Wand2 class="w-4 h-4" />
                             </template>

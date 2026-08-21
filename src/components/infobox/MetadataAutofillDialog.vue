@@ -2,7 +2,7 @@
 import { ref, inject, type Ref, computed, watch } from 'vue';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { useUiStore } from '../../stores/ui';
-import { hasGoogleKey } from '../../services/ai/aiConfig';
+import { hasGoogleKey, aiConfig } from '../../services/ai/aiConfig';
 import { metadataFillerService, ExtractedMetadata, IGDBGameCandidate } from '../../services/MetadataFillerService';
 import Dialog from 'openvue/dialog';
 import InputText from 'openvue/inputtext';
@@ -33,7 +33,7 @@ const useGemini = ref(localStorage.getItem('autofill_use_gemini') !== 'false');
 const hasTwitch = computed(() => !!(twitchClientId?.value && twitchClientSecret?.value));
 const hasRawg = computed(() => !!rawgApiKey?.value);
 // Web-grounded autofill is Google-only — gate it on the Google key regardless of the chat provider.
-const hasGemini = computed(() => hasGoogleKey());
+const hasGemini = computed(() => !aiConfig.hideAi && hasGoogleKey());
 
 watch(useIGDB, (newVal) => {
     localStorage.setItem('autofill_use_igdb', newVal.toString());
@@ -83,7 +83,7 @@ watch(visible, (val) => {
         comparisonRows.value = [];
         searchPerformed.value = false;
         
-        if (!hasGoogleKey()) {
+        if (aiConfig.hideAi || !hasGoogleKey()) {
             useGemini.value = false;
         } else {
             useGemini.value = localStorage.getItem('autofill_use_gemini') !== 'false';
@@ -525,31 +525,33 @@ const handleApply = () => {
                     </div>
                 </div>
 
-                <div class="border-t border-surface-200 dark:border-surface-800/60"></div>
+                <template v-if="!aiConfig.hideAi">
+                    <div class="border-t border-surface-200 dark:border-surface-800/60"></div>
 
-                <!-- Gemini AI Service Row -->
-                <div class="flex items-start justify-between gap-4 py-0.5">
-                    <div class="flex flex-col gap-0.5">
-                        <div class="flex items-center gap-2 text-xs font-semibold text-surface-900 dark:text-surface-100">
-                            <Cpu class="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                            <span>Gemini AI Grounding</span>
+                    <!-- Gemini AI Service Row -->
+                    <div class="flex items-start justify-between gap-4 py-0.5">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center gap-2 text-xs font-semibold text-surface-900 dark:text-surface-100">
+                                <Cpu class="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                                <span>Gemini AI Grounding</span>
+                            </div>
+                            <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
+                                Uses Google Search grounding to retrieve secondary database IDs (HLTB, Lutris, WineHQ, etc.).
+                            </p>
                         </div>
-                        <p class="text-xs text-surface-500 leading-normal max-w-[480px]">
-                            Uses Google Search grounding to retrieve secondary database IDs (HLTB, Lutris, WineHQ, etc.).
-                        </p>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <template v-if="hasGemini">
+                                <ToggleSwitch v-model="useGemini" class="scale-90" />
+                                <span class="text-xs font-semibold w-10 text-right" :class="useGemini ? 'text-sky-500' : 'text-surface-400'">
+                                    {{ useGemini ? 'Active' : 'Off' }}
+                                </span>
+                            </template>
+                            <template v-else>
+                                <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-xs font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
+                            </template>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <template v-if="hasGemini">
-                            <ToggleSwitch v-model="useGemini" class="scale-90" />
-                            <span class="text-xs font-semibold w-10 text-right" :class="useGemini ? 'text-sky-500' : 'text-surface-400'">
-                                {{ useGemini ? 'Active' : 'Off' }}
-                            </span>
-                        </template>
-                        <template v-else>
-                            <Button label="Configure" icon="pi pi-cog" severity="secondary" size="small" class="h-7 text-xs font-semibold py-0 px-2.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 border-0 transition-colors shrink-0" @click="openSettings" />
-                        </template>
-                    </div>
-                </div>
+                </template>
             </div>
 
             <!-- Search Section -->

@@ -59,7 +59,7 @@ const allSteps: TourStep[] = [
         action: () => {
             uiStore.sidebarVisible = false;
         },
-        conditional: () => !!workspaceStore.activePage
+        conditional: () => !!workspaceStore.activePage && !uiStore.hideAiFeatures
     },
     {
         title: 'Visual / Code Modes 🔄',

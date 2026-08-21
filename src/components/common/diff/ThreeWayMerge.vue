@@ -15,6 +15,7 @@ import {
 // AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
 // providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { wikitextExtensions, isDark } from './cmWikitext';
+import { aiConfig } from '../../../services/ai/aiConfig';
 
 const props = defineProps<{
     local: string;
@@ -569,7 +570,7 @@ onUnmounted(() => {
             <Button aria-label="Smart apply — auto-resolve conflicts (no AI)" size="small" severity="secondary" text rounded @click="smartApply" v-tooltip.bottom="'Smart apply — auto-resolve conflicts (no AI)'">
                 <template #icon><Wand2 class="w-4 h-4" /></template>
             </Button>
-            <Button aria-label="Resolve the merge with AI" size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
+            <Button v-if="!aiConfig.hideAi" aria-label="Resolve the merge with AI" size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
                 <template #icon><Bot class="w-4 h-4" /></template>
             </Button>
             <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />

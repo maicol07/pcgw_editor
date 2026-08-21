@@ -396,6 +396,20 @@ const saveSettings = () => {
                         </div>
                     </div>
 
+                    <!-- AI Features Visibility -->
+                    <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span id="group-ai-features" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Bot class="w-4 h-4 text-primary-500" /> AI Features
+                        </span>
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Hide AI Features</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Hide all AI-assisted tools, summary generation, and screenshot analysis across the editor.</span>
+                            </div>
+                            <ToggleSwitch v-model="uiStore.hideAiFeatures" aria-label="Hide AI Features" />
+                        </div>
+                    </div>
+
                     <!-- Guided Tour -->
                     <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
                         <span id="group-tour" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">

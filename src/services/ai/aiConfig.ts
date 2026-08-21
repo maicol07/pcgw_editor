@@ -71,10 +71,12 @@ export const aiConfig = reactive({
     provider: initialProvider,
     model: localStorage.getItem('ai-model') || availableModels[initialProvider][0]?.id || '',
     keys: loadKeys(),
+    hideAi: localStorage.getItem('hideAiFeatures') === 'true',
 });
 
 watch(() => aiConfig.provider, (v) => localStorage.setItem('ai-provider', v));
 watch(() => aiConfig.model, (v) => localStorage.setItem('ai-model', v));
+watch(() => aiConfig.hideAi, (v) => localStorage.setItem('hideAiFeatures', v.toString()));
 watch(
     () => ({ ...aiConfig.keys }),
     (keys) => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { FieldDefinition, subFieldOf } from '../../types/schema';
+import { aiConfig } from '../../services/ai/aiConfig';
 import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
 import MultiSelect from 'openvue/multiselect';
@@ -341,6 +342,9 @@ const handleUpdateNotes = (val: string) => {
 };
 
 const isVisible = computed(() => {
+    if (aiConfig.hideAi && (props.field.component === 'ScreenshotAnalysis' || props.field.component === 'VideoAnalysis')) {
+        return false;
+    }
     if (props.field.showIf && props.formModel) {
         return props.field.showIf(props.formModel);
     }

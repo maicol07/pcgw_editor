@@ -153,8 +153,8 @@ describe('AppSettings.vue', () => {
         if (accountTab) await accountTab.trigger('click');
 
         const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
-        // toggles[0] is syncScroll (appearance tab), toggles[1] is autoReLogin (account tab)
-        const autoReLoginToggle = toggles[1];
+        // toggles[0] is syncScroll, toggles[1] is hideAiFeatures, toggles[2] is autoReLogin
+        const autoReLoginToggle = toggles[2] || toggles[1];
         
         await autoReLoginToggle.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);
@@ -185,5 +185,17 @@ describe('AppSettings.vue', () => {
 
         await syncScrollToggle.vm.$emit('update:modelValue', false);
         expect(store.syncScroll).toBe(false);
+    });
+
+    it('updates uiStore hideAiFeatures when toggle is clicked in appearance tab', async () => {
+        const { wrapper, store } = setupWrapper();
+
+        const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
+        // toggles[1] is hideAiFeatures in appearance tab
+        const hideAiToggle = toggles[1];
+        expect(hideAiToggle).toBeDefined();
+
+        await hideAiToggle.vm.$emit('update:modelValue', true);
+        expect(store.hideAiFeatures).toBe(true);
     });
 });

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { pcgwAuth } from '../services/pcgwAuth';
+import { aiConfig } from '../services/ai/aiConfig';
 
 export const useUiStore = defineStore('ui', () => {
     const isSettingsOpen = ref(false);
@@ -32,6 +33,8 @@ export const useUiStore = defineStore('ui', () => {
     const autoUploadDescription = ref<boolean>(localStorage.getItem('autoUploadDescription') !== 'false');
     const autoReLogin = ref<boolean>(localStorage.getItem('autoReLogin') === 'true');
     const syncScroll = ref<boolean>(localStorage.getItem('syncScroll') !== 'false');
+    const hideAiFeatures = ref<boolean>(localStorage.getItem('hideAiFeatures') === 'true');
+    aiConfig.hideAi = hideAiFeatures.value;
     const tourPart1Seen = ref<boolean>(localStorage.getItem('tour-part1-seen') === 'true');
     const tourPart2Seen = ref<boolean>(localStorage.getItem('tour-part2-seen') === 'true');
     const isTourActive = ref<boolean>(false);
@@ -44,6 +47,11 @@ export const useUiStore = defineStore('ui', () => {
 
     watch(syncScroll, (val: boolean) => {
         localStorage.setItem('syncScroll', val.toString());
+    });
+
+    watch(hideAiFeatures, (val: boolean) => {
+        localStorage.setItem('hideAiFeatures', val.toString());
+        aiConfig.hideAi = val;
     });
 
     watch(autoUploadDescription, (val: boolean) => {
@@ -176,6 +184,7 @@ export const useUiStore = defineStore('ui', () => {
         fontFamily,
         theme,
         syncScroll,
+        hideAiFeatures,
         autoUploadDescription,
         autoReLogin,
         navRailCollapsed,

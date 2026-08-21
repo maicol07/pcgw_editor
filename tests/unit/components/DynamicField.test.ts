@@ -153,4 +153,58 @@ describe('DynamicField.vue - IGDB Pre-fill and Disable Logic', () => {
         // Should be enabled now
         expect(wrapper.findComponent(InputText).props('disabled')).toBeFalsy();
     });
+
+    describe('AI components visibility with hideAiFeatures', () => {
+        it('renders ScreenshotAnalysis when hideAiFeatures is false', async () => {
+            const { setActivePinia, createPinia } = await import('pinia');
+            setActivePinia(createPinia());
+            const { aiConfig } = await import('../../../src/services/ai/aiConfig');
+            aiConfig.hideAi = false;
+            const aiField = {
+                key: 'video',
+                label: 'AI Analysis',
+                component: 'ScreenshotAnalysis'
+            };
+            const wrapper = mount(DynamicField, {
+                props: {
+                    field: aiField as any,
+                    modelValue: {}
+                }
+            });
+            expect(wrapper.find('.dynamic-field').exists()).toBe(true);
+        });
+
+        it('hides ScreenshotAnalysis and VideoAnalysis when hideAiFeatures is true', async () => {
+            const { aiConfig } = await import('../../../src/services/ai/aiConfig');
+            aiConfig.hideAi = true;
+
+            const aiField = {
+                key: 'video',
+                label: 'AI Analysis',
+                component: 'ScreenshotAnalysis'
+            };
+            const wrapper = mount(DynamicField, {
+                props: {
+                    field: aiField as any,
+                    modelValue: {}
+                }
+            });
+            expect(wrapper.find('.dynamic-field').exists()).toBe(false);
+
+            const videoField = {
+                key: 'video',
+                label: 'Video Analysis',
+                component: 'VideoAnalysis'
+            };
+            const wrapper2 = mount(DynamicField, {
+                props: {
+                    field: videoField as any,
+                    modelValue: {}
+                }
+            });
+            expect(wrapper2.find('.dynamic-field').exists()).toBe(false);
+
+            aiConfig.hideAi = false;
+        });
+    });
 });

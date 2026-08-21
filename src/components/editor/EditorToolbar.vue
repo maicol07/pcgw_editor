@@ -241,7 +241,7 @@ const pcgwMenuItems = computed(() => {
                     </div>
                 </div>
 
-                <Button aria-label="Generate summary with AI" text size="small" @click="emit('generateSummary')" severity="secondary" data-tour="ai-summary"
+                <Button v-if="!uiStore.hideAiFeatures" aria-label="Generate summary with AI" text size="small" @click="emit('generateSummary')" severity="secondary" data-tour="ai-summary"
                     class="h-8! w-8! p-0! hover-scale ml-1" v-tooltip.bottom="'Generate summary with AI'"
                     :disabled="isGeneratingSummary">
                     <template #icon>
