@@ -12,6 +12,7 @@ import {
     type AIProvider
 } from '../../services/ai/aiConfig';
 import { useUiStore } from '../../stores/ui';
+import { useWorkspaceStore } from '../../stores/workspace';
 import Dialog from 'openvue/dialog';
 import Select from 'openvue/select';
 import AutoComplete from 'openvue/autocomplete';
@@ -22,7 +23,8 @@ import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
     Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle,
-    Check, Link2
+    Check, Link2, Code2, UploadCloud, HardDrive, Download, Upload, Trash2,
+    Sliders
 } from '@lucide/vue';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
@@ -32,6 +34,8 @@ import { useToast } from 'openvue/usetoast';
 import { PROVIDER_LOGOS } from '../icons/aiLogos';
 
 const uiStore = useUiStore();
+const workspaceStore = useWorkspaceStore();
+const toast = useToast();
 
 // AI provider/model/key bind directly to the reactive aiConfig (auto-persisted).
 const providerOptions = PROVIDERS.map((p) => ({ label: PROVIDER_LABELS[p], value: p }));
@@ -110,7 +114,6 @@ const tempTwitchClientSecret = ref(twitchClientSecret?.value || '');
 const rawgApiKey = inject<Ref<string>>('rawgApiKey');
 const tempRawgApiKey = ref(rawgApiKey?.value || '');
 
-const toast = useToast();
 const isLoginVisible = ref(false);
 const activeTab = ref(uiStore.settingsTab || 'appearance');
 watch(() => uiStore.settingsTab, (tab) => {
@@ -138,6 +141,64 @@ const handleResetCache = () => {
         detail: 'PCGamingWiki metadata cache has been cleared.',
         life: 3000
     });
+};
+
+// --- Workspace Backup & Restore ---
+const backupFileInput = ref<HTMLInputElement | null>(null);
+
+const handleExportBackup = () => {
+    workspaceStore.exportWorkspaceBackup();
+    toast.add({
+        severity: 'success',
+        summary: 'Backup Exported',
+        detail: 'Workspace backup file downloaded.',
+        life: 3000
+    });
+};
+
+const handleImportBackup = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    try {
+        const res = await workspaceStore.importWorkspaceBackup(file);
+        if (res.success) {
+            toast.add({
+                severity: 'success',
+                summary: 'Backup Restored',
+                detail: `Successfully restored ${res.importedCount} pages into workspace.`,
+                life: 4000
+            });
+        } else {
+            toast.add({
+                severity: 'warn',
+                summary: 'Import Incomplete',
+                detail: res.message || 'No pages imported.',
+                life: 4000
+            });
+        }
+    } catch (err: any) {
+        toast.add({
+            severity: 'error',
+            summary: 'Import Failed',
+            detail: err.message || 'Could not parse backup file.',
+            life: 4000
+        });
+    } finally {
+        input.value = '';
+    }
+};
+
+const handleClearWorkspaceData = () => {
+    if (confirm('Are you sure you want to clear all local workspace pages? This cannot be undone unless you have an exported backup.')) {
+        workspaceStore.clearAllWorkspaceData();
+        toast.add({
+            severity: 'info',
+            summary: 'Workspace Cleared',
+            detail: 'All local pages have been removed.',
+            life: 3000
+        });
+    }
 };
 
 // --- Cloud Sync ---
@@ -195,15 +256,19 @@ watch(() => uiStore.isSettingsOpen, (val) => {
 
 const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'editor', label: 'Editor & Preview', icon: Code2 },
+    { id: 'publishing', label: 'Publishing & Wiki', icon: UploadCloud },
+    { id: 'workspace', label: 'Workspace & Data', icon: HardDrive },
     { id: 'integrations', label: 'Integrations & APIs', icon: Bot },
-    { id: 'account', label: 'Account & Cache', icon: Globe },
     { id: 'sync', label: 'Cloud Sync', icon: Cloud }
 ];
 
 const tabSubtitles: Record<string, string> = {
-    appearance: 'Customize the interface theme, fonts, and layout spacing.',
+    appearance: 'Customize the interface theme, typography, and UI spacing.',
+    editor: 'Configure CodeMirror wikitext editor, live preview rendering, and split pane behavior.',
+    publishing: 'Manage PCGamingWiki publishing defaults, edit summaries, and watchlist preferences.',
+    workspace: 'Manage workspace defaults, section collapsing, backup export/restore, and local data storage.',
     integrations: 'Configure third-party API credentials to enable autofill and metadata assistance.',
-    account: 'Manage authentication credentials and local data cache settings.',
     sync: 'Sync workspaces and settings across your devices via your own Google Drive.'
 };
 
@@ -233,6 +298,65 @@ const updateDensity = (index: number) => {
     uiStore.densityMode = densityModes[index];
 };
 
+// Select Options for Editor & Preview
+const editorFontFamilyOptions = [
+    { label: 'Default Monospace (System)', value: 'default' },
+    { label: 'JetBrains Mono', value: 'JetBrains Mono' },
+    { label: 'Fira Code', value: 'Fira Code' },
+    { label: 'Source Code Pro', value: 'Source Code Pro' },
+    { label: 'Cascadia Code', value: 'Cascadia Code' },
+    { label: 'Consolas', value: 'Consolas' }
+];
+
+const editorFontSizeOptions = [
+    { label: '12 px (Compact)', value: 12 },
+    { label: '13 px', value: 13 },
+    { label: '14 px (Default)', value: 14 },
+    { label: '15 px', value: 15 },
+    { label: '16 px (Comfortable)', value: 16 },
+    { label: '18 px (Large)', value: 18 }
+];
+
+const editorTabSizeOptions = [
+    { label: '2 Spaces', value: 2 },
+    { label: '4 Spaces (Default)', value: 4 }
+];
+
+const defaultEditorModeOptions = [
+    { label: 'Remember Last Mode (Default)', value: 'remember' },
+    { label: 'Visual Form Editor', value: 'Visual' },
+    { label: 'Code Wikitext Editor', value: 'Code' }
+];
+
+const previewDebounceOptions = [
+    { label: '150 ms (Fast - Realtime)', value: 150 },
+    { label: '300 ms (Balanced - Default)', value: 300 },
+    { label: '500 ms (Smooth)', value: 500 },
+    { label: '1000 ms (Relaxed)', value: 1000 }
+];
+
+const previewSplitRatioOptions = [
+    { label: '50 / 50 (Balanced Equal)', value: '50/50' },
+    { label: '60 / 40 (Editor Focused)', value: '60/40' },
+    { label: '40 / 60 (Preview Focused)', value: '40/60' },
+    { label: '70 / 30 (Wide Editor)', value: '70/30' }
+];
+
+// Select Options for Publishing & Wiki
+const defaultWatchlistOptions = [
+    { label: 'Do not change watchlist (Default)', value: 'nochange' },
+    { label: 'Add edited page to watchlist', value: 'watch' },
+    { label: 'Remove edited page from watchlist', value: 'unwatch' },
+    { label: 'Respect PCGW user preferences', value: 'preferences' }
+];
+
+// Select Options for Workspace
+const defaultSectionStateOptions = [
+    { label: 'Remember Previous State (Default)', value: 'remember' },
+    { label: 'All Sections Expanded', value: 'expanded' },
+    { label: 'All Sections Collapsed', value: 'collapsed' }
+];
+
 const saveSettings = () => {
     // AI config persists itself via aiConfig watchers; only the legacy temp-bound keys need committing here.
     if (twitchClientId && twitchClientSecret) {
@@ -261,7 +385,7 @@ const saveSettings = () => {
 
         <div class="flex flex-col md:flex-row min-h-[600px]">
             <!-- Rail-style navigation (mirrors SectionNav) -->
-            <nav class="flex flex-row md:flex-col shrink-0 w-full md:w-52 border-b md:border-b-0 md:border-r border-surface-200/70 dark:border-surface-800/70 overflow-x-auto md:overflow-x-visible custom-scrollbar">
+            <nav class="flex flex-row md:flex-col shrink-0 w-full md:w-56 border-b md:border-b-0 md:border-r border-surface-200/70 dark:border-surface-800/70 overflow-x-auto md:overflow-x-visible custom-scrollbar">
                 <div class="flex flex-row md:flex-col gap-1 px-2.5 py-3 md:py-4 md:pt-5">
                     <span class="hidden md:block px-2.5 mb-1 text-xs font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500 select-none">
                         Settings
@@ -294,14 +418,12 @@ const saveSettings = () => {
                     </p>
                 </div>
 
-                <!-- Appearance Tab -->
+                <!-- 1. Appearance Tab -->
                 <div v-show="activeTab === 'appearance'" class="flex flex-col gap-6 animate-fade-in">
                     <!-- Theme Selector -->
                     <div class="flex flex-col gap-3">
                         <span id="group-theme" class="text-sm font-semibold text-surface-700 dark:text-surface-200">Theme Preference</span>
                         <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="group-theme">
-                            <!-- Explicit aria-label: the visible text sits behind several decorative
-                                 preview divs, so name-from-content is not dependable here. -->
                             <button v-for="opt in themeOptions" :key="opt.value" role="radio"
                                 :aria-label="opt.label"
                                 :aria-checked="uiStore.theme === opt.value"
@@ -311,7 +433,6 @@ const saveSettings = () => {
                                     ? 'border-primary-500 bg-primary-500/5 dark:bg-primary-500/10 ring-1 ring-primary-500'
                                     : 'border-surface-200 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-800/80 hover:border-surface-300 dark:hover:border-surface-700'"
                             >
-                                <!-- Simulated theme UI cards -->
                                 <div class="w-full h-14 rounded-lg relative overflow-hidden border border-surface-200/60 dark:border-surface-800/60 shadow-2xs"
                                     :class="opt.value === 'light' ? 'bg-white' : opt.value === 'dark' ? 'bg-surface-900' : 'bg-linear-to-br from-white via-surface-100 to-surface-900'"
                                 >
@@ -382,10 +503,10 @@ const saveSettings = () => {
                         </div>
                     </div>
 
-                    <!-- Editor & Preview Scrolling -->
+                    <!-- Synchronize Scrolling -->
                     <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
                         <span id="group-scroll" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                            <Link2 class="w-4 h-4 text-primary-500" /> Editor & Preview
+                            <Link2 class="w-4 h-4 text-primary-500" /> Scrolling Synchronization
                         </span>
                         <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
                             <div class="flex flex-col gap-0.5">
@@ -429,7 +550,276 @@ const saveSettings = () => {
                     </div>
                 </div>
 
-                <!-- Integrations Tab -->
+                <!-- 2. Editor & Preview Tab -->
+                <div v-show="activeTab === 'editor'" class="flex flex-col gap-6 animate-fade-in">
+                    <!-- Code Editor Settings Group -->
+                    <div class="flex flex-col gap-4">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Code2 class="w-4 h-4 text-primary-500" /> Code Editor (CodeMirror)
+                        </span>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Font Family -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-editor-font-family" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Editor Font Family</label>
+                                <Select v-model="uiStore.editorFontFamily" :options="editorFontFamilyOptions" optionLabel="label" optionValue="value" inputId="setting-editor-font-family" class="w-full">
+                                    <template #option="slotProps">
+                                        <span :style="{ fontFamily: slotProps.option.value === 'default' ? 'monospace' : `'${slotProps.option.value}', monospace` }">{{ slotProps.option.label }}</span>
+                                    </template>
+                                </Select>
+                            </div>
+
+                            <!-- Font Size -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-editor-font-size" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Editor Font Size</label>
+                                <Select v-model="uiStore.editorFontSize" :options="editorFontSizeOptions" optionLabel="label" optionValue="value" inputId="setting-editor-font-size" class="w-full" />
+                            </div>
+
+                            <!-- Tab Size -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-editor-tab-size" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Indentation / Tab Size</label>
+                                <Select v-model="uiStore.editorTabSize" :options="editorTabSizeOptions" optionLabel="label" optionValue="value" inputId="setting-editor-tab-size" class="w-full" />
+                            </div>
+
+                            <!-- Default Mode -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-default-mode" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Default Editor Mode on Load</label>
+                                <Select v-model="uiStore.defaultEditorMode" :options="defaultEditorModeOptions" optionLabel="label" optionValue="value" inputId="setting-default-mode" class="w-full" />
+                            </div>
+                        </div>
+
+                        <!-- Editor Toggles -->
+                        <div class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl px-4">
+                            <!-- Line Wrapping -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Line Wrapping (Soft Wrap)</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Wrap long wikitext lines automatically to avoid horizontal scrolling.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.editorLineWrapping" aria-label="Line Wrapping" />
+                            </div>
+
+                            <!-- Line Numbers -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Show Line Numbers</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Display gutter line numbers along the left edge of the code editor.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.editorLineNumbers" aria-label="Show Line Numbers" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Preview Settings Group -->
+                    <div class="flex flex-col gap-4 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Monitor class="w-4 h-4 text-primary-500" /> Live Preview & Layout
+                        </span>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Preview Debounce -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-preview-debounce" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Rendering Debounce Rate</label>
+                                <Select v-model="uiStore.previewDebounce" :options="previewDebounceOptions" optionLabel="label" optionValue="value" inputId="setting-preview-debounce" class="w-full" />
+                                <span class="text-[11px] text-surface-400">Delay before re-rendering wikitext preview upon typing.</span>
+                            </div>
+
+                            <!-- Split Ratio -->
+                            <div class="flex flex-col gap-1.5">
+                                <label for="setting-split-ratio" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Default Split Screen Ratio</label>
+                                <Select v-model="uiStore.previewSplitRatio" :options="previewSplitRatioOptions" optionLabel="label" optionValue="value" inputId="setting-split-ratio" class="w-full" />
+                                <span class="text-[11px] text-surface-400">Initial proportion between editor and live preview panels.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Publishing & Wiki Tab -->
+                <div v-show="activeTab === 'publishing'" class="flex flex-col gap-5 animate-fade-in">
+                    <!-- PCGamingWiki Authentication Status -->
+                    <div class="flex flex-col gap-3">
+                        <span id="group-pcgw-account" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Globe class="w-4 h-4 text-primary-500" /> PCGamingWiki Account
+                        </span>
+                        
+                        <!-- Logged In state card -->
+                        <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 relative">
+                                    <Globe class="w-5 h-5" />
+                                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-surface-950 rounded-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected Account</span>
+                                    <span class="font-bold text-surface-800 dark:text-surface-100 text-sm leading-tight">{{ pcgwAuth.username }}</span>
+                                </div>
+                            </div>
+                            <Button aria-label="Logout" severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
+                                class="p-2 rounded-lg hover:bg-red-500/10 text-red-500 border-none cursor-pointer">
+                                <LogOut class="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <!-- Logged Out state card -->
+                        <div v-else class="flex flex-col items-center gap-3 p-6 bg-surface-50 dark:bg-surface-900/40 border border-dashed border-surface-300 dark:border-surface-800 rounded-xl text-center">
+                            <div class="w-11 h-11 rounded-full bg-surface-100 dark:bg-surface-850 flex items-center justify-center text-surface-400">
+                                <Globe class="w-5 h-5" />
+                            </div>
+                            <div class="flex flex-col gap-1 max-w-xs">
+                                <span class="font-bold text-sm text-surface-800 dark:text-surface-200">Not connected to PCGamingWiki</span>
+                                <span class="text-xs text-surface-500 leading-relaxed">Connect to submit wiki page revisions directly, upload screenshots and set auto-descriptions.</span>
+                            </div>
+                            <Button label="Connect Account" severity="primary" size="small" class="mt-1 shadow-soft shadow-primary-500/10 cursor-pointer" @click="isLoginVisible = true">
+                                <template #icon>
+                                    <LogIn class="w-4 h-4 mr-2" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Publishing Defaults -->
+                    <div class="flex flex-col gap-4 pt-4 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <UploadCloud class="w-4 h-4 text-primary-500" /> Revision Defaults
+                        </span>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Default Summary -->
+                            <div class="flex flex-col gap-1.5 md:col-span-2">
+                                <label for="setting-default-summary" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Default Edit Summary</label>
+                                <InputText v-model="uiStore.defaultEditSummary" id="setting-default-summary" placeholder="e.g. Updated via PCGW Editor" class="w-full" />
+                                <span class="text-[11px] text-surface-400">Initial edit summary prefilled when opening the publish dialog.</span>
+                            </div>
+
+                            <!-- Watchlist Action -->
+                            <div class="flex flex-col gap-1.5 md:col-span-2">
+                                <label for="setting-default-watchlist" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Watchlist Preference</label>
+                                <Select v-model="uiStore.defaultWatchlist" :options="defaultWatchlistOptions" optionLabel="label" optionValue="value" inputId="setting-default-watchlist" class="w-full" />
+                                <span class="text-[11px] text-surface-400">Action performed on your PCGamingWiki watchlist when publishing changes.</span>
+                            </div>
+                        </div>
+
+                        <!-- Publishing Toggles -->
+                        <div class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl px-4">
+                            <!-- Minor Edit Toggle -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Mark as Minor Edit by Default</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Automatically check the "This is a minor edit" flag during publishing.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.defaultMinorEdit" aria-label="Mark as Minor Edit" />
+                            </div>
+
+                            <!-- Auto-relogin Switch -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Automatic Session Refresh</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Automatically renews PCGW API credentials when session expires using local tokens.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.autoReLogin" aria-label="Auto Re-login" />
+                            </div>
+
+                            <!-- Auto-description Switch -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Show Upload Attribution</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Adds a descriptive tag linking back to this client app when uploading media files.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.autoUploadDescription" aria-label="Show Upload Attribution" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Workspace & Data Tab -->
+                <div v-show="activeTab === 'workspace'" class="flex flex-col gap-5 animate-fade-in">
+                    <!-- Visual Form Defaults -->
+                    <div class="flex flex-col gap-4">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Sliders class="w-4 h-4 text-primary-500" /> Visual Form Behavior
+                        </span>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="setting-section-state" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Initial Section Expansion State</label>
+                            <Select v-model="uiStore.defaultSectionState" :options="defaultSectionStateOptions" optionLabel="label" optionValue="value" inputId="setting-section-state" class="w-full" />
+                            <span class="text-[11px] text-surface-400">Controls whether form sections start fully expanded or collapsed by default.</span>
+                        </div>
+
+                        <!-- Confirm Deletions Toggle -->
+                        <div class="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Confirm Before Deletion</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Show confirmation dialogs when deleting workspace pages, custom sections, or table rows.</span>
+                            </div>
+                            <ToggleSwitch v-model="uiStore.confirmDeletions" aria-label="Confirm Before Deletion" />
+                        </div>
+                    </div>
+
+                    <!-- Local Backup & Restore -->
+                    <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <HardDrive class="w-4 h-4 text-primary-500" /> Local Workspace Backup
+                        </span>
+
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Export Complete Backup</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Download all workspace pages and configuration snapshots as a single JSON file.</span>
+                            </div>
+                            <Button label="Export Backup" severity="secondary" variant="outlined" size="small" @click="handleExportBackup" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <Download class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Restore Workspace Backup</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Import and restore pages from an exported workspace backup file.</span>
+                            </div>
+                            <input ref="backupFileInput" type="file" accept=".json" class="hidden" @change="handleImportBackup" />
+                            <Button label="Restore Backup" severity="primary" size="small" @click="backupFileInput?.click()" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <Upload class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Cache & Data Management -->
+                    <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <RotateCcw class="w-4 h-4 text-primary-500" /> Cache & Storage Management
+                        </span>
+
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">PCGW Metadata Cache</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Clear cached Cargo tables, schemas, and template suggestions.</span>
+                            </div>
+                            <Button label="Reset Cache" severity="secondary" variant="outlined" size="small" @click="handleResetCache" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <RotateCcw class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-3 p-4 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-red-600 dark:text-red-400">Clear All Workspace Pages</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Wipe all local pages stored in your browser's workspace storage.</span>
+                            </div>
+                            <Button label="Clear Workspace" severity="danger" variant="outlined" size="small" @click="handleClearWorkspaceData" class="cursor-pointer shrink-0">
+                                <template #icon>
+                                    <Trash2 class="w-3.5 h-3.5 mr-1.5" />
+                                </template>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Integrations Tab -->
                 <div v-show="activeTab === 'integrations'" class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70 animate-fade-in">
                     <!-- AI Assistant -->
                     <div class="flex flex-col gap-3 pb-5">
@@ -452,30 +842,29 @@ const saveSettings = () => {
                             leave-to-class="opacity-0 -translate-y-2"
                         >
                             <div v-show="showAiHelp" class="p-3.5 bg-surface-100/50 dark:bg-surface-800/40 rounded-xl text-xs text-surface-600 dark:text-surface-300 flex flex-col gap-2 md:pl-9 border border-surface-200/50 dark:border-surface-800/50 leading-relaxed">
-                                <span class="font-bold text-surface-800 dark:text-surface-200">How to get an AI Provider Key:</span>
-                                <ul class="list-disc list-inside flex flex-col gap-1.5 pl-1">
-                                    <li><b>Google Gemini:</b> Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary-500 hover:underline font-medium">Google AI Studio</a>, click on <i>Create API key</i>, and copy the generated key. (Free tier available).</li>
-                                    <li><b>OpenAI:</b> Visit the <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary-500 hover:underline font-medium">OpenAI API Keys dashboard</a>, click <i>Create new secret key</i>, and copy it. (Requires credit balance).</li>
-                                    <li><b>Anthropic Claude:</b> Go to the <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-primary-500 hover:underline font-medium">Anthropic Console keys page</a>, click <i>Create Key</i>, and copy the key. (Requires active credits).</li>
-                                </ul>
+                                <span class="font-bold text-surface-800 dark:text-surface-200">How to get an API Key:</span>
+                                <ol class="list-decimal list-inside flex flex-col gap-1.5 pl-1">
+                                    <li><b>Google Gemini:</b> Access <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-primary-500 hover:underline font-medium">aistudio.google.com</a> and click "Create API key". Free tier available!</li>
+                                    <li><b>OpenAI:</b> Visit <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary-500 hover:underline font-medium">platform.openai.com</a>, create an account, and generate a new secret key under API Keys.</li>
+                                    <li><b>Anthropic (Claude):</b> Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-primary-500 hover:underline font-medium">console.anthropic.com</a>, navigate to API Keys, and click Create Key.</li>
+                                </ol>
                             </div>
                         </Transition>
-                        <div class="flex flex-col gap-3 md:pl-9">
+                        <div class="md:pl-9 flex flex-col gap-3">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1.5">
                                     <label for="setting-ai-provider" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Provider</label>
-                                    <Select v-model="aiConfig.provider" :options="providerOptions" inputId="setting-ai-provider" aria-label="AI provider" optionLabel="label" optionValue="value" class="w-full">
+                                    <Select v-model="aiConfig.provider" :options="providerOptions" optionLabel="label" optionValue="value" inputId="setting-ai-provider" class="w-full">
                                         <template #value="slotProps">
                                             <div v-if="slotProps.value" class="flex items-center gap-2">
-                                                <component :is="PROVIDER_LOGOS[slotProps.value as AIProvider]" :size="16" class="w-4 h-4 shrink-0" />
+                                                <component :is="PROVIDER_LOGOS[slotProps.value as AIProvider]" class="w-4 h-4 text-primary-500 shrink-0" />
                                                 <span>{{ PROVIDER_LABELS[slotProps.value as AIProvider] }}</span>
                                             </div>
-                                            <span v-else>{{ slotProps.placeholder }}</span>
                                         </template>
                                         <template #option="slotProps">
-                                            <div class="flex items-center gap-2.5 py-0.5">
-                                                <component :is="PROVIDER_LOGOS[slotProps.option.value as AIProvider]" :size="16" class="w-4 h-4 shrink-0" />
-                                                <span class="text-xs font-medium">{{ slotProps.option.label }}</span>
+                                            <div class="flex items-center gap-2">
+                                                <component :is="PROVIDER_LOGOS[slotProps.option.value as AIProvider]" class="w-4 h-4 text-primary-500 shrink-0" />
+                                                <span>{{ slotProps.option.label }}</span>
                                             </div>
                                         </template>
                                     </Select>
@@ -483,81 +872,43 @@ const saveSettings = () => {
                                 <div class="flex flex-col gap-1.5">
                                     <div class="flex items-center justify-between">
                                         <label for="setting-ai-model" class="text-xs font-semibold text-surface-600 dark:text-surface-300">Model</label>
-                                        <button
-                                            type="button"
-                                            @click="() => handleRefreshModels(true)"
-                                            :disabled="isFetchingModels"
-                                            title="Fetch latest models from provider API"
-                                            class="flex items-center gap-1 text-[11px] text-primary-500 hover:text-primary-600 font-medium cursor-pointer select-none disabled:opacity-50"
-                                        >
-                                            <component :is="isFetchingModels ? Loader2 : RefreshCw" class="w-3 h-3" :class="{ 'animate-spin': isFetchingModels }" />
-                                            <span>{{ isFetchingModels ? 'Fetching...' : 'Fetch Models' }}</span>
+                                        <button type="button" @click="handleRefreshModels(true)" :disabled="isFetchingModels" class="text-[11px] text-primary-500 hover:text-primary-600 font-medium flex items-center gap-1 cursor-pointer">
+                                            <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isFetchingModels }" />
+                                            <span>Fetch Models</span>
                                         </button>
                                     </div>
-                                    <AutoComplete
-                                        v-model="aiConfig.model"
-                                        :suggestions="modelSuggestions"
-                                        optionLabel="label"
-                                        dropdown
-                                        completeOnFocus
-                                        placeholder="Search or enter model ID..."
-                                        inputId="setting-ai-model"
-                                        aria-label="AI model"
-                                        class="w-full"
-                                        @complete="searchModel"
-                                        @item-select="onModelSelect"
-                                    >
+                                    <AutoComplete v-model="aiConfig.model" :suggestions="modelSuggestions" optionLabel="label" inputId="setting-ai-model" placeholder="Select or type model..." class="w-full" dropdown @complete="searchModel" @item-select="onModelSelect">
                                         <template #option="slotProps">
                                             <div class="flex flex-col py-0.5">
-                                                <span class="text-xs font-medium text-surface-900 dark:text-surface-100">
-                                                    {{ typeof slotProps.option === 'object' ? slotProps.option.label : slotProps.option }}
-                                                </span>
-                                                <span
-                                                    v-if="typeof slotProps.option === 'object' && slotProps.option.id !== slotProps.option.label"
-                                                    class="text-[10px] text-surface-400 dark:text-surface-500 font-mono"
-                                                >
-                                                    {{ slotProps.option.id }}
-                                                </span>
-                                            </div>
-                                        </template>
-                                        <template #empty>
-                                            <div class="p-2 text-xs text-surface-500 text-center">
-                                                {{ !availableModels[aiConfig.provider]?.length ? 'No models loaded. Click "Fetch Models".' : 'No matching models found.' }}
+                                                <span class="text-xs font-semibold">{{ slotProps.option.label }}</span>
+                                                <span class="text-[10px] text-surface-400 font-mono">{{ slotProps.option.id }}</span>
                                             </div>
                                         </template>
                                     </AutoComplete>
                                 </div>
                             </div>
-                            <div class="flex flex-col gap-2">
-                                <label for="setting-ai-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">{{ PROVIDER_LABELS[aiConfig.provider] }} API Key</label>
+
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center justify-between">
+                                    <label for="setting-ai-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">API Key</label>
+                                    <a v-if="keyLink" :href="keyLink" target="_blank" class="text-[11px] text-primary-500 hover:underline">Get Key &rarr;</a>
+                                </div>
                                 <div class="flex relative items-center">
-                                    <InputText
-                                        v-model="aiConfig.keys[aiConfig.provider]"
-                                        id="setting-ai-key"
-                                        :type="showAiKey ? 'text' : 'password'"
-                                        placeholder="API key..."
-                                        class="w-full pr-10 ai-api-key-input"
-                                        @blur="() => { if (aiConfig.keys[aiConfig.provider]) handleRefreshModels(false); }"
-                                        @keyup.enter="() => handleRefreshModels(true)"
-                                    />
+                                    <InputText v-model="aiConfig.keys[aiConfig.provider]" id="setting-ai-key" :type="showAiKey ? 'text' : 'password'" placeholder="Enter API key" class="w-full pr-10 ai-api-key-input" />
                                     <button type="button" @click="showAiKey = !showAiKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                         <component :is="showAiKey ? EyeOff : Eye" class="w-4 h-4" />
                                     </button>
                                 </div>
-                                <span class="text-[11px] text-surface-500 leading-normal">
-                                    Powers screenshot parsing, edit-summary generation, and infobox mapping. Keys are stored per provider in your browser's local storage. Get a key from <a :href="keyLink" target="_blank" class="text-primary-500 hover:underline">{{ PROVIDER_LABELS[aiConfig.provider] }}</a>.
-                                    <br>Web-grounded metadata autofill (store IDs) requires a <strong>Google</strong> key specifically.
-                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- RAWG -->
+                    <!-- RAWG API -->
                     <div class="flex flex-col gap-3 py-5">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2.5">
-                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 text-teal-500 shrink-0"><Key class="w-4 h-4" /></span>
-                                <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">RAWG.io Database API</span>
+                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Key class="w-4 h-4" /></span>
+                                <span class="font-semibold text-sm text-surface-900 dark:text-surface-100">RAWG Video Games Database API</span>
                             </div>
                             <button type="button" @click="showRawgHelp = !showRawgHelp" class="flex items-center gap-1.5 text-xs text-primary-500 hover:text-primary-600 font-semibold cursor-pointer select-none">
                                 <Info class="w-3.5 h-3.5" />
@@ -575,27 +926,30 @@ const saveSettings = () => {
                             <div v-show="showRawgHelp" class="p-3.5 bg-surface-100/50 dark:bg-surface-800/40 rounded-xl text-xs text-surface-600 dark:text-surface-300 flex flex-col gap-2 md:pl-9 border border-surface-200/50 dark:border-surface-800/50 leading-relaxed">
                                 <span class="font-bold text-surface-800 dark:text-surface-200">How to get a RAWG API Key:</span>
                                 <ol class="list-decimal list-inside flex flex-col gap-1.5 pl-1">
-                                    <li>Go to the <a href="https://rawg.io/apidocs" target="_blank" class="text-primary-500 hover:underline font-medium">RAWG.io API Docs</a>.</li>
-                                    <li>Log in or register a new RAWG account.</li>
-                                    <li>Click on <b>Get an API key</b> and fill out the form.</li>
-                                    <li>Copy the generated key and paste it below.</li>
+                                    <li>Sign up for a free account at <a href="https://rawg.io/apidocs" target="_blank" class="text-primary-500 hover:underline font-medium">rawg.io/apidocs</a>.</li>
+                                    <li>Navigate to your profile settings or API section.</li>
+                                    <li>Click <b>Get an API key</b> and fill in the brief project details.</li>
+                                    <li>Copy your generated key and paste it below.</li>
                                 </ol>
                             </div>
                         </Transition>
-                        <div class="flex flex-col gap-2 md:pl-9">
-                            <label for="setting-rawg-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
+                        <div class="md:pl-9 flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="setting-rawg-key" class="text-xs font-semibold text-surface-600 dark:text-surface-300">RAWG API Key</label>
+                                <a href="https://rawg.io/apidocs" target="_blank" class="text-[11px] text-primary-500 hover:underline">Get RAWG Key &rarr;</a>
+                            </div>
                             <div class="flex relative items-center">
-                                <InputText v-model="tempRawgApiKey" id="setting-rawg-key" :type="showRawgKey ? 'text' : 'password'" placeholder="RAWG api key..." class="w-full pr-10" />
+                                <InputText v-model="tempRawgApiKey" id="setting-rawg-key" :type="showRawgKey ? 'text' : 'password'" placeholder="Enter RAWG API Key" class="w-full pr-10" />
                                 <button type="button" @click="showRawgKey = !showRawgKey" class="absolute right-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 cursor-pointer">
                                     <component :is="showRawgKey ? EyeOff : Eye" class="w-4 h-4" />
                                 </button>
                             </div>
-                            <span class="text-[11px] text-surface-500 leading-normal">Used for populating release dates, developers, publishers, and store identifiers directly. Get an API key from the <a href="https://rawg.io/apidocs" target="_blank" class="text-primary-500 hover:underline">RAWG API Docs</a>.</span>
+                            <span class="text-[11px] text-surface-500 leading-normal">Used to fetch game release dates, developers, publishers, genres, tags and official websites automatically.</span>
                         </div>
                     </div>
 
-                    <!-- Twitch / IGDB -->
-                    <div class="flex flex-col gap-3.5 pt-5">
+                    <!-- Twitch IGDB -->
+                    <div class="flex flex-col gap-3 pt-5">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2.5">
                                 <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0"><Key class="w-4 h-4" /></span>
@@ -646,98 +1000,7 @@ const saveSettings = () => {
                     </div>
                 </div>
 
-                <!-- Account & Cache Tab -->
-                <div v-show="activeTab === 'account'" class="flex flex-col gap-5 animate-fade-in">
-                    <!-- PCGamingWiki Authentication Status -->
-                    <div class="flex flex-col gap-3">
-                        <span id="group-pcgw-account" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
-                            <Globe class="w-4 h-4 text-primary-500" /> PCGamingWiki Account
-                        </span>
-                        
-                        <!-- Logged In state card -->
-                        <div v-if="pcgwAuth.isLoggedIn" class="flex items-center justify-between p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 relative">
-                                    <Globe class="w-5 h-5" />
-                                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-surface-950 rounded-full animate-pulse"></div>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Connected Account</span>
-                                    <span class="font-bold text-surface-800 dark:text-surface-100 text-sm leading-tight">{{ pcgwAuth.username }}</span>
-                                </div>
-                            </div>
-                            <Button aria-label="Logout" severity="danger" text size="small" @click="handleLogout" v-tooltip.bottom="'Logout'"
-                                class="p-2 rounded-lg hover:bg-red-500/10 text-red-500 border-none cursor-pointer">
-                                <LogOut class="w-4 h-4" />
-                            </Button>
-                        </div>
-
-                        <!-- Logged Out state card -->
-                        <div v-else class="flex flex-col items-center gap-3 p-6 bg-surface-50 dark:bg-surface-900/40 border border-dashed border-surface-300 dark:border-surface-800 rounded-xl text-center">
-                            <div class="w-11 h-11 rounded-full bg-surface-100 dark:bg-surface-850 flex items-center justify-center text-surface-400">
-                                <Globe class="w-5 h-5" />
-                            </div>
-                            <div class="flex flex-col gap-1 max-w-xs">
-                                <span class="font-bold text-sm text-surface-800 dark:text-surface-200">Not connected to PCGamingWiki</span>
-                                <span class="text-xs text-surface-500 leading-relaxed">Connect to submit wiki page revisions directly, upload screenshots and set auto-descriptions.</span>
-                            </div>
-                            <Button label="Connect Account" severity="primary" size="small" class="mt-1 shadow-soft shadow-primary-500/10 cursor-pointer" @click="isLoginVisible = true">
-                                <template #icon>
-                                    <LogIn class="w-4 h-4 mr-2" />
-                                </template>
-                            </Button>
-                        </div>
-                    </div>
-
-                    <!-- Preferences + cache (flat, divider-separated) -->
-                    <div class="flex flex-col divide-y divide-surface-200/70 dark:divide-surface-800/70">
-                        <!-- Auto-relogin Switch -->
-                        <div class="flex items-start gap-3.5 py-3.5">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><RotateCcw class="w-4 h-4" /></span>
-                            <div class="flex-1 flex flex-col gap-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Automatic Session Refresh</span>
-                                    <ToggleSwitch v-model="uiStore.autoReLogin" aria-label="Auto Re-login" />
-                                </div>
-                                <p class="text-[11px] text-surface-500 leading-normal">
-                                    Automatically renews PCGW API credentials when the current session expires. Uses secure locally stored tokens.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Auto-description Switch -->
-                        <div class="flex items-start gap-3.5 py-3.5">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><Info class="w-4 h-4" /></span>
-                            <div class="flex-1 flex flex-col gap-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Show Upload Attribution</span>
-                                    <ToggleSwitch v-model="uiStore.autoUploadDescription" aria-label="Show Upload Attribution" />
-                                </div>
-                                <p class="text-[11px] text-surface-500 leading-normal">
-                                    Adds a descriptive tag linking back to this client app whenever you upload image media files to the wiki.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Cache Administration -->
-                        <div class="flex items-center justify-between gap-3 py-3.5">
-                            <div class="flex items-start gap-3.5">
-                                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-500/10 text-primary-500 shrink-0 mt-0.5"><RotateCcw class="w-4 h-4" /></span>
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Cache Administration</span>
-                                    <span class="text-[11px] text-surface-500 leading-normal">Purge offline copies of PCGW schemas and templates.</span>
-                                </div>
-                            </div>
-                            <Button label="Reset Cache" severity="secondary" variant="outlined" size="small" @click="handleResetCache" class="cursor-pointer shrink-0">
-                                <template #icon>
-                                    <RotateCcw class="w-3.5 h-3.5 mr-1.5" />
-                                </template>
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cloud Sync Tab -->
+                <!-- 6. Cloud Sync Tab -->
                 <div v-show="activeTab === 'sync'" class="flex flex-col gap-5 animate-fade-in">
                     <!-- Not configured in this build -->
                     <div v-if="!syncState.available" class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-surface-300 dark:border-surface-800 bg-surface-50 dark:bg-surface-900/40">

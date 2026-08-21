@@ -55,7 +55,7 @@ class PCGWMediaService {
         }
     }
 
-    async editPage(title: string, text: string, summary: string, baserevid?: number, minor: boolean = false): Promise<any> {
+    async editPage(title: string, text: string, summary: string, baserevid?: number, minor: boolean = false, watchlist?: 'nochange' | 'watch' | 'unwatch' | 'preferences'): Promise<any> {
         if (!pcgwAuth.isAuthReady) {
             throw new Error('User not authenticated with PCGW');
         }
@@ -71,6 +71,7 @@ class PCGWMediaService {
         formData.append('token', token);
         if (baserevid) formData.append('baserevid', baserevid.toString());
         if (minor) formData.append('minor', '1');
+        if (watchlist && watchlist !== 'nochange') formData.append('watchlist', watchlist);
 
         try {
             const result = await pcgwAuth.apiPost(formData, 'POST');

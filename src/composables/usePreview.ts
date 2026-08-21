@@ -1,8 +1,10 @@
 import { ref, watch, onScopeDispose } from 'vue';
+import { getActivePinia } from 'pinia';
 import { useDebounceFn } from '@vueuse/core';
 import { renderWikitextToHtml } from '../utils/renderer';
 import { sanitizeHtml } from '../utils/sanitize';
 import { getProxiedImageUrl } from '../config/api';
+import { useUiStore } from '../stores/ui';
 
 const proxyHtmlImages = (html: string): string => {
     if (!html) return '';
@@ -75,6 +77,7 @@ export function usePreview(
     wikitextSource: () => string,
     titleSource: () => string
 ) {
+    const uiStore = getActivePinia() ? useUiStore() : null;
     const previewMode = ref<PreviewMode>('API');
     const renderedHtml = ref('');
     const isLoading = ref(false);
@@ -156,7 +159,7 @@ export function usePreview(
     const runFetch = useDebounceFn((newText: string) => {
         isPending.value = false;
         fetchPreview(newText);
-    }, 500);
+    }, () => uiStore?.previewDebounce || 300);
 
     const debouncedFetch = (newText: string) => {
         isPending.value = true;

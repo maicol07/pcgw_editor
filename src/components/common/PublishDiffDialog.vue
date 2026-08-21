@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { getActivePinia } from 'pinia';
 import Dialog from 'openvue/dialog';
 import Button from 'openvue/button';
 import InputText from 'openvue/inputtext';
@@ -7,6 +8,7 @@ import Checkbox from 'openvue/checkbox';
 import CodeDiffView from './diff/CodeDiffView.vue';
 import { UploadCloud, GitCompare, Wand2 } from '@lucide/vue';
 import { aiConfig } from '../../services/ai/aiConfig';
+import { useUiStore } from '../../stores/ui';
 
 const props = defineProps<{
     visible: boolean;
@@ -24,19 +26,21 @@ const emit = defineEmits<{
     (e: 'requestAiSummary'): void;
 }>();
 
+const uiStore = getActivePinia() ? useUiStore() : null;
+
 const visibleState = computed({
     get: () => props.visible,
     set: (val) => emit('update:visible', val)
 });
 
-const summary = ref('Updated via PCGW Editor');
-const isMinorEdit = ref(false);
+const summary = ref(uiStore?.defaultEditSummary || 'Updated via PCGW Editor');
+const isMinorEdit = ref(uiStore?.defaultMinorEdit || false);
 
 // Reset form when dialog opens
 watch(() => props.visible, (newVal) => {
     if (newVal) {
-        summary.value = 'Updated via PCGW Editor';
-        isMinorEdit.value = false;
+        summary.value = uiStore?.defaultEditSummary || 'Updated via PCGW Editor';
+        isMinorEdit.value = uiStore?.defaultMinorEdit || false;
     }
 });
 

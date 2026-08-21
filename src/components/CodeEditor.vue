@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state';
 import { mediawiki } from '@bhsd/codemirror-wikitext';
 import { oneDark } from '@codemirror/theme-one-dark';
 import config from 'wikiparser-node/config/default.json';
+import { useUiStore } from '../stores/ui';
 
 interface Props {
     modelValue: string;
@@ -16,13 +17,10 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+const uiStore = useUiStore();
 
 const editorContainer = ref<HTMLDivElement | null>(null);
 let editorView: EditorView | null = null;
-// Held in the setup scope, not on the EditorView. It used to be stashed as
-// editorView._themeObserver, but a theme change replaces editorView with a fresh instance that has
-// no such property — so onUnmounted read undefined, skipped disconnect(), and the observer stayed
-// attached to <html> spawning orphan editors for the rest of the session.
 let themeObserver: MutationObserver | null = null;
 
 // Track if we're updating from external source to prevent loop
@@ -35,11 +33,7 @@ const checkDarkMode = () => {
     isDark.value = document.documentElement.classList.contains('dark');
 };
 
-onMounted(() => {
-    if (!editorContainer.value) return;
-
-    checkDarkMode();
-
+const createExtensions = () => {
     const updateListener = EditorView.updateListener.of((update) => {
         if (update.docChanged && !isExternalUpdate) {
             const newValue = update.state.doc.toString();
@@ -47,32 +41,69 @@ onMounted(() => {
         }
     });
 
-    // Get the MediaWiki language support with all extensions
     const wikitextSupport = mediawiki(config as any);
+
+    const getFontFamilyCss = (family: string | undefined): string => {
+        switch (family) {
+            case 'JetBrains Mono':
+                return "'JetBrains Mono', monospace";
+            case 'Fira Code':
+                return "'Fira Code', monospace";
+            case 'Source Code Pro':
+                return "'Source Code Pro', monospace";
+            case 'Cascadia Code':
+                return "'Cascadia Code', monospace";
+            case 'Consolas':
+                return "Consolas, 'Courier New', monospace";
+            default:
+                return "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+        }
+    };
+
+    const themeStyles: Record<string, any> = {
+        '&': {
+            height: '100%',
+            fontSize: `${uiStore.editorFontSize || 14}px`,
+        },
+        '.cm-scroller': {
+            fontFamily: getFontFamilyCss(uiStore.editorFontFamily),
+        },
+    };
+
+    if (!uiStore.editorLineNumbers) {
+        themeStyles['.cm-gutters'] = { display: 'none !important' };
+    }
 
     const extensions = [
         basicSetup,
         wikitextSupport,
         updateListener,
-        EditorView.lineWrapping,
-        EditorView.theme({
-            '&': {
-                height: '100%',
-                fontSize: '14px',
-            },
-            '.cm-scroller': {
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            },
-        }),
+        EditorState.tabSize.of(uiStore.editorTabSize || 4),
+        EditorView.theme(themeStyles),
     ];
+
+    if (uiStore.editorLineWrapping) {
+        extensions.push(EditorView.lineWrapping);
+    }
 
     if (isDark.value) {
         extensions.push(oneDark);
     }
 
+    return extensions;
+};
+
+const rebuildEditor = () => {
+    if (!editorContainer.value) return;
+    const currentDoc = editorView ? editorView.state.doc.toString() : props.modelValue;
+    if (editorView) {
+        editorView.destroy();
+        editorView = null;
+    }
+
     const state = EditorState.create({
-        doc: props.modelValue,
-        extensions,
+        doc: currentDoc,
+        extensions: createExtensions(),
     });
 
     editorView = new EditorView({
@@ -80,45 +111,21 @@ onMounted(() => {
         parent: editorContainer.value,
     });
 
+    scrollElement.value = editorContainer.value.querySelector('.cm-scroller') as HTMLElement || editorView.scrollDOM || null;
+};
+
+onMounted(() => {
+    if (!editorContainer.value) return;
+
+    checkDarkMode();
+    rebuildEditor();
+
     // Watch for dark mode changes
     themeObserver = new MutationObserver(() => {
         const wasDark = isDark.value;
         checkDarkMode();
-        
-        // Recreate editor if theme changed
-        if (wasDark !== isDark.value && editorView) {
-            const currentDoc = editorView.state.doc.toString();
-            editorView.destroy();
-            
-            const newExtensions = [
-                basicSetup,
-                wikitextSupport,
-                updateListener,
-                EditorView.lineWrapping,
-                EditorView.theme({
-                    '&': {
-                        height: '100%',
-                        fontSize: '14px',
-                    },
-                    '.cm-scroller': {
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                    },
-                }),
-            ];
-
-            if (isDark.value) {
-                newExtensions.push(oneDark);
-            }
-
-            const newState = EditorState.create({
-                doc: currentDoc,
-                extensions: newExtensions,
-            });
-
-            editorView = new EditorView({
-                state: newState,
-                parent: editorContainer.value!,
-            });
+        if (wasDark !== isDark.value) {
+            rebuildEditor();
         }
     });
 
@@ -126,10 +133,21 @@ onMounted(() => {
         attributes: true,
         attributeFilter: ['class'],
     });
-
-    // Set scroll element reference for sync scroll
-    scrollElement.value = editorContainer.value?.querySelector('.cm-scroller') as HTMLElement || editorView?.scrollDOM || null;
 });
+
+// Watch for editor settings changes
+watch(
+    [
+        () => uiStore.editorFontSize,
+        () => uiStore.editorFontFamily,
+        () => uiStore.editorLineWrapping,
+        () => uiStore.editorLineNumbers,
+        () => uiStore.editorTabSize,
+    ],
+    () => {
+        rebuildEditor();
+    }
+);
 
 const scrollElement = ref<HTMLElement | null>(null);
 

@@ -199,7 +199,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
 
-    async function publishPage(id: string, summary: string, force: boolean = false, minor: boolean = false): Promise<any> {
+    async function publishPage(id: string, summary: string, force: boolean = false, minor: boolean = false, watchlist?: 'nochange' | 'watch' | 'unwatch' | 'preferences'): Promise<any> {
         const page = pages.value.find(p => p.id === id);
         if (!page || !page.pcgwPageTitle) {
             throw new Error('Page is not linked to PCGamingWiki.');
@@ -223,7 +223,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             page.wikitext, 
             summary, 
             !force ? page.localRevisionId : undefined,
-            minor
+            minor,
+            watchlist
         );
 
         if (result?.edit?.newrevid) {
@@ -322,6 +323,83 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         downloadAnchorNode.remove();
     }
 
+    function exportWorkspaceBackup() {
+        const backupData = {
+            version: '2.0',
+            exportedAt: new Date().toISOString(),
+            pageCount: pages.value.length,
+            pages: pages.value,
+            activePageId: activePageId.value
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        const dateTag = new Date().toISOString().slice(0, 10);
+        downloadAnchorNode.setAttribute("download", `pcgw_workspace_backup_${dateTag}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function importWorkspaceBackup(file: File): Promise<{ success: boolean; importedCount: number; message?: string }> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target?.result as string;
+                    const parsed = JSON.parse(content);
+                    const incomingPages: Page[] = Array.isArray(parsed.pages) ? parsed.pages : [];
+
+                    if (incomingPages.length === 0) {
+                        return resolve({ success: false, importedCount: 0, message: 'No valid pages found in backup file.' });
+                    }
+
+                    // Validate & assign unique IDs if colliding
+                    const existingIds = new Set(pages.value.map(p => p.id));
+                    let count = 0;
+                    const pagesToAppend: Page[] = [];
+
+                    for (const p of incomingPages) {
+                        if (p && typeof p.title === 'string') {
+                            const newId = (p.id && !existingIds.has(p.id)) ? p.id : crypto.randomUUID();
+                            pagesToAppend.push({
+                                id: newId,
+                                title: p.title,
+                                wikitext: p.wikitext || '',
+                                baseWikitext: p.baseWikitext || '',
+                                lastModified: p.lastModified || Date.now(),
+                                template: p.template || 'blank',
+                                pcgwPageTitle: p.pcgwPageTitle,
+                                localRevisionId: p.localRevisionId,
+                                onlineRevisionId: p.onlineRevisionId
+                            });
+                            existingIds.add(newId);
+                            count++;
+                        }
+                    }
+
+                    pages.value = [...pages.value, ...pagesToAppend];
+                    if (pagesToAppend.length > 0 && !activePageId.value) {
+                        activePageId.value = pagesToAppend[0].id;
+                    }
+
+                    resolve({ success: true, importedCount: count });
+                } catch (err: any) {
+                    reject(new Error('Invalid backup JSON format: ' + (err.message || 'parse error')));
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file.'));
+            reader.readAsText(file);
+        });
+    }
+
+    function clearAllWorkspaceData() {
+        pages.value = [];
+        activePageId.value = '';
+        _activeGameData.value = structuredClone(initialGameData);
+    }
+
     // Initialize if empty
     if (pages.value.length > 0 && (!activePageId.value || !pages.value.find(p => p.id === activePageId.value))) {
         activePageId.value = pages.value[0].id;
@@ -340,6 +418,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         unlinkPage,
         importPage,
         exportPage,
+        exportWorkspaceBackup,
+        importWorkspaceBackup,
+        clearAllWorkspaceData,
         syncToWikitext,
         syncFromWikitext,
         checkForUpdates,

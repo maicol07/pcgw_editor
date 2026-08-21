@@ -200,6 +200,10 @@ const submitRename = () => {
 };
 
 const confirmDelete = (event: Event, page: any) => {
+    if (!ui.confirmDeletions) {
+        store.deletePage(page.id);
+        return;
+    }
     confirm.require({
         target: event.currentTarget as HTMLElement,
         message: `Delete "${page.title}"? This can't be undone.`,

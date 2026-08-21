@@ -7,13 +7,23 @@ export const useUiStore = defineStore('ui', () => {
     const isSettingsOpen = ref(false);
     const settingsTab = ref('appearance');
     const openSettings = (tab: string = 'appearance') => {
-        settingsTab.value = tab;
+        settingsTab.value = tab === 'account' ? 'publishing' : tab;
         isSettingsOpen.value = true;
     };
     const sidebarVisible = ref(false);
-    const editorMode = ref<'Visual' | 'Code'>('Visual');
+    const getInitialEditorMode = (): 'Visual' | 'Code' => {
+        const defaultMode = localStorage.getItem('defaultEditorMode');
+        if (defaultMode === 'Visual' || defaultMode === 'Code') return defaultMode;
+        const stored = localStorage.getItem('editorMode');
+        return (stored === 'Visual' || stored === 'Code') ? stored : 'Visual';
+    };
+    const editorMode = ref<'Visual' | 'Code'>(getInitialEditorMode());
     const isModeSwitching = ref(false);
     const isInitialLoad = ref(true);
+
+    watch(editorMode, (val) => {
+        localStorage.setItem('editorMode', val);
+    });
 
     // Release notes / "what's new" dialog
     const releaseNotesOpen = ref(false);
@@ -35,6 +45,32 @@ export const useUiStore = defineStore('ui', () => {
     const syncScroll = ref<boolean>(localStorage.getItem('syncScroll') !== 'false');
     const hideAiFeatures = ref<boolean>(localStorage.getItem('hideAiFeatures') === 'true');
     aiConfig.hideAi = hideAiFeatures.value;
+
+    // Code Editor settings
+    const editorFontSize = ref<number>(parseInt(localStorage.getItem('editorFontSize') || '14', 10));
+    const editorFontFamily = ref<string>(localStorage.getItem('editorFontFamily') || 'default');
+    const editorLineWrapping = ref<boolean>(localStorage.getItem('editorLineWrapping') !== 'false');
+    const editorLineNumbers = ref<boolean>(localStorage.getItem('editorLineNumbers') !== 'false');
+    const editorTabSize = ref<number>(parseInt(localStorage.getItem('editorTabSize') || '4', 10));
+    type DefaultEditorMode = 'Visual' | 'Code' | 'remember';
+    const defaultEditorMode = ref<DefaultEditorMode>((localStorage.getItem('defaultEditorMode') as DefaultEditorMode) || 'remember');
+
+    // Live Preview settings
+    const previewDebounce = ref<number>(parseInt(localStorage.getItem('previewDebounce') || '300', 10));
+    type PreviewSplitRatio = '50/50' | '60/40' | '40/60' | '70/30';
+    const previewSplitRatio = ref<PreviewSplitRatio>((localStorage.getItem('previewSplitRatio') as PreviewSplitRatio) || '50/50');
+
+    // Publishing / Wiki settings
+    const defaultEditSummary = ref<string>(localStorage.getItem('defaultEditSummary') || 'Updated via PCGW Editor');
+    const defaultMinorEdit = ref<boolean>(localStorage.getItem('defaultMinorEdit') === 'true');
+    type DefaultWatchlist = 'nochange' | 'watch' | 'unwatch' | 'preferences';
+    const defaultWatchlist = ref<DefaultWatchlist>((localStorage.getItem('defaultWatchlist') as DefaultWatchlist) || 'nochange');
+
+    // Workspace settings
+    const confirmDeletions = ref<boolean>(localStorage.getItem('confirmDeletions') !== 'false');
+    type DefaultSectionState = 'remember' | 'expanded' | 'collapsed';
+    const defaultSectionState = ref<DefaultSectionState>((localStorage.getItem('defaultSectionState') as DefaultSectionState) || 'remember');
+
     const tourPart1Seen = ref<boolean>(localStorage.getItem('tour-part1-seen') === 'true');
     const tourPart2Seen = ref<boolean>(localStorage.getItem('tour-part2-seen') === 'true');
     const isTourActive = ref<boolean>(false);
@@ -44,6 +80,58 @@ export const useUiStore = defineStore('ui', () => {
     if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--app-font-family', fontFamily.value);
     }
+
+    watch(editorFontSize, (val: number) => {
+        localStorage.setItem('editorFontSize', val.toString());
+    });
+
+    watch(editorFontFamily, (val: string) => {
+        localStorage.setItem('editorFontFamily', val);
+    });
+
+    watch(editorLineWrapping, (val: boolean) => {
+        localStorage.setItem('editorLineWrapping', val.toString());
+    });
+
+    watch(editorLineNumbers, (val: boolean) => {
+        localStorage.setItem('editorLineNumbers', val.toString());
+    });
+
+    watch(editorTabSize, (val: number) => {
+        localStorage.setItem('editorTabSize', val.toString());
+    });
+
+    watch(defaultEditorMode, (val: DefaultEditorMode) => {
+        localStorage.setItem('defaultEditorMode', val);
+    });
+
+    watch(previewDebounce, (val: number) => {
+        localStorage.setItem('previewDebounce', val.toString());
+    });
+
+    watch(previewSplitRatio, (val: PreviewSplitRatio) => {
+        localStorage.setItem('previewSplitRatio', val);
+    });
+
+    watch(defaultEditSummary, (val: string) => {
+        localStorage.setItem('defaultEditSummary', val);
+    });
+
+    watch(defaultMinorEdit, (val: boolean) => {
+        localStorage.setItem('defaultMinorEdit', val.toString());
+    });
+
+    watch(defaultWatchlist, (val: DefaultWatchlist) => {
+        localStorage.setItem('defaultWatchlist', val);
+    });
+
+    watch(confirmDeletions, (val: boolean) => {
+        localStorage.setItem('confirmDeletions', val.toString());
+    });
+
+    watch(defaultSectionState, (val: DefaultSectionState) => {
+        localStorage.setItem('defaultSectionState', val);
+    });
 
     watch(syncScroll, (val: boolean) => {
         localStorage.setItem('syncScroll', val.toString());
@@ -185,6 +273,19 @@ export const useUiStore = defineStore('ui', () => {
         theme,
         syncScroll,
         hideAiFeatures,
+        editorFontSize,
+        editorFontFamily,
+        editorLineWrapping,
+        editorLineNumbers,
+        editorTabSize,
+        defaultEditorMode,
+        previewDebounce,
+        previewSplitRatio,
+        defaultEditSummary,
+        defaultMinorEdit,
+        defaultWatchlist,
+        confirmDeletions,
+        defaultSectionState,
         autoUploadDescription,
         autoReLogin,
         navRailCollapsed,

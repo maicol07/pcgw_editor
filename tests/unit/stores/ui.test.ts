@@ -30,4 +30,13 @@ describe('UI Store', () => {
         await nextTick();
         expect(localStorage.getItem('hideAiFeatures')).toBe('false');
     });
+
+    it('manages and persists editorFontFamily', async () => {
+        const store = useUiStore();
+        expect(store.editorFontFamily).toBe('default');
+
+        store.editorFontFamily = 'JetBrains Mono';
+        await nextTick();
+        expect(localStorage.getItem('editorFontFamily')).toBe('JetBrains Mono');
+    });
 });

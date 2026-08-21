@@ -20,7 +20,8 @@ vi.mock('@lucide/vue', () => {
         'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key',
         'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn',
         'Info', 'RotateCcw', 'Eye', 'EyeOff', 'Cloud', 'RefreshCw',
-        'Loader2', 'AlertCircle', 'Check', 'Link2'
+        'Loader2', 'AlertCircle', 'Check', 'Link2', 'Code2', 'UploadCloud',
+        'HardDrive', 'Download', 'Upload', 'Trash2', 'Sliders'
     ];
     const mock: any = {};
     icons.forEach(icon => {
@@ -147,14 +148,14 @@ describe('AppSettings.vue', () => {
     it('updates uiStore autoReLogin when toggle is clicked', async () => {
         const { wrapper, store } = setupWrapper();
 
-        // Switch to account tab
+        // Switch to publishing tab
         const tabs = wrapper.findAll('button');
-        const accountTab = tabs.find(t => t.text().includes('Account'));
-        if (accountTab) await accountTab.trigger('click');
+        const publishingTab = tabs.find(t => t.text().includes('Publishing') || t.text().includes('Account'));
+        if (publishingTab) await publishingTab.trigger('click');
 
-        const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
-        // toggles[0] is syncScroll, toggles[1] is hideAiFeatures, toggles[2] is autoReLogin
-        const autoReLoginToggle = toggles[2] || toggles[1];
+        const toggles = wrapper.findAllComponents(ToggleSwitch);
+        const autoReLoginToggle = toggles.find(t => t.attributes('aria-label') === 'Auto Re-login') || toggles[5];
+        expect(autoReLoginToggle).toBeDefined();
         
         await autoReLoginToggle.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);

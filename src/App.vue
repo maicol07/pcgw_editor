@@ -244,7 +244,7 @@ const handlePublishToPcgw = async (force: boolean = false) => {
     
     isPublishing.value = true;
     try {
-        await workspaceStore.publishPage(workspaceStore.activePage.id, publishSummary.value, force, isMinorEdit.value);
+        await workspaceStore.publishPage(workspaceStore.activePage.id, publishSummary.value, force, isMinorEdit.value, uiStore.defaultWatchlist);
         
         // Success
         isPublishDialogVisible.value = false;
@@ -296,6 +296,16 @@ const handleDiffMerge = async (mergedText: string) => {
 // two panes aren't cramped on tablet/mobile; horizontal on larger screens.
 const { width: windowWidth } = useWindowSize();
 const splitterLayout = computed(() => (windowWidth.value < 1024 ? 'vertical' : 'horizontal'));
+
+const splitPanelSizes = computed(() => {
+    switch (uiStore.previewSplitRatio) {
+        case '60/40': return [60, 40];
+        case '40/60': return [40, 60];
+        case '70/30': return [70, 30];
+        case '50/50':
+        default: return [50, 50];
+    }
+});
 
 // --- Schema Helpers ---
 const getSchema = (id: string) => computed(() => fieldsConfig.find(s => s.id === id));
@@ -464,7 +474,7 @@ onMounted(() => {
         <Splitter v-if="workspaceStore.activePage" style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern"
             :layout="splitterLayout" stateKey="editor-splitter" stateStorage="local">
             <!-- Left Panel: Editor -->
-            <SplitterPanel class="flex flex-col overflow-hidden relative" :size="50" :minSize="30">
+            <SplitterPanel class="flex flex-col overflow-hidden relative" :size="splitPanelSizes[0]" :minSize="25">
                 <EditorToolbar :title="pageTitle" @update:title="pageTitle = $event" :editorMode="editorMode"
                     @update:editorMode="handleModeChange" :isGeneratingSummary="isGeneratingSummary"
                     @toggleSidebar="uiStore.sidebarVisible = true" @generateSummary="generateShareSummary"
@@ -767,7 +777,7 @@ onMounted(() => {
             <!-- Right Panel: Preview -->
             <SplitterPanel
                 class="flex flex-col overflow-hidden bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700"
-                :size="50" :minSize="30">
+                :size="splitPanelSizes[1]" :minSize="25">
                 <PreviewPanel ref="previewPanelRef" data-tour="preview-panel" :html="renderedHtml" :loading="isPreviewLoading" :error="previewError"
                     :previewMode="previewMode" @update:previewMode="previewMode = $event" />
             </SplitterPanel>
