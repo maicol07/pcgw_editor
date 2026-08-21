@@ -126,6 +126,16 @@ onMounted(() => {
         attributes: true,
         attributeFilter: ['class'],
     });
+
+    // Set scroll element reference for sync scroll
+    scrollElement.value = editorContainer.value?.querySelector('.cm-scroller') as HTMLElement || editorView?.scrollDOM || null;
+});
+
+const scrollElement = ref<HTMLElement | null>(null);
+
+defineExpose({
+    getScrollElement: () => editorContainer.value?.querySelector('.cm-scroller') as HTMLElement || editorView?.scrollDOM || null,
+    scrollElement,
 });
 
 // Watch for external changes to modelValue

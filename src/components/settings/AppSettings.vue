@@ -22,7 +22,7 @@ import {
     Palette, Bot, Sun, Moon, Monitor, Type, Layout, Key,
     AlignJustify, AlignLeft, Menu, Globe, LogOut, LogIn,
     Info, RotateCcw, Eye, EyeOff, Cloud, RefreshCw, Loader2, AlertCircle,
-    Check
+    Check, Link2
 } from '@lucide/vue';
 import { pcgwAuth } from '../../services/pcgwAuth';
 import { syncState, connectAndUnlock, syncNow, disconnect as disconnectSync, reconnectSync } from '../../services/sync/syncService';
@@ -382,6 +382,20 @@ const saveSettings = () => {
                         </div>
                     </div>
 
+                    <!-- Editor & Preview Scrolling -->
+                    <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
+                        <span id="group-scroll" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                            <Link2 class="w-4 h-4 text-primary-500" /> Editor & Preview
+                        </span>
+                        <div class="flex items-center justify-between gap-3 p-4 bg-surface-50 dark:bg-surface-900/40 border border-surface-200/60 dark:border-surface-800/60 rounded-xl">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Synchronize Scrolling</span>
+                                <span class="text-[11px] text-surface-500 leading-normal">Keep the editor and preview scrolling positions synchronized.</span>
+                            </div>
+                            <ToggleSwitch v-model="uiStore.syncScroll" aria-label="Synchronize Scrolling" />
+                        </div>
+                    </div>
+
                     <!-- Guided Tour -->
                     <div class="flex flex-col gap-3 pt-5 border-t border-surface-200/60 dark:border-surface-800/60">
                         <span id="group-tour" class="text-sm font-semibold text-surface-700 dark:text-surface-200 flex items-center gap-2">
@@ -669,7 +683,7 @@ const saveSettings = () => {
                             <div class="flex-1 flex flex-col gap-1">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Automatic Session Refresh</span>
-                                    <ToggleSwitch v-model="uiStore.autoReLogin" />
+                                    <ToggleSwitch v-model="uiStore.autoReLogin" aria-label="Auto Re-login" />
                                 </div>
                                 <p class="text-[11px] text-surface-500 leading-normal">
                                     Automatically renews PCGW API credentials when the current session expires. Uses secure locally stored tokens.
@@ -683,7 +697,7 @@ const saveSettings = () => {
                             <div class="flex-1 flex flex-col gap-1">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-semibold text-surface-800 dark:text-surface-200">Show Upload Attribution</span>
-                                    <ToggleSwitch v-model="uiStore.autoUploadDescription" />
+                                    <ToggleSwitch v-model="uiStore.autoUploadDescription" aria-label="Show Upload Attribution" />
                                 </div>
                                 <p class="text-[11px] text-surface-500 leading-normal">
                                     Adds a descriptive tag linking back to this client app whenever you upload image media files to the wiki.

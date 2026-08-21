@@ -10,6 +10,7 @@ import { searchKeywords, panelKeys } from './config/searchKeywords';
 import { useAutoTheme } from './composables/useAutoTheme';
 import { useSearch } from './composables/useSearch';
 import { usePreview } from './composables/usePreview';
+import { useSyncScroll } from './composables/useSyncScroll';
 import { useEditor } from './features/editor/useEditor';
 import { useAISummary } from './features/ai/useAISummary';
 import { hasActiveKey } from './services/ai/aiConfig';
@@ -324,6 +325,25 @@ const schemas = {
 // --- Section navigation rail + scroll-spy ---
 const scrollContainer = ref<HTMLElement>();
 const activeSection = ref(sectionKeysInOrder[0]);
+const codeEditorRef = ref<any>(null);
+const previewPanelRef = ref<any>(null);
+
+const activeEditorContainer = computed(() => {
+    if (editorMode.value === 'Visual') {
+        return scrollContainer.value || null;
+    }
+    return codeEditorRef.value?.getScrollElement?.() || codeEditorRef.value?.scrollElement || null;
+});
+
+const previewScrollContainer = computed(() => {
+    return previewPanelRef.value?.getScrollElement?.() || previewPanelRef.value?.scrollContainer || null;
+});
+
+const { alignSection } = useSyncScroll({
+    editorContainer: activeEditorContainer,
+    previewContainer: previewScrollContainer,
+    enabled: computed(() => uiStore.syncScroll),
+});
 
 // While a click-driven scroll is animating, keep the clicked section active
 // instead of letting scroll-spy hijack it (the target may sit near the bottom
@@ -334,10 +354,7 @@ const navigateToSection = (key: string) => {
     activeSection.value = key;
     suppressSpyUntil = performance.now() + 800;
     requestAnimationFrame(() => {
-        const el = document.getElementById(`sec-${key}`);
-        if (el && scrollContainer.value) {
-            scrollContainer.value.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' });
-        }
+        alignSection(key);
     });
 };
 
@@ -726,7 +743,7 @@ onMounted(() => {
                         <div v-else class="h-full flex flex-col" key="code">
                             <Suspense>
                                 <template #default>
-                                    <CodeEditor v-model="manualWikitext" class="flex-1" />
+                                    <CodeEditor ref="codeEditorRef" v-model="manualWikitext" class="flex-1" />
                                 </template>
                                 <template #fallback>
                                     <div class="h-full w-full p-4 animate-pulse">
@@ -751,7 +768,7 @@ onMounted(() => {
             <SplitterPanel
                 class="flex flex-col overflow-hidden bg-surface-50 dark:bg-surface-950 border-l border-surface-200 dark:border-surface-700"
                 :size="50" :minSize="30">
-                <PreviewPanel data-tour="preview-panel" :html="renderedHtml" :loading="isPreviewLoading" :error="previewError"
+                <PreviewPanel ref="previewPanelRef" data-tour="preview-panel" :html="renderedHtml" :loading="isPreviewLoading" :error="previewError"
                     :previewMode="previewMode" @update:previewMode="previewMode = $event" />
             </SplitterPanel>
         </Splitter>

@@ -31,6 +31,7 @@ export const useUiStore = defineStore('ui', () => {
     const fontFamily = ref<string>(localStorage.getItem('fontFamily') || '"Google Sans"');
     const autoUploadDescription = ref<boolean>(localStorage.getItem('autoUploadDescription') !== 'false');
     const autoReLogin = ref<boolean>(localStorage.getItem('autoReLogin') === 'true');
+    const syncScroll = ref<boolean>(localStorage.getItem('syncScroll') !== 'false');
     const tourPart1Seen = ref<boolean>(localStorage.getItem('tour-part1-seen') === 'true');
     const tourPart2Seen = ref<boolean>(localStorage.getItem('tour-part2-seen') === 'true');
     const isTourActive = ref<boolean>(false);
@@ -40,6 +41,10 @@ export const useUiStore = defineStore('ui', () => {
     if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--app-font-family', fontFamily.value);
     }
+
+    watch(syncScroll, (val: boolean) => {
+        localStorage.setItem('syncScroll', val.toString());
+    });
 
     watch(autoUploadDescription, (val: boolean) => {
         localStorage.setItem('autoUploadDescription', val.toString());
@@ -170,6 +175,7 @@ export const useUiStore = defineStore('ui', () => {
         densityMode,
         fontFamily,
         theme,
+        syncScroll,
         autoUploadDescription,
         autoReLogin,
         navRailCollapsed,

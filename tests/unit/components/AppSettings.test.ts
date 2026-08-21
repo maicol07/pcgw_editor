@@ -20,7 +20,7 @@ vi.mock('@lucide/vue', () => {
         'Palette', 'Bot', 'Sun', 'Moon', 'Monitor', 'Type', 'Layout', 'Key',
         'AlignJustify', 'AlignLeft', 'Menu', 'Globe', 'LogOut', 'LogIn',
         'Info', 'RotateCcw', 'Eye', 'EyeOff', 'Cloud', 'RefreshCw',
-        'Loader2', 'AlertCircle', 'Check'
+        'Loader2', 'AlertCircle', 'Check', 'Link2'
     ];
     const mock: any = {};
     icons.forEach(icon => {
@@ -153,7 +153,8 @@ describe('AppSettings.vue', () => {
         if (accountTab) await accountTab.trigger('click');
 
         const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
-        const autoReLoginToggle = toggles[0];
+        // toggles[0] is syncScroll (appearance tab), toggles[1] is autoReLogin (account tab)
+        const autoReLoginToggle = toggles[1];
         
         await autoReLoginToggle.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);
@@ -172,5 +173,17 @@ describe('AppSettings.vue', () => {
         if (fetchButton) {
             await fetchButton.trigger('click');
         }
+    });
+
+    it('updates uiStore syncScroll when toggle is clicked in appearance tab', async () => {
+        const { wrapper, store } = setupWrapper();
+
+        const toggles = wrapper.findAllComponents({ name: 'ToggleSwitch' });
+        // toggles[0] is syncScroll in appearance tab
+        const syncScrollToggle = toggles[0];
+        expect(syncScrollToggle).toBeDefined();
+
+        await syncScrollToggle.vm.$emit('update:modelValue', false);
+        expect(store.syncScroll).toBe(false);
     });
 });

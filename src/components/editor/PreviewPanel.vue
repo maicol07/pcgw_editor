@@ -2,8 +2,12 @@
 import { ref, computed } from 'vue';
 import { PreviewMode } from '../../composables/usePreview';
 import SelectButton from 'openvue/selectbutton';
-import { Monitor, AlertTriangle, Globe } from '@lucide/vue';
+import Button from 'openvue/button';
+import { Monitor, AlertTriangle, Globe, Link2, Link2Off } from '@lucide/vue';
+import { useUiStore } from '../../stores/ui';
 import PreviewLegend from './PreviewLegend.vue';
+
+const uiStore = useUiStore();
 
 // This component accepts the logic from usePreview as props or we can bind v-models?
 // Ideally, the parent owns the composable and passes the state down.
@@ -96,11 +100,16 @@ const scrollToHeading = (id: string) => {
     }
 };
 
+defineExpose({
+    scrollContainer,
+    scrollToHeading,
+    getScrollElement: () => scrollContainer.value,
+});
+
 </script>
 
 <template>
     <div class="flex flex-col h-full bg-white border-l border-surface-200 dark:border-surface-700">
-        <!-- Floating Header -->
         <!-- Floating Header -->
         <div
             class="flex items-center justify-between p-2 border-b border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 sticky top-0 z-10 glass">
@@ -109,15 +118,28 @@ const scrollToHeading = (id: string) => {
                 <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Preview</span>
             </div>
 
-            <SelectButton :modelValue="previewMode" @update:modelValue="emit('update:previewMode', $event)"
-                :options="previewOptions" optionLabel="label" optionValue="value" dataKey="value"
-                :allowEmpty="false" size="small" class="scale-90 origin-right transition-fast">
-                <template #option="{ option }">
-                    <span v-tooltip.bottom="option.label" class="flex items-center justify-center -m-2 p-2">
-                        <component :is="option.icon" class="w-4 h-4" />
-                    </span>
-                </template>
-            </SelectButton>
+            <div class="flex items-center gap-1.5">
+                <Button :aria-label="uiStore.syncScroll ? 'Disable scroll sync' : 'Enable scroll sync'"
+                    :severity="uiStore.syncScroll ? 'primary' : 'secondary'"
+                    text rounded size="small"
+                    class="h-7! w-7! p-0! cursor-pointer transition-colors"
+                    v-tooltip.bottom="uiStore.syncScroll ? 'Scroll sync: Enabled' : 'Scroll sync: Disabled'"
+                    @click="uiStore.syncScroll = !uiStore.syncScroll">
+                    <template #icon>
+                        <component :is="uiStore.syncScroll ? Link2 : Link2Off" class="w-3.5 h-3.5" />
+                    </template>
+                </Button>
+
+                <SelectButton :modelValue="previewMode" @update:modelValue="emit('update:previewMode', $event)"
+                    :options="previewOptions" optionLabel="label" optionValue="value" dataKey="value"
+                    :allowEmpty="false" size="small" class="scale-90 origin-right transition-fast">
+                    <template #option="{ option }">
+                        <span v-tooltip.bottom="option.label" class="flex items-center justify-center -m-2 p-2">
+                            <component :is="option.icon" class="w-4 h-4" />
+                        </span>
+                    </template>
+                </SelectButton>
+            </div>
         </div>
 
         <!-- Content -->
@@ -142,7 +164,7 @@ const scrollToHeading = (id: string) => {
                 class="absolute top-4 right-4 z-40" />
 
             <!-- Scrollable Area -->
-            <div class="h-full overflow-auto p-4 custom-scrollbar scroll-smooth" ref="scrollContainer">
+            <div class="h-full overflow-auto p-4 custom-scrollbar" ref="scrollContainer">
                 <div v-if="error"
                     class="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-center gap-2 mb-4 text-sm">
                     <AlertTriangle class="w-5 h-5 shrink-0" />
