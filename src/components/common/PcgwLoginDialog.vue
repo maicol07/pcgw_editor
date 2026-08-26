@@ -71,7 +71,7 @@ const openBotPasswordHelp = () => {
         <div class="flex flex-col gap-4 py-2">
             <Message severity="info" class="text-xs!">
                 <template #icon>
-                    <ShieldAlert class="w-4 h-4 mr-2" />
+                    <ShieldAlert class="w-5 h-5 mr-2 shrink-0 self-center" />
                 </template>
                 It is highly recommended to use a 
                 <a @click="openBotPasswordHelp" class="underline cursor-pointer font-bold">Bot Password</a>
