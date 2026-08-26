@@ -30,7 +30,7 @@ const InfoboxReception = defineAsyncComponent(() => import('../infobox/InfoboxRe
 import TaxonomyField from '../infobox/TaxonomyField.vue';
 import CompoundRatingField from './CompoundRatingField.vue';
 import Textarea from 'openvue/textarea';
-import { Info } from '@lucide/vue';
+import { Info, Lock } from '@lucide/vue';
 import AutoComplete from 'openvue/autocomplete';
 import StubValidator from '../StubValidator.vue';
 // (AvailabilityForm moved to async above)
@@ -39,9 +39,17 @@ import ScreenshotAnalysis from '../common/ScreenshotAnalysis.vue';
 import SectionGallery from '../SectionGallery.vue';
 import InputWithNotes from './InputWithNotes.vue';
 import WikitextEditor from '../common/WikitextEditor.vue';
+import { isDataSourceAuthRequired } from '../../services/pcgwApi';
+import { pcgwAuth } from '../../services/pcgwAuth';
 // Async like the forms above: a static import drags Quill (~200 kB) into the entry chunk even
 // for a page whose schema never renders a WYSIWYG field.
 const WysiwygEditor = defineAsyncComponent(() => import('../common/WysiwygEditor.vue'));
+
+const isFieldAuthMissing = (fieldDef: FieldDefinition): boolean => {
+    if (pcgwAuth.isLoggedIn) return false;
+    const dataSource = (fieldDef.componentProps as any)?.dataSource;
+    return isDataSourceAuthRequired(dataSource);
+};
 
 // (Async components moved to top)
 
@@ -382,6 +390,12 @@ const isVisible = computed(() => {
             <component :is="field.icon" class="w-4 h-4" :class="field.iconClass || 'text-primary-500'"
                 v-if="field.icon" />
             {{ field.label }}
+            <span v-if="isFieldAuthMissing(field)"
+                v-tooltip.top="'Suggestions require PCGamingWiki login (Bot Password)'"
+                class="text-amber-500 dark:text-amber-400 flex items-center cursor-help"
+                aria-label="Requires authentication">
+                <Lock class="w-3.5 h-3.5" />
+            </span>
             <span v-if="computedDescription" v-tooltip.top="computedDescription"
                 class="ml-auto text-surface-400 hover:text-primary-500 cursor-help">
                 <Info class="w-4 h-4" />

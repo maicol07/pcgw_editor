@@ -21,11 +21,16 @@ const ButtonStub = {
 };
 
 // Mock pcgwApi
-vi.mock('../../../src/services/pcgwApi', () => ({
-  pcgwApi: {
-    searchCompanies: vi.fn().mockResolvedValue(['Epic Games', 'Steam'])
-  }
-}));
+vi.mock('../../../src/services/pcgwApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/services/pcgwApi')>();
+  return {
+    ...actual,
+    pcgwApi: {
+      ...actual.pcgwApi,
+      searchCompanies: vi.fn().mockResolvedValue(['Epic Games', 'Steam'])
+    }
+  };
+});
 
 describe('AutocompleteField.vue - Custom Value support', () => {
   it('allows adding custom search query to selected values in MultiSelect mode', async () => {

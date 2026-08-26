@@ -1,6 +1,7 @@
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
 import { getWorkerLoginUrl, getWorkerProxyUrl, getWorkerHeaders, apiFetch, HTTPONLY_AUTH } from '../config/api';
+import { notifyPermissionDenied } from '../utils/notifications';
 
 const AUTH_STORAGE_KEY = 'pcgw_auth_data_v2';
 
@@ -114,7 +115,9 @@ class PCGWAuthService {
         });
 
         // Handle MediaWiki auth errors reactively
-        if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed' || res?.error?.code === 'badtoken') {
+        if (res?.error?.code === 'permissiondenied') {
+            notifyPermissionDenied(res?.error?.info);
+        } else if (res?.error?.code === 'notloggedin' || res?.error?.code === 'readapidenied' || res?.error?.code === 'assertuserfailed' || res?.error?.code === 'badtoken') {
             if (retry) {
                 const autoReLogin = localStorage.getItem('autoReLogin') === 'true';
                 if (autoReLogin && this.authData.value.username && this.sessionPassword.value) {

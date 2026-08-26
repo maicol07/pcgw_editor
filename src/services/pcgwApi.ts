@@ -5,10 +5,33 @@
 import { useStorage } from '@vueuse/core';
 import { getDirectApiUrl, getApiHeaders, apiFetch, getProxiedImageUrl } from '../config/api';
 import { getRevisionText, putRevisionText } from '../db';
+import { pcgwAuth } from './pcgwAuth';
+import { notifyPermissionDenied } from '../utils/notifications';
 const CACHE_KEY = 'pcgw_api_cache_v2';
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
 const normalizeFilename = (name: string) => name.replace(/_/g, ' ').trim();
+
+export const AUTH_REQUIRED_DATA_SOURCES = [
+    'genres',
+    'themes',
+    'perspectives',
+    'pacing',
+    'controls',
+    'sports',
+    'vehicles',
+    'artStyles',
+    'monetization',
+    'microtransactions',
+    'modes'
+] as const;
+
+export type AuthRequiredDataSource = typeof AUTH_REQUIRED_DATA_SOURCES[number];
+
+export const isDataSourceAuthRequired = (source?: string): boolean => {
+    if (!source) return false;
+    return (AUTH_REQUIRED_DATA_SOURCES as readonly string[]).includes(source);
+};
 
 export interface ImageInfo {
     url: string;
@@ -41,9 +64,12 @@ class PCGWApiService {
     private batchTimer: any = null;
     private batchCallbacks = new Map<string, Array<(info: ImageInfo | null) => void>>();
 
-    private async fetchApi<T = any>(params: Record<string, string>): Promise<T | null> {
+    private async fetchApi<T = any>(params: Record<string, string>, requiresAuth = false): Promise<T | null> {
         try {
-            return await apiFetch<T>(getDirectApiUrl(), {
+            if (requiresAuth && pcgwAuth.isLoggedIn) {
+                return await pcgwAuth.apiPost(params, 'GET');
+            }
+            const res = await apiFetch<T>(getDirectApiUrl(), {
                 query: {
                     format: 'json',
                     origin: '*',
@@ -52,6 +78,10 @@ class PCGWApiService {
                 headers: getApiHeaders(),
                 parseResponse: JSON.parse
             });
+            if ((res as any)?.error?.code === 'permissiondenied') {
+                notifyPermissionDenied((res as any)?.error?.info);
+            }
+            return res;
         } catch (error) {
             console.error('PCGamingWiki API error:', error);
             return null;
@@ -77,6 +107,11 @@ class PCGWApiService {
     }
 
     private async cargoQuery(field: string, searchTerm?: string): Promise<string[]> {
+        // Cargo queries strictly require authentication with bot password on PCGamingWiki
+        if (!pcgwAuth.isLoggedIn) {
+            return [];
+        }
+
         const term = (searchTerm || '').trim();
         if (term && term.length < 2) return [];
 
@@ -90,7 +125,7 @@ class PCGWApiService {
         try {
             const queryParams: Record<string, string> = {
                 action: 'cargoquery',
-                tables: 'Infobox_game',
+                tables: 'Game',
                 fields: `${field}=value`,
                 group_by: field,
                 limit: term ? '20' : '50',
@@ -100,34 +135,34 @@ class PCGWApiService {
                 queryParams.where = `${field} HOLDS LIKE "%${term}%"`;
             }
 
-            const result = await this.fetchApi<{ cargoquery?: CargoResult[] }>(queryParams);
-
-            if (!result?.cargoquery || !Array.isArray(result.cargoquery)) {
-                return [];
-            }
+            const result = await this.fetchApi<{ cargoquery?: CargoResult[] }>(queryParams, true);
 
             const values = new Set<string>();
-            result.cargoquery.forEach((item) => {
-                const value = item.title?.value;
-                if (value) {
-                    value.split(',').forEach(v => {
-                        let trimmed = v.trim();
-                        trimmed = trimmed.replace(/^(Company|Engine|Series):/i, '');
-                        
-                        const lower = trimmed.toLowerCase();
-                        if (lower === 'select...' || lower === 'select' || lower === 'search...' || !trimmed) {
-                            return;
-                        }
+            if (result?.cargoquery && Array.isArray(result.cargoquery)) {
+                result.cargoquery.forEach((item) => {
+                    const value = item.title?.value;
+                    if (value) {
+                        value.split(',').forEach(v => {
+                            let trimmed = v.trim();
+                            trimmed = trimmed.replace(/^(Company|Engine|Series):/i, '');
+                            
+                            const lower = trimmed.toLowerCase();
+                            if (lower === 'select...' || lower === 'select' || lower === 'search...' || !trimmed) {
+                                return;
+                            }
 
-                        if (term ? trimmed.toLowerCase().includes(term.toLowerCase()) : true) {
-                            values.add(trimmed);
-                        }
-                    });
-                }
-            });
+                            if (term ? trimmed.toLowerCase().includes(term.toLowerCase()) : true) {
+                                values.add(trimmed);
+                            }
+                        });
+                    }
+                });
+            }
 
             const suggestions = Array.from(values).slice(0, 10);
-            this.setCache(cacheKey, suggestions);
+            if (suggestions.length > 0) {
+                this.setCache(cacheKey, suggestions);
+            }
             return suggestions;
         } catch (error) {
             console.error('Cargo query error:', error);
@@ -136,63 +171,164 @@ class PCGWApiService {
     }
 
     async searchCompanies(query?: string): Promise<string[]> {
-        const [devs, pubs] = await Promise.all([
-            this.cargoQuery('Infobox_game.Developers', query),
-            this.cargoQuery('Infobox_game.Publishers', query),
-        ]);
-        return Array.from(new Set([...devs, ...pubs])).slice(0, 10);
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
+
+        const cacheKey = term ? `company:${term.toLowerCase()}` : 'company:__initial__';
+        const cached = this.getFromCache(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let titles: string[] = [];
+            if (!term) {
+                const response = await this.fetchApi<{ query?: { allpages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allpages',
+                    apnamespace: '416',
+                    aplimit: '20',
+                });
+                titles = response?.query?.allpages?.map(p => p.title) || [];
+            } else {
+                const result = await this.fetchApi<[string, string[], string[], string[]]>({
+                    action: 'opensearch',
+                    search: term,
+                    namespace: '416',
+                    limit: '10',
+                });
+                titles = result && Array.isArray(result[1]) ? result[1] : [];
+            }
+
+            const results = titles.map(t => t.replace(/^Company:/i, '').trim()).filter(Boolean);
+            if (results.length > 0) {
+                this.setCache(cacheKey, results);
+            }
+            return results;
+        } catch (e) {
+            console.error('Company search error:', e);
+            return [];
+        }
     }
 
     async searchEngines(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Engines', query);
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
+
+        const cacheKey = term ? `engine:${term.toLowerCase()}` : 'engine:__initial__';
+        const cached = this.getFromCache(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let titles: string[] = [];
+            if (!term) {
+                const response = await this.fetchApi<{ query?: { allpages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allpages',
+                    apnamespace: '404',
+                    aplimit: '20',
+                });
+                titles = response?.query?.allpages?.map(p => p.title) || [];
+            } else {
+                const result = await this.fetchApi<[string, string[], string[], string[]]>({
+                    action: 'opensearch',
+                    search: term,
+                    namespace: '404',
+                    limit: '10',
+                });
+                titles = result && Array.isArray(result[1]) ? result[1] : [];
+            }
+
+            const results = titles.map(t => t.replace(/^Engine:/i, '').trim()).filter(Boolean);
+            if (results.length > 0) {
+                this.setCache(cacheKey, results);
+            }
+            return results;
+        } catch (e) {
+            console.error('Engine search error:', e);
+            return [];
+        }
     }
 
     async searchSeries(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Series', query);
+        const term = (query || '').trim();
+        if (term && term.length < 2) return [];
+
+        const cacheKey = term ? `series:${term.toLowerCase()}` : 'series:__initial__';
+        const cached = this.getFromCache(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let titles: string[] = [];
+            if (!term) {
+                const response = await this.fetchApi<{ query?: { allpages?: { title: string }[] } }>({
+                    action: 'query',
+                    list: 'allpages',
+                    apnamespace: '402',
+                    aplimit: '20',
+                });
+                titles = response?.query?.allpages?.map(p => p.title) || [];
+            } else {
+                const result = await this.fetchApi<[string, string[], string[], string[]]>({
+                    action: 'opensearch',
+                    search: term,
+                    namespace: '402',
+                    limit: '10',
+                });
+                titles = result && Array.isArray(result[1]) ? result[1] : [];
+            }
+
+            const results = titles.map(t => t.replace(/^Series:/i, '').trim()).filter(Boolean);
+            if (results.length > 0) {
+                this.setCache(cacheKey, results);
+            }
+            return results;
+        } catch (e) {
+            console.error('Series search error:', e);
+            return [];
+        }
     }
 
     async searchGenres(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Genres', query);
+        return this.cargoQuery('Game.Genres', query);
     }
 
     async searchThemes(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Themes', query);
+        return this.cargoQuery('Game.Themes', query);
     }
 
     async searchPerspectives(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Perspectives', query);
+        return this.cargoQuery('Game.Perspectives', query);
     }
 
     async searchPacing(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Pacing', query);
+        return this.cargoQuery('Game.Pacing', query);
     }
 
     async searchControls(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Controls', query);
+        return this.cargoQuery('Game.Controls', query);
     }
 
     async searchSports(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Sports', query);
+        return this.cargoQuery('Game.Sports', query);
     }
 
     async searchVehicles(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Vehicles', query);
+        return this.cargoQuery('Game.Vehicles', query);
     }
 
     async searchArtStyles(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Art_styles', query);
+        return this.cargoQuery('Game.Art_styles', query);
     }
 
     async searchMonetizations(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Monetization', query);
+        return this.cargoQuery('Game.Monetization', query);
     }
 
     async searchMicrotransactions(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Microtransactions', query);
+        return this.cargoQuery('Game.Microtransactions', query);
     }
 
     async searchModes(query?: string): Promise<string[]> {
-        return this.cargoQuery('Infobox_game.Modes', query);
+        return this.cargoQuery('Game.Modes', query);
     }
 
     /**
@@ -710,25 +846,30 @@ class PCGWApiService {
 
     async prewarmCargoInitialValues(): Promise<void> {
         const fieldsMap: Record<string, string> = {
-            'Developers': 'Infobox_game.Developers',
-            'Publishers': 'Infobox_game.Publishers',
-            'Engines': 'Infobox_game.Engines',
-            'Series': 'Infobox_game.Series',
-            'Genres': 'Infobox_game.Genres',
-            'Themes': 'Infobox_game.Themes',
-            'Perspectives': 'Infobox_game.Perspectives',
-            'Pacing': 'Infobox_game.Pacing',
-            'Controls': 'Infobox_game.Controls',
-            'Sports': 'Infobox_game.Sports',
-            'Vehicles': 'Infobox_game.Vehicles',
-            'Art styles': 'Infobox_game.Art_styles',
-            'Monetization': 'Infobox_game.Monetization',
-            'Microtransactions': 'Infobox_game.Microtransactions',
-            'Modes': 'Infobox_game.Modes'
+            'Developers': 'Game.Developers',
+            'Publishers': 'Game.Publishers',
+            'Engines': 'Game.Engines',
+            'Series': 'Game.Series',
+            'Genres': 'Game.Genres',
+            'Themes': 'Game.Themes',
+            'Perspectives': 'Game.Perspectives',
+            'Pacing': 'Game.Pacing',
+            'Controls': 'Game.Controls',
+            'Sports': 'Game.Sports',
+            'Vehicles': 'Game.Vehicles',
+            'Art styles': 'Game.Art_styles',
+            'Monetization': 'Game.Monetization',
+            'Microtransactions': 'Game.Microtransactions',
+            'Modes': 'Game.Modes'
         };
 
-        const checkKey = 'cargo:Infobox_game.Genres:__initial__';
+        const checkKey = 'cargo:Game.Genres:__initial__';
         if (this.getFromCache(checkKey)) {
+            return;
+        }
+
+        // Cargo queries strictly require authentication with bot password on PCGamingWiki
+        if (!pcgwAuth.isLoggedIn) {
             return;
         }
 
@@ -753,13 +894,13 @@ class PCGWApiService {
 
             const queryParams: Record<string, string> = {
                 action: 'cargoquery',
-                tables: 'Infobox_game',
+                tables: 'Game',
                 fields: fieldsQueryList,
-                order_by: 'Infobox_game._pageID DESC',
+                order_by: 'Game._pageID DESC',
                 limit: '500',
             };
 
-            const result = await this.fetchApi<{ cargoquery?: { title: Record<string, string> }[] }>(queryParams);
+            const result = await this.fetchApi<{ cargoquery?: { title: Record<string, string> }[] }>(queryParams, true);
 
             if (!result?.cargoquery || !Array.isArray(result.cargoquery)) {
                 return;
@@ -794,13 +935,15 @@ class PCGWApiService {
             Object.entries(sets).forEach(([fieldName, valSet]) => {
                 const cacheKey = `cargo:${fieldName}:__initial__`;
                 const suggestions = Array.from(valSet).slice(0, 50);
-                this.setCache(cacheKey, suggestions);
+                if (suggestions.length > 0) {
+                    this.setCache(cacheKey, suggestions);
+                }
             });
 
             const commonSearches = [
-                { field: 'Infobox_game.Developers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
-                { field: 'Infobox_game.Publishers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
-                { field: 'Infobox_game.Engines', queries: ['Unreal', 'Unity', 'Source', 'id Tech'] }
+                { field: 'Game.Developers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
+                { field: 'Game.Publishers', queries: ['Valve', 'EA', 'Ubisoft', 'Sony', 'Microsoft', 'Nintendo'] },
+                { field: 'Game.Engines', queries: ['Unreal', 'Unity', 'Source', 'id Tech'] }
             ];
 
             commonSearches.forEach(({ field, queries }) => {
@@ -811,7 +954,9 @@ class PCGWApiService {
                     const matches = values
                         .filter(v => v.toLowerCase().includes(query.toLowerCase()))
                         .slice(0, 10);
-                    this.setCache(cacheKey, matches);
+                    if (matches.length > 0) {
+                        this.setCache(cacheKey, matches);
+                    }
                 });
             });
 

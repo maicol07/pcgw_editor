@@ -1,7 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { pcgwApi } from '../../../src/services/pcgwApi';
+import { pcgwAuth } from '../../../src/services/pcgwAuth';
 
 describe('pcgwApi', () => {
+    beforeEach(() => {
+        pcgwApi.resetCache();
+    });
+
     describe('extractTitleFromUrl', () => {
         it('should extract title from standard wiki path', () => {
             const url = 'https://www.pcgamingwiki.com/wiki/Grand_Theft_Auto_V';
@@ -70,8 +75,69 @@ describe('pcgwApi', () => {
         });
     });
 
+    describe('namespace searches', () => {
+        it('should search companies using namespace 416 opensearch', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue([
+                'Valve',
+                ['Company:Valve', 'Company:Valve Corporation'],
+                ['', ''],
+                ['https://www.pcgamingwiki.com/wiki/Company:Valve', 'https://www.pcgamingwiki.com/wiki/Company:Valve_Corporation']
+            ]);
+
+            const results = await pcgwApi.searchCompanies('Valve');
+            expect(fetchSpy).toHaveBeenCalledWith({
+                action: 'opensearch',
+                search: 'Valve',
+                namespace: '416',
+                limit: '10'
+            });
+            expect(results).toEqual(['Valve', 'Valve Corporation']);
+            fetchSpy.mockRestore();
+        });
+
+        it('should search engines using namespace 404 opensearch', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue([
+                'Unreal',
+                ['Engine:Unreal Engine', 'Engine:Unreal Engine 5'],
+                ['', ''],
+                ['https://www.pcgamingwiki.com/wiki/Engine:Unreal_Engine', 'https://www.pcgamingwiki.com/wiki/Engine:Unreal_Engine_5']
+            ]);
+
+            const results = await pcgwApi.searchEngines('Unreal');
+            expect(fetchSpy).toHaveBeenCalledWith({
+                action: 'opensearch',
+                search: 'Unreal',
+                namespace: '404',
+                limit: '10'
+            });
+            expect(results).toEqual(['Unreal Engine', 'Unreal Engine 5']);
+            fetchSpy.mockRestore();
+        });
+
+        it('should search series using namespace 402 opensearch', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue([
+                'Half-Life',
+                ['Series:Half-Life'],
+                [''],
+                ['https://www.pcgamingwiki.com/wiki/Series:Half-Life']
+            ]);
+
+            const results = await pcgwApi.searchSeries('Half-Life');
+            expect(fetchSpy).toHaveBeenCalledWith({
+                action: 'opensearch',
+                search: 'Half-Life',
+                namespace: '402',
+                limit: '10'
+            });
+            expect(results).toEqual(['Half-Life']);
+            fetchSpy.mockRestore();
+        });
+    });
+
     describe('prewarmCargoInitialValues', () => {
-        it('should fetch all taxonomy fields in a single query and cache them correctly', async () => {
+        it('should fetch all taxonomy fields in a single query when logged in', async () => {
+            vi.spyOn(pcgwAuth, 'isLoggedIn', 'get').mockReturnValue(true);
+
             const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue({
                 cargoquery: [
                     {
@@ -96,16 +162,13 @@ describe('pcgwApi', () => {
                 ]
             });
 
-            // Make sure cache is clean before test
-            pcgwApi.resetCache();
-
             await pcgwApi.prewarmCargoInitialValues();
 
             expect(fetchSpy).toHaveBeenCalledWith(expect.objectContaining({
                 action: 'cargoquery',
-                tables: 'Infobox_game',
-                order_by: 'Infobox_game._pageID DESC'
-            }));
+                tables: 'Game',
+                order_by: 'Game._pageID DESC'
+            }), true);
 
             // Verify cached values by calling the public methods
             fetchSpy.mockClear();
@@ -113,18 +176,24 @@ describe('pcgwApi', () => {
             const genres = await pcgwApi.searchGenres();
             expect(genres).toEqual(['First-person shooter']);
 
-            const companies = await pcgwApi.searchCompanies();
-            expect(companies).toContain('Valve');
-            expect(companies).toContain('Gearbox Software');
-            expect(companies).toContain('Sierra Entertainment');
-
-            // Verify a common search cache was warmed
-            const devSearch = await pcgwApi.searchCompanies('Valve');
-            expect(devSearch).toEqual(['Valve']);
-
             expect(fetchSpy).not.toHaveBeenCalled();
 
             fetchSpy.mockRestore();
+            vi.restoreAllMocks();
+        });
+
+        it('should do nothing and return empty when not logged in', async () => {
+            vi.spyOn(pcgwAuth, 'isLoggedIn', 'get').mockReturnValue(false);
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi');
+
+            await pcgwApi.prewarmCargoInitialValues();
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+
+            const genres = await pcgwApi.searchGenres();
+            expect(genres).toEqual([]);
+
+            vi.restoreAllMocks();
         });
     });
 });

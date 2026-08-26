@@ -84,6 +84,7 @@ const openBotPasswordHelp = () => {
                         <li>Create, edit, and move pages</li>
                         <li>Upload new files</li>
                         <li>Upload, replace, and move files</li>
+                        <li>Run queries (Cargo queries)</li>
                     </ul>
                 </div>
             </Message>

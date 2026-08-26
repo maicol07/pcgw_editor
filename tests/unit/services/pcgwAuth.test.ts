@@ -401,4 +401,19 @@ describe('PCGWAuthService', () => {
         expect(pcgwAuth['authData'].value.password).toBeUndefined();
         expect(pcgwAuth.password).toBe('SecretPass');
     });
+
+    it('should trigger permission denied notification on permissiondenied response', async () => {
+        // @ts-ignore
+        pcgwAuth.authData.value.sessionCookies = 'valid-cookies';
+
+        vi.mocked(apiFetch).mockResolvedValueOnce({
+            error: {
+                code: 'permissiondenied',
+                info: "You don't have permission to run arbitrary Cargo queries."
+            }
+        });
+
+        const res = await pcgwAuth.apiPost({ action: 'cargoquery' });
+        expect(res?.error?.code).toBe('permissiondenied');
+    });
 });

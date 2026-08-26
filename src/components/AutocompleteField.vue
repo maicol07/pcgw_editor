@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import MultiSelect from 'openvue/multiselect';
 import AutoComplete from 'openvue/autocomplete';
 import Button from 'openvue/button';
-import { pcgwApi } from '../services/pcgwApi';
+import { Lock } from '@lucide/vue';
+import { pcgwApi, isDataSourceAuthRequired } from '../services/pcgwApi';
+import { pcgwAuth } from '../services/pcgwAuth';
 
 export type DataSource = 'companies' | 'engines' | 'series' | 'genres' | 'themes' | 'perspectives' | 'files' | 'pacing' | 'controls' | 'sports' | 'vehicles' | 'artStyles' | 'monetization' | 'microtransactions' | 'modes' | 'pages';
 
@@ -26,6 +28,9 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: string | string[]): void;
     (e: 'suggestions-update', value: string[]): void;
 }>();
+
+const isAuthRequired = computed(() => isDataSourceAuthRequired(props.dataSource));
+const isAuthMissing = computed(() => isAuthRequired.value && !pcgwAuth.isLoggedIn);
 
 const localValue = ref<any>(Array.isArray(props.modelValue) ? [...props.modelValue] : props.modelValue);
 
@@ -291,7 +296,11 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                             + Add '{{ filterText }}'
                         </Button>
                     </div>
-                    <div v-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
+                    <div v-if="isAuthMissing" class="p-2 text-xs text-amber-600 dark:text-amber-400 text-center border-t border-surface-200 dark:border-surface-700 flex items-center justify-center gap-1.5 bg-amber-500/5">
+                        <Lock class="w-3.5 h-3.5 shrink-0" />
+                        <span>Suggestions require logging in with a PCGamingWiki Bot Password</span>
+                    </div>
+                    <div v-else-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
                         Type at least 2 characters to search for more options
                     </div>
                 </div>
@@ -308,11 +317,22 @@ const onFilter = async (event: { value?: string, query?: string }) => {
                 </slot>
             </template>
             <template #footer>
-                <div v-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
+                <div v-if="isAuthMissing" class="p-2 text-xs text-amber-600 dark:text-amber-400 text-center border-t border-surface-200 dark:border-surface-700 flex items-center justify-center gap-1.5 bg-amber-500/5">
+                    <Lock class="w-3.5 h-3.5 shrink-0" />
+                    <span>Suggestions require logging in with a PCGamingWiki Bot Password</span>
+                </div>
+                <div v-else-if="!filterText || filterText.length < 2" class="p-2 text-xs text-surface-500 dark:text-surface-400 text-center border-t border-surface-200 dark:border-surface-700">
                     Type at least 2 characters to search for more options
                 </div>
             </template>
         </AutoComplete>
+
+        <!-- Discreet lock badge on input container when unauthenticated -->
+        <div v-if="isAuthMissing"
+            class="absolute right-8 top-1/2 -translate-y-1/2 flex items-center pointer-events-auto z-1 text-amber-500/80 hover:text-amber-500 transition-colors"
+            v-tooltip.top="'Suggestions for this field require PCGamingWiki login (Bot Password)'">
+            <Lock class="w-3.5 h-3.5" />
+        </div>
     </div>
 </template>
 
