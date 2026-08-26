@@ -115,7 +115,7 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
 </script>
 
 <template>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 @container">
         <!-- Bulk actions -->
         <div v-if="localizations.length"
             class="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 rounded-lg bg-surface-50 dark:bg-surface-800/40 border border-surface-200 dark:border-surface-700">
@@ -153,9 +153,9 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                     </Button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-end">
+                <div class="grid grid-cols-1 @md:grid-cols-12 gap-x-3 gap-y-2 items-end">
                     <!-- Language -->
-                    <div class="md:col-span-4 lg:col-span-3 flex flex-col gap-1">
+                    <div class="@md:col-span-4 @3xl:col-span-3 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Language</label>
                         <div class="flex gap-2">
                             <Select v-model="row.language" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
@@ -181,7 +181,7 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                     </div>
 
                     <!-- Interface -->
-                    <div class="md:col-span-2 lg:col-span-1 flex flex-col gap-1 items-center">
+                    <div class="@md:col-span-2 @3xl:col-span-1 min-w-0 flex flex-col gap-1 items-center">
                         <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">UI</label>
                         <div
                             class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
@@ -190,31 +190,31 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                     </div>
 
                     <!-- Audio -->
-                    <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
+                    <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Audio</label>
                         <RatingSelect v-model="row.audio" :inputId="`loc-audio-${getRowId(row)}`" />
                     </div>
 
                     <!-- Subtitles -->
-                    <div class="md:col-span-3 lg:col-span-2 flex flex-col gap-1">
+                    <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Subtitles</label>
                         <RatingSelect v-model="row.subtitles" :inputId="`loc-subs-${getRowId(row)}`" />
                     </div>
 
                     <!-- Notes & Fan -->
-                    <div class="md:col-span-10 lg:col-span-3 flex gap-2 items-end">
-                        <div class="flex-1 flex flex-col gap-1">
+                    <div class="@md:col-span-10 @3xl:col-span-3 min-w-0 flex gap-2 items-end">
+                        <div class="flex-1 min-w-0 flex flex-col gap-1">
                             <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Notes</label>
                             <InputText :id="`loc-notes-${getRowId(row)}`" v-model="row.notes" class="w-full" placeholder="Notes..." />
                         </div>
-                        <div class="flex flex-col gap-1 items-center pb-2" title="Fan Translation">
+                        <div class="flex flex-col gap-1 items-center pb-2 shrink-0" title="Fan Translation">
                             <label :for="`loc-fan-${getRowId(row)}`" class="text-xs font-bold text-surface-400">FAN</label>
                             <Checkbox :inputId="`loc-fan-${getRowId(row)}`" v-model="row.fan" binary />
                         </div>
                     </div>
 
                     <!-- Delete Button (Last column) -->
-                    <div class="md:col-span-2 lg:col-span-1 flex justify-end pb-1">
+                    <div class="@md:col-span-2 @3xl:col-span-1 min-w-0 flex justify-end pb-1">
                         <Button severity="danger" text @click="removeRow(index)" title="Remove Language">
                             <template #icon>
                                 <Trash2 class="w-4 h-4" />

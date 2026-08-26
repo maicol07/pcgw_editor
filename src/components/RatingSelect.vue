@@ -28,15 +28,15 @@ const optionItems = computed(() => {
 </script>
 
 <template>
-    <div class="rating-select-wrapper">
-        <Select v-model="model" :inputId="inputId" :options="optionItems" optionLabel="label" optionValue="value" class="min-w-32"
+    <div class="rating-select-wrapper w-full min-w-0">
+        <Select v-model="model" :inputId="inputId" :options="optionItems" optionLabel="label" optionValue="value" class="w-full min-w-0"
             size="small">
             <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <img :src="ratingMetadata[slotProps.value as RatingValue].icon" :alt="slotProps.value" class="w-5 h-5 shrink-0 object-contain" />
-                    <span class="leading-none mt-0.5">{{ ratingMetadata[slotProps.value as RatingValue].label }}</span>
+                <div v-if="slotProps.value" class="flex items-center gap-1.5 min-w-0">
+                    <img :src="ratingMetadata[slotProps.value as RatingValue].icon" :alt="slotProps.value" class="w-4 h-4 shrink-0 object-contain" />
+                    <span class="leading-none mt-0.5 truncate text-xs">{{ ratingMetadata[slotProps.value as RatingValue].label }}</span>
                 </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
+                <span v-else class="truncate text-xs">{{ slotProps.placeholder }}</span>
             </template>
             <template #option="slotProps">
                 <div class="flex flex-col gap-1 py-1">
