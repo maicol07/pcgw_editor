@@ -12,6 +12,10 @@ export class PCGWEditor {
         return this.parser.getText().trimStart();
     }
 
+    hasTemplate(name: string): boolean {
+        return this.parser.findTemplate(name) !== null;
+    }
+
     getText(): string {
         // Ensure no leading newline if the file is empty or starts with one inappropriately
         // But parser might produce one.
@@ -453,6 +457,13 @@ export class PCGWEditor {
     }
 
     updateIntroduction(data: GameData['introduction']) {
+        const hasData = Boolean(
+            (data.introduction && data.introduction.trim() !== '') ||
+            (data.releaseHistory && data.releaseHistory.trim() !== '') ||
+            (data.currentState && data.currentState.trim() !== '')
+        );
+        if (!hasData && !this.parser.findTemplate('Introduction')) return;
+
         this.ensureTemplate('Introduction');
         this.updateSection('Introduction', data, {
             introduction: 'introduction',
@@ -544,8 +555,7 @@ export class PCGWEditor {
     }
 
     updateMonetization(data: GameData['monetization']) {
-        this.ensureTemplate('Monetization', { after: 'Availability', before: 'Microtransactions', header: 'Monetization' });
-        this.updateSection('Monetization', data, {
+        const mapping = {
             adSupported: 'ad-supported',
             dlc: 'dlc',
             expansionPack: 'expansion pack',
@@ -555,12 +565,19 @@ export class PCGWEditor {
             subscription: 'subscription',
             subscriptionGamingService: 'subscription gaming service',
             crossGameBonus: 'cross-game bonus'
+        };
+        const hasData = Object.keys(mapping).some(key => {
+            const val = (data as any)?.[key];
+            return val && val !== '';
         });
+        if (!hasData && !this.parser.findTemplate('Monetization')) return;
+
+        this.ensureTemplate('Monetization', { after: 'Availability', before: 'Microtransactions', header: 'Monetization' });
+        this.updateSection('Monetization', data, mapping);
     }
 
     updateMicrotransactions(data: GameData['microtransactions']) {
-        this.ensureTemplate('Microtransactions', { after: 'Monetization', before: 'DLC', header: 'Microtransactions' });
-        this.updateSection('Microtransactions', data, {
+        const mapping = {
             boost: 'boost',
             cosmetic: 'cosmetic',
             currency: 'currency',
@@ -572,7 +589,15 @@ export class PCGWEditor {
             playerTrading: 'player trading',
             timeLimited: 'time-limited',
             unlock: 'unlock'
+        };
+        const hasData = Object.keys(mapping).some(key => {
+            const val = (data as any)?.[key];
+            return val && val !== '';
         });
+        if (!hasData && !this.parser.findTemplate('Microtransactions')) return;
+
+        this.ensureTemplate('Microtransactions', { after: 'Monetization', before: 'DLC', header: 'Microtransactions' });
+        this.updateSection('Microtransactions', data, mapping);
     }
 
 
@@ -640,6 +665,17 @@ export class PCGWEditor {
             xboxCloud: 'xbox cloud',
             icloud: 'icloud'
         };
+
+        const hasData = Boolean(
+            (cloud.status && cloud.status !== 'unknown') ||
+            (cloud.notes && cloud.notes.trim() !== '') ||
+            Object.keys(cloudMap).some(key => {
+                const status = (cloud as any)[key];
+                const notes = (cloud as any)[`${key}Notes`];
+                return (status && status !== 'unknown') || (notes && notes.trim() !== '');
+            })
+        );
+        if (!hasData && !this.parser.findTemplate('Save game cloud syncing')) return;
 
         // Ensure template exists with proper section header
         if (!this.parser.findTemplate('Save game cloud syncing')) {
@@ -1650,6 +1686,91 @@ export class PCGWEditor {
         }
     }
 
+    /**
+     * Remove all templates, headings, and structures associated with a section key.
+     */
+    removeSectionByKey(key: string): void {
+        switch (key) {
+            case 'articleState':
+                ['stub', 'cleanup', 'delete', 'State', 'Disambig', 'Distinguish'].forEach(t => {
+                    this.parser.removeTemplate(t);
+                });
+                break;
+            case 'infobox':
+                this.parser.removeTemplate('Infobox game');
+                break;
+            case 'introduction':
+                this.parser.removeTemplate('Introduction');
+                this.parser.replaceCustomSection(/'''\s*General information\s*'''[\s\S]*?(?=\n==|$)/i, '', '');
+                break;
+            case 'availability':
+                this.parser.removeTemplate('Availability');
+                this.parser.removeSection(/Availability/i);
+                break;
+            case 'monetization':
+                this.parser.removeTemplate('Monetization');
+                this.parser.removeTemplate('Microtransactions');
+                this.parser.removeSection(/Monetization/i);
+                this.parser.removeSection(/Microtransactions/i);
+                break;
+            case 'dlc':
+                this.parser.removeTemplate('DLC');
+                this.parser.removeSection(/DLC/i);
+                break;
+            case 'essentialImprovements':
+                this.parser.removeSection(/Essential improvements/i);
+                break;
+            case 'gameData':
+                this.parser.removeTemplate('Save game cloud syncing');
+                this.parser.removeSection(/Game data/i);
+                this.parser.replaceCustomSection(/===Configuration file\(s\) location===[\s\S]*?(?===|$)/, '', '');
+                this.parser.replaceCustomSection(/===Save game data location===[\s\S]*?(?===|$)/, '', '');
+                break;
+            case 'video':
+                this.parser.removeTemplate('Video');
+                this.parser.removeSection(/Video/i);
+                break;
+            case 'input':
+                this.parser.removeTemplate('Input');
+                this.parser.removeSection(/Input/i);
+                break;
+            case 'audio':
+                this.parser.removeTemplate('Audio');
+                this.parser.removeSection(/Audio/i);
+                break;
+            case 'network':
+                ['Network', 'Network/Multiplayer', 'Network/Connections', 'Network/Ports'].forEach(t => {
+                    this.parser.removeTemplate(t);
+                });
+                this.parser.removeSection(/Network/i);
+                break;
+            case 'vr':
+                this.parser.removeTemplate('VR support');
+                this.parser.removeSection(/VR support/i);
+                break;
+            case 'issues':
+                this.parser.removeSection(/Issues unresolved/i);
+                this.parser.removeSection(/Issues fixed/i);
+                this.parser.removeSection(/Issues/i);
+                break;
+            case 'other':
+                this.parser.removeTemplate('API');
+                this.parser.removeTemplate('Middleware');
+                this.parser.removeSection(/Other information/i);
+                break;
+            case 'systemReq':
+                while (this.parser.findTemplate('System requirements')) {
+                    this.parser.removeTemplate('System requirements');
+                }
+                this.parser.removeSection(/System requirements/i);
+                break;
+            case 'l10n':
+                this.parser.removeTemplate('L10n');
+                this.parser.removeSection(/Localizations/i);
+                break;
+        }
+        this.parser.cleanNewlines();
+    }
 }
 
 // Keep DEFAULT_TEMPLATE and generateWikitext at the end
@@ -1808,7 +1929,10 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateGameData(data.config);
     editor.updateCloudSync(data.config.cloudSync);
     editor.updateVideo(data.video);
-    editor.updateInput(data.input);
+    const hasInputData = Object.values(data.input || {}).some(val => val && val !== 'unknown' && val !== '');
+    if (editor.hasTemplate('Input') || hasInputData) {
+        editor.updateInput(data.input);
+    }
     editor.updateAudio(data.audio);
     editor.updateNetwork(data.network);
     editor.updateVR(data.vr);

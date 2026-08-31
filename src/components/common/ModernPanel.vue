@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUiStore } from '../../stores/ui';
-import { ChevronDown, Eye, EyeOff } from '@lucide/vue';
+import { ChevronDown, Eye, EyeOff, Trash2 } from '@lucide/vue';
 
 const uiStore = useUiStore();
 
@@ -9,14 +9,17 @@ const props = withDefaults(defineProps<{
     sectionKey?: string;
     collapsible?: boolean;
     hidable?: boolean;
+    deletable?: boolean;
 }>(), {
     collapsible: true,
     hidable: true,
+    deletable: true,
 });
 
 const emit = defineEmits<{
     (e: 'toggle-collapse'): void;
     (e: 'toggle-hide'): void;
+    (e: 'delete', target: HTMLElement): void;
 }>();
 
 const isCollapsed = computed(() => {
@@ -46,6 +49,11 @@ const toggleHide = () => {
     }
     emit('toggle-hide');
 };
+
+const handleDelete = (event: MouseEvent) => {
+    const btn = (event.currentTarget as HTMLElement) || ((event.target as HTMLElement)?.closest('button') as HTMLElement);
+    emit('delete', btn);
+};
 </script>
 
 <template>
@@ -71,6 +79,15 @@ const toggleHide = () => {
 
                 <!-- Controls -->
                 <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <button
+                        v-if="deletable"
+                        type="button"
+                        @click.stop="handleDelete"
+                        v-tooltip.top="'Delete section'"
+                        aria-label="Delete section"
+                        class="p-1.5 rounded-lg text-surface-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors active:scale-95">
+                        <Trash2 class="w-4 h-4 transition-transform duration-200" />
+                    </button>
                     <button
                         v-if="hidable"
                         type="button"

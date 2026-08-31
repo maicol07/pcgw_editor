@@ -5,7 +5,7 @@ import Drawer from 'openvue/drawer';
 import Button from 'openvue/button';
 import FileUpload from 'openvue/fileupload';
 import { computed, ref } from 'vue';
-import { Plus, Pencil, Download, Trash2, Loader2, AlertCircle, Search, Filter, ArrowUpDown, Clock, Calendar, Hash, File, FilePenLine, User, Users, Link, Unlink, Layout, SortAsc, SortDesc } from '@lucide/vue';
+import { Plus, Pencil, Download, Trash2, Loader2, AlertCircle, AlertTriangle, Search, Filter, ArrowUpDown, Clock, Calendar, Hash, File, FilePenLine, User, Users, Link, Unlink, Layout, SortAsc, SortDesc } from '@lucide/vue';
 import Dialog from 'openvue/dialog';
 import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
@@ -205,9 +205,9 @@ const confirmDelete = (event: Event, page: any) => {
         return;
     }
     confirm.require({
-        target: event.currentTarget as HTMLElement,
+        group: 'sidebar-confirm',
+        target: (event.currentTarget || (event.target as HTMLElement)?.closest('button') || event.target) as HTMLElement,
         message: `Delete "${page.title}"? This can't be undone.`,
-        icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger p-button-sm',
         rejectClass: 'p-button-text p-button-sm',
         acceptLabel: 'Delete',
@@ -557,7 +557,11 @@ defineExpose({ openLinkDialog, openNewPageDialog });
         </div>
     </Drawer>
 
-    <ConfirmPopup />
+    <ConfirmPopup group="sidebar-confirm">
+        <template #icon>
+            <AlertTriangle class="w-5 h-5 text-amber-500 shrink-0" />
+        </template>
+    </ConfirmPopup>
 
     <!-- Rename Dialog -->
     <Dialog v-model:visible="isRenameVisible" header="Rename Page" :style="{ width: '400px' }" modal :draggable="false">

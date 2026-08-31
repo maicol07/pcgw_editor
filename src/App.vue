@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent, watch } from 'vue';
+import { computed, provide, onMounted, onUnmounted, ref, defineAsyncComponent, watch, nextTick } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { useWorkspaceStore } from './stores/workspace';
 import { useUiStore } from './stores/ui';
@@ -25,6 +25,8 @@ import WorkspaceSidebar from './components/WorkspaceSidebar.vue';
 import EditorToolbar from './components/editor/EditorToolbar.vue';
 import Toast from 'openvue/toast';
 import { useToast } from 'openvue/usetoast';
+import ConfirmPopup from 'openvue/confirmpopup';
+import { useConfirm } from 'openvue/useconfirm';
 import PreviewPanel from './components/editor/PreviewPanel.vue';
 import QuickActions from './components/layout/QuickActions.vue';
 import AISummaryDialog from './features/ai/AISummaryDialog.vue';
@@ -32,7 +34,7 @@ import AppSettings from './components/settings/AppSettings.vue';
 import GuidedTour from './components/layout/GuidedTour.vue';
 import EditorSkeleton from './components/layout/EditorSkeleton.vue';
 import SectionNav from './components/layout/SectionNav.vue';
-import { sectionKeysInOrder } from './config/sections';
+import { sectionGroups, sectionKeysInOrder } from './config/sections';
 import DynamicSection from './components/schema/DynamicSection.vue';
 // Async: DiffMergerDialog pulls CodeDiffView -> @codemirror/merge, which otherwise loads
 // CodeMirror at startup even though CodeEditor itself is already lazy.
@@ -54,7 +56,7 @@ import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
     Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock,
-    Plus, Download
+    Plus, Download, AlertTriangle
 } from '@lucide/vue';
 
 // Async Components
@@ -460,6 +462,51 @@ onMounted(() => {
         window.removeEventListener('keydown', handleGlobalKeydown);
     });
 });
+
+const confirm = useConfirm();
+const confirmPopupRef = ref<any>(null);
+
+const handlePopupEnter = () => {
+    confirmPopupRef.value?.alignOverlay();
+};
+
+const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
+    const allItems = sectionGroups.flatMap(g => g.items);
+    const item = allItems.find(i => i.key === sectionKey);
+    const label = item ? item.label : sectionKey;
+
+    const performDelete = () => {
+        workspaceStore.deleteSection(sectionKey);
+        if (!uiStore.isSectionHidden(sectionKey)) {
+            uiStore.toggleSectionHide(sectionKey);
+        }
+        toast.add({
+            severity: 'info',
+            summary: 'Section deleted',
+            detail: `"${label}" section was deleted and removed from Wikitext.`,
+            life: 3000
+        });
+    };
+
+    if (!uiStore.confirmDeletions) {
+        performDelete();
+        return;
+    }
+
+    confirm.require({
+        group: 'app-confirm',
+        target: targetEl,
+        message: `Delete "${label}" section? This will clear its data and remove it from wikitext.`,
+        acceptClass: 'p-button-danger p-button-sm',
+        rejectClass: 'p-button-text p-button-sm',
+        acceptLabel: 'Delete',
+        rejectLabel: 'Cancel',
+        onShow: () => {
+            nextTick(() => confirmPopupRef.value?.alignOverlay());
+        },
+        accept: performDelete
+    });
+};
 </script>
 
 <template>
@@ -469,6 +516,11 @@ onMounted(() => {
             'compact-mode': uiStore.densityMode === 'compact'
         }">
         <Toast />
+        <ConfirmPopup group="app-confirm" ref="confirmPopupRef" :pt="{ transition: { onEnter: handlePopupEnter, onAfterEnter: handlePopupEnter } }">
+            <template #icon>
+                <AlertTriangle class="w-5 h-5 text-amber-500 shrink-0" />
+            </template>
+        </ConfirmPopup>
         <WorkspaceSidebar ref="workspaceSidebarRef" v-model:visible="uiStore.sidebarVisible" />
 
         <Splitter v-if="workspaceStore.activePage" style="height: 100vh" class="border-none mb-0! rounded-none! bg-transparent splitter-modern"
@@ -513,7 +565,8 @@ onMounted(() => {
                             class="p-4 md:p-6 max-w-6xl xl:max-w-7xl 2xl:max-w-none mx-auto flex flex-col gap-9" key="visual">
                             <QuickActions v-model:searchQuery="searchQuery" />                            <!-- Sections -->
                             <ModernPanel id="sec-articleState" sectionKey="articleState"
-                                v-show="panelVisibility.articleState">
+                                v-show="panelVisibility.articleState"
+                                :deletable="false">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <File class="text-slate-500 w-4 h-4" /><span
@@ -525,7 +578,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-infobox" sectionKey="infobox"
-                                v-show="panelVisibility.infobox">
+                                v-show="panelVisibility.infobox"
+                                :deletable="false">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Info class="text-blue-600 w-4 h-4" />
@@ -538,7 +592,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-introduction" sectionKey="introduction"
-                                v-show="panelVisibility.introduction">
+                                v-show="panelVisibility.introduction"
+                                :deletable="false">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlignLeft class="text-orange-500 w-4 h-4" /><span
@@ -558,7 +613,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-availability" sectionKey="availability"
-                                v-show="panelVisibility.availability">
+                                v-show="panelVisibility.availability"
+                                @delete="handleDeleteSection('availability', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <ShoppingCart class="text-emerald-500 w-4 h-4" /><span
@@ -570,7 +626,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-monetization" sectionKey="monetization"
-                                v-show="panelVisibility.monetization">
+                                v-show="panelVisibility.monetization"
+                                @delete="handleDeleteSection('monetization', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <DollarSign class="text-amber-500 w-4 h-4" /><span
@@ -598,7 +655,8 @@ onMounted(() => {
                                 </div>
                             </ModernPanel>
 
-                            <ModernPanel id="sec-dlc" sectionKey="dlc" v-show="panelVisibility.dlc">
+                            <ModernPanel id="sec-dlc" sectionKey="dlc" v-show="panelVisibility.dlc"
+                                @delete="handleDeleteSection('dlc', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <PlusCircle class="text-primary-500 w-4 h-4" /><span
@@ -610,7 +668,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-essentialImprovements" sectionKey="essentialImprovements"
-                                v-show="panelVisibility.essentialImprovements">
+                                v-show="panelVisibility.essentialImprovements"
+                                @delete="handleDeleteSection('essentialImprovements', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Star class="text-yellow-500 w-4 h-4" /><span
@@ -632,7 +691,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-gameData" sectionKey="gameData"
-                                v-show="panelVisibility.gameData">
+                                v-show="panelVisibility.gameData"
+                                @delete="handleDeleteSection('gameData', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Save class="text-green-600 w-4 h-4" /><span class="section-eyebrow">Game
@@ -643,7 +703,8 @@ onMounted(() => {
                                     :section="schemas.gameData.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-video" sectionKey="video" v-show="panelVisibility.video">
+                            <ModernPanel id="sec-video" sectionKey="video" v-show="panelVisibility.video"
+                                @delete="handleDeleteSection('video', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Monitor class="text-sky-500 w-4 h-4" /><span
@@ -654,7 +715,8 @@ onMounted(() => {
                                     :section="schemas.video.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-input" sectionKey="input" v-show="panelVisibility.input">
+                            <ModernPanel id="sec-input" sectionKey="input" v-show="panelVisibility.input"
+                                @delete="handleDeleteSection('input', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Keyboard class="text-indigo-500 w-4 h-4" /><span
@@ -665,7 +727,8 @@ onMounted(() => {
                                     :section="schemas.input.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-audio" sectionKey="audio" v-show="panelVisibility.audio">
+                            <ModernPanel id="sec-audio" sectionKey="audio" v-show="panelVisibility.audio"
+                                @delete="handleDeleteSection('audio', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Volume2 class="text-primary-500 w-4 h-4" /><span
@@ -677,7 +740,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-network" sectionKey="network"
-                                v-show="panelVisibility.network">
+                                v-show="panelVisibility.network"
+                                @delete="handleDeleteSection('network', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Wifi class="text-cyan-500 w-4 h-4" /><span
@@ -688,7 +752,8 @@ onMounted(() => {
                                     :section="schemas.network.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-vr" sectionKey="vr" v-show="panelVisibility.vr">
+                            <ModernPanel id="sec-vr" sectionKey="vr" v-show="panelVisibility.vr"
+                                @delete="handleDeleteSection('vr', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Eye class="text-pink-500 w-4 h-4" /><span class="section-eyebrow">VR
@@ -699,7 +764,8 @@ onMounted(() => {
                                     :section="schemas.vr.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-issues" sectionKey="issues" v-show="panelVisibility.issues">
+                            <ModernPanel id="sec-issues" sectionKey="issues" v-show="panelVisibility.issues"
+                                @delete="handleDeleteSection('issues', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <AlertCircle class="text-red-500 w-4 h-4" /><span
@@ -710,7 +776,8 @@ onMounted(() => {
                                     :section="schemas.issues.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-other" sectionKey="other" v-show="panelVisibility.other">
+                            <ModernPanel id="sec-other" sectionKey="other" v-show="panelVisibility.other"
+                                @delete="handleDeleteSection('other', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
@@ -726,7 +793,8 @@ onMounted(() => {
                             </ModernPanel>
 
                             <ModernPanel id="sec-systemReq" sectionKey="systemReq"
-                                v-show="panelVisibility.systemReq">
+                                v-show="panelVisibility.systemReq"
+                                @delete="handleDeleteSection('systemReq', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Cpu class="text-lime-500 w-4 h-4" /><span class="section-eyebrow">System
@@ -737,7 +805,8 @@ onMounted(() => {
                                     :section="schemas.systemReq.value" v-model="gameData" />
                             </ModernPanel>
 
-                            <ModernPanel id="sec-l10n" sectionKey="l10n" v-show="panelVisibility.l10n">
+                            <ModernPanel id="sec-l10n" sectionKey="l10n" v-show="panelVisibility.l10n"
+                                @delete="handleDeleteSection('l10n', $event)">
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Globe class="text-teal-400 w-4 h-4" /><span

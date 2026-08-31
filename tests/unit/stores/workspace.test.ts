@@ -65,4 +65,22 @@ describe('Workspace Store', () => {
         expect(page2?.onlineRevisionId).toBe(200);
         expect(page3?.onlineRevisionId).toBeUndefined();
     });
+
+    it('resets section in activeGameData and strips section from activePage wikitext on deleteSection', async () => {
+        const store = useWorkspaceStore();
+        store.pages = [];
+        const wikitext = '== Availability ==\n{{Availability\n|Steam|1234|Steam|}}\n\n== Video ==\n{{Video\n|widescreen resolution=true\n}}';
+        store.createPage('Game Page', wikitext, 'singleplayer');
+        await store.syncFromWikitext();
+
+        expect(store.activeGameData.availability.length).toBeGreaterThan(0);
+        expect(store.activePage?.wikitext).toContain('== Availability ==');
+
+        store.deleteSection('availability');
+
+        expect(store.activeGameData.availability.length).toBe(0);
+        expect(store.activePage?.wikitext).not.toContain('== Availability ==');
+        expect(store.activePage?.wikitext).not.toContain('{{Availability');
+        expect(store.activePage?.wikitext).toContain('== Video ==');
+    });
 });

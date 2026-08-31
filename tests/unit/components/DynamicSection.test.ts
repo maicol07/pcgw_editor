@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import ToastService from 'openvue/toastservice';
+import ConfirmationService from 'openvue/confirmationservice';
+import { createPinia } from 'pinia';
 import DynamicSection from '../../../src/components/schema/DynamicSection.vue';
 import { SectionDefinition } from '../../../src/types/schema';
 
@@ -68,7 +70,7 @@ describe('DynamicSection.vue - Multiple Compound Rating Rows', () => {
                 modelValue
             },
             global: {
-                plugins: [ToastService]
+                plugins: [ToastService, ConfirmationService, createPinia()]
             }
         });
 

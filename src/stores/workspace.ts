@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
 import { initialGameData, GameData } from '../models/GameData';
 import { computed, ref, watch } from 'vue';
-import { generateWikitext } from '../utils/wikitext';
+import { generateWikitext, PCGWEditor } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
 import { pcgwApi } from '../services/pcgwApi';
 import { pcgwMedia } from '../services/pcgwMedia';
@@ -81,6 +81,149 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             activePage.value.wikitext = generateWikitext(_activeGameData.value, activePage.value.baseWikitext);
             activePage.value.lastModified = Date.now();
         }
+    }
+
+    function deleteSection(sectionKey: string) {
+        if (!activePage.value || !_activeGameData.value) return;
+
+        // 1. Reset the section's fields in _activeGameData to empty / blank state
+        switch (sectionKey) {
+            case 'articleState':
+                _activeGameData.value.articleState = { stub: false, cleanup: false, delete: false };
+                break;
+            case 'infobox':
+                _activeGameData.value.infobox = {
+                    cover: '',
+                    developers: [],
+                    publishers: [],
+                    engines: [],
+                    releaseDates: [],
+                    reception: [],
+                    taxonomy: {} as any,
+                    links: {} as any,
+                    license: '',
+                };
+                break;
+            case 'introduction':
+                _activeGameData.value.introduction = {
+                    introduction: '',
+                    releaseHistory: '',
+                    currentState: '',
+                    generalInfo: '',
+                };
+                break;
+            case 'availability':
+                _activeGameData.value.availability = [];
+                break;
+            case 'monetization':
+                _activeGameData.value.monetization = {
+                    adSupported: '',
+                    crossGameBonus: '',
+                    dlc: '',
+                    expansionPack: '',
+                    freeware: '',
+                    freeToPlay: '',
+                    oneTimePurchase: '',
+                    subscription: '',
+                    subscriptionGamingService: '',
+                };
+                _activeGameData.value.microtransactions = {
+                    boost: '',
+                    cosmetic: '',
+                    currency: '',
+                    finiteSpend: '',
+                    infiniteSpend: '',
+                    freeToGrind: '',
+                    lootBox: '',
+                    none: '',
+                    playerTrading: '',
+                    timeLimited: '',
+                    unlock: '',
+                };
+                break;
+            case 'dlc':
+                _activeGameData.value.dlc = [];
+                break;
+            case 'essentialImprovements':
+                _activeGameData.value.essentialImprovements = '';
+                break;
+            case 'gameData':
+                _activeGameData.value.config = {
+                    configFiles: [],
+                    saveData: [],
+                    xdg: null,
+                    cloudSync: {} as any,
+                };
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.game_data = [];
+                }
+                break;
+            case 'video':
+                _activeGameData.value.video = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.video = [];
+                }
+                break;
+            case 'input':
+                _activeGameData.value.input = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.input = [];
+                }
+                break;
+            case 'audio':
+                _activeGameData.value.audio = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.audio = [];
+                }
+                break;
+            case 'network':
+                _activeGameData.value.network = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.network = [];
+                }
+                break;
+            case 'vr':
+                _activeGameData.value.vr = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.vr = [];
+                }
+                break;
+            case 'issues':
+                _activeGameData.value.issues = [];
+                break;
+            case 'other':
+                _activeGameData.value.api = {} as any;
+                _activeGameData.value.middleware = {} as any;
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.other = [];
+                }
+                break;
+            case 'systemReq':
+                _activeGameData.value.requirements = {
+                    windows: { minimum: {} as any, recommended: {} as any },
+                    mac: { minimum: {} as any, recommended: {} as any },
+                    linux: { minimum: {} as any, recommended: {} as any },
+                };
+                if (_activeGameData.value.galleries) {
+                    _activeGameData.value.galleries.systemReq = [];
+                }
+                break;
+            case 'l10n':
+                _activeGameData.value.localizations = [];
+                break;
+        }
+
+        // 2. Remove templates and sections directly from base and current wikitext
+        if (activePage.value.baseWikitext) {
+            const baseEditor = new PCGWEditor(activePage.value.baseWikitext);
+            baseEditor.removeSectionByKey(sectionKey);
+            activePage.value.baseWikitext = baseEditor.getText();
+        }
+
+        const currentEditor = new PCGWEditor(activePage.value.wikitext);
+        currentEditor.removeSectionByKey(sectionKey);
+        activePage.value.wikitext = currentEditor.getText();
+        activePage.value.lastModified = Date.now();
     }
 
     async function syncFromWikitext(newWikitext?: string, revid?: number) {
@@ -421,6 +564,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         exportWorkspaceBackup,
         importWorkspaceBackup,
         clearAllWorkspaceData,
+        deleteSection,
         syncToWikitext,
         syncFromWikitext,
         checkForUpdates,
