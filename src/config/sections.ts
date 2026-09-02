@@ -47,9 +47,9 @@ export const sectionGroups: SectionGroup[] = [
             { key: 'video', label: 'Video', icon: Monitor },
             { key: 'input', label: 'Input', icon: Keyboard },
             { key: 'audio', label: 'Audio', icon: Volume2 },
+            { key: 'l10n', label: 'Localizations', icon: Globe },
             { key: 'network', label: 'Network', icon: Wifi },
             { key: 'vr', label: 'VR Support', icon: Eye },
-            { key: 'systemReq', label: 'System Requirements', icon: Cpu },
         ],
     },
     {
@@ -57,7 +57,7 @@ export const sectionGroups: SectionGroup[] = [
         items: [
             { key: 'issues', label: 'Issues', icon: AlertCircle },
             { key: 'other', label: 'Other Info', icon: Settings },
-            { key: 'l10n', label: 'Localizations', icon: Globe },
+            { key: 'systemReq', label: 'System Requirements', icon: Cpu },
         ],
     },
 ];

@@ -739,6 +739,18 @@ const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
                                     :section="schemas.audio.value" v-model="gameData" />
                             </ModernPanel>
 
+                            <ModernPanel id="sec-l10n" sectionKey="l10n" v-show="panelVisibility.l10n"
+                                @delete="handleDeleteSection('l10n', $event)">
+                                <template #header>
+                                    <div class="flex items-center gap-2">
+                                        <Globe class="text-teal-400 w-4 h-4" /><span
+                                            class="section-eyebrow">Localizations</span>
+                                    </div>
+                                </template>
+                                <DynamicSection v-if="schemas.l10n.value"
+                                    :section="schemas.l10n.value" v-model="gameData" />
+                            </ModernPanel>
+
                             <ModernPanel id="sec-network" sectionKey="network"
                                 v-show="panelVisibility.network"
                                 @delete="handleDeleteSection('network', $event)">
@@ -803,18 +815,6 @@ const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
                                 </template>
                                 <DynamicSection v-if="schemas.systemReq.value"
                                     :section="schemas.systemReq.value" v-model="gameData" />
-                            </ModernPanel>
-
-                            <ModernPanel id="sec-l10n" sectionKey="l10n" v-show="panelVisibility.l10n"
-                                @delete="handleDeleteSection('l10n', $event)">
-                                <template #header>
-                                    <div class="flex items-center gap-2">
-                                        <Globe class="text-teal-400 w-4 h-4" /><span
-                                            class="section-eyebrow">Localizations</span>
-                                    </div>
-                                </template>
-                                <DynamicSection v-if="schemas.l10n.value"
-                                    :section="schemas.l10n.value" v-model="gameData" />
                             </ModernPanel>
                         </div>
 
