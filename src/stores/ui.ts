@@ -52,6 +52,8 @@ export const useUiStore = defineStore('ui', () => {
     const editorLineWrapping = ref<boolean>(localStorage.getItem('editorLineWrapping') !== 'false');
     const editorLineNumbers = ref<boolean>(localStorage.getItem('editorLineNumbers') !== 'false');
     const editorTabSize = ref<number>(parseInt(localStorage.getItem('editorTabSize') || '4', 10));
+    const editorSyntaxHighlighting = ref<boolean>(localStorage.getItem('editorSyntaxHighlighting') !== 'false');
+    const diffSyntaxHighlighting = ref<boolean>(localStorage.getItem('diffSyntaxHighlighting') !== 'false');
     type DefaultEditorMode = 'Visual' | 'Code' | 'remember';
     const defaultEditorMode = ref<DefaultEditorMode>((localStorage.getItem('defaultEditorMode') as DefaultEditorMode) || 'remember');
 
@@ -99,6 +101,14 @@ export const useUiStore = defineStore('ui', () => {
 
     watch(editorTabSize, (val: number) => {
         localStorage.setItem('editorTabSize', val.toString());
+    });
+
+    watch(editorSyntaxHighlighting, (val: boolean) => {
+        localStorage.setItem('editorSyntaxHighlighting', val.toString());
+    });
+
+    watch(diffSyntaxHighlighting, (val: boolean) => {
+        localStorage.setItem('diffSyntaxHighlighting', val.toString());
     });
 
     watch(defaultEditorMode, (val: DefaultEditorMode) => {
@@ -278,6 +288,8 @@ export const useUiStore = defineStore('ui', () => {
         editorLineWrapping,
         editorLineNumbers,
         editorTabSize,
+        editorSyntaxHighlighting,
+        diffSyntaxHighlighting,
         defaultEditorMode,
         previewDebounce,
         previewSplitRatio,

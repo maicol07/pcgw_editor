@@ -13,12 +13,16 @@ const baseTheme = EditorView.theme({
     },
 });
 
-// Extensions shared by every pane. `dark` toggles the dark theme and custom syntax highlighting.
-export function wikitextExtensions(dark = isDark()) {
+// Extensions shared by every pane. `dark` toggles the dark theme and `highlight` toggles custom syntax highlighting.
+export function wikitextExtensions(dark = isDark(), highlight?: boolean) {
+    const enableHighlight = highlight !== undefined
+        ? highlight
+        : (typeof localStorage !== 'undefined' ? localStorage.getItem('diffSyntaxHighlighting') !== 'false' : true);
     return [
         mediawiki(config as any),
         EditorView.lineWrapping,
         baseTheme,
-        ...getWikitextThemeExtensions(dark),
+        ...getWikitextThemeExtensions(dark, enableHighlight),
     ];
 }
+

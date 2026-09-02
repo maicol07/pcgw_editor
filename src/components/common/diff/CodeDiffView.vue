@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state';
 import Button from 'openvue/button';
 import { UnfoldVertical, FoldVertical } from '@lucide/vue';
 import { wikitextExtensions, isDark } from './cmWikitext';
+import { useUiStore } from '../../../stores/ui';
 
 const props = withDefaults(defineProps<{
     original: string;
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<{
 
 const container = ref<HTMLDivElement | null>(null);
 const collapseOn = ref(true);
+const uiStore = useUiStore();
 let view: MergeView | null = null;
 
 const cleanOriginal = computed(() => (props.original || '').replace(/\r/g, ''));
@@ -26,7 +28,7 @@ const cleanModified = computed(() => (props.modified || '').replace(/\r/g, ''));
 const build = () => {
     if (!container.value) return;
     view?.destroy();
-    const readOnly = [...wikitextExtensions(isDark()), EditorState.readOnly.of(true)];
+    const readOnly = [...wikitextExtensions(isDark(), uiStore.diffSyntaxHighlighting), EditorState.readOnly.of(true)];
     view = new MergeView({
         a: { doc: cleanOriginal.value, extensions: readOnly },
         b: { doc: cleanModified.value, extensions: readOnly },
@@ -48,7 +50,7 @@ onMounted(() => {
     onUnmounted(() => observer.disconnect());
 });
 
-watch(() => [cleanOriginal.value, cleanModified.value], build);
+watch(() => [cleanOriginal.value, cleanModified.value, uiStore.diffSyntaxHighlighting], build);
 
 onUnmounted(() => view?.destroy());
 </script>

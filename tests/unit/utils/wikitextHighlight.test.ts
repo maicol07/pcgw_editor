@@ -76,12 +76,31 @@ describe('wikitextHighlight', () => {
         expect(hasTemplateArg).toBe(true);
     });
 
-    it('returns appropriate extensions for light and dark modes', () => {
-        const lightExts = getWikitextThemeExtensions(false);
-        const darkExts = getWikitextThemeExtensions(true);
+    it('returns appropriate extensions for light and dark modes with highlighting enabled or disabled', () => {
+        const lightExts = getWikitextThemeExtensions(false, true);
+        const darkExts = getWikitextThemeExtensions(true, true);
+        const lightDisabled = getWikitextThemeExtensions(false, false);
+        const darkDisabled = getWikitextThemeExtensions(true, false);
 
         expect(lightExts.length).toBe(1);
         expect(darkExts.length).toBe(2); // oneDarkTheme + syntaxHighlighting
+        expect(lightDisabled.length).toBe(1); // emptyHighlightStyle
+        expect(darkDisabled.length).toBe(2); // oneDarkTheme + emptyHighlightStyle
+    });
+
+    it('creates an EditorState without errors using theme extensions with highlighting disabled', () => {
+        const lang = mediawikiLanguage(config as any);
+        const stateLightDisabled = EditorState.create({
+            doc: sampleText,
+            extensions: [lang, ...getWikitextThemeExtensions(false, false)]
+        });
+        expect(stateLightDisabled.doc.toString()).toBe(sampleText);
+
+        const stateDarkDisabled = EditorState.create({
+            doc: sampleText,
+            extensions: [lang, ...getWikitextThemeExtensions(true, false)]
+        });
+        expect(stateDarkDisabled.doc.toString()).toBe(sampleText);
     });
 
     it('creates an EditorState without errors using theme extensions', () => {

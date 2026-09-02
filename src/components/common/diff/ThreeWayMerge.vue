@@ -15,6 +15,7 @@ import {
 // AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
 // providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { wikitextExtensions, isDark } from './cmWikitext';
+import { useUiStore } from '../../../stores/ui';
 import { aiConfig } from '../../../services/ai/aiConfig';
 
 const props = defineProps<{
@@ -22,6 +23,8 @@ const props = defineProps<{
     base: string;
     online: string;
 }>();
+
+const uiStore = useUiStore();
 
 const emit = defineEmits<{
     (e: 'update:result', value: string): void;
@@ -452,7 +455,7 @@ const buildViews = () => {
     const doc = center ? center.state.doc.toString() : resultText;
     [left, center, right].forEach((v) => v?.destroy());
     const dark = isDark();
-    const ro = [...wikitextExtensions(dark), decoField, EditorState.readOnly.of(true), EditorView.editable.of(false)];
+    const ro = [...wikitextExtensions(dark, uiStore.diffSyntaxHighlighting), decoField, EditorState.readOnly.of(true), EditorView.editable.of(false)];
 
     left = new EditorView({ doc: props.local, parent: leftEl.value, extensions: ro });
     right = new EditorView({ doc: props.online, parent: rightEl.value, extensions: ro });
@@ -460,7 +463,7 @@ const buildViews = () => {
     center = new EditorView({
         doc, parent: centerEl.value,
         extensions: [
-            ...wikitextExtensions(dark),
+            ...wikitextExtensions(dark, uiStore.diffSyntaxHighlighting),
             decoField,
             history(),
             undoRedoKeys,
@@ -539,6 +542,7 @@ onMounted(() => {
 });
 
 watch(() => [props.local, props.base, props.online], () => { computeModel(); buildViews(); });
+watch(() => uiStore.diffSyntaxHighlighting, () => buildViews());
 
 onUnmounted(() => {
     window.removeEventListener('resize', onResize);

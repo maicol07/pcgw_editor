@@ -39,4 +39,23 @@ describe('UI Store', () => {
         await nextTick();
         expect(localStorage.getItem('editorFontFamily')).toBe('JetBrains Mono');
     });
+
+    it('defaults editorSyntaxHighlighting and diffSyntaxHighlighting to true and persists changes', async () => {
+        const store = useUiStore();
+        expect(store.editorSyntaxHighlighting).toBe(true);
+        expect(store.diffSyntaxHighlighting).toBe(true);
+
+        store.editorSyntaxHighlighting = false;
+        store.diffSyntaxHighlighting = false;
+        await nextTick();
+
+        expect(localStorage.getItem('editorSyntaxHighlighting')).toBe('false');
+        expect(localStorage.getItem('diffSyntaxHighlighting')).toBe('false');
+
+        // Test reloading from localStorage
+        const store2 = useUiStore();
+        expect(store2.editorSyntaxHighlighting).toBe(false);
+        expect(store2.diffSyntaxHighlighting).toBe(false);
+    });
 });
+

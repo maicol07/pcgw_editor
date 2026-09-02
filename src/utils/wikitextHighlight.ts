@@ -79,17 +79,20 @@ export const wikitextHighlightDark = HighlightStyle.define([
     { tag: tags.number, color: '#d19a66' },
 ]);
 
+const emptyHighlightStyle = HighlightStyle.define([]);
+
 /**
- * Returns CodeMirror theme & syntax highlighting extensions for the given mode.
+ * Returns CodeMirror theme & syntax highlighting extensions for the given mode and highlighting preference.
  */
-export function getWikitextThemeExtensions(isDark: boolean): Extension[] {
+export function getWikitextThemeExtensions(isDark: boolean, enableHighlighting = true): Extension[] {
+    const extensions: Extension[] = [];
     if (isDark) {
-        return [
-            oneDarkTheme,
-            syntaxHighlighting(wikitextHighlightDark),
-        ];
+        extensions.push(oneDarkTheme);
     }
-    return [
-        syntaxHighlighting(wikitextHighlightLight),
-    ];
+    if (enableHighlighting) {
+        extensions.push(syntaxHighlighting(isDark ? wikitextHighlightDark : wikitextHighlightLight));
+    } else {
+        extensions.push(syntaxHighlighting(emptyHighlightStyle));
+    }
+    return extensions;
 }

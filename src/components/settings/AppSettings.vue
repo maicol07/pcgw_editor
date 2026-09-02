@@ -607,6 +607,24 @@ const saveSettings = () => {
                                 </div>
                                 <ToggleSwitch v-model="uiStore.editorLineNumbers" aria-label="Show Line Numbers" />
                             </div>
+
+                            <!-- Code Editor Syntax Highlighting -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Code Editor Syntax Highlighting</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Colorize wikitext templates, arguments, sections, and links in the code editor.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.editorSyntaxHighlighting" aria-label="Code Editor Syntax Highlighting" />
+                            </div>
+
+                            <!-- Diff & Merge Syntax Highlighting -->
+                            <div class="flex items-center justify-between py-3.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-bold text-surface-800 dark:text-surface-200">Diff & Merge Syntax Highlighting</span>
+                                    <span class="text-[11px] text-surface-500 leading-normal">Colorize wikitext syntax in side-by-side diff and merge views.</span>
+                                </div>
+                                <ToggleSwitch v-model="uiStore.diffSyntaxHighlighting" aria-label="Diff & Merge Syntax Highlighting" />
+                            </div>
                         </div>
                     </div>
 

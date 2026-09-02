@@ -86,7 +86,7 @@ const createExtensions = () => {
         extensions.push(EditorView.lineWrapping);
     }
 
-    extensions.push(...getWikitextThemeExtensions(isDark.value));
+    extensions.push(...getWikitextThemeExtensions(isDark.value, uiStore.editorSyntaxHighlighting));
 
     return extensions;
 };
@@ -141,6 +141,7 @@ watch(
         () => uiStore.editorLineWrapping,
         () => uiStore.editorLineNumbers,
         () => uiStore.editorTabSize,
+        () => uiStore.editorSyntaxHighlighting,
     ],
     () => {
         rebuildEditor();
