@@ -8,7 +8,8 @@ import Popover from 'openvue/popover';
 import InputGroup from 'openvue/inputgroup';
 import InputGroupAddon from 'openvue/inputgroupaddon';
 import InputText from 'openvue/inputtext';
-import { Plus, Trash, X, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical, Copy } from '@lucide/vue';
+import Menu from 'openvue/menu';
+import { Plus, Trash, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical, Copy, MoreVertical } from '@lucide/vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ref, computed } from 'vue';
 
@@ -207,6 +208,66 @@ const applyTokenSuggestion = (rowIndex: number, pathIndex: number) => {
   newRows[rowIndex].paths[pathIndex] = newStr;
   emit('update:rows', newRows);
 };
+
+// Platform & Path Action Menus
+const platformMenu = ref();
+const activePlatformIndex = ref<number | null>(null);
+
+const togglePlatformMenu = (event: Event, index: number) => {
+  activePlatformIndex.value = index;
+  platformMenu.value.toggle(event);
+};
+
+const platformMenuItems = computed<any[]>(() => {
+  if (activePlatformIndex.value === null) return [];
+  const index = activePlatformIndex.value;
+  return [
+    {
+      label: 'Duplicate Platform',
+      icon: Copy,
+      command: () => duplicateRow(index),
+    },
+    {
+      label: 'Remove Platform',
+      icon: Trash,
+      class: 'text-red-500 dark:text-red-400',
+      command: () => removeRow(index),
+    },
+  ];
+});
+
+const pathMenu = ref();
+const activePathTarget = ref<{ rowIndex: number; pathIndex: number } | null>(null);
+
+const togglePathMenu = (event: Event, rowIndex: number, pathIndex: number) => {
+  activePathTarget.value = { rowIndex, pathIndex };
+  pathMenu.value.toggle(event);
+};
+
+const pathMenuItems = computed<any[]>(() => {
+  if (!activePathTarget.value) return [];
+  const { rowIndex, pathIndex } = activePathTarget.value;
+  const row = props.rows[rowIndex];
+  if (!row?.paths) return [];
+
+  const items = [];
+  if (row.paths.length < 20) {
+    items.push({
+      label: 'Duplicate Path',
+      icon: Copy,
+      command: () => duplicatePath(rowIndex, pathIndex),
+    });
+  }
+  if (row.paths.length > 1) {
+    items.push({
+      label: 'Remove Path',
+      icon: Trash,
+      class: 'text-red-500 dark:text-red-400',
+      command: () => removePath(rowIndex, pathIndex),
+    });
+  }
+  return items;
+});
 </script>
 
 
@@ -269,17 +330,12 @@ const applyTokenSuggestion = (rowIndex: number, pathIndex: number) => {
             </template>
           </Select>
 
-          <Button text severity="secondary" size="small" v-tooltip.top="'Duplicate Platform'" aria-label="Duplicate Platform"
-            class="shrink-0 !p-2 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-md" @click="duplicateRow(rowIndex)">
+          <Button type="button" text severity="secondary" size="small"
+            aria-label="Platform actions" v-tooltip.top="'More actions'"
+            class="shrink-0 !p-2 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-md"
+            @click="(e) => togglePlatformMenu(e, rowIndex)">
             <template #icon>
-              <Copy class="w-4 h-4 text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200" />
-            </template>
-          </Button>
-
-          <Button text severity="danger" size="small" v-tooltip.top="'Remove Platform'" aria-label="Remove Platform"
-            class="shrink-0 !p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md" @click="removeRow(rowIndex)">
-            <template #icon>
-              <Trash class="w-4 h-4 text-red-500" />
+              <MoreVertical class="w-4 h-4 text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200" />
             </template>
           </Button>
         </div>
@@ -325,23 +381,12 @@ const applyTokenSuggestion = (rowIndex: number, pathIndex: number) => {
                 </div>
               </div>
 
-              <Button v-if="row.paths.length < 20" text rounded severity="secondary"
+              <Button type="button" text rounded severity="secondary"
                 class="w-8! h-8! p-0! opacity-0 group-hover/path:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
-                aria-label="Duplicate Path"
-                v-tooltip.top="'Duplicate Path'"
-                @click="duplicatePath(rowIndex, pathIndex)">
+                aria-label="Path actions" v-tooltip.top="'More actions'"
+                @click="(e) => togglePathMenu(e, rowIndex, pathIndex)">
                 <template #icon>
-                  <Copy class="w-4 h-4" />
-                </template>
-              </Button>
-
-              <Button v-if="row.paths.length > 1" text rounded severity="danger"
-                class="w-8! h-8! p-0! opacity-0 group-hover/path:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
-                aria-label="Remove Path"
-                v-tooltip.top="'Remove Path'"
-                @click="removePath(rowIndex, pathIndex)">
-                <template #icon>
-                  <X class="w-4 h-4" />
+                  <MoreVertical class="w-4 h-4" />
                 </template>
               </Button>
             </div>
@@ -386,5 +431,23 @@ const applyTokenSuggestion = (rowIndex: number, pathIndex: number) => {
         </div>
       </div>
     </Popover>
+
+    <Menu ref="platformMenu" :model="platformMenuItems" :popup="true">
+      <template #item="{ item, props }">
+        <a v-bind="props.action" class="flex items-center w-full px-3 py-2 cursor-pointer" :class="item.class">
+          <component :is="item.icon" v-if="item.icon" class="w-4 h-4 mr-2 shrink-0" />
+          <span>{{ item.label }}</span>
+        </a>
+      </template>
+    </Menu>
+
+    <Menu ref="pathMenu" :model="pathMenuItems" :popup="true">
+      <template #item="{ item, props }">
+        <a v-bind="props.action" class="flex items-center w-full px-3 py-2 cursor-pointer" :class="item.class">
+          <component :is="item.icon" v-if="item.icon" class="w-4 h-4 mr-2 shrink-0" />
+          <span>{{ item.label }}</span>
+        </a>
+      </template>
+    </Menu>
   </div>
 </template>

@@ -40,6 +40,23 @@ const PopoverStub = {
     }
 };
 
+const MenuStub = {
+    template: `
+        <div class="menu-stub">
+            <template v-for="(item, idx) in model" :key="idx">
+                <slot name="item" :item="item" :props="{ action: { onClick: () => item.command && item.command() } }">
+                    <button :data-label="item.label" @click="item.command && item.command()">{{ item.label }}</button>
+                </slot>
+            </template>
+        </div>
+    `,
+    props: ['model'],
+    methods: {
+        toggle: vi.fn(),
+        hide: vi.fn()
+    }
+};
+
 // Mock Lucide icons
 vi.mock('@lucide/vue', () => ({
     Plus: { template: '<span class="icon-plus"></span>' },
@@ -52,7 +69,8 @@ vi.mock('@lucide/vue', () => ({
     Search: { template: '<span class="icon-search"></span>' },
     ShoppingCart: { template: '<span class="icon-shopping-cart"></span>' },
     GripVertical: { template: '<span class="icon-grip-vertical"></span>' },
-    Copy: { template: '<span class="icon-copy"></span>' }
+    Copy: { template: '<span class="icon-copy"></span>' },
+    MoreVertical: { template: '<span class="icon-more-vertical"></span>' }
 }));
 
 // VueDraggable wraps the row list; stub it to a plain container that renders its slot.
@@ -91,6 +109,7 @@ describe('GameDataPathForm.vue', () => {
                         Button: ButtonStub,
                         Select: SelectStub,
                         Popover: PopoverStub,
+                        Menu: MenuStub,
                         InputText: InputTextStub,
                         InputGroup: InputGroupStub,
                         InputGroupAddon: InputGroupAddonStub
@@ -177,15 +196,19 @@ describe('GameDataPathForm.vue', () => {
         expect(newVal[0].paths[0]).toBe('{{p|appdata}}\\Game');
     });
 
-    it('duplicates a platform row', async () => {
+    it('duplicates a platform row via more menu', async () => {
         const { wrapper } = setupWrapper([
             { platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] }
         ]);
 
-        const dupBtn = wrapper.find('button[aria-label="Duplicate Platform"]');
-        expect(dupBtn.exists()).toBe(true);
+        const moreBtn = wrapper.find('button[aria-label="Platform actions"]');
+        expect(moreBtn.exists()).toBe(true);
+        await moreBtn.trigger('click');
 
-        await dupBtn.trigger('click');
+        const dupBtn = wrapper.findAll('a').find(el => el.text().includes('Duplicate Platform'));
+        expect(dupBtn).toBeTruthy();
+
+        await dupBtn!.trigger('click');
 
         const emitted = wrapper.emitted('update:rows');
         expect(emitted).toBeTruthy();
@@ -195,15 +218,19 @@ describe('GameDataPathForm.vue', () => {
         expect(newVal[1]).toEqual({ platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] });
     });
 
-    it('duplicates a path in a row', async () => {
+    it('duplicates a path in a row via more menu', async () => {
         const { wrapper } = setupWrapper([
             { platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] }
         ]);
 
-        const dupPathBtn = wrapper.find('button[aria-label="Duplicate Path"]');
-        expect(dupPathBtn.exists()).toBe(true);
+        const moreBtn = wrapper.find('button[aria-label="Path actions"]');
+        expect(moreBtn.exists()).toBe(true);
+        await moreBtn.trigger('click');
 
-        await dupPathBtn.trigger('click');
+        const dupPathBtn = wrapper.findAll('a').find(el => el.text().includes('Duplicate Path'));
+        expect(dupPathBtn).toBeTruthy();
+
+        await dupPathBtn!.trigger('click');
 
         const emitted = wrapper.emitted('update:rows');
         expect(emitted).toBeTruthy();
@@ -211,5 +238,44 @@ describe('GameDataPathForm.vue', () => {
         expect(newVal[0].paths.length).toBe(2);
         expect(newVal[0].paths[0]).toBe('%USERPROFILE%\\Documents\\MyGame');
         expect(newVal[0].paths[1]).toBe('%USERPROFILE%\\Documents\\MyGame');
+    });
+
+    it('removes a platform row via more menu', async () => {
+        const { wrapper } = setupWrapper([
+            { platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] }
+        ]);
+
+        const moreBtn = wrapper.find('button[aria-label="Platform actions"]');
+        await moreBtn.trigger('click');
+
+        const removeBtn = wrapper.findAll('a').find(el => el.text().includes('Remove Platform'));
+        expect(removeBtn).toBeTruthy();
+
+        await removeBtn!.trigger('click');
+
+        const emitted = wrapper.emitted('update:rows');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![0][0] as GameDataPathRow[];
+        expect(newVal.length).toBe(0);
+    });
+
+    it('removes a path in a row via more menu', async () => {
+        const { wrapper } = setupWrapper([
+            { platform: 'Windows', paths: ['path1', 'path2'] }
+        ]);
+
+        const moreBtn = wrapper.findAll('button[aria-label="Path actions"]')[0];
+        await moreBtn.trigger('click');
+
+        const removeBtn = wrapper.findAll('a').find(el => el.text().includes('Remove Path'));
+        expect(removeBtn).toBeTruthy();
+
+        await removeBtn!.trigger('click');
+
+        const emitted = wrapper.emitted('update:rows');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![0][0] as GameDataPathRow[];
+        expect(newVal[0].paths.length).toBe(1);
+        expect(newVal[0].paths[0]).toBe('path2');
     });
 });
