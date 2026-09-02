@@ -51,7 +51,8 @@ vi.mock('@lucide/vue', () => ({
     Gamepad2: { template: '<span class="icon-gamepad2"></span>' },
     Search: { template: '<span class="icon-search"></span>' },
     ShoppingCart: { template: '<span class="icon-shopping-cart"></span>' },
-    GripVertical: { template: '<span class="icon-grip-vertical"></span>' }
+    GripVertical: { template: '<span class="icon-grip-vertical"></span>' },
+    Copy: { template: '<span class="icon-copy"></span>' }
 }));
 
 // VueDraggable wraps the row list; stub it to a plain container that renders its slot.
@@ -174,5 +175,41 @@ describe('GameDataPathForm.vue', () => {
         expect(emitted).toBeTruthy();
         const newVal = emitted![0][0] as GameDataPathRow[];
         expect(newVal[0].paths[0]).toBe('{{p|appdata}}\\Game');
+    });
+
+    it('duplicates a platform row', async () => {
+        const { wrapper } = setupWrapper([
+            { platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] }
+        ]);
+
+        const dupBtn = wrapper.find('button[aria-label="Duplicate Platform"]');
+        expect(dupBtn.exists()).toBe(true);
+
+        await dupBtn.trigger('click');
+
+        const emitted = wrapper.emitted('update:rows');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![0][0] as GameDataPathRow[];
+        expect(newVal.length).toBe(2);
+        expect(newVal[0]).toEqual({ platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] });
+        expect(newVal[1]).toEqual({ platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] });
+    });
+
+    it('duplicates a path in a row', async () => {
+        const { wrapper } = setupWrapper([
+            { platform: 'Windows', paths: ['%USERPROFILE%\\Documents\\MyGame'] }
+        ]);
+
+        const dupPathBtn = wrapper.find('button[aria-label="Duplicate Path"]');
+        expect(dupPathBtn.exists()).toBe(true);
+
+        await dupPathBtn.trigger('click');
+
+        const emitted = wrapper.emitted('update:rows');
+        expect(emitted).toBeTruthy();
+        const newVal = emitted![0][0] as GameDataPathRow[];
+        expect(newVal[0].paths.length).toBe(2);
+        expect(newVal[0].paths[0]).toBe('%USERPROFILE%\\Documents\\MyGame');
+        expect(newVal[0].paths[1]).toBe('%USERPROFILE%\\Documents\\MyGame');
     });
 });
