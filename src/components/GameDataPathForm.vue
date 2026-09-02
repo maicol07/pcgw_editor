@@ -69,14 +69,60 @@ const localRows = computed<GameDataPathRow[]>({
   set: (v) => emit('update:rows', v),
 });
 
+let rowIdCounter = 0;
+let pathIdCounter = 0;
+
+function ensureRowId(row: GameDataPathRow): number {
+  const r = row as any;
+  if (!r._id) {
+    Object.defineProperty(r, '_id', {
+      value: ++rowIdCounter,
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return r._id;
+}
+
+function ensurePathIds(row: GameDataPathRow): number[] {
+  const r = row as any;
+  if (!r._pathIds || r._pathIds.length !== (r.paths?.length ?? 0)) {
+    const existing: number[] = r._pathIds || [];
+    const ids = (r.paths || []).map((_: string, i: number) => existing[i] ?? ++pathIdCounter);
+    if (r._pathIds) {
+      r._pathIds = ids;
+    } else {
+      Object.defineProperty(r, '_pathIds', {
+        value: ids,
+        writable: true,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+  }
+  return r._pathIds;
+}
+
+function getPathId(row: GameDataPathRow, pathIndex: number): number {
+  const ids = ensurePathIds(row);
+  return ids[pathIndex] ?? pathIndex;
+}
+
 const addRow = () => {
-  const newRows = [...props.rows, { platform: 'Windows', paths: [''] }];
+  const newRow: GameDataPathRow = { platform: 'Windows', paths: [''] };
+  ensureRowId(newRow);
+  ensurePathIds(newRow);
+  const newRows = [...props.rows, newRow];
   emit('update:rows', newRows);
 };
 
 // Quick-add a Windows row prefilled with a common token (used in empty state)
 const quickAddRow = (value: string) => {
-  const newRows = [...props.rows, { platform: 'Windows', paths: [value] }];
+  const newRow: GameDataPathRow = { platform: 'Windows', paths: [value] };
+  ensureRowId(newRow);
+  ensurePathIds(newRow);
+  const newRows = [...props.rows, newRow];
   emit('update:rows', newRows);
 };
 
@@ -93,6 +139,8 @@ const duplicateRow = (index: number) => {
     platform: source.platform,
     paths: [...(source.paths || [])]
   };
+  ensureRowId(clone);
+  ensurePathIds(clone);
   const newRows = [...props.rows];
   newRows.splice(index + 1, 0, clone);
   emit('update:rows', newRows);
@@ -100,10 +148,28 @@ const duplicateRow = (index: number) => {
 
 const addPath = (rowIndex: number) => {
   const newRows = [...props.rows];
-  if (!newRows[rowIndex].paths) newRows[rowIndex].paths = [];
+  const row = newRows[rowIndex];
+  if (!row) return;
+  const paths = row.paths ? [...row.paths] : [];
 
-  if (newRows[rowIndex].paths.length < 20) {
-    newRows[rowIndex].paths.push('');
+  if (paths.length < 20) {
+    const currentIds = ensurePathIds(row);
+    const newIds = [...currentIds, ++pathIdCounter];
+    paths.push('');
+    const newRow = { ...row, paths };
+    Object.defineProperty(newRow, '_id', {
+      value: ensureRowId(row),
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
+    Object.defineProperty(newRow, '_pathIds', {
+      value: newIds,
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
+    newRows[rowIndex] = newRow;
     emit('update:rows', newRows);
   }
 };
@@ -112,18 +178,52 @@ const duplicatePath = (rowIndex: number, pathIndex: number) => {
   const newRows = [...props.rows];
   const row = newRows[rowIndex];
   if (!row || !row.paths || row.paths.length >= 20) return;
+  const currentIds = ensurePathIds(row);
+  const newIds = [...currentIds];
+  newIds.splice(pathIndex + 1, 0, ++pathIdCounter);
   const newPaths = [...row.paths];
   newPaths.splice(pathIndex + 1, 0, newPaths[pathIndex]);
-  newRows[rowIndex] = { ...row, paths: newPaths };
+  const newRow = { ...row, paths: newPaths };
+  Object.defineProperty(newRow, '_id', {
+    value: ensureRowId(row),
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(newRow, '_pathIds', {
+    value: newIds,
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+  newRows[rowIndex] = newRow;
   emit('update:rows', newRows);
 };
 
 const removePath = (rowIndex: number, pathIndex: number) => {
   const newRows = [...props.rows];
-  if (newRows[rowIndex].paths) {
-    newRows[rowIndex].paths.splice(pathIndex, 1);
-    emit('update:rows', newRows);
-  }
+  const row = newRows[rowIndex];
+  if (!row?.paths) return;
+  const currentIds = ensurePathIds(row);
+  const newIds = [...currentIds];
+  newIds.splice(pathIndex, 1);
+  const newPaths = [...row.paths];
+  newPaths.splice(pathIndex, 1);
+  const newRow = { ...row, paths: newPaths };
+  Object.defineProperty(newRow, '_id', {
+    value: ensureRowId(row),
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(newRow, '_pathIds', {
+    value: newIds,
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+  newRows[rowIndex] = newRow;
+  emit('update:rows', newRows);
 };
 
 const searchQuery = ref('');
@@ -298,9 +398,10 @@ const pathMenuItems = computed<any[]>(() => {
       </div>
     </div>
 
-    <VueDraggable v-model="localRows" :animation="150" handle=".drag-handle" class="flex flex-col gap-4">
-      <div v-for="(row, rowIndex) in rows" :key="rowIndex"
-        class="@container surface-card overflow-hidden flex flex-col group">
+    <VueDraggable v-model="localRows" target=".sortable-platform-list" :animation="150" handle=".drag-handle">
+      <TransitionGroup name="platform-list" tag="div" class="sortable-platform-list flex flex-col gap-4">
+        <div v-for="(row, rowIndex) in rows" :key="ensureRowId(row)"
+          class="@container surface-card overflow-hidden flex flex-col group">
 
 
         <!-- Header: drag · platform · delete -->
@@ -353,8 +454,8 @@ const pathMenuItems = computed<any[]>(() => {
             </Button>
           </div>
 
-          <div class="grid grid-cols-1 gap-2">
-            <div v-for="(_path, pathIndex) in row.paths" :key="pathIndex" class="flex gap-2 items-start group/path">
+          <TransitionGroup name="path-list" tag="div" class="grid grid-cols-1 gap-2">
+            <div v-for="(_path, pathIndex) in row.paths" :key="getPathId(row, pathIndex)" class="flex gap-2 items-start group/path">
               <div class="flex-1 min-w-0">
                 <InputGroup class="min-h-8">
                   <PathInputField
@@ -390,9 +491,10 @@ const pathMenuItems = computed<any[]>(() => {
                 </template>
               </Button>
             </div>
-          </div>
+          </TransitionGroup>
         </div>
       </div>
+      </TransitionGroup>
     </VueDraggable>
 
     <Button label="Add Platform" severity="secondary" outlined class="w-full border-dashed" @click="addRow">
@@ -451,3 +553,66 @@ const pathMenuItems = computed<any[]>(() => {
     </Menu>
   </div>
 </template>
+
+<style scoped>
+/* Platform card transitions */
+.platform-list-enter-active,
+.platform-list-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.platform-list-enter-from,
+.platform-list-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: scale(0.98) translateY(-8px);
+}
+
+.platform-list-enter-to,
+.platform-list-leave-from {
+  opacity: 1;
+  max-height: 600px;
+  transform: scale(1) translateY(0);
+}
+
+.platform-list-move {
+  transition: transform 0.25s ease;
+}
+
+/* Path item transitions */
+.path-list-enter-active,
+.path-list-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.path-list-enter-from,
+.path-list-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-6px) scale(0.98);
+}
+
+.path-list-enter-to,
+.path-list-leave-from {
+  opacity: 1;
+  max-height: 120px;
+  transform: translateY(0) scale(1);
+}
+
+.path-list-move {
+  transition: transform 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .platform-list-enter-active,
+  .platform-list-leave-active,
+  .platform-list-move,
+  .path-list-enter-active,
+  .path-list-leave-active,
+  .path-list-move {
+    transition: none;
+  }
+}
+</style>
