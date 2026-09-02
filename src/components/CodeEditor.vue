@@ -3,7 +3,7 @@ import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { mediawiki } from '@bhsd/codemirror-wikitext';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { getWikitextThemeExtensions } from '../utils/wikitextHighlight';
 import config from 'wikiparser-node/config/default.json';
 import { useUiStore } from '../stores/ui';
 
@@ -86,9 +86,7 @@ const createExtensions = () => {
         extensions.push(EditorView.lineWrapping);
     }
 
-    if (isDark.value) {
-        extensions.push(oneDark);
-    }
+    extensions.push(...getWikitextThemeExtensions(isDark.value));
 
     return extensions;
 };

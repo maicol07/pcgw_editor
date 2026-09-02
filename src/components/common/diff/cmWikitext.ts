@@ -1,7 +1,7 @@
 // Shared CodeMirror extensions for diff/merge views — mirrors CodeEditor.vue setup.
 import { EditorView } from '@codemirror/view';
 import { mediawiki } from '@bhsd/codemirror-wikitext';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { getWikitextThemeExtensions } from '../../../utils/wikitextHighlight';
 import config from 'wikiparser-node/config/default.json';
 
 export const isDark = () => document.documentElement.classList.contains('dark');
@@ -13,9 +13,12 @@ const baseTheme = EditorView.theme({
     },
 });
 
-// Extensions shared by every pane. `dark` toggles the oneDark theme.
+// Extensions shared by every pane. `dark` toggles the dark theme and custom syntax highlighting.
 export function wikitextExtensions(dark = isDark()) {
-    const exts = [mediawiki(config as any), EditorView.lineWrapping, baseTheme];
-    if (dark) exts.push(oneDark);
-    return exts;
+    return [
+        mediawiki(config as any),
+        EditorView.lineWrapping,
+        baseTheme,
+        ...getWikitextThemeExtensions(dark),
+    ];
 }
