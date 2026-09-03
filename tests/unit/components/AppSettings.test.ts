@@ -153,11 +153,11 @@ describe('AppSettings.vue', () => {
         const publishingTab = tabs.find(t => t.text().includes('Publishing') || t.text().includes('Account'));
         if (publishingTab) await publishingTab.trigger('click');
 
-        const toggles = wrapper.findAllComponents(ToggleSwitch);
-        const autoReLoginToggle = toggles.find(t => t.attributes('aria-label') === 'Auto Re-login') || toggles[5];
+        const row = wrapper.findAll('.flex.items-center.justify-between').find(el => el.text().includes('Automatic Session Refresh'));
+        const autoReLoginToggle = row?.findComponent(ToggleSwitch) || wrapper.findAllComponents(ToggleSwitch)[7];
         expect(autoReLoginToggle).toBeDefined();
         
-        await autoReLoginToggle.vm.$emit('update:modelValue', true);
+        await autoReLoginToggle!.vm.$emit('update:modelValue', true);
         expect(store.autoReLogin).toBe(true);
     });
 
