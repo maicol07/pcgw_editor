@@ -17,124 +17,152 @@
                 </TabList>
                 <TabPanels class="p-5">
                     <TabPanel v-for="os in supportedOS" :key="os.key" :value="os.key">
-                        <div class="flex flex-col gap-6" v-if="localModel[os.key] && localModel[os.key].minimum">
-
-                            <!-- Copy from first OS (non-primary tabs) -->
-                            <div v-if="os.key !== supportedOS[0].key" class="flex justify-end -mb-2">
-                                <Button :label="`Copy from ${supportedOS[0].label}`" size="small" text severity="secondary"
-                                    @click="copyFromFirstOS(os.key)" v-tooltip.left="`Prefill from ${supportedOS[0].label} data`">
-                                    <template #icon>
-                                        <Copy class="w-3.5 h-3.5" />
-                                    </template>
-                                </Button>
-                            </div>
-
-                            <!-- Specs Grid -->
-                            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                <!-- Minimum Specs -->
-                                <div
-                                    class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
-                                    <div
-                                        class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
-                                        <MinusCircle class="w-4 h-4 text-orange-500" />
-                                        <h4
-                                            class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
-                                            Minimum</h4>
+                        <SubsectionCodeWrapper :sectionKey="`systemReq.${os.key}`">
+                            <template #header="{ isCodeMode, toggleCode }">
+                                <div class="flex items-center justify-between pb-3 mb-2 border-b border-surface-200 dark:border-surface-700/60">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-semibold text-surface-600 dark:text-surface-300 uppercase tracking-wider">{{ os.label }} Specifications</span>
+                                        <Transition name="scale-fade">
+                                            <span v-if="isCodeMode"
+                                                class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                Code
+                                            </span>
+                                        </Transition>
                                     </div>
-
-                                    <div class="space-y-4">
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-min-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
-                                                Version</label>
-                                            <InputText :id="`sysreq-${os.key}-min-os`" v-model="localModel[os.key].minimum.os"
-                                                placeholder="e.g. Windows 10 64-bit" size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-min-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
-                                            <InputText :id="`sysreq-${os.key}-min-cpu`" v-model="localModel[os.key].minimum.cpu"
-                                                placeholder="e.g. Intel Core i5-4460" size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-min-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
-                                            <InputText :id="`sysreq-${os.key}-min-ram`" v-model="localModel[os.key].minimum.ram" placeholder="e.g. 8 GB"
-                                                size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-min-hdd`"
-                                                class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
-                                            <InputText :id="`sysreq-${os.key}-min-hdd`" v-model="localModel[os.key].minimum.hdd" placeholder="e.g. 50 GB"
-                                                size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-min-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
-                                            <InputText :id="`sysreq-${os.key}-min-gpu`" v-model="localModel[os.key].minimum.gpu"
-                                                placeholder="e.g. NVIDIA GTX 960" size="small" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Recommended Specs -->
-                                <div
-                                    class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
-                                    <div
-                                        class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
-                                        <PlusCircle class="w-4 h-4 text-green-500" />
-                                        <h4
-                                            class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
-                                            Recommended</h4>
-                                        <Button aria-label="Copy all Minimum spec fields into Recommended" label="Copy from Minimum" size="small" text severity="secondary"
-                                            class="ml-auto px-2! py-1! text-xs!" @click="copyFromMinimum(os.key)"
-                                            v-tooltip.top="'Copy all Minimum spec fields into Recommended'">
+                                    <div class="flex items-center gap-2">
+                                        <!-- Copy from first OS (non-primary tabs) -->
+                                        <Button v-if="os.key !== supportedOS[0].key && !isCodeMode" :label="`Copy from ${supportedOS[0].label}`" size="small" text severity="secondary"
+                                            @click="copyFromFirstOS(os.key)" v-tooltip.left="`Prefill from ${supportedOS[0].label} data`">
                                             <template #icon>
                                                 <Copy class="w-3.5 h-3.5" />
                                             </template>
                                         </Button>
+                                        <button
+                                            type="button"
+                                            @click.stop="toggleCode"
+                                            v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                            :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                            class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                            :class="isCodeMode
+                                                ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                            <Transition name="scale-fade" mode="out-in">
+                                                <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                            </Transition>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="flex flex-col gap-6" v-if="localModel[os.key] && localModel[os.key].minimum">
+
+                                <!-- Specs Grid -->
+                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                    <!-- Minimum Specs -->
+                                    <div
+                                        class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
+                                        <div
+                                            class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
+                                            <MinusCircle class="w-4 h-4 text-orange-500" />
+                                            <h4
+                                                class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
+                                                Minimum</h4>
+                                        </div>
+
+                                        <div class="space-y-4">
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-min-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
+                                                    Version</label>
+                                                <InputText :id="`sysreq-${os.key}-min-os`" v-model="localModel[os.key].minimum.os"
+                                                    placeholder="e.g. Windows 10 64-bit" size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-min-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
+                                                <InputText :id="`sysreq-${os.key}-min-cpu`" v-model="localModel[os.key].minimum.cpu"
+                                                    placeholder="e.g. Intel Core i5-4460" size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-min-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
+                                                <InputText :id="`sysreq-${os.key}-min-ram`" v-model="localModel[os.key].minimum.ram" placeholder="e.g. 8 GB"
+                                                    size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-min-hdd`"
+                                                    class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
+                                                <InputText :id="`sysreq-${os.key}-min-hdd`" v-model="localModel[os.key].minimum.hdd" placeholder="e.g. 50 GB"
+                                                    size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-min-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
+                                                <InputText :id="`sysreq-${os.key}-min-gpu`" v-model="localModel[os.key].minimum.gpu"
+                                                    placeholder="e.g. NVIDIA GTX 960" size="small" />
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="space-y-4">
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-rec-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
-                                                Version</label>
-                                            <InputText :id="`sysreq-${os.key}-rec-os`" v-model="localModel[os.key].recommended.os"
-                                                placeholder="e.g. Windows 11" size="small" />
+                                    <!-- Recommended Specs -->
+                                    <div
+                                        class="flex flex-col gap-4 p-4 rounded-md bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
+                                        <div
+                                            class="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-700/50">
+                                            <PlusCircle class="w-4 h-4 text-green-500" />
+                                            <h4
+                                                class="font-bold text-sm uppercase tracking-wider text-surface-500 dark:text-surface-400">
+                                                Recommended</h4>
+                                            <Button aria-label="Copy all Minimum spec fields into Recommended" label="Copy from Minimum" size="small" text severity="secondary"
+                                                class="ml-auto px-2! py-1! text-xs!" @click="copyFromMinimum(os.key)"
+                                                v-tooltip.top="'Copy all Minimum spec fields into Recommended'">
+                                                <template #icon>
+                                                    <Copy class="w-3.5 h-3.5" />
+                                                </template>
+                                            </Button>
                                         </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-rec-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
-                                            <InputText :id="`sysreq-${os.key}-rec-cpu`" v-model="localModel[os.key].recommended.cpu"
-                                                placeholder="e.g. Intel Core i7-8700" size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-rec-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
-                                            <InputText :id="`sysreq-${os.key}-rec-ram`" v-model="localModel[os.key].recommended.ram"
-                                                placeholder="e.g. 16 GB" size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-rec-hdd`"
-                                                class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
-                                            <InputText :id="`sysreq-${os.key}-rec-hdd`" v-model="localModel[os.key].recommended.hdd"
-                                                placeholder="e.g. 50 GB" size="small" />
-                                        </div>
-                                        <div class="grid gap-1.5">
-                                            <label :for="`sysreq-${os.key}-rec-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
-                                            <InputText :id="`sysreq-${os.key}-rec-gpu`" v-model="localModel[os.key].recommended.gpu"
-                                                placeholder="e.g. NVIDIA RTX 2060" size="small" />
+
+                                        <div class="space-y-4">
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-rec-os`" class="text-xs font-semibold text-surface-500 uppercase">OS
+                                                    Version</label>
+                                                <InputText :id="`sysreq-${os.key}-rec-os`" v-model="localModel[os.key].recommended.os"
+                                                    placeholder="e.g. Windows 11" size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-rec-cpu`" class="text-xs font-semibold text-surface-500 uppercase">CPU</label>
+                                                <InputText :id="`sysreq-${os.key}-rec-cpu`" v-model="localModel[os.key].recommended.cpu"
+                                                    placeholder="e.g. Intel Core i7-8700K" size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-rec-ram`" class="text-xs font-semibold text-surface-500 uppercase">RAM</label>
+                                                <InputText :id="`sysreq-${os.key}-rec-ram`" v-model="localModel[os.key].recommended.ram" placeholder="e.g. 16 GB"
+                                                    size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-rec-hdd`"
+                                                    class="text-xs font-semibold text-surface-500 uppercase">Storage</label>
+                                                <InputText :id="`sysreq-${os.key}-rec-hdd`" v-model="localModel[os.key].recommended.hdd" placeholder="e.g. 50 GB"
+                                                    size="small" />
+                                            </div>
+                                            <div class="grid gap-1.5">
+                                                <label :for="`sysreq-${os.key}-rec-gpu`" class="text-xs font-semibold text-surface-500 uppercase">GPU</label>
+                                                <InputText :id="`sysreq-${os.key}-rec-gpu`" v-model="localModel[os.key].recommended.gpu"
+                                                    placeholder="e.g. NVIDIA RTX 2060" size="small" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Notes -->
-                            <div class="flex flex-col gap-2 pt-2 border-t border-surface-100 dark:border-surface-800">
-                                <label :for="`sysreq-${os.key}-notes`" class="text-sm font-semibold flex items-center gap-2">
-                                    <FileText class="w-4 h-4 text-primary-500" />
-                                    Additional Notes
-                                </label>
-                                <Textarea :id="`sysreq-${os.key}-notes`" v-model="localModel[os.key].notes" rows="2"
-                                    placeholder="e.g. AVX support required, constant internet connection..."
-                                    class="w-full" autoResize />
-                            </div>
+                                <!-- Notes -->
+                                <div class="flex flex-col gap-2 pt-2 border-t border-surface-100 dark:border-surface-800">
+                                    <label :for="`sysreq-${os.key}-notes`" class="text-sm font-semibold flex items-center gap-2">
+                                        <FileText class="w-4 h-4 text-primary-500" />
+                                        Additional Notes
+                                    </label>
+                                    <Textarea :id="`sysreq-${os.key}-notes`" v-model="localModel[os.key].notes" rows="2"
+                                        placeholder="e.g. AVX support required, constant internet connection..."
+                                        class="w-full" autoResize />
+                                </div>
 
-                        </div>
+                            </div>
+                        </SubsectionCodeWrapper>
                     </TabPanel>
                 </TabPanels>
             </Tabs>
@@ -154,7 +182,8 @@ import TabPanels from 'openvue/tabpanels';
 import TabPanel from 'openvue/tabpanel';
 import InputText from 'openvue/inputtext';
 import Textarea from 'openvue/textarea';
-import { MinusCircle, PlusCircle, FileText, Copy } from '@lucide/vue';
+import SubsectionCodeWrapper from './common/SubsectionCodeWrapper.vue';
+import { MinusCircle, PlusCircle, FileText, Copy, Code2 } from '@lucide/vue';
 import { useVModel } from '@vueuse/core';
 
 // Icons

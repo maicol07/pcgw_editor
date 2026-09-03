@@ -9,7 +9,8 @@ import InputGroup from 'openvue/inputgroup';
 import InputGroupAddon from 'openvue/inputgroupaddon';
 import InputText from 'openvue/inputtext';
 import Menu from 'openvue/menu';
-import { Plus, Trash, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical, Copy, MoreVertical } from '@lucide/vue';
+import SubsectionCodeWrapper from './common/SubsectionCodeWrapper.vue';
+import { Plus, Trash, Bookmark, Folder, Save, Gamepad2, Search, ShoppingCart, GripVertical, Copy, MoreVertical, Code2, FileText } from '@lucide/vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ref, computed } from 'vue';
 
@@ -32,6 +33,7 @@ const props = defineProps<{
   title: string;
   icon?: string;
   description?: string;
+  sectionKey?: string;
 }>();
 
 const headerIcon = computed(() => {
@@ -372,18 +374,45 @@ const pathMenuItems = computed<any[]>(() => {
 
 
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="flex items-start justify-between pb-4 border-b border-surface-200 dark:border-surface-800">
-      <div class="flex gap-3">
-        <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-primary-600 dark:text-primary-400 h-fit">
-          <component :is="headerIcon" class="w-5 h-5" />
+  <SubsectionCodeWrapper :sectionKey="sectionKey">
+    <template #header="{ isCodeMode, toggleCode }">
+      <div class="flex items-start justify-between pb-4 border-b border-surface-200 dark:border-surface-800">
+        <div class="flex gap-3">
+          <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-primary-600 dark:text-primary-400 h-fit">
+            <component :is="headerIcon" class="w-5 h-5" />
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ title }}</h3>
+              <Transition name="scale-fade">
+                <span v-if="sectionKey && isCodeMode"
+                  class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                  Code
+                </span>
+              </Transition>
+            </div>
+            <p v-if="description" class="text-xs text-surface-500 dark:text-surface-400">{{ description }}</p>
+          </div>
         </div>
-        <div class="flex flex-col gap-0.5">
-          <h3 class="text-base font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ title }}</h3>
-          <p v-if="description" class="text-xs text-surface-500 dark:text-surface-400">{{ description }}</p>
+        <div v-if="sectionKey" class="flex items-center gap-1">
+          <button
+            type="button"
+            @click.stop="toggleCode"
+            v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+            :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+            class="p-1.5 rounded-lg transition-colors active:scale-95"
+            :class="isCodeMode
+              ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+              : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+            <Transition name="scale-fade" mode="out-in">
+              <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+            </Transition>
+          </button>
         </div>
       </div>
-    </div>
+    </template>
+
+    <div class="flex flex-col gap-6 pt-1">
 
     <!-- Empty state: quick-add common locations -->
     <div v-if="!rows.length" class="flex flex-col items-center gap-3 py-8 text-center">
@@ -551,7 +580,8 @@ const pathMenuItems = computed<any[]>(() => {
         </a>
       </template>
     </Menu>
-  </div>
+    </div>
+  </SubsectionCodeWrapper>
 </template>
 
 <style scoped>

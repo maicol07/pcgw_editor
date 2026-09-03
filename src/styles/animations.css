@@ -357,6 +357,38 @@
     opacity: 0;
 }
 
+.fade-enter-active {
+    transition: opacity 0.18s ease-out;
+}
+
+.fade-leave-active {
+    transition: opacity 0.12s ease-in;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Editor Visual <-> Code Mode Switch Transition */
+.editor-mode-enter-active {
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editor-mode-leave-active {
+    transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editor-mode-enter-from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.995);
+}
+
+.editor-mode-leave-to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.995);
+}
+
 .slide-down-enter-active,
 .slide-down-leave-active {
     transition: opacity 0.25s ease, transform 0.25s ease;

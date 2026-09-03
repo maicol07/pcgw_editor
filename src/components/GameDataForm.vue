@@ -58,6 +58,7 @@ if (uiBus) {
     <!-- Game Data Paths -->
     <div class="flex flex-col gap-8">
       <GameDataPathForm v-model:rows="configFiles" title="Configuration Locations" icon="folder"
+        sectionKey="gameData.config"
         description="Where the game stores its configuration files (ini, xml, cfg, etc.)" />
 
       <div
@@ -76,6 +77,7 @@ if (uiBus) {
       </div>
 
       <GameDataPathForm v-model:rows="saveData" title="Save Game Locations" icon="save"
+        sectionKey="gameData.saves"
         description="Where the game stores its save files." />
     </div>
 

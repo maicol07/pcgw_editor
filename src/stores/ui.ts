@@ -227,6 +227,7 @@ export const useUiStore = defineStore('ui', () => {
 
     const collapsedSections = ref<Record<string, boolean>>(loadStoredMap('collapsedSections'));
     const hiddenSections = ref<Record<string, boolean>>(loadStoredMap('hiddenSections'));
+    const sectionCodeModes = ref<Record<string, boolean>>(loadStoredMap('sectionCodeModes'));
 
     watch(collapsedSections, (val) => {
         localStorage.setItem('collapsedSections', JSON.stringify(val));
@@ -234,6 +235,10 @@ export const useUiStore = defineStore('ui', () => {
 
     watch(hiddenSections, (val) => {
         localStorage.setItem('hiddenSections', JSON.stringify(val));
+    }, { deep: true });
+
+    watch(sectionCodeModes, (val) => {
+        localStorage.setItem('sectionCodeModes', JSON.stringify(val));
     }, { deep: true });
 
     const toggleSectionCollapse = (key: string) => {
@@ -250,8 +255,16 @@ export const useUiStore = defineStore('ui', () => {
         };
     };
 
+    const toggleSectionCode = (key: string) => {
+        sectionCodeModes.value = {
+            ...sectionCodeModes.value,
+            [key]: !sectionCodeModes.value[key]
+        };
+    };
+
     const isSectionCollapsed = (key: string): boolean => !!collapsedSections.value[key];
     const isSectionHidden = (key: string): boolean => !!hiddenSections.value[key];
+    const isSectionCode = (key: string): boolean => !!sectionCodeModes.value[key];
 
     const collapseAllSections = (keys: string[]) => {
         const next: Record<string, boolean> = {};
@@ -319,10 +332,13 @@ export const useUiStore = defineStore('ui', () => {
 
         collapsedSections,
         hiddenSections,
+        sectionCodeModes,
         toggleSectionCollapse,
         toggleSectionHide,
+        toggleSectionCode,
         isSectionCollapsed,
         isSectionHidden,
+        isSectionCode,
         collapseAllSections,
         expandAllSections,
         hideAllSections,

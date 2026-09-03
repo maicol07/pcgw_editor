@@ -40,7 +40,8 @@ vi.mock('@lucide/vue', () => ({
     MinusCircle: { template: '<span class="icon-minus"></span>' },
     PlusCircle: { template: '<span class="icon-plus"></span>' },
     FileText: { template: '<span class="icon-filetext"></span>' },
-    Copy: { template: '<span class="icon-copy"></span>' }
+    Copy: { template: '<span class="icon-copy"></span>' },
+    Code2: { template: '<span class="icon-code2"></span>' }
 }));
 
 const ButtonStub = {

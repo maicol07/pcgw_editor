@@ -56,8 +56,9 @@ import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
     Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock,
-    Plus, Download, AlertTriangle
+    Plus, Download, AlertTriangle, Code2, FileText, Boxes, Puzzle
 } from '@lucide/vue';
+import SubsectionCodeWrapper from './components/common/SubsectionCodeWrapper.vue';
 
 // Async Components
 const CodeEditor = defineAsyncComponent(() => import('./components/CodeEditor.vue'));
@@ -635,23 +636,75 @@ const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <div class="flex flex-col gap-4">
-                                        <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
-                                            <DollarSign class="w-4 h-4 text-amber-500" /> Monetization
-                                        </h3>
+                                    <SubsectionCodeWrapper sectionKey="monetization.monetization">
+                                        <template #header="{ isCodeMode, toggleCode }">
+                                            <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                                        <DollarSign class="w-4 h-4 text-amber-500" /> Monetization
+                                                    </h3>
+                                                    <Transition name="scale-fade">
+                                                        <span v-if="isCodeMode"
+                                                            class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                            Code
+                                                        </span>
+                                                    </Transition>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="toggleCode"
+                                                    v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                                    :class="isCodeMode
+                                                        ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                        : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                                    <Transition name="scale-fade" mode="out-in">
+                                                        <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                                    </Transition>
+                                                </button>
+                                            </div>
+                                        </template>
                                         <DynamicSection
                                             v-if="schemas.monetization.value"
                                             :section="schemas.monetization.value" v-model="gameData" />
-                                    </div>
+                                    </SubsectionCodeWrapper>
+
                                     <div class="border-t border-surface-200 dark:border-surface-700"></div>
-                                    <div class="flex flex-col gap-4">
-                                        <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
-                                            <ShoppingCart class="w-4 h-4 text-primary-500" /> Microtransactions
-                                        </h3>
+
+                                    <SubsectionCodeWrapper sectionKey="monetization.microtransactions">
+                                        <template #header="{ isCodeMode, toggleCode }">
+                                            <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                                        <ShoppingCart class="w-4 h-4 text-primary-500" /> Microtransactions
+                                                    </h3>
+                                                    <Transition name="scale-fade">
+                                                        <span v-if="isCodeMode"
+                                                            class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                            Code
+                                                        </span>
+                                                    </Transition>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="toggleCode"
+                                                    v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                                    :class="isCodeMode
+                                                        ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                        : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                                    <Transition name="scale-fade" mode="out-in">
+                                                        <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                                    </Transition>
+                                                </button>
+                                            </div>
+                                        </template>
                                         <DynamicSection
                                             v-if="schemas.microtransactions.value"
                                             :section="schemas.microtransactions.value" v-model="gameData" />
-                                    </div>
+                                    </SubsectionCodeWrapper>
                                 </div>
                             </ModernPanel>
 
@@ -797,10 +850,73 @@ const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
-                                    <DynamicSection v-if="schemas.api.value"
-                                        :section="schemas.api.value" v-model="gameData" />
-                                    <DynamicSection v-if="schemas.middleware.value"
-                                        :section="schemas.middleware.value" v-model="gameData" />
+                                    <SubsectionCodeWrapper sectionKey="other.api">
+                                        <template #header="{ isCodeMode, toggleCode }">
+                                            <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                                        <Boxes class="w-4 h-4 text-primary-500" /> API Support
+                                                    </h3>
+                                                    <Transition name="scale-fade">
+                                                        <span v-if="isCodeMode"
+                                                            class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                            Code
+                                                        </span>
+                                                    </Transition>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="toggleCode"
+                                                    v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                                    :class="isCodeMode
+                                                        ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                        : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                                    <Transition name="scale-fade" mode="out-in">
+                                                        <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                                    </Transition>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <DynamicSection v-if="schemas.api.value"
+                                            :section="schemas.api.value" v-model="gameData" />
+                                    </SubsectionCodeWrapper>
+
+                                    <div class="border-t border-surface-200 dark:border-surface-700"></div>
+
+                                    <SubsectionCodeWrapper sectionKey="other.middleware">
+                                        <template #header="{ isCodeMode, toggleCode }">
+                                            <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                                        <Puzzle class="w-4 h-4 text-purple-500" /> Middleware
+                                                    </h3>
+                                                    <Transition name="scale-fade">
+                                                        <span v-if="isCodeMode"
+                                                            class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                            Code
+                                                        </span>
+                                                    </Transition>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="toggleCode"
+                                                    v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                                    :class="isCodeMode
+                                                        ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                        : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                                    <Transition name="scale-fade" mode="out-in">
+                                                        <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                                    </Transition>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <DynamicSection v-if="schemas.middleware.value"
+                                            :section="schemas.middleware.value" v-model="gameData" />
+                                    </SubsectionCodeWrapper>
                                 </div>
                             </ModernPanel>
 
