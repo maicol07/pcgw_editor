@@ -331,7 +331,7 @@ export function findSectionRange(key: string, wikitext: string): SectionRange | 
     if (config.primaryTemplate) {
         const primary = parser.findTemplate(config.primaryTemplate);
         if (primary) {
-            let start = primary.start;
+            const start = primary.start;
             let end = primary.end;
 
             // Multiple templates of same type (e.g. Game data/config)
