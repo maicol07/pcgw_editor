@@ -1,7 +1,7 @@
-import { GOOGLE_CLIENT_ID } from '../../config/api';
+import { GOOGLE_CLIENT_ID, getWorkerGoogleTokenUrl, getWorkerGoogleRefreshUrl } from '../../config/api';
 
 // Google Drive appDataFolder: a per-app hidden folder, invisible in the user's Drive file list.
-// Auth is browser-only via Google Identity Services (token flow, no client secret, no backend).
+// Auth is via Google Identity Services (Code Flow with offline access) + Cloudflare Worker token exchange/refresh.
 const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const FILE_NAME = 'pcgw-editor-sync.enc';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
@@ -23,7 +23,7 @@ function loadGis(): Promise<void> {
     return gisLoaded;
 }
 
-const TOKEN_KEY = 'pcgw-gdrive-token'; // {token, expiry}; access tokens are short-lived (~1h)
+const TOKEN_KEY = 'pcgw-gdrive-token'; // {token, expiry, refreshToken}
 
 /** Thrown when the remote blob moved on since our last read (Drive answered 412 to If-Match). */
 export class PreconditionFailedError extends Error {
@@ -36,11 +36,13 @@ export class PreconditionFailedError extends Error {
 // The storage backend for the encrypted sync blob. If a second backend is ever needed,
 // extract an interface then — not before.
 class GoogleDriveProvider {
-    private tokenClient: any = null;
+    private codeClient: any = null;
     private accessToken = '';
     private tokenExpiry = 0;
+    private refreshToken = '';
     private fileId: string | null = null; // re-located each session; not persisted
     private tokenPromise: Promise<string> | null = null;
+    private refreshPromise: Promise<string> | null = null;
     // Drive's revision of the blob we last read. Sent back as If-Match on write so a concurrent
     // edit from another device is rejected with 412 instead of being silently overwritten.
     private headRevisionId: string | null = null;
@@ -48,42 +50,82 @@ class GoogleDriveProvider {
     constructor() {
         try {
             const saved = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
-            if (saved && Date.now() < saved.expiry) {
-                this.accessToken = saved.token;
-                this.tokenExpiry = saved.expiry;
+            if (saved) {
+                if (saved.token && Date.now() < saved.expiry) {
+                    this.accessToken = saved.token;
+                    this.tokenExpiry = saved.expiry;
+                }
+                if (saved.refreshToken) {
+                    this.refreshToken = saved.refreshToken;
+                }
             }
         } catch { /* ignore corrupt entry */ }
+    }
+
+    private saveTokens(): void {
+        localStorage.setItem(TOKEN_KEY, JSON.stringify({
+            token: this.accessToken,
+            expiry: this.tokenExpiry,
+            refreshToken: this.refreshToken,
+        }));
     }
 
     private async initClient() {
         if (!GOOGLE_CLIENT_ID) throw new Error('Google client ID not configured');
         await loadGis();
-        if (!this.tokenClient) {
-            this.tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        if (!this.codeClient) {
+            this.codeClient = (window as any).google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_CLIENT_ID,
                 scope: SCOPE,
+                ux_mode: 'popup',
+                access_type: 'offline',
                 callback: () => {}, // set per request
             });
         }
     }
 
-    private requestToken(prompt: '' | 'consent'): Promise<string> {
+    private requestCode(): Promise<string> {
         if (this.tokenPromise) return this.tokenPromise;
         this.tokenPromise = new Promise((resolve, reject) => {
-            this.tokenClient.callback = (resp: any) => {
-                this.tokenPromise = null;
-                if (resp.error) return reject(new Error(resp.error));
-                this.accessToken = resp.access_token;
-                this.tokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600_000) - 60_000;
-                localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: this.accessToken, expiry: this.tokenExpiry }));
-                resolve(this.accessToken);
+            this.codeClient.callback = async (resp: any) => {
+                if (resp.error) {
+                    this.tokenPromise = null;
+                    return reject(new Error(resp.error_description || resp.error));
+                }
+                if (!resp.code) {
+                    this.tokenPromise = null;
+                    return reject(new Error('No authorization code returned'));
+                }
+                try {
+                    const tokenUrl = getWorkerGoogleTokenUrl();
+                    const exchangeRes = await fetch(tokenUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: resp.code }),
+                    });
+                    const data = await exchangeRes.json();
+                    if (!exchangeRes.ok || data.error) {
+                        throw new Error(data.error_description || data.error || 'Token exchange failed');
+                    }
+                    this.accessToken = data.access_token;
+                    if (data.refresh_token) {
+                        this.refreshToken = data.refresh_token;
+                    }
+                    this.tokenExpiry = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600_000) - 60_000;
+                    this.saveTokens();
+                    resolve(this.accessToken);
+                } catch (err) {
+                    reject(err);
+                } finally {
+                    this.tokenPromise = null;
+                }
             };
-            this.tokenClient.error_callback = (err: any) => {
+            this.codeClient.error_callback = (err: any) => {
                 this.tokenPromise = null;
-                reject(new Error(err?.message || err?.type || 'Token request failed'));
+                reject(new Error(err?.message || err?.type || 'Authorization request failed'));
             };
             try {
-                this.tokenClient.requestAccessToken({ prompt });
+                this.codeClient.requestCode();
             } catch (e) {
                 this.tokenPromise = null;
                 reject(e);
@@ -92,31 +134,68 @@ class GoogleDriveProvider {
         return this.tokenPromise;
     }
 
+    private refreshAccessToken(): Promise<string> {
+        if (this.refreshPromise) return this.refreshPromise;
+        this.refreshPromise = (async () => {
+            try {
+                if (!this.refreshToken) {
+                    throw new Error('No refresh token available');
+                }
+                const refreshUrl = getWorkerGoogleRefreshUrl();
+                const res = await fetch(refreshUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: this.refreshToken }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    if (data.error === 'invalid_grant') {
+                        this.refreshToken = '';
+                        this.accessToken = '';
+                        this.tokenExpiry = 0;
+                        this.saveTokens();
+                    }
+                    throw new Error(data.error_description || data.error || 'Token refresh failed');
+                }
+                this.accessToken = data.access_token;
+                this.tokenExpiry = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600_000) - 60_000;
+                this.saveTokens();
+                return this.accessToken;
+            } finally {
+                this.refreshPromise = null;
+            }
+        })();
+        return this.refreshPromise;
+    }
+
     async connect(): Promise<void> {
         await this.initClient();
-        await this.requestToken('consent');
+        await this.requestCode();
     }
 
     async ensureToken(): Promise<string> {
-        await this.initClient();
         if (this.accessToken && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
-        try {
-            // Attempt silent token refresh without interactive prompt
-            return await this.requestToken('');
-        } catch {
-            throw new Error('Token expired');
+        if (this.refreshToken) {
+            try {
+                return await this.refreshAccessToken();
+            } catch {
+                throw new Error('Token expired');
+            }
         }
+        throw new Error('Token expired');
     }
 
     async reconnect(): Promise<void> {
-        await this.initClient();
-        try {
-            await this.requestToken('');
-        } catch {
-            await this.requestToken('consent');
+        if (this.refreshToken) {
+            try {
+                await this.refreshAccessToken();
+                return;
+            } catch { /* proceed to requestCode */ }
         }
+        await this.initClient();
+        await this.requestCode();
     }
 
     /**
@@ -217,15 +296,17 @@ class GoogleDriveProvider {
     }
 
     disconnect(): void {
-        const token = this.accessToken;
+        const token = this.refreshToken || this.accessToken;
         if (token && (window as any).google?.accounts?.oauth2) {
             try {
                 (window as any).google.accounts.oauth2.revoke(token);
             } catch { /* best effort */ }
         }
         this.accessToken = '';
+        this.refreshToken = '';
         this.tokenExpiry = 0;
         this.fileId = null;
+        this.headRevisionId = null;
         localStorage.removeItem(TOKEN_KEY);
     }
 }

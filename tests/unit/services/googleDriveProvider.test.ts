@@ -4,9 +4,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 // localStorage before the import and the module registry reset between tests.
 const FUTURE = Date.now() + 3600_000;
 
-async function freshProvider() {
+async function freshProvider(refreshToken = 'ref-tok') {
     vi.resetModules();
-    localStorage.setItem('pcgw-gdrive-token', JSON.stringify({ token: 'tok', expiry: FUTURE }));
+    localStorage.setItem('pcgw-gdrive-token', JSON.stringify({ token: 'tok', expiry: FUTURE, refreshToken }));
     const mod = await import('../../../src/services/sync/GoogleDriveProvider');
     return mod;
 }
@@ -21,6 +21,7 @@ const reply = (status: number, body: any = {}) => ({
 
 const LIST_URL = /drive\/v3\/files\?spaces=appDataFolder/;
 const UPLOAD_URL = /upload\/drive\/v3\/files/;
+const REFRESH_URL = /api\/auth\/google\/refresh/;
 
 describe('GoogleDriveProvider — revision guard', () => {
     let fetchMock: ReturnType<typeof vi.fn>;
@@ -30,7 +31,7 @@ describe('GoogleDriveProvider — revision guard', () => {
         fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
         // The provider calls initClient() -> loadGis() before every request.
-        vi.stubGlobal('google', { accounts: { oauth2: { initTokenClient: () => ({}), revoke: () => {} } } });
+        vi.stubGlobal('google', { accounts: { oauth2: { initCodeClient: () => ({ requestCode: () => {} }), revoke: () => {} } } });
     });
 
     afterEach(() => {
@@ -103,13 +104,8 @@ describe('GoogleDriveProvider — revision guard', () => {
         fetchMock
             .mockResolvedValueOnce(reply(200, { files: [] }))                              // locate #1
             .mockResolvedValueOnce(reply(401))                                             // upload #1
+            .mockResolvedValueOnce(reply(200, { access_token: 'tok2', expires_in: 3600 })) // refresh via worker
             .mockResolvedValueOnce(reply(200, { id: 'f1', headRevisionId: 'rev-1' }));      // upload #2
-
-        // A 401 clears the token, and ensureToken() then goes through requestToken(); stub it to
-        // resolve immediately so the retry proceeds.
-        (driveProvider as any).tokenClient = {
-            requestAccessToken() { this.callback({ access_token: 'tok2', expires_in: 3600 }); },
-        };
 
         await driveProvider.writeBlob('payload');
 
@@ -118,6 +114,9 @@ describe('GoogleDriveProvider — revision guard', () => {
         // Both attempts had no fileId, so neither is a duplicate-create risk here; what we assert
         // is that the second call was rebuilt (fresh Authorization), not the first one replayed.
         expect((uploads[1][1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer tok2' });
+        const refreshCall = fetchMock.mock.calls.find(c => REFRESH_URL.test(String(c[0])));
+        expect(refreshCall).toBeDefined();
+        expect(JSON.parse(refreshCall![1].body)).toEqual({ refresh_token: 'ref-tok' });
     });
 
     it('treats a 404 on read as "no remote blob yet" and forgets the stale id', async () => {
@@ -127,5 +126,37 @@ describe('GoogleDriveProvider — revision guard', () => {
             .mockResolvedValueOnce(reply(404));
 
         await expect(driveProvider.readBlob()).resolves.toBeNull();
+    });
+
+    it('silently refreshes expired access token via worker when refresh token is present', async () => {
+        vi.resetModules();
+        // Stored token is already expired
+        localStorage.setItem('pcgw-gdrive-token', JSON.stringify({ token: 'old-tok', expiry: Date.now() - 10_000, refreshToken: 'my-refresh-token' }));
+        const { driveProvider } = await import('../../../src/services/sync/GoogleDriveProvider');
+
+        fetchMock.mockResolvedValueOnce(reply(200, { access_token: 'new-tok', expires_in: 3600 }));
+
+        const token = await driveProvider.ensureToken();
+        expect(token).toBe('new-tok');
+        const refreshCall = fetchMock.mock.calls.find(c => REFRESH_URL.test(String(c[0])));
+        expect(refreshCall).toBeDefined();
+        expect(JSON.parse(refreshCall![1].body)).toEqual({ refresh_token: 'my-refresh-token' });
+
+        const saved = JSON.parse(localStorage.getItem('pcgw-gdrive-token') || '{}');
+        expect(saved.token).toBe('new-tok');
+        expect(saved.refreshToken).toBe('my-refresh-token');
+    });
+
+    it('clears storage and throws Token expired when worker returns invalid_grant on refresh', async () => {
+        vi.resetModules();
+        localStorage.setItem('pcgw-gdrive-token', JSON.stringify({ token: 'old-tok', expiry: Date.now() - 10_000, refreshToken: 'revoked-token' }));
+        const { driveProvider } = await import('../../../src/services/sync/GoogleDriveProvider');
+
+        fetchMock.mockResolvedValueOnce(reply(400, { error: 'invalid_grant', error_description: 'Token has been revoked' }));
+
+        await expect(driveProvider.ensureToken()).rejects.toThrow('Token expired');
+        const saved = JSON.parse(localStorage.getItem('pcgw-gdrive-token') || '{}');
+        expect(saved.token).toBe('');
+        expect(saved.refreshToken).toBe('');
     });
 });

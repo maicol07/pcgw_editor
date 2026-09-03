@@ -33,6 +33,10 @@ export const API_CONFIG = {
     // Allowlisted external proxy for third-party metadata APIs (replaces public corsproxy.io)
     workerExtUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/ext',
 
+    // Google OAuth endpoints via Worker for token exchange and refresh
+    workerGoogleTokenUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/auth/google/token',
+    workerGoogleRefreshUrl: 'https://pcgw-proxy-login.maicol07.workers.dev/api/auth/google/refresh',
+
     // Used for the initial logintoken request which often fails CORS on localhost
     proxyUrl: (import.meta.env.DEV && !PROXY_PREFIX) ? '/pcgw-api' : (PROXY_PREFIX + PCGW_API_URL),
     
@@ -44,6 +48,8 @@ export const API_CONFIG = {
 
 export const getWorkerLoginUrl = () => API_CONFIG.workerLoginUrl;
 export const getWorkerProxyUrl = () => API_CONFIG.workerProxyUrl;
+export const getWorkerGoogleTokenUrl = () => API_CONFIG.workerGoogleTokenUrl;
+export const getWorkerGoogleRefreshUrl = () => API_CONFIG.workerGoogleRefreshUrl;
 export const getExtProxyUrl = () => API_CONFIG.workerExtUrl;
 export const getDirectApiUrl = () => API_CONFIG.directUrl;
 

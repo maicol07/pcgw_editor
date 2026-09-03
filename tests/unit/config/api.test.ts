@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { getApiHeaders, getWorkerHeaders, API_CONFIG, apiFetch, getProxiedImageUrl } from '../../../src/config/api';
+import { getApiHeaders, getWorkerHeaders, API_CONFIG, apiFetch, getProxiedImageUrl, getWorkerGoogleTokenUrl, getWorkerGoogleRefreshUrl } from '../../../src/config/api';
 import pkg from '../../../package.json';
 
 describe('src/config/api.ts', () => {
@@ -33,6 +33,11 @@ describe('src/config/api.ts', () => {
         const headers = getWorkerHeaders();
         expect(headers).toHaveProperty('X-Requested-With', 'XMLHttpRequest');
         expect(headers).toHaveProperty('Api-User-Agent', expectedUserAgent);
+    });
+
+    it('provides correct Google OAuth endpoints for the worker', () => {
+        expect(getWorkerGoogleTokenUrl()).toBe('https://pcgw-proxy-login.maicol07.workers.dev/api/auth/google/token');
+        expect(getWorkerGoogleRefreshUrl()).toBe('https://pcgw-proxy-login.maicol07.workers.dev/api/auth/google/refresh');
     });
 
     describe('getProxiedImageUrl', () => {

@@ -421,6 +421,96 @@ export default {
             }
         }
 
-        return new Response(JSON.stringify({ message: 'Worker Bridge Active. Endpoints: /api/login, /api/proxy, /api/image' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        // ==========================================
+        // 4. GOOGLE OAUTH2 TOKEN EXCHANGE & REFRESH
+        // ==========================================
+        if (request.method === 'POST' && url.pathname === '/api/auth/google/token') {
+            try {
+                if (!env.GOOGLE_CLIENT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'GOOGLE_CLIENT_SECRET is not configured on worker' }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                    });
+                }
+                const { code } = await request.json();
+                if (!code) {
+                    return new Response(JSON.stringify({ error: 'Authorization code is required' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                    });
+                }
+
+                const clientId = env.GOOGLE_CLIENT_ID || '1034798646876-9pfp06so088l98gs477njt3fdgca97o9.apps.googleusercontent.com';
+                const tokenParams = new URLSearchParams({
+                    code,
+                    client_id: clientId,
+                    client_secret: env.GOOGLE_CLIENT_SECRET,
+                    redirect_uri: 'postmessage',
+                    grant_type: 'authorization_code',
+                });
+
+                const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: tokenParams.toString(),
+                });
+
+                const data = await tokenRes.json();
+                return new Response(JSON.stringify(data), {
+                    status: tokenRes.status,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                });
+            } catch (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                });
+            }
+        }
+
+        if (request.method === 'POST' && url.pathname === '/api/auth/google/refresh') {
+            try {
+                if (!env.GOOGLE_CLIENT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'GOOGLE_CLIENT_SECRET is not configured on worker' }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                    });
+                }
+                const { refresh_token } = await request.json();
+                if (!refresh_token) {
+                    return new Response(JSON.stringify({ error: 'refresh_token is required' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                    });
+                }
+
+                const clientId = env.GOOGLE_CLIENT_ID || '1034798646876-9pfp06so088l98gs477njt3fdgca97o9.apps.googleusercontent.com';
+                const tokenParams = new URLSearchParams({
+                    client_id: clientId,
+                    client_secret: env.GOOGLE_CLIENT_SECRET,
+                    refresh_token,
+                    grant_type: 'refresh_token',
+                });
+
+                const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: tokenParams.toString(),
+                });
+
+                const data = await tokenRes.json();
+                return new Response(JSON.stringify(data), {
+                    status: tokenRes.status,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                });
+            } catch (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                });
+            }
+        }
+
+        return new Response(JSON.stringify({ message: 'Worker Bridge Active. Endpoints: /api/login, /api/proxy, /api/image, /api/auth/google/token, /api/auth/google/refresh' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 };
