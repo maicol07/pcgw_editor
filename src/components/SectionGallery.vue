@@ -3,7 +3,7 @@ import { ref, computed, watchEffect, reactive, watch, toRaw, defineAsyncComponen
 import { useFileStore, LocalFile } from '../stores/files';
 import { useUiStore } from '../stores/ui';
 import { useWorkspaceStore } from '../stores/workspace';
-import { GALLERY_SECTIONS, resolveGallerySectionKey, getGallerySectionLabel, getGallerySectionIcon } from '../config/gallerySections';
+import { GALLERY_SECTIONS, resolveGallerySectionKey, getGallerySectionLabel } from '../config/gallerySections';
 import { useToast } from 'openvue/usetoast';
 import { pcgwAuth } from '../services/pcgwAuth';
 import { pcgwMedia } from '../services/pcgwMedia';
@@ -32,7 +32,8 @@ const WysiwygEditor = defineAsyncComponent(() => import('./common/WysiwygEditor.
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
-    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw, FolderInput
+    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw, FolderInput,
+    Monitor, Keyboard, Volume2, Save, Wifi, Eye, Settings, Cpu
 } from '@lucide/vue';
 import { calculateSha1 } from '../utils/crypto';
 const Cropper = defineAsyncComponent(async () => {
@@ -143,9 +144,27 @@ const showMoveDialog = ref(false);
 const selectedTargetSection = ref<string>('');
 const movingImages = ref<GalleryImage[]>([]);
 
+const sectionIcons: Record<string, any> = {
+    video: Monitor,
+    input: Keyboard,
+    audio: Volume2,
+    game_data: Save,
+    network: Wifi,
+    vr: Eye,
+    other: Settings,
+    systemReq: Cpu
+};
+const getGallerySectionIcon = (keyOrName: string) => {
+    const key = resolveGallerySectionKey(keyOrName);
+    return sectionIcons[key];
+};
+
 const currentSectionKey = computed(() => resolveGallerySectionKey(props.section));
 const targetSectionOptions = computed(() =>
-    GALLERY_SECTIONS.filter(s => s.key !== currentSectionKey.value)
+    GALLERY_SECTIONS.filter(s => s.key !== currentSectionKey.value).map(s => ({
+        ...s,
+        icon: getGallerySectionIcon(s.key)
+    }))
 );
 
 const openMoveDialog = (element: GalleryImage) => {

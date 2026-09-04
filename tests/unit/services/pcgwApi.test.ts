@@ -64,12 +64,112 @@ describe('pcgwApi', () => {
                 titles: 'game_1|Game 2',
                 rvprop: 'ids',
                 redirects: '1'
-            });
+            }, { preferAuth: true, method: 'POST' });
 
             expect(results).toEqual({
                 'game_1': { revid: 150 },
                 'Game 2': { revid: 250 }
             });
+
+            fetchSpy.mockRestore();
+        });
+    });
+
+    describe('getLatestRevisionInfo', () => {
+        it('should fetch revision info with redirects and POST preferAuth', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue({
+                query: {
+                    pages: {
+                        '502': { title: 'Doom (1993)', revisions: [{ revid: 1798426 }] }
+                    }
+                }
+            });
+
+            const result = await pcgwApi.getLatestRevisionInfo('Doom');
+
+            expect(fetchSpy).toHaveBeenCalledWith({
+                action: 'query',
+                prop: 'revisions',
+                titles: 'Doom',
+                rvprop: 'ids',
+                rvlimit: '1',
+                redirects: '1'
+            }, { preferAuth: true, method: 'POST' });
+
+            expect(result).toEqual({ revid: 1798426 });
+
+            fetchSpy.mockRestore();
+        });
+    });
+
+    describe('fetchWikitext', () => {
+        it('should fetch wikitext with redirects and POST preferAuth without caching mutable title', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue({
+                query: {
+                    pages: {
+                        '502': {
+                            title: 'Doom (1993)',
+                            revisions: [
+                                {
+                                    revid: 1798426,
+                                    slots: { main: { '*': '== Availability ==\n{{Availability}}' } }
+                                }
+                            ]
+                        }
+                    }
+                }
+            });
+
+            const result = await pcgwApi.fetchWikitext('Doom');
+
+            expect(fetchSpy).toHaveBeenCalledWith({
+                action: 'query',
+                prop: 'revisions',
+                titles: 'Doom',
+                rvprop: 'content|ids',
+                rvslots: 'main',
+                redirects: '1'
+            }, { preferAuth: true, method: 'POST' });
+
+            expect(result).toEqual({
+                content: '== Availability ==\n{{Availability}}',
+                revid: 1798426,
+                title: 'Doom (1993)'
+            });
+
+            // Second call should still fetch and not return from localStorage cache
+            fetchSpy.mockClear();
+            await pcgwApi.fetchWikitext('Doom');
+            expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+            fetchSpy.mockRestore();
+        });
+
+        it('should cache when cacheKeyBase is provided', async () => {
+            const fetchSpy = vi.spyOn(pcgwApi as any, 'fetchApi').mockResolvedValue({
+                query: {
+                    pages: {
+                        '100': {
+                            title: 'Sample',
+                            revisions: [
+                                {
+                                    revid: 10,
+                                    slots: { main: { '*': 'Template content' } }
+                                }
+                            ]
+                        }
+                    }
+                }
+            });
+
+            const first = await pcgwApi.fetchWikitext('Sample', 'template:test');
+            expect(first?.content).toBe('Template content');
+            expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+            fetchSpy.mockClear();
+            const second = await pcgwApi.fetchWikitext('Sample', 'template:test');
+            expect(second?.content).toBe('Template content');
+            expect(fetchSpy).not.toHaveBeenCalled();
 
             fetchSpy.mockRestore();
         });

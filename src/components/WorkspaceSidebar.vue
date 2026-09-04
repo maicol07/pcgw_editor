@@ -147,7 +147,7 @@ const createNewPage = async () => {
             }
             wikitext = result.content;
             const revid = result.revid;
-            title = pageTitleToFetch;
+            title = result.title || pageTitleToFetch;
             store.createPage(title, wikitext, newPageTemplate.value as any, title, revid);
         } else if (newPageTemplate.value !== 'blank') {
             const templateType = newPageTemplate.value as 'singleplayer' | 'multiplayer' | 'unknown';

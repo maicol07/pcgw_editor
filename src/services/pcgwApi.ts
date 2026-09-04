@@ -64,20 +64,41 @@ class PCGWApiService {
     private batchTimer: any = null;
     private batchCallbacks = new Map<string, Array<(info: ImageInfo | null) => void>>();
 
-    private async fetchApi<T = any>(params: Record<string, string>, requiresAuth = false): Promise<T | null> {
+    private async fetchApi<T = any>(
+        params: Record<string, string>,
+        options: boolean | { requiresAuth?: boolean; preferAuth?: boolean; method?: 'GET' | 'POST' } = false
+    ): Promise<T | null> {
+        const requiresAuth = typeof options === 'boolean' ? options : !!options.requiresAuth;
+        const preferAuth = typeof options === 'object' ? !!options.preferAuth : false;
+        const method = typeof options === 'object' && options.method ? options.method : 'GET';
+
         try {
-            if (requiresAuth && pcgwAuth.isLoggedIn) {
-                return await pcgwAuth.apiPost(params, 'GET');
+            if ((requiresAuth || preferAuth) && pcgwAuth.isLoggedIn) {
+                return await pcgwAuth.apiPost(params, method);
             }
-            const res = await apiFetch<T>(getDirectApiUrl(), {
-                query: {
+
+            const fetchOptions: any = {
+                headers: getApiHeaders(),
+                parseResponse: JSON.parse
+            };
+
+            if (method === 'POST') {
+                fetchOptions.method = 'POST';
+                fetchOptions.query = { origin: '*' };
+                fetchOptions.body = new URLSearchParams({
+                    format: 'json',
+                    ...params
+                });
+            } else {
+                fetchOptions.method = 'GET';
+                fetchOptions.query = {
                     format: 'json',
                     origin: '*',
                     ...params
-                },
-                headers: getApiHeaders(),
-                parseResponse: JSON.parse
-            });
+                };
+            }
+
+            const res = await apiFetch<T>(getDirectApiUrl(), fetchOptions);
             if ((res as any)?.error?.code === 'permissiondenied') {
                 notifyPermissionDenied((res as any)?.error?.info);
             }
@@ -661,9 +682,9 @@ class PCGWApiService {
         return result?.content || null;
     }
 
-    async fetchWikitext(title: string, cacheKeyBase?: string, bypassCache: boolean = false): Promise<{ content: string; revid: number } | null> {
-        const cacheKey = cacheKeyBase || `wikitext:${title}`;
-        if (!bypassCache) {
+    async fetchWikitext(title: string, cacheKeyBase?: string, bypassCache: boolean = false): Promise<{ content: string; revid: number; title?: string } | null> {
+        const cacheKey = cacheKeyBase;
+        if (cacheKey && !bypassCache) {
             const cached = this.getFromCache(cacheKey);
             // If cached and cache is a simple string array (old format), we might need to handle it.
             // For simplicity, let's just clear cache or handle the new format.
@@ -673,13 +694,14 @@ class PCGWApiService {
         }
 
         try {
-            const result = await this.fetchApi<{ query?: { pages?: Record<string, { revisions?: { revid: number, slots?: { main?: { '*'?: string } } }[] }> } }>({
+            const result = await this.fetchApi<{ query?: { pages?: Record<string, { title?: string; revisions?: { revid: number, slots?: { main?: { '*'?: string } } }[] }> } }>({
                 action: 'query',
                 prop: 'revisions',
                 titles: title,
                 rvprop: 'content|ids',
                 rvslots: 'main',
-            });
+                redirects: '1'
+            }, { preferAuth: true, method: 'POST' });
 
             if (!result?.query?.pages) return null;
             const pages = Object.values(result.query.pages);
@@ -690,11 +712,13 @@ class PCGWApiService {
             if (rawContent === undefined || revid === undefined) return null;
 
             const content = rawContent.replace(/\r\n/g, '\n');
-            this.setCache(cacheKey, [content, revid.toString()]);
+            if (cacheKey) {
+                this.setCache(cacheKey, [content, revid.toString()]);
+            }
             // This response *is* the text of `revid`: keep it, so when this revision later becomes the
             // merge ancestor there is nothing left to fetch.
             void putRevisionText(revid, content);
-            return { content, revid };
+            return { content, revid, title: page.title || title };
         } catch (error) {
             console.error(`Failed to fetch wikitext for ${title}:`, error);
             return null;
@@ -718,7 +742,7 @@ class PCGWApiService {
                 revids: String(revid),
                 rvprop: 'content',
                 rvslots: 'main',
-            });
+            }, { preferAuth: true, method: 'POST' });
 
             const page = Object.values(result?.query?.pages || {})[0];
             const rawContent = page?.revisions?.[0]?.slots?.main?.['*'];
@@ -740,8 +764,9 @@ class PCGWApiService {
                 prop: 'revisions',
                 titles: title,
                 rvprop: 'ids',
-                rvlimit: '1'
-            });
+                rvlimit: '1',
+                redirects: '1'
+            }, { preferAuth: true, method: 'POST' });
 
             if (!result?.query?.pages) return null;
             const pages = Object.values(result.query.pages);
@@ -778,7 +803,7 @@ class PCGWApiService {
                     titles: chunk.join('|'),
                     rvprop: 'ids',
                     redirects: '1'
-                });
+                }, { preferAuth: true, method: 'POST' });
 
                 if (response?.query?.pages) {
                     const normalizedMap: Record<string, string> = {};
@@ -980,8 +1005,9 @@ class PCGWApiService {
                 titles: title,
                 prop: 'revisions',
                 rvprop: 'content',
-                rvslots: 'main'
-            });
+                rvslots: 'main',
+                redirects: '1'
+            }, { preferAuth: true, method: 'POST' });
 
             const pages = response?.query?.pages || {};
             const page = Object.values(pages)[0];
