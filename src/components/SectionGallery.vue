@@ -1495,6 +1495,116 @@ interface CropJob {
 
 const croppingQueue = ref<CropJob[]>([]);
 const currentManualCropJob = ref<CropJob | null>(null);
+let currentCropCreatedUrl: string | null = null;
+
+const setCropImageUrl = (url: string, isOwned = false) => {
+    if (currentCropCreatedUrl && currentCropCreatedUrl !== url) {
+        URL.revokeObjectURL(currentCropCreatedUrl);
+        currentCropCreatedUrl = null;
+    }
+    if (isOwned) {
+        currentCropCreatedUrl = url;
+    }
+    cropImageUrl.value = url;
+};
+
+const extractCroppedBlob = async (
+    result: any,
+    targetMime: string,
+    sourceImg?: HTMLImageElement | null
+): Promise<Blob | null> => {
+    // 1. Fast path: draw directly from decoded GPU texture (HTMLImageElement) onto OffscreenCanvas
+    if (
+        sourceImg &&
+        sourceImg.complete &&
+        sourceImg.naturalWidth > 0 &&
+        sourceImg.naturalHeight > 0 &&
+        result?.coordinates &&
+        typeof OffscreenCanvas !== 'undefined'
+    ) {
+        const hasTransforms = result.imageTransforms && (
+            (result.imageTransforms.rotate || 0) % 360 !== 0 ||
+            result.imageTransforms.flip?.horizontal ||
+            result.imageTransforms.flip?.vertical
+        );
+
+        if (!hasTransforms) {
+            let offscreen: OffscreenCanvas | null = null;
+            try {
+                const nw = sourceImg.naturalWidth;
+                const nh = sourceImg.naturalHeight;
+
+                let sx = Math.max(0, Math.round(result.coordinates.left));
+                let sy = Math.max(0, Math.round(result.coordinates.top));
+                let sw = Math.round(result.coordinates.width);
+                let sh = Math.round(result.coordinates.height);
+
+                if (sx >= nw) sx = nw - 1;
+                if (sy >= nh) sy = nh - 1;
+                if (sx + sw > nw) sw = nw - sx;
+                if (sy + sh > nh) sh = nh - sy;
+
+                sw = Math.max(1, sw);
+                sh = Math.max(1, sh);
+
+                offscreen = new OffscreenCanvas(sw, sh);
+                const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.drawImage(sourceImg, sx, sy, sw, sh, 0, 0, sw, sh);
+                    const convertOptions: ImageEncodeOptions = { type: targetMime };
+                    if (targetMime === 'image/jpeg' || targetMime === 'image/webp') {
+                        convertOptions.quality = 0.92;
+                    }
+                    return await offscreen.convertToBlob(convertOptions);
+                }
+            } catch (e) {
+                console.warn('Fast GPU texture crop fallback to canvas:', e);
+            } finally {
+                if (offscreen) {
+                    offscreen.width = 0;
+                    offscreen.height = 0;
+                }
+            }
+        }
+    }
+
+    // 2. OffscreenCanvas fallback for result.canvas (handles transforms while keeping conversion asynchronous)
+    if (result?.canvas && typeof OffscreenCanvas !== 'undefined') {
+        let offscreen: OffscreenCanvas | null = null;
+        try {
+            const canvas = result.canvas;
+            if (canvas.width > 0 && canvas.height > 0) {
+                offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+                const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.drawImage(canvas, 0, 0);
+                    const convertOptions: ImageEncodeOptions = { type: targetMime };
+                    if (targetMime === 'image/jpeg' || targetMime === 'image/webp') {
+                        convertOptions.quality = 0.92;
+                    }
+                    return await offscreen.convertToBlob(convertOptions);
+                }
+            }
+        } catch (e) {
+            console.warn('OffscreenCanvas fallback failed:', e);
+        } finally {
+            if (offscreen) {
+                offscreen.width = 0;
+                offscreen.height = 0;
+            }
+        }
+    }
+
+    // 3. Fallback: canvas.toBlob (handles test mocks and environments without OffscreenCanvas)
+    const canvas = result?.canvas;
+    if (!canvas) return null;
+
+    return new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob: Blob | null) => {
+            resolve(blob);
+        }, targetMime);
+    });
+};
 
 const initiateCrop = (job: CropJob) => {
     selectedCropFormat.value = getOriginalFormatForCrop(job);
@@ -1502,10 +1612,10 @@ const initiateCrop = (job: CropJob) => {
         const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
         if (!file) return;
         croppingImage.value = job.galleryItem;
-        cropImageUrl.value = getFileUrl(file.blob);
+        setCropImageUrl(getFileUrl(file.blob), true);
     } else if (job.type === 'combine' && job.combineItem) {
         if (!job.combineItem.url) return;
-        cropImageUrl.value = job.combineItem.url;
+        setCropImageUrl(job.combineItem.url, false);
         // We set a placeholder for the gallery image to keep progressbar/dialog happy
         croppingImage.value = { 
             name: job.combineItem.name, 
@@ -1515,7 +1625,7 @@ const initiateCrop = (job: CropJob) => {
         };
     } else if (job.type === 'combine-result') {
         if (!uncroppedCombinePreviewUrl.value) return;
-        cropImageUrl.value = uncroppedCombinePreviewUrl.value;
+        setCropImageUrl(uncroppedCombinePreviewUrl.value, false);
         croppingImage.value = {
             name: (combineFileName.value || 'combined') + '.' + (selectedCombineFormat.value === 'image/jpeg' ? 'jpg' : (selectedCombineFormat.value === 'image/webp' ? 'webp' : 'png')),
             caption: '',
@@ -1540,54 +1650,59 @@ const processNextCrop = () => {
     }
 };
 
+let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedGeneratePreview = () => {
+    if (previewDebounceTimer) clearTimeout(previewDebounceTimer);
+    previewDebounceTimer = setTimeout(() => {
+        generatePreview().catch(console.error);
+    }, 150);
+};
+
 const handleConfirmCrop = async () => {
     if (!cropperRef.value || !croppingImage.value) return;
 
     isCropping.value = true;
-    const result = cropperRef.value.getResult();
-    const { canvas } = result;
-    if (!canvas) {
-        isCropping.value = false;
-        return;
-    }
+    try {
+        const result = cropperRef.value.getResult();
+        if (!result) return;
 
-    const targetMime = selectedCropFormat.value;
-    const currentJob = croppingQueue.value[0] || currentManualCropJob.value;
-    if (!currentJob) {
-        isCropping.value = false;
-        return;
-    }
+        const currentJob = croppingQueue.value[0] || currentManualCropJob.value;
+        if (!currentJob) return;
 
-    if (currentJob.type === 'combine-result') {
-        if (result.coordinates) {
-            combineCrop.value = {
-                left: Math.round(result.coordinates.left),
-                top: Math.round(result.coordinates.top),
-                width: Math.round(result.coordinates.width),
-                height: Math.round(result.coordinates.height)
-            };
-            await generatePreview();
-            
-            toast.add({
-                severity: 'success',
-                summary: 'Combined Image Cropped',
-                detail: 'Crop has been applied to the combined image.',
-                life: 3000
-            });
-        }
-        isCropping.value = false;
-        showCropDialog.value = false;
-        return;
-    }
-
-    canvas.toBlob(async (blob: Blob | null) => {
-        if (!blob) {
-            isCropping.value = false;
+        if (currentJob.type === 'combine-result') {
+            if (result.coordinates) {
+                combineCrop.value = {
+                    left: Math.round(result.coordinates.left),
+                    top: Math.round(result.coordinates.top),
+                    width: Math.round(result.coordinates.width),
+                    height: Math.round(result.coordinates.height)
+                };
+                debouncedGeneratePreview();
+                
+                toast.add({
+                    severity: 'success',
+                    summary: 'Combined Image Cropped',
+                    detail: 'Crop has been applied to the combined image.',
+                    life: 3000
+                });
+            }
+            showCropDialog.value = false;
             return;
         }
 
+        const targetMime = selectedCropFormat.value;
+        const capturedLocalFile = currentJob.type === 'gallery' && currentJob.galleryItem?.localId !== undefined
+            ? fileStore.files.find(f => f.id === currentJob.galleryItem?.localId)
+            : null;
+        const cropperEl = cropperRef.value?.$el as HTMLElement | undefined;
+        const sourceImg = (cropperRef.value?.$refs?.image as HTMLImageElement | undefined) ||
+            (cropperEl?.querySelector?.('img.vue-advanced-cropper__image, img') as HTMLImageElement | null);
+
+        const blob = await extractCroppedBlob(result, targetMime, sourceImg);
+        if (!blob) return;
+
         if (currentJob.type === 'gallery' && currentJob.galleryItem?.localId !== undefined) {
-            const localFile = fileStore.files.find(f => f.id === currentJob.galleryItem?.localId);
+            const localFile = fileStore.files.find(f => f.id === currentJob.galleryItem?.localId) || capturedLocalFile;
             if (localFile) {
                 const newName = replaceExtension(localFile.name, targetMime);
                 const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
@@ -1663,7 +1778,7 @@ const handleConfirmCrop = async () => {
             if (qIdx !== -1) {
                 combineQueue.value[qIdx] = { ...item };
             }
-            await generatePreview();
+            debouncedGeneratePreview();
         }
 
         toast.add({
@@ -1674,11 +1789,17 @@ const handleConfirmCrop = async () => {
         });
 
         showCropDialog.value = false;
-    }, targetMime);
+    } finally {
+        isCropping.value = false;
+    }
 };
 
 watch(showCropDialog, (newVal) => {
     if (!newVal && croppingImage.value) {
+        if (currentCropCreatedUrl) {
+            URL.revokeObjectURL(currentCropCreatedUrl);
+            currentCropCreatedUrl = null;
+        }
         croppingImage.value = null;
         isCropping.value = false;
         cropImageUrl.value = '';
@@ -2317,6 +2438,8 @@ const generatePreview = async () => {
     }
     
     isGeneratingPreview.value = true;
+    let canvas: HTMLCanvasElement | null = null;
+    let croppedCanvas: HTMLCanvasElement | null = null;
     try {
         const sources = combineQueue.value.map(item => item.url).filter(Boolean) as string[];
         
@@ -2342,10 +2465,10 @@ const generatePreview = async () => {
             totalHeight = images.reduce((sum, i) => sum + i.height, 0) + gap * Math.max(0, images.length - 1);
         }
 
-        const canvas = document.createElement('canvas');
+        canvas = document.createElement('canvas');
         canvas.width = totalWidth;
         canvas.height = totalHeight;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) throw new Error('No 2D context');
 
         ctx.clearRect(0, 0, totalWidth, totalHeight);
@@ -2364,7 +2487,7 @@ const generatePreview = async () => {
         }
 
         const targetMime = selectedCombineFormat.value || 'image/png';
-        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, targetMime));
+        const blob = await new Promise<Blob | null>(resolve => canvas!.toBlob(resolve, targetMime));
         if (blob) {
             if (uncroppedCombinePreviewUrl.value) URL.revokeObjectURL(uncroppedCombinePreviewUrl.value);
             uncroppedCombinePreviewUrl.value = URL.createObjectURL(blob);
@@ -2373,7 +2496,7 @@ const generatePreview = async () => {
             let outputCanvas: HTMLCanvasElement | HTMLImageElement = canvas;
             if (combineCrop.value) {
                 const crop = combineCrop.value;
-                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas = document.createElement('canvas');
                 // Ensure coordinates are within canvas boundaries
                 const left = Math.max(0, Math.min(crop.left, canvas.width));
                 const top = Math.max(0, Math.min(crop.top, canvas.height));
@@ -2382,7 +2505,7 @@ const generatePreview = async () => {
 
                 croppedCanvas.width = width;
                 croppedCanvas.height = height;
-                const croppedCtx = croppedCanvas.getContext('2d');
+                const croppedCtx = croppedCanvas.getContext('2d', { willReadFrequently: true });
                 if (croppedCtx) {
                     croppedCtx.drawImage(canvas, left, top, width, height, 0, 0, width, height);
                     outputCanvas = croppedCanvas;
@@ -2403,12 +2526,20 @@ const generatePreview = async () => {
     } catch (e) {
         console.error("Preview building failed", e);
     } finally {
+        if (canvas) {
+            canvas.width = 0;
+            canvas.height = 0;
+        }
+        if (croppedCanvas) {
+            croppedCanvas.width = 0;
+            croppedCanvas.height = 0;
+        }
         isGeneratingPreview.value = false;
     }
 };
 
 watch([combineQueue, combineOrientation, combineGap, selectedCombineFormat], () => {
-    generatePreview();
+    debouncedGeneratePreview();
 }, { deep: true });
 
 watch(combineQueue, (newQueue) => {
@@ -3248,7 +3379,15 @@ defineExpose({
         <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal class="w-full max-w-3xl mx-4" :draggable="false">
             <div class="flex flex-col gap-4">
                 <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
-                    <Cropper v-if="cropImageUrl" ref="cropperRef" :src="cropImageUrl" class="h-full w-full" background-class="bg-surface-100 dark:bg-surface-900" auto-zoom />
+                    <Cropper
+                        v-if="cropImageUrl"
+                        ref="cropperRef"
+                        :src="cropImageUrl"
+                        class="h-full w-full"
+                        background-class="bg-surface-100 dark:bg-surface-900"
+                        auto-zoom
+                        :check-orientation="false"
+                    />
                 </div>
                 <div class="flex items-center justify-between w-full mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
                     <div class="flex items-center gap-2">
