@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
-import { initialGameData, GameData } from '../models/GameData';
+import { initialGameData, GameData, type GalleryImage } from '../models/GameData';
+import { resolveGallerySectionKey } from '../config/gallerySections';
 import { computed, ref, watch } from 'vue';
 import { generateWikitext, PCGWEditor } from '../utils/wikitext';
 import { parseWikitext } from '../utils/parser';
@@ -543,6 +544,72 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         _activeGameData.value = structuredClone(initialGameData);
     }
 
+    function moveGalleryImages(
+        fromSection: string,
+        toSection: string,
+        imagesToMove: (GalleryImage | string)[]
+    ): { moved: GalleryImage[]; skipped: GalleryImage[] } {
+        if (!_activeGameData.value || imagesToMove.length === 0) {
+            return { moved: [], skipped: [] };
+        }
+
+        const fromKey = resolveGallerySectionKey(fromSection);
+        const toKey = resolveGallerySectionKey(toSection);
+
+        if (fromKey === toKey) {
+            return { moved: [], skipped: [] };
+        }
+
+        if (!_activeGameData.value.galleries) {
+            _activeGameData.value.galleries = {};
+        }
+        if (!_activeGameData.value.galleries[fromKey]) {
+            _activeGameData.value.galleries[fromKey] = [];
+        }
+        if (!_activeGameData.value.galleries[toKey]) {
+            _activeGameData.value.galleries[toKey] = [];
+        }
+
+        const normalize = (item: GalleryImage | string): GalleryImage => {
+            if (typeof item === 'string') {
+                return { name: item, caption: '', position: 'gallery' };
+            }
+            return { ...item, position: item.position || 'gallery' };
+        };
+
+        const targetList = _activeGameData.value.galleries[toKey];
+        const moved: GalleryImage[] = [];
+        const skipped: GalleryImage[] = [];
+
+        const isDuplicate = (targetItem: GalleryImage, item: GalleryImage) => {
+            if (item.localId !== undefined && targetItem.localId !== undefined) {
+                return item.localId === targetItem.localId;
+            }
+            return targetItem.name.trim().toLowerCase() === item.name.trim().toLowerCase();
+        };
+
+        for (const rawItem of imagesToMove) {
+            const item = normalize(rawItem);
+            const exists = targetList.some(target => isDuplicate(target, item));
+            if (exists) {
+                skipped.push(item);
+            } else {
+                moved.push(item);
+            }
+        }
+
+        if (moved.length > 0) {
+            _activeGameData.value.galleries[fromKey] = _activeGameData.value.galleries[fromKey].filter(sourceItem => {
+                const normalizedSource = normalize(sourceItem);
+                return !moved.some(m => isDuplicate(normalizedSource, m));
+            });
+
+            _activeGameData.value.galleries[toKey] = [...targetList, ...moved];
+        }
+
+        return { moved, skipped };
+    }
+
     // Initialize if empty
     if (pages.value.length > 0 && (!activePageId.value || !pages.value.find(p => p.id === activePageId.value))) {
         activePageId.value = pages.value[0].id;
@@ -565,6 +632,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         importWorkspaceBackup,
         clearAllWorkspaceData,
         deleteSection,
+        moveGalleryImages,
         syncToWikitext,
         syncFromWikitext,
         checkForUpdates,

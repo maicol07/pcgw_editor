@@ -1948,9 +1948,9 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateSectionImages('Audio', data.galleries['audio']);
     editor.updateSectionImages('Network', data.galleries['network']);
     editor.updateSectionImages('VR support', data.galleries['vr']);
-    editor.updateSectionImages('API', data.galleries['api']);
+    editor.updateSectionImages('API', data.galleries['other'] || data.galleries['api']);
     editor.updateSectionImages('Middleware', data.galleries['middleware']);
-    editor.updateSectionImages('System requirements', data.galleries['system_requirements']);
+    editor.updateSectionImages('System requirements', data.galleries['systemReq'] || data.galleries['system_requirements']);
 
     return editor.getText();
 }

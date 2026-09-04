@@ -176,7 +176,7 @@ const SECTION_CONFIGS: Record<string, SectionConfig> = {
         generate: (editor, data) => {
             editor.updateAPI(data.api);
             editor.updateMiddleware(data.middleware);
-            editor.updateSectionImages('API', data.galleries['api']);
+            editor.updateSectionImages('API', data.galleries['other'] || data.galleries['api']);
             editor.updateSectionImages('Middleware', data.galleries['middleware']);
         },
     },
@@ -202,7 +202,7 @@ const SECTION_CONFIGS: Record<string, SectionConfig> = {
         primaryTemplate: 'System requirements',
         generate: (editor, data) => {
             editor.updateSystemRequirements(data.requirements);
-            editor.updateSectionImages('System requirements', data.galleries['system_requirements']);
+            editor.updateSectionImages('System requirements', data.galleries['systemReq'] || data.galleries['system_requirements']);
         },
     },
     'systemReq.windows': {

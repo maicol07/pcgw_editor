@@ -83,4 +83,50 @@ describe('Workspace Store', () => {
         expect(store.activePage?.wikitext).not.toContain('{{Availability');
         expect(store.activePage?.wikitext).toContain('== Video ==');
     });
+
+    it('moves gallery images from one section to another', async () => {
+        const store = useWorkspaceStore();
+        store.pages = [];
+        store.createPage('Test Page');
+        store.activeGameData.galleries = {
+            video: [{ name: 'video_preview.jpg', caption: 'Video 1', position: 'gallery' }],
+            input: []
+        };
+
+        const result = store.moveGalleryImages('Video', 'Input', [
+            { name: 'video_preview.jpg', caption: 'Video 1', position: 'gallery' }
+        ]);
+
+        expect(result.moved).toHaveLength(1);
+        expect(result.skipped).toHaveLength(0);
+        expect(store.activeGameData.galleries.video).toHaveLength(0);
+        expect(store.activeGameData.galleries.input).toHaveLength(1);
+        expect(store.activeGameData.galleries.input[0].name).toBe('video_preview.jpg');
+        expect(store.activeGameData.galleries.input[0].caption).toBe('Video 1');
+    });
+
+    it('skips duplicates when moving gallery images to a section that already contains them', async () => {
+        const store = useWorkspaceStore();
+        store.pages = [];
+        store.createPage('Test Page');
+        store.activeGameData.galleries = {
+            video: [
+                { name: 'shared.jpg', caption: 'Shared', position: 'gallery' },
+                { name: 'unique.jpg', caption: 'Unique', position: 'gallery' }
+            ],
+            input: [
+                { name: 'shared.jpg', caption: 'Existing', position: 'gallery' }
+            ]
+        };
+
+        const result = store.moveGalleryImages('video', 'input', store.activeGameData.galleries.video);
+
+        expect(result.moved).toHaveLength(1);
+        expect(result.moved[0].name).toBe('unique.jpg');
+        expect(result.skipped).toHaveLength(1);
+        expect(result.skipped[0].name).toBe('shared.jpg');
+        expect(store.activeGameData.galleries.video).toHaveLength(1);
+        expect(store.activeGameData.galleries.video[0].name).toBe('shared.jpg');
+        expect(store.activeGameData.galleries.input).toHaveLength(2);
+    });
 });

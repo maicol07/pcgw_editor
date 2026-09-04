@@ -2,6 +2,8 @@
 import { ref, computed, watchEffect, reactive, watch, toRaw, defineAsyncComponent } from 'vue';
 import { useFileStore, LocalFile } from '../stores/files';
 import { useUiStore } from '../stores/ui';
+import { useWorkspaceStore } from '../stores/workspace';
+import { GALLERY_SECTIONS, resolveGallerySectionKey, getGallerySectionLabel, getGallerySectionIcon } from '../config/gallerySections';
 import { useToast } from 'openvue/usetoast';
 import { pcgwAuth } from '../services/pcgwAuth';
 import { pcgwMedia } from '../services/pcgwMedia';
@@ -30,7 +32,7 @@ const WysiwygEditor = defineAsyncComponent(() => import('./common/WysiwygEditor.
 import {
     Images, Image, GripHorizontal, ExternalLink, Pencil, Trash2, PanelRight, Grid,
     Upload, CheckCircle2, AlertCircle, Loader2, LogOut, HardDrive, MoreVertical, User, Plus, Info, Replace, TextCursorInput, Link, Crop, Combine,
-    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw
+    X, ArrowRightLeft, ListChecks, TriangleAlert, Scaling, RotateCcw, RotateCw, FolderInput
 } from '@lucide/vue';
 import { calculateSha1 } from '../utils/crypto';
 const Cropper = defineAsyncComponent(async () => {
@@ -133,7 +135,84 @@ const showCaptionDialog = ref(false);
 
 const fileStore = useFileStore();
 const uiStore = useUiStore();
+const workspaceStore = useWorkspaceStore();
 const toast = useToast();
+
+// Move Image State
+const showMoveDialog = ref(false);
+const selectedTargetSection = ref<string>('');
+const movingImages = ref<GalleryImage[]>([]);
+
+const currentSectionKey = computed(() => resolveGallerySectionKey(props.section));
+const targetSectionOptions = computed(() =>
+    GALLERY_SECTIONS.filter(s => s.key !== currentSectionKey.value)
+);
+
+const openMoveDialog = (element: GalleryImage) => {
+    movingImages.value = [element];
+    selectedTargetSection.value = targetSectionOptions.value[0]?.key || '';
+    showMoveDialog.value = true;
+};
+
+const openBatchMoveDialog = () => {
+    const selected = displayImages.value.filter(img => selectedKeys.value.has(getItemKey(img)));
+    if (selected.length === 0) return;
+    movingImages.value = selected;
+    selectedTargetSection.value = targetSectionOptions.value[0]?.key || '';
+    showMoveDialog.value = true;
+};
+
+const confirmMove = () => {
+    if (!selectedTargetSection.value || movingImages.value.length === 0) return;
+
+    const targetLabel = getGallerySectionLabel(selectedTargetSection.value);
+    const result = workspaceStore.moveGalleryImages(
+        props.section,
+        selectedTargetSection.value,
+        movingImages.value
+    ) || { moved: movingImages.value, skipped: [] };
+
+    if (result.moved.length > 0) {
+        // Remove moved items from local displayImages
+        displayImages.value = displayImages.value.filter(item => {
+            return !result.moved.some(m =>
+                (m.localId !== undefined && item.localId !== undefined)
+                    ? m.localId === item.localId
+                    : m.name.toLowerCase() === item.name.toLowerCase()
+            );
+        });
+
+        // Clear selection for moved items
+        const updatedSelected = new Set(selectedKeys.value);
+        result.moved.forEach(img => {
+            updatedSelected.delete(getItemKey(img));
+        });
+        selectedKeys.value = updatedSelected;
+
+        toast.add({
+            severity: 'success',
+            summary: result.moved.length === 1 ? 'Image moved' : 'Images moved',
+            detail: result.moved.length === 1
+                ? `Moved "${result.moved[0].name}" to ${targetLabel}`
+                : `Moved ${result.moved.length} images to ${targetLabel}`,
+            life: 3000
+        });
+    }
+
+    if (result.skipped.length > 0) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Duplicate skipped',
+            detail: result.skipped.length === 1
+                ? `"${result.skipped[0].name}" already exists in ${targetLabel}`
+                : `${result.skipped.length} images already exist in ${targetLabel}`,
+            life: 4000
+        });
+    }
+
+    showMoveDialog.value = false;
+    movingImages.value = [];
+};
 
 const MAX_PCGW_MP = 12.5;
 const MAX_PCGW_PIXELS = MAX_PCGW_MP * 1000000;
@@ -448,6 +527,11 @@ const actionMenuItems = computed<any[]>(() => {
             icon: Replace,
             command: () => triggerReplace(activeItem.value!.index)
         });
+        items.push({
+            label: 'Move to section',
+            icon: FolderInput,
+            command: () => openMoveDialog(element)
+        });
     } else {
         // Wiki file actions
         items.push({
@@ -480,6 +564,11 @@ const actionMenuItems = computed<any[]>(() => {
             label: 'Replace with local image',
             icon: Replace,
             command: () => triggerReplace(activeItem.value!.index)
+        });
+        items.push({
+            label: 'Move to section',
+            icon: FolderInput,
+            command: () => openMoveDialog(element)
         });
     }
 
@@ -2855,6 +2944,9 @@ defineExpose({
                     <Button aria-label="Combine Selected" v-tooltip.top="'Combine Selected'" text size="small" rounded severity="primary" @click="batchCombine" class="p-1!">
                         <template #icon><Combine class="w-4 h-4" /></template>
                     </Button>
+                    <Button aria-label="Move Selected to Section" v-tooltip.top="'Move to Section'" text size="small" rounded severity="primary" @click="openBatchMoveDialog" class="p-1!">
+                        <template #icon><FolderInput class="w-4 h-4" /></template>
+                    </Button>
                     
                     <div class="h-4 w-px bg-primary-200 dark:bg-primary-700/50 mx-1"></div>
                     <Button aria-label="Upload Local to PCGW" v-tooltip.top="'Upload Local to PCGW'" text size="small" rounded severity="success" @click="batchUpload" class="p-1!" :disabled="!Array.from(selectedKeys).some(k => k.startsWith('local-'))">
@@ -2955,6 +3047,7 @@ defineExpose({
         </Dialog>
         <div v-if="displayImages.length > 0" class="w-full">
             <VueDraggable v-model="displayImages"
+                :group="{ name: 'section-galleries', pull: true, put: true }"
                 class="gallery-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" ghost-class="opacity-50"
                 :animation="200">
                 <div v-for="(element, index) in displayImages"
@@ -3113,6 +3206,43 @@ defineExpose({
                 <div class="flex justify-end gap-2 pt-3 border-t border-surface-200 dark:border-surface-700">
                     <Button label="Cancel" text @click="showCaptionDialog = false" />
                     <Button label="Save" @click="saveCaption" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- Move Image Dialog -->
+        <Dialog v-model:visible="showMoveDialog" :header="movingImages.length > 1 ? `Move ${movingImages.length} Images to Section` : 'Move Image to Section'" modal class="w-full max-w-sm mx-4"
+            :draggable="false">
+            <div class="flex flex-col gap-4">
+                <p class="text-sm text-surface-600 dark:text-surface-300">
+                    <template v-if="movingImages.length === 1">
+                        Move <strong class="text-surface-900 dark:text-surface-100 font-data">{{ movingImages[0]?.name }}</strong> to:
+                    </template>
+                    <template v-else>
+                        Move <strong>{{ movingImages.length }}</strong> selected images to:
+                    </template>
+                </p>
+                <div class="flex flex-col gap-1.5">
+                    <label for="destinationSectionSelect" class="text-xs font-bold text-surface-500 uppercase tracking-wider">Destination Section</label>
+                    <Select id="destinationSectionSelect" v-model="selectedTargetSection" :options="targetSectionOptions" optionLabel="label" optionValue="key" placeholder="Select section..." class="w-full">
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex items-center gap-2">
+                                <component :is="getGallerySectionIcon(slotProps.value)" class="w-4 h-4 text-surface-500" />
+                                <span>{{ getGallerySectionLabel(slotProps.value) }}</span>
+                            </div>
+                            <span v-else class="text-surface-400">{{ slotProps.placeholder }}</span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center gap-2 py-0.5">
+                                <component :is="slotProps.option.icon" class="w-4 h-4 text-surface-500" />
+                                <span>{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-surface-200 dark:border-surface-700">
+                    <Button label="Cancel" text @click="showMoveDialog = false" />
+                    <Button label="Move" severity="primary" :disabled="!selectedTargetSection" @click="confirmMove" />
                 </div>
             </div>
         </Dialog>

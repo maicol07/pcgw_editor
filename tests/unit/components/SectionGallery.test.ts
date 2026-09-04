@@ -6,6 +6,7 @@ import Tooltip from 'openvue/tooltip';
 import ToastService from 'openvue/toastservice';
 import type { GalleryImage } from '../../../src/models/GameData';
 import { useFileStore } from '../../../src/stores/files';
+import { useWorkspaceStore } from '../../../src/stores/workspace';
 
 // Mock primevue/usetoast
 vi.mock('openvue/usetoast', () => ({
@@ -1053,6 +1054,94 @@ describe('SectionGallery.vue', () => {
             expect(redoneItem.type).toBe('local');
             expect(redoneItem.localId).toBe(55);
             expect(redoneItem.croppedState).toBeUndefined();
+        });
+    });
+
+    describe('Move Image Logic', () => {
+        it('excludes the current section from target options', () => {
+            const wrapper = mount(SectionGallery, {
+                props: {
+                    modelValue: [{ name: 'test_video.jpg', caption: '', position: 'gallery' }],
+                    section: 'Video'
+                },
+                global: {
+                    plugins: [pinia, ToastService],
+                    directives: { tooltip: Tooltip },
+                    stubs: { AutocompleteField: true, VueDraggable: true, Dialog: true, FileUpload: true, Menu: true }
+                }
+            });
+            const vm = wrapper.vm as any;
+            expect(vm.targetSectionOptions.some((s: any) => s.key === 'video' || s.label === 'Video')).toBe(false);
+            expect(vm.targetSectionOptions.some((s: any) => s.key === 'input')).toBe(true);
+        });
+
+        it('includes Move to section in actionMenuItems', async () => {
+            const wrapper = createWrapper([
+                { name: 'test_video.jpg', caption: '', position: 'gallery' }
+            ]);
+            const vm = wrapper.vm as any;
+            vm.activeItem = { element: { name: 'test_video.jpg', position: 'gallery' }, index: 0 };
+            const moveItem = vm.actionMenuItems.find((i: any) => i.label === 'Move to section');
+            expect(moveItem).toBeDefined();
+            expect(moveItem.command).toBeInstanceOf(Function);
+
+            moveItem.command();
+            expect(vm.showMoveDialog).toBe(true);
+            expect(vm.movingImages).toHaveLength(1);
+            expect(vm.movingImages[0].name).toBe('test_video.jpg');
+        });
+
+        it('opens batch move dialog for selected images', async () => {
+            const wrapper = createWrapper([
+                { name: 'img1.jpg', position: 'gallery' },
+                { name: 'img2.jpg', position: 'gallery' }
+            ]);
+            const vm = wrapper.vm as any;
+            vm.toggleSelection(vm.displayImages[0]);
+            vm.toggleSelection(vm.displayImages[1]);
+
+            vm.openBatchMoveDialog();
+            expect(vm.showMoveDialog).toBe(true);
+            expect(vm.movingImages).toHaveLength(2);
+        });
+
+        it('confirms move, updates displayImages and emits update:modelValue', async () => {
+            const workspaceStore = useWorkspaceStore();
+            const spy = vi.spyOn(workspaceStore, 'moveGalleryImages').mockReturnValue({
+                moved: [{ name: 'to_move.jpg', position: 'gallery' }],
+                skipped: []
+            });
+
+            const wrapper = mount(SectionGallery, {
+                props: {
+                    modelValue: [
+                        { name: 'to_move.jpg', position: 'gallery' },
+                        { name: 'stay.jpg', position: 'gallery' }
+                    ],
+                    section: 'Video'
+                },
+                global: {
+                    plugins: [pinia, ToastService],
+                    directives: { tooltip: Tooltip },
+                    stubs: { AutocompleteField: true, VueDraggable: true, Dialog: true, FileUpload: true, Menu: true }
+                }
+            });
+            const vm = wrapper.vm as any;
+            vm.openMoveDialog(vm.displayImages[0]);
+            vm.selectedTargetSection = 'input';
+
+            vm.confirmMove();
+
+            expect(spy).toHaveBeenCalledWith('Video', 'input', [{ name: 'to_move.jpg', position: 'gallery' }]);
+            expect(vm.showMoveDialog).toBe(false);
+            expect(wrapper.emitted('update:modelValue')).toBeTruthy();
+            const emitted = wrapper.emitted('update:modelValue')![0][0] as any[];
+            expect(emitted).toHaveLength(1);
+            expect(emitted[0].name).toBe('stay.jpg');
+
+            await wrapper.setProps({ modelValue: emitted });
+            expect(vm.displayImages).toHaveLength(1);
+            expect(vm.displayImages[0].name).toBe('stay.jpg');
         });
     });
 });
