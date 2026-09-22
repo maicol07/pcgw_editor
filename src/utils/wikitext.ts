@@ -279,6 +279,13 @@ export class PCGWEditor {
         this.ensureTemplate('Infobox game');
         this.setTemplateParam('Infobox game', 'cover', infobox.cover);
         this.setTemplateParam('Infobox game', 'license', infobox.license);
+        if (infobox.realAiLevel !== undefined) {
+            if (infobox.realAiLevel) {
+                this.setTemplateParam('Infobox game', 'real ai level', infobox.realAiLevel);
+            } else {
+                this.parser.removeParameter('Infobox game', 'real ai level');
+            }
+        }
 
         const linkMap: Record<string, string> = {
             steamAppId: 'steam appid',
@@ -1387,6 +1394,113 @@ export class PCGWEditor {
         this.updateSection('API', data, map);
     }
 
+    ensureAiUsageTemplate() {
+        if (this.parser.findTemplate('AI usage')) return;
+        const wikitext = this.parser.getText();
+
+        // 1. Check if ===AI usage=== header already exists
+        const aiHeaderRegex = /^={3,}\s*AI\s+usage\s*={3,}[^\n]*\n?/im;
+        const aiHeaderMatch = wikitext.match(aiHeaderRegex);
+        if (aiHeaderMatch && aiHeaderMatch.index !== undefined) {
+            const insertPos = aiHeaderMatch.index + aiHeaderMatch[0].length;
+            this.parser = new WikitextParser(
+                wikitext.substring(0, insertPos) + `{{AI usage\n}}\n` + wikitext.substring(insertPos)
+            );
+            return;
+        }
+
+        // 2. Check if ==Other information== header exists
+        const otherHeaderRegex = /^={2,}\s*Other\s+information\s*={2,}[^\n]*\n?/im;
+        const otherMatch = wikitext.match(otherHeaderRegex);
+        if (otherMatch && otherMatch.index !== undefined) {
+            const insertPos = otherMatch.index + otherMatch[0].length;
+            this.parser = new WikitextParser(
+                wikitext.substring(0, insertPos) + `\n===AI usage===\n{{AI usage\n}}\n` + wikitext.substring(insertPos)
+            );
+            return;
+        }
+
+        // 3. Check if ===API=== or {{API}} or ===Middleware=== or {{Middleware}} exists
+        const apiHeaderRegex = /^={3,}\s*API\s*={3,}[^\n]*\n?/im;
+        const apiHeaderMatch = wikitext.match(apiHeaderRegex);
+        const apiTpl = this.parser.findTemplate('API');
+        const midHeaderRegex = /^={3,}\s*Middleware\s*={3,}[^\n]*\n?/im;
+        const midHeaderMatch = wikitext.match(midHeaderRegex);
+        const midTpl = this.parser.findTemplate('Middleware');
+
+        let insertPos = -1;
+        let needsOtherHeader = true;
+
+        if (apiHeaderMatch && apiHeaderMatch.index !== undefined) {
+            insertPos = apiHeaderMatch.index;
+        } else if (apiTpl) {
+            insertPos = apiTpl.start;
+        } else if (midHeaderMatch && midHeaderMatch.index !== undefined) {
+            insertPos = midHeaderMatch.index;
+        } else if (midTpl) {
+            insertPos = midTpl.start;
+        }
+
+        if (insertPos !== -1) {
+            const prefixText = wikitext.substring(0, insertPos);
+            if (/==\s*Other\s+information\s*==/i.test(prefixText)) {
+                needsOtherHeader = false;
+            }
+            const block = (needsOtherHeader ? `==Other information==\n` : '') + `===AI usage===\n{{AI usage\n}}\n\n`;
+            this.parser = new WikitextParser(
+                wikitext.substring(0, insertPos) + block + wikitext.substring(insertPos)
+            );
+            return;
+        }
+
+        // 4. Fallback: before System requirements or end of document
+        const sysHeaderRegex = /^={2,}\s*System\s+requirements\s*={2,}[^\n]*\n?/im;
+        const sysMatch = wikitext.match(sysHeaderRegex);
+        const sysTpl = this.parser.findTemplate('System requirements');
+        if (sysMatch && sysMatch.index !== undefined) {
+            insertPos = sysMatch.index;
+        } else if (sysTpl) {
+            insertPos = sysTpl.start;
+        }
+
+        const block = `==Other information==\n===AI usage===\n{{AI usage\n}}\n\n`;
+        if (insertPos !== -1) {
+            this.parser = new WikitextParser(
+                wikitext.substring(0, insertPos) + block + wikitext.substring(insertPos)
+            );
+        } else {
+            const prefix = wikitext.length > 0 && !wikitext.endsWith('\n') ? '\n\n' : '';
+            this.parser = new WikitextParser(wikitext + prefix + block);
+        }
+    }
+
+    updateAiUsage(data: GameData['ai']) {
+        if (!data) return;
+
+        const map: Record<string, string> = {
+            code: 'code',
+            graphics2D: '2d graphics',
+            graphics3D: '3d graphics',
+            animation: 'animation',
+            audio: 'audio',
+            speech: 'speech',
+            video: 'video',
+            text: 'text',
+            localization: 'localization',
+            concept: 'concept'
+        };
+
+        const hasContent = Object.keys(map).some(key => {
+            const val = (data as any)[key];
+            return val && val.trim() !== '';
+        });
+
+        if (hasContent || this.parser.findTemplate('AI usage')) {
+            this.ensureAiUsageTemplate();
+            this.updateSection('AI usage', data, map);
+        }
+    }
+
     updateMiddleware(data: GameData['middleware']) {
         const map: Record<string, string> = {
             physics: 'physics',
@@ -1753,7 +1867,13 @@ export class PCGWEditor {
                 this.parser.removeSection(/Issues fixed/i);
                 this.parser.removeSection(/Issues/i);
                 break;
+            case 'ai':
+            case 'other.ai':
+                this.parser.removeTemplate('AI usage');
+                this.parser.removeSubSection(/AI\s+usage/i);
+                break;
             case 'other':
+                this.parser.removeTemplate('AI usage');
                 this.parser.removeTemplate('API');
                 this.parser.removeTemplate('Middleware');
                 this.parser.removeSection(/Other information/i);
@@ -1936,6 +2056,7 @@ export function generateWikitext(data: GameData, originalWikitext: string): stri
     editor.updateAudio(data.audio);
     editor.updateNetwork(data.network);
     editor.updateVR(data.vr);
+    editor.updateAiUsage(data.ai);
     editor.updateAPI(data.api);
     editor.updateMiddleware(data.middleware);
     editor.updateLocalizations(data.localizations);

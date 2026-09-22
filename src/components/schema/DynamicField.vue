@@ -255,6 +255,7 @@ const boundProps = computed(() => {
             label: props.field.label,
             description: props.field.description,
             icon: props.field.icon,
+            iconClass: props.field.iconClass,
             placeholder: props.field.componentProps?.placeholder,
             editorStyle: props.field.componentProps?.editorStyle,
             readonly: props.field.componentProps?.readonly,
@@ -358,6 +359,29 @@ const isVisible = computed(() => {
     }
     return true;
 });
+
+const hasOptionImages = computed(() => {
+    if (props.field.component !== 'Select') return false;
+    const opts = (props.field.componentProps as any)?.options;
+    return Array.isArray(opts) && opts.some((opt: any) => opt && opt.image);
+});
+
+const selectedSelectOption = computed(() => {
+    if (!hasOptionImages.value) return null;
+    const opts = (props.field.componentProps as any)?.options;
+    if (!Array.isArray(opts)) return null;
+    return opts.find((opt: any) => (typeof opt === 'object' ? opt.value : opt) === computedModelValue.value) || null;
+});
+
+const shouldRenderValueSlot = computed(() => {
+    if (props.field.component === 'MultiSelect' && (props.field.componentProps as any)?.showIcons) {
+        return true;
+    }
+    if (hasOptionImages.value) {
+        return true;
+    }
+    return false;
+});
 </script>
 
 <template>
@@ -406,18 +430,27 @@ const isVisible = computed(() => {
             @update:modelValue="handleModelValueUpdate" @update:value="handleUpdateValue"
             @update:notes="handleUpdateNotes" class="w-full">
 
-            <template v-if="['MultiSelect'].includes(field.component) && (field.componentProps as any)?.showIcons"
-                #value="slotProps">
-                <div class="flex items-center gap-1 flex-nowrap overflow-hidden w-full"
-                    v-if="slotProps.value && slotProps.value.length">
-                    <div v-for="option in slotProps.value" :key="option"
-                        class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
-                        <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
-                        <span class="text-xs">{{ option }}</span>
-                    </div>
+            <template v-if="shouldRenderValueSlot" #value="slotProps">
+                <div v-if="field.component === 'MultiSelect'"
+                    class="flex items-center gap-1 flex-nowrap overflow-hidden w-full">
+                    <template v-if="slotProps.value && slotProps.value.length">
+                        <div v-for="option in slotProps.value" :key="option"
+                            class="flex items-center bg-surface-100 dark:bg-surface-700 rounded px-1.5 py-0.5 gap-1 shrink-0">
+                            <img v-if="getIconSrc(option)" :src="getIconSrc(option)" :alt="option" class="w-3.5 h-3.5" />
+                            <span class="text-xs">{{ option }}</span>
+                        </div>
+                    </template>
+                    <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
                 </div>
-                <!-- Default placeholder handling if needed, though PrimeVue usually handles it -->
-                <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
+                <div v-else-if="field.component === 'Select'" class="flex items-center">
+                    <div v-if="selectedSelectOption?.image" class="flex items-center gap-2">
+                        <img :src="selectedSelectOption.image" class="w-5 h-5 object-contain shrink-0" :alt="selectedSelectOption.label" />
+                        <span class="text-sm font-medium">{{ selectedSelectOption.label }}</span>
+                    </div>
+                    <span v-else-if="selectedSelectOption?.label" class="text-sm">{{ selectedSelectOption.label }}</span>
+                    <span v-else-if="slotProps.value" class="text-sm">{{ slotProps.value }}</span>
+                    <span v-else class="text-surface-400 text-sm">{{ slotProps.placeholder }}</span>
+                </div>
             </template>
             <!--
                 One #option template, branching inside. There used to be two, with mutually
@@ -432,10 +465,21 @@ const isVisible = computed(() => {
                         class="w-4 h-4 mr-2" />
                     <span class="text-sm">{{ slotProps.option }}</span>
                 </div>
-                <div v-else-if="field.component === 'Select'" class="flex flex-col gap-1 py-1">
-                    <span class="font-medium">{{ slotProps.option.label || slotProps.option }}</span>
-                    <span v-if="slotProps.option.description" class="text-xs text-surface-500 dark:text-surface-400">{{
-                        slotProps.option.description }}</span>
+                <div v-else-if="field.component === 'Select'" class="flex items-center gap-2.5 py-1 w-full justify-between">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <img v-if="slotProps.option.image" :src="slotProps.option.image" class="w-6 h-6 object-contain shrink-0" :alt="slotProps.option.label || slotProps.option" />
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <span class="font-medium text-sm">{{ slotProps.option.label || slotProps.option }}</span>
+                            <span v-if="slotProps.option.description" class="text-xs text-surface-500 dark:text-surface-400 leading-snug">{{
+                                slotProps.option.description }}</span>
+                        </div>
+                    </div>
+                    <span v-if="slotProps.option.explanation"
+                        v-tooltip.top="slotProps.option.explanation"
+                        class="text-surface-400 hover:text-primary-500 cursor-help shrink-0 ml-2"
+                        @click.stop>
+                        <Info class="w-4 h-4" />
+                    </span>
                 </div>
                 <span v-else class="text-sm">{{ slotProps.option?.label ?? slotProps.option }}</span>
             </template>

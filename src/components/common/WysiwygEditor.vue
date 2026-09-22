@@ -13,15 +13,18 @@ import AutoComplete from 'openvue/autocomplete';
 import Button from 'openvue/button';
 import Checkbox from 'openvue/checkbox';
 import Textarea from 'openvue/textarea';
+import Select from 'openvue/select';
 import { VueDraggable } from 'vue-draggable-plus';
 
 import {
     ListChecks, Link2, MessageSquareWarning,
     Code, X,
-    BookOpen, GripVertical, Plus, Info
+    BookOpen, GripVertical, Plus, Info, Bot
 } from '@lucide/vue';
 import { wikitextToHtml, htmlToWikitext } from '../../utils/htmlWikitextConverter';
 import { useReferences } from '../../composables/useReferences';
+import { iconMap } from '../../utils/icons';
+import { type ReferenceType } from '../../types/references';
 import { pcgwApi } from '../../services/pcgwApi';
 import { useDebounceFn } from '@vueuse/core';
 const CodeEditor = defineAsyncComponent(() => import('../CodeEditor.vue'));
@@ -119,6 +122,7 @@ const props = defineProps<{
     label?: string;
     description?: string;
     icon?: any;
+    iconClass?: string;
 }>();
 
 const emit = defineEmits<{
@@ -167,12 +171,17 @@ const onTextChange = (e: any) => {
 const { cleanParams } = useReferences();
 
 const showRefParamDialog = ref(false);
-type ReferenceType = 'Refcheck' | 'Refurl' | 'cn' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink';
 const currentRefType = ref<ReferenceType>('Refcheck');
 const tempRefParams = ref<Record<string, string>>({});
 // State for keyboard keys
 const selectedKeys = ref<string[]>([]);
 const customKey = ref('');
+
+const aiNoteLevelOptions = [
+    { label: 'Level 3 - Assisted', value: '3', badge: iconMap.ai['3'] },
+    { label: 'Level 4 - Generated', value: '4', badge: iconMap.ai['4'] },
+    { label: 'Level 5 - Synthetic', value: '5', badge: iconMap.ai['5'] }
+];
 
 const addCustomKey = () => {
     if (customKey.value.trim()) {
@@ -204,12 +213,14 @@ const showFixboxDialog = ref(false);
 const tempFixboxParams = ref({
     description: '',
     ref: '',
+    ai: '',
     collapsed: false,
     fix: ''
 });
 const oldFixboxParams = ref({
     description: '',
     ref: '',
+    ai: '',
     collapsed: false,
     fix: ''
 });
@@ -233,9 +244,9 @@ const parseRefToFields = (wt: string): RefFields | null => {
     m = body.match(/^\[\[\s*Wikipedia\s*:\s*([^|\]]+?)\s*(?:\|\s*([^\]]*?))?\s*\]\]$/i);
     if (m) return { type: 'wlink', params: { page: m[1].trim(), text: (m[2] || '').trim() }, wrap: false };
 
-    const tplM = body.match(/^\{\{\s*([A-Za-z]+)\s*(?:\|([\s\S]*))?\}\}$/);
+    const tplM = body.match(/^\{\{\s*([A-Za-z0-9 ]+)\s*(?:\|([\s\S]*))?\}\}$/);
     if (!tplM) return null;
-    const name = tplM[1].toLowerCase();
+    const name = tplM[1].toLowerCase().replace(/\s+/g, '');
     const params: Record<string, string> = {};
     const positional: string[] = [];
     for (const a of splitArgs(tplM[2] || '')) {
@@ -250,6 +261,7 @@ const parseRefToFields = (wt: string): RefFields | null => {
     if (name === 'refcheck') return { type: 'Refcheck', params: { user: params.user || '', date: params.date || '', comment: params.comment || '' }, wrap };
     if (name === 'refurl') return { type: 'Refurl', params: { url: params.url || '', title: params.title || '', date: params.date || '', snippet: params.snippet || '' }, wrap };
     if (name === 'cn') return { type: 'cn', params: { date: params.date || '', reason: params.reason || '' }, wrap };
+    if (name === 'ainote') return { type: 'ainote', params: { level: params.level || '3', hover: params.hover || '', ref: params.ref || '' }, wrap: false };
     return null;
 };
 
@@ -270,19 +282,25 @@ const openTokenForEdit = (wt: string, node: HTMLElement) => {
     showRefParamDialog.value = true;
 };
 
-const refDialogHeader = computed(() =>
-    ((editingTokenNode.value || editingExistingFixboxRef.value) ? 'Edit ' : 'Insert ') + currentRefType.value);
+const refDialogHeader = computed(() => {
+    const action = (editingTokenNode.value || editingExistingFixboxRef.value) ? 'Edit ' : 'Insert ';
+    if (currentRefType.value === 'ainote') return action + 'AI Note';
+    return action + currentRefType.value;
+});
 const fixboxDialogHeader = computed(() => editingFixboxWikitext.value ? 'Edit Fixbox' : 'Insert Fixbox');
 
 const openFixboxDialog = () => {
-    tempFixboxParams.value = { description: '', ref: '', collapsed: false, fix: '' };
-    oldFixboxParams.value = { description: '', ref: '', collapsed: false, fix: '' };
+    tempFixboxParams.value = { description: '', ref: '', ai: '', collapsed: false, fix: '' };
+    oldFixboxParams.value = { description: '', ref: '', ai: '', collapsed: false, fix: '' };
     editingFixboxWikitext.value = null;
     showFixboxDialog.value = true;
 };
 
 const insertFixbox = () => {
     let template = `{{Fixbox|description=${tempFixboxParams.value.description}`;
+    if (tempFixboxParams.value.ai) {
+        template += `|ai=${tempFixboxParams.value.ai}`;
+    }
     if (tempFixboxParams.value.ref) {
         template += `|ref=${tempFixboxParams.value.ref}`;
     }
@@ -367,6 +385,7 @@ const onEditorContentClick = (event: MouseEvent) => {
 
         let description = '';
         let refStr = '';
+        let aiStr = '';
         let fix = '';
         let collapsed = false;
 
@@ -379,6 +398,7 @@ const onEditorContentClick = (event: MouseEvent) => {
                 const val = part.slice(eq + 1).trim();
                 if (key === 'description') description = val;
                 else if (key === 'ref') refStr = val; // keep <ref> wrapper so type/wrap parse correctly
+                else if (key === 'ai') aiStr = val;
                 else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
                 else if (key === 'fix') fix = val;
             } else if (part.trim() && !description) {
@@ -389,6 +409,7 @@ const onEditorContentClick = (event: MouseEvent) => {
         tempFixboxParams.value = {
             description,
             ref: refStr,
+            ai: aiStr,
             collapsed,
             fix: fix.trim()
         };
@@ -417,6 +438,7 @@ const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = '
     if (type === 'Refcheck') { params.date = today; params.user = 'User'; }
     if (type === 'Refurl') { params.date = today; params.url = ''; params.title = ''; }
     if (type === 'cn') { params.date = today; }
+    if (type === 'ainote') { params.level = '3'; params.hover = ''; params.ref = ''; }
 
     if (type === 'ilink') { params.page = ''; params.text = ''; }
     if (type === 'wlink') { params.page = ''; params.text = ''; }
@@ -428,12 +450,15 @@ const openRefParamDialog = (type: ReferenceType, target: 'editor' | 'fixbox' = '
 
     tempRefParams.value = params;
 
-    // Editing a Fixbox that already has a reference of this type: pre-fill from it
-    if (target === 'fixbox' && tempFixboxParams.value.ref) {
-        const f = parseRefToFields(tempFixboxParams.value.ref);
-        if (f && f.type === type) {
-            applyRefFields(f);
-            editingExistingFixboxRef.value = true;
+    // Editing a Fixbox that already has a reference or AI note of this type: pre-fill from it
+    if (target === 'fixbox') {
+        const existingStr = type === 'ainote' ? tempFixboxParams.value.ai : tempFixboxParams.value.ref;
+        if (existingStr) {
+            const f = parseRefToFields(existingStr);
+            if (f && f.type === type) {
+                applyRefFields(f);
+                editingExistingFixboxRef.value = true;
+            }
         }
     }
 
@@ -468,6 +493,11 @@ const insertReference = () => {
         template = `{{u|${params.user}|${params.id}}}`;
     } else if (currentRefType.value === 'tlink') {
         template = `{{t|${params.template}}}`;
+    } else if (currentRefType.value === 'ainote') {
+        let inner = `level=${params.level || '3'}`;
+        if (params.hover) inner += `|hover=${params.hover}`;
+        if (params.ref) inner += `|ref=${params.ref}`;
+        template = `{{AI note|${inner}}}`;
     } else {
         const paramStr = Object.entries(params).map(([k, v]) => `${k}=${v}`).join('|');
         template = `{{${currentRefType.value}${paramStr ? '|' + paramStr : ''}}}`;
@@ -484,7 +514,11 @@ const insertReference = () => {
     }
 
     if (citationTarget.value === 'fixbox') {
-        tempFixboxParams.value.ref = template;
+        if (currentRefType.value === 'ainote') {
+            tempFixboxParams.value.ai = template;
+        } else {
+            tempFixboxParams.value.ref = template;
+        }
         showRefParamDialog.value = false;
         citationTarget.value = 'editor';
         editingExistingFixboxRef.value = false;
@@ -562,7 +596,7 @@ defineExpose({
         <!-- Header: title · description · source toggle -->
         <div class="wysiwyg-header sticky top-0 z-20 flex items-center justify-between gap-2 px-3 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50/90 dark:bg-surface-800/80 backdrop-blur">
             <div class="flex items-center gap-2 min-w-0">
-                <component :is="icon" class="w-4 h-4 text-primary-500 shrink-0" v-if="icon" />
+                <component :is="icon" class="w-4 h-4 shrink-0" :class="iconClass || 'text-primary-500'" v-if="icon" />
                 <span v-if="label" class="text-sm font-semibold text-surface-700 dark:text-surface-200 truncate">{{ label }}</span>
                 <span v-if="description" v-tooltip.top="description"
                     class="text-surface-400 hover:text-primary-500 cursor-help shrink-0">
@@ -776,6 +810,36 @@ defineExpose({
                     <InputText v-model="tempRefParams.template" />
                 </InputGroup>
             </div>
+            <div v-if="currentRefType === 'ainote'" class="flex flex-col gap-3 pt-2">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-bold uppercase text-surface-500 tracking-wider">REAL AI Level</label>
+                    <Select v-model="tempRefParams.level" :options="aiNoteLevelOptions" optionLabel="label" optionValue="value" class="w-full">
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex items-center gap-2">
+                                <img v-if="aiNoteLevelOptions.find(o => o.value === slotProps.value)?.badge"
+                                    :src="aiNoteLevelOptions.find(o => o.value === slotProps.value)?.badge"
+                                    :alt="slotProps.value" class="w-4 h-4 object-contain" />
+                                <span>{{ aiNoteLevelOptions.find(o => o.value === slotProps.value)?.label }}</span>
+                            </div>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center gap-2 py-1">
+                                <img v-if="slotProps.option.badge" :src="slotProps.option.badge" :alt="slotProps.option.label" class="w-4 h-4 object-contain" />
+                                <span class="text-sm">{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                    <p class="text-2xs text-surface-400">Inline AI notes only display a badge for Levels 3–5.</p>
+                </div>
+                <InputGroup>
+                    <InputGroupAddon>Hover text</InputGroupAddon>
+                    <InputText v-model="tempRefParams.hover" placeholder="Optional tooltip hover description" />
+                </InputGroup>
+                <InputGroup>
+                    <InputGroupAddon>Ref Citation</InputGroupAddon>
+                    <InputText v-model="tempRefParams.ref" placeholder="e.g. <ref>...</ref> or <ref name='...' />" />
+                </InputGroup>
+            </div>
             <div class="flex justify-end gap-2 mt-4 w-full">
                 <Button label="Cancel" text @click="showRefParamDialog = false" class="ml-auto" />
                 <Button label="Insert" @click="insertReference" />
@@ -820,6 +884,28 @@ defineExpose({
                         <span class="text-xs hidden sm:inline">Citation</span>
                     </Button>
                 </div>
+            </div>
+
+            <!-- AI Disclosure -->
+            <div class="flex flex-col gap-2 p-3 bg-surface-50 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
+                <div class="flex items-center justify-between gap-4">
+                    <label class="text-xs font-bold uppercase text-surface-500 tracking-wider flex items-center gap-1.5">
+                        <Bot class="w-3.5 h-3.5 text-purple-500" />
+                        AI Disclosure
+                    </label>
+                    <div v-if="tempFixboxParams.ai" class="flex items-center gap-2 max-w-[200px]">
+                        <span class="text-[11px] truncate italic text-purple-600 dark:text-purple-400 font-mono" :title="tempFixboxParams.ai">
+                            {{ tempFixboxParams.ai }}
+                        </span>
+                        <Button aria-label="Clear AI disclosure" icon="pi pi-times" severity="danger" text rounded size="small" 
+                            class="w-6! h-6!" @click="tempFixboxParams.ai = ''" v-tooltip.top="'Clear AI disclosure'" />
+                    </div>
+                </div>
+                <Button aria-label="Set AI Note" size="small" rounded outlined severity="secondary" @click="openRefParamDialog('ainote', 'fixbox')" 
+                    class="gap-2 w-full" v-tooltip.top="'Attach AI Note disclosure to this fix'">
+                    <Bot class="w-4 h-4 text-purple-500" />
+                    <span class="text-xs">{{ tempFixboxParams.ai ? 'Edit AI Note' : 'Add AI Note' }}</span>
+                </Button>
             </div>
 
             <div class="flex items-center gap-2 mt-2">

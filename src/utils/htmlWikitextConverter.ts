@@ -51,6 +51,7 @@ const renderFixbox = (full: string): string => {
     const inner = full.replace(/^\{\{\s*Fixbox\s*\|/i, '').replace(/\}\}$/, '');
     let description = '';
     let ref = '';
+    let ai = '';
     let fix = '';
     let collapsed = false;
     for (const part of splitArgs(inner)) {
@@ -60,6 +61,7 @@ const renderFixbox = (full: string): string => {
             const val = part.slice(eq + 1).trim();
             if (key === 'description') description = val;
             else if (key === 'ref') ref = val;
+            else if (key === 'ai') ai = val;
             else if (key === 'collapsed') collapsed = val.toLowerCase() === 'yes';
             else if (key === 'fix') fix = val;
         } else if (part.trim() && !description) {
@@ -73,11 +75,17 @@ const renderFixbox = (full: string): string => {
         refHtml = `<sup class="reference">${renderInlineToken(innerRef) ?? esc(innerRef)}</sup>`;
     }
 
+    let aiHtml = '';
+    if (ai) {
+        const renderedAi = renderInlineToken(ai) ?? renderInlineMarkup(ai);
+        if (renderedAi) aiHtml = ` ${renderedAi} `;
+    }
+
     let htmlOut = `<div class="fixbox-wrapper" contenteditable="false" data-wikitext="${encWt(full)}"><table class="pcgwikitable fixbox${collapsed ? ' mw-collapsible mw-collapsed mw-made-collapsible' : ''}"><tbody><tr><th class="fixbox-title">`;
     if (collapsed) {
         htmlOut += `<span class="mw-collapsible-toggle mw-collapsible-toggle-default mw-collapsible-toggle-collapsed" role="button" tabindex="0" aria-expanded="false"><a class="mw-collapsible-text">Expand</a></span>`;
     }
-    htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${renderInlineMarkup(description)}${refHtml}</th></tr>`;
+    htmlOut += `<div title="Fix" class="svg-icon svg-16 fixbox-icon"></div>${aiHtml}${renderInlineMarkup(description)}${refHtml}</th></tr>`;
     if (fix && fix.trim() !== '') {
         htmlOut += `<tr${collapsed ? ' style="display: none;"' : ''}><td class="fixbox-body"><p>${renderInlineMarkup(fix.trim())}</p></td></tr>`;
     }
@@ -100,7 +108,7 @@ export const wikitextToHtml = (wikitext: string): string => {
     html = html.replace(/<ref(?:\s+name="[^"]*")?>[\s\S]*?<\/ref>/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));
 
     // Citation / formatting templates produced by the toolbar -> inline chips
-    html = replaceBalancedTemplates(html, /^(?:Refcheck|Refurl|cn|Key|u|t)$/i, (full) => chip(full, renderInlineToken(full) ?? esc(full)));
+    html = replaceBalancedTemplates(html, /^(?:Refcheck|Refurl|cn|Key|u|t|ainote|AI\s+note)$/i, (full) => chip(full, renderInlineToken(full) ?? esc(full)));
 
     // Interwiki / Wikipedia links produced by the "Wiki Link" button -> inline chips
     html = html.replace(/\[\[\s*w\s*\|\s*[^|\]]+?\s*\]\]/gi, (m) => chip(m, renderInlineToken(m) ?? esc(m)));

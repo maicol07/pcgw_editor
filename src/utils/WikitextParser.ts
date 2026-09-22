@@ -629,6 +629,42 @@ export class WikitextParser {
     }
 
     /**
+     * Remove a sub-section (Level 3 header === and content up to the next Level 2 or 3 header).
+     */
+    removeSubSection(header: string | RegExp): void {
+        let headerRegex: RegExp;
+        if (header instanceof RegExp) {
+            const source = header.source;
+            const flags = header.flags.replace('g', '').replace('y', '');
+            headerRegex = new RegExp(`^={3,}\\s*${source}\\s*={3,}[^\\n]*\\n?`, flags + 'm');
+        } else {
+            headerRegex = new RegExp(`^={3,}\\s*${this.escapeRegex(header)}\\s*={3,}[^\\n]*\\n?`, 'im');
+        }
+
+        const match = this.wikitext.match(headerRegex);
+        if (!match || match.index === undefined) {
+            return;
+        }
+
+        const headerStart = match.index;
+        const bodyStart = headerStart + match[0].length;
+
+        // Find the next section or subsection (Level 2 or 3 header: == or ===)
+        const nextHeaderRegex = /(?:^|\n)={2,}(?!=)/;
+        const remaining = this.wikitext.substring(bodyStart);
+        const nextMatch = remaining.match(nextHeaderRegex);
+
+        let end = this.wikitext.length;
+        if (nextMatch && nextMatch.index !== undefined) {
+            const offset = nextMatch[0].startsWith('\n') ? 1 : 0;
+            end = bodyStart + nextMatch.index + offset;
+        }
+
+        this.wikitext = this.wikitext.substring(0, headerStart) + this.wikitext.substring(end);
+        this.cleanNewlines();
+    }
+
+    /**
      * Escape special regex characters
      */
     private escapeRegex(str: string): string {

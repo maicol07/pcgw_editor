@@ -11,7 +11,7 @@ export function useReferences() {
 
         // Regex to capture template calls {{Name|params}} or any other text
         // Optionally wrapped in <ref> tags
-        const regex = /(?:<ref>)?\s*{{(Refcheck|Refurl|cn|key|ilink|wlink|ulink|tlink)([^}]*)}}\s*(?:<\/ref>)?|([^{<]+)/g;
+        const regex = /(?:<ref>)?\s*{{(Refcheck|Refurl|cn|key|ilink|wlink|ulink|tlink|ainote|AI\s+note)([^}]*)}}\s*(?:<\/ref>)?|([^{<]+)/gi;
         let match;
 
         while ((match = regex.exec(text)) !== null) {
@@ -21,7 +21,8 @@ export function useReferences() {
                     refs.push({ id: crypto.randomUUID(), type: 'text', params: {}, content: match[3].trim() });
                 }
             } else {
-                const type = match[1] as ReferenceType;
+                const rawType = match[1];
+                const type: ReferenceType = /^ai\s*note$/i.test(rawType) ? 'ainote' : (rawType as ReferenceType);
                 const paramStr = match[2];
                 const params: Record<string, string> = {};
 
@@ -59,6 +60,14 @@ export function useReferences() {
             if (r.type === 'text') return r.content || '';
 
             const sortedKeys = Object.keys(r.params).sort((a, b) => {
+                if (r.type === 'ainote') {
+                    const order = ['level', 'hover', 'ref'];
+                    const idxA = order.indexOf(a);
+                    const idxB = order.indexOf(b);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                }
                 const isANum = !isNaN(Number(a));
                 const isBNum = !isNaN(Number(b));
                 if (isANum && isBNum) return Number(a) - Number(b);
@@ -75,7 +84,8 @@ export function useReferences() {
                 })
                 .join('|');
 
-            let template = `{{${r.type}${paramsStr ? '|' + paramsStr : ''}}}`;
+            const tplName = r.type === 'ainote' ? 'AI note' : r.type;
+            let template = `{{${tplName}${paramsStr ? '|' + paramsStr : ''}}}`;
             
             if (r.wrapInRef && ['Refcheck', 'Refurl', 'cn'].includes(r.type)) {
                 template = `<ref>${template}</ref>`;

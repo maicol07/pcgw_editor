@@ -172,13 +172,29 @@ const SECTION_CONFIGS: Record<string, SectionConfig> = {
         headerRegex: /^Other\s+information$/i,
         defaultHeaderTitle: 'Other information',
         primaryTemplate: 'API',
-        additionalTemplates: ['Middleware'],
+        additionalTemplates: ['AI usage', 'Middleware'],
         generate: (editor, data) => {
+            editor.updateAiUsage(data.ai);
             editor.updateAPI(data.api);
             editor.updateMiddleware(data.middleware);
             editor.updateSectionImages('API', data.galleries['other'] || data.galleries['api']);
             editor.updateSectionImages('Middleware', data.galleries['middleware']);
         },
+    },
+    'other.ai': {
+        subHeaderRegex: /^AI\s+usage$/i,
+        primaryTemplate: 'AI usage',
+        generate: (editor, data) => editor.updateAiUsage(data.ai),
+    },
+    'other.aiUsage': {
+        subHeaderRegex: /^AI\s+usage$/i,
+        primaryTemplate: 'AI usage',
+        generate: (editor, data) => editor.updateAiUsage(data.ai),
+    },
+    ai: {
+        subHeaderRegex: /^AI\s+usage$/i,
+        primaryTemplate: 'AI usage',
+        generate: (editor, data) => editor.updateAiUsage(data.ai),
     },
     'other.api': {
         primaryTemplate: 'API',

@@ -322,6 +322,20 @@ export const FIELD_DEFINITIONS: Record<string, FieldMetadata> = {
     'middleware.multiplayer': { wikitextParam: 'multiplayer' },
     'middleware.anticheat': { wikitextParam: 'anticheat' },
 
+    // AI Usage
+    'realAiLevel': { wikitextParam: 'real ai level', defaultValue: '' },
+    'infobox.realAiLevel': { wikitextParam: 'real ai level', defaultValue: '' },
+    'ai.code': { wikitextParam: 'code' },
+    'ai.graphics2D': { wikitextParam: '2d graphics' },
+    'ai.graphics3D': { wikitextParam: '3d graphics' },
+    'ai.animation': { wikitextParam: 'animation' },
+    'ai.audio': { wikitextParam: 'audio' },
+    'ai.speech': { wikitextParam: 'speech' },
+    'ai.video': { wikitextParam: 'video' },
+    'ai.text': { wikitextParam: 'text' },
+    'ai.localization': { wikitextParam: 'localization' },
+    'ai.concept': { wikitextParam: 'concept' },
+
     // System Requirements
     'requirements': { wikitextParam: 'system_requirements', defaultValue: {} },
 

@@ -205,6 +205,7 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
     if (infobox) {
         data.infobox.cover = getParam(infobox, 'cover');
         data.infobox.license = getParam(infobox, 'license');
+        data.infobox.realAiLevel = getParam(infobox, 'real ai level');
 
         const parseRows = (paramName: string, rowTemplateName: string) => {
             const rows: any[] = [];
@@ -1070,6 +1071,21 @@ export async function parseWikitext(wikitext: string): Promise<GameData> {
         if (getParam(req, 'alt1OS') || getParam(req, 'alt1Title')) target.alt1 = parseAlt('alt1');
         if (getParam(req, 'alt2OS') || getParam(req, 'alt2Title')) target.alt2 = parseAlt('alt2');
     });
+
+    // --- AI Usage ---
+    const aiUsage = findTemplateGlobal('AI usage') || findTemplateGlobal('Ai usage');
+    if (aiUsage) {
+        data.ai.code = getParam(aiUsage, 'code');
+        data.ai.graphics2D = getParam(aiUsage, '2d graphics');
+        data.ai.graphics3D = getParam(aiUsage, '3d graphics');
+        data.ai.animation = getParam(aiUsage, 'animation');
+        data.ai.audio = getParam(aiUsage, 'audio');
+        data.ai.speech = getParam(aiUsage, 'speech');
+        data.ai.video = getParam(aiUsage, 'video');
+        data.ai.text = getParam(aiUsage, 'text');
+        data.ai.localization = getParam(aiUsage, 'localization');
+        data.ai.concept = getParam(aiUsage, 'concept');
+    }
 
     // --- Middleware ---
     const middleware = findTemplateGlobal('Middleware');

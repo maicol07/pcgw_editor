@@ -68,6 +68,20 @@ export interface GameInfobox {
         zoom?: string;
     };
     license: string;
+    realAiLevel?: string;
+}
+
+export interface GameAiUsage {
+    code?: string;
+    graphics2D?: string;
+    graphics3D?: string;
+    animation?: string;
+    audio?: string;
+    speech?: string;
+    video?: string;
+    text?: string;
+    localization?: string;
+    concept?: string;
 }
 
 export interface GameIntroduction {
@@ -718,6 +732,7 @@ export interface GameData {
     network: SettingsNetwork;
     vr: SettingsVR;
     localizations: LocalizationRow[];
+    ai: GameAiUsage;
     api: SettingsAPI;
     middleware: GameMiddleware;
 
@@ -734,6 +749,7 @@ export const initialGameData: GameData = {
     },
     infobox: {
         cover: 'GAME TITLE cover.jpg',
+        realAiLevel: '',
         developers: [],
         publishers: [],
         engines: [],
@@ -1006,6 +1022,18 @@ export const initialGameData: GameData = {
         other: [],
         systemReq: [],
         game_data: [],
+    },
+    ai: {
+        code: '',
+        graphics2D: '',
+        graphics3D: '',
+        animation: '',
+        audio: '',
+        speech: '',
+        video: '',
+        text: '',
+        localization: '',
+        concept: '',
     },
     issues: [],
 };

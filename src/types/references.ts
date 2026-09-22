@@ -1,4 +1,4 @@
-export type ReferenceType = 'Refcheck' | 'Refurl' | 'cn' | 'text' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink';
+export type ReferenceType = 'Refcheck' | 'Refurl' | 'cn' | 'text' | 'key' | 'ilink' | 'wlink' | 'ulink' | 'tlink' | 'ainote';
 
 export interface ReferenceItem {
     id: string; // internal id for unique keys

@@ -2,7 +2,7 @@
 // Shared snippet-tool buttons for the WYSIWYG and Source toolbars.
 // Emits a descriptor; the parent (WysiwygEditor) opens the matching dialog.
 // `.custom-action-btn` is styled globally by WysiwygEditor's <style> block.
-import { ListChecks, Link2, MessageSquareWarning, FileText, Globe, Keyboard, Wrench } from '@lucide/vue';
+import { ListChecks, Link2, MessageSquareWarning, FileText, Globe, Keyboard, Wrench, Bot } from '@lucide/vue';
 
 export type SnippetAction = { kind: 'ref'; type: string } | { kind: 'fixbox' };
 
@@ -23,6 +23,7 @@ const groups: { label: string; tools: { tip: string; icon: any; iconClass?: stri
     ] },
     { label: 'Tools', tools: [
         { tip: 'Fixbox', icon: Wrench, iconClass: 'text-orange-500', payload: { kind: 'fixbox' } },
+        { tip: 'AI Note', icon: Bot, iconClass: 'text-emerald-500', payload: { kind: 'ref', type: 'ainote' } },
     ] },
 ];
 </script>

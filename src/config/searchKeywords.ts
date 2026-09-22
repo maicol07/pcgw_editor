@@ -12,7 +12,7 @@ export const searchKeywords: Record<string, string[]> = {
     audio: ['surround', 'volume', 'voice', 'mute', 'subtitles'],
     network: ['multiplayer', 'server', 'p2p', 'crossplay', 'lan'],
     vr: ['hmd', 'trackir', 'oculus', 'vive', 'steamvr'],
-    other: ['api', 'middleware', 'directx', 'vulkan'],
+    other: ['ai', 'real ai', 'generative ai', 'api', 'middleware', 'directx', 'vulkan'],
     systemReq: ['requirement', 'ram', 'gpu', 'cpu', 'os'],
     l10n: ['lang', 'dub', 'sub', 'ui'],
     issues: ['issue', 'unresolved', 'fixed', 'bug'],

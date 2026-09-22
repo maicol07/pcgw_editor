@@ -56,7 +56,7 @@ import MetadataAutofillDialog from './components/infobox/MetadataAutofillDialog.
 import {
     File, Info, AlignLeft, ShoppingCart, DollarSign, PlusCircle,
     Star, Save, Monitor, Keyboard, Volume2, Wifi, Eye, Settings, Cpu, Globe, Loader2, AlertCircle, RefreshCw, FileClock,
-    Plus, Download, AlertTriangle, Code2, FileText, Boxes, Puzzle
+    Plus, Download, AlertTriangle, Code2, FileText, Boxes, Puzzle, Bot
 } from '@lucide/vue';
 import SubsectionCodeWrapper from './components/common/SubsectionCodeWrapper.vue';
 
@@ -328,6 +328,7 @@ const schemas = {
     audio: getSchema('audio'),
     network: getSchema('network'),
     vr: getSchema('vr'),
+    ai: getSchema('ai'),
     api: getSchema('api'),
     middleware: getSchema('middleware'),
     systemReq: getSchema('system_requirements'),
@@ -846,10 +847,45 @@ const handleDeleteSection = (sectionKey: string, targetEl: HTMLElement) => {
                                 <template #header>
                                     <div class="flex items-center gap-2">
                                         <Settings class="text-slate-500 w-4 h-4" /><span
-                                            class="section-eyebrow">Other Information (API, Middleware)</span>
+                                            class="section-eyebrow">Other Information (AI, API, Middleware)</span>
                                     </div>
                                 </template>
                                 <div class="flex flex-col gap-6">
+                                    <SubsectionCodeWrapper sectionKey="other.ai">
+                                        <template #header="{ isCodeMode, toggleCode }">
+                                            <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                                                        <Bot class="w-4 h-4 text-emerald-500" /> AI Usage
+                                                    </h3>
+                                                    <Transition name="scale-fade">
+                                                        <span v-if="isCodeMode"
+                                                            class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                            Code
+                                                        </span>
+                                                    </Transition>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="toggleCode"
+                                                    v-tooltip.top="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    :aria-label="isCodeMode ? 'Switch to visual editor' : 'Switch to code editor'"
+                                                    class="p-1.5 rounded-lg transition-colors active:scale-95"
+                                                    :class="isCodeMode
+                                                        ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
+                                                        : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800/60'">
+                                                    <Transition name="scale-fade" mode="out-in">
+                                                        <component :is="isCodeMode ? FileText : Code2" :key="isCodeMode ? 'visual-icon' : 'code-icon'" class="w-4 h-4 transition-transform duration-200" />
+                                                    </Transition>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <DynamicSection v-if="schemas.ai.value"
+                                            :section="schemas.ai.value" v-model="gameData" />
+                                    </SubsectionCodeWrapper>
+
+                                    <div class="border-t border-surface-200 dark:border-surface-700"></div>
+
                                     <SubsectionCodeWrapper sectionKey="other.api">
                                         <template #header="{ isCodeMode, toggleCode }">
                                             <div class="flex items-center justify-between pb-2 border-b border-surface-200/60 dark:border-surface-700/40">

@@ -1,4 +1,5 @@
 import { sanitizeHtml } from './sanitize';
+import { getIconSrc } from './icons';
 import iconTcTrue from '../assets/icons/tc-true.svg';
 import iconTcFalse from '../assets/icons/tc-false.svg';
 import iconTcUnknown from '../assets/icons/tc-unknown.svg';
@@ -706,10 +707,91 @@ export const renderWikitextToHtml = (wikitext: string, title: string = 'Preview'
                     <td class="table-api-body-support">${w64}</td>
                     <td class="table-api-body-notes">${data['windows notes'] || ''}</td>
                  </tr>`;
-                }
+                 }
                 t2 += '</table></div>';
                 bodyText = bodyText.replace(tpl.content, t1 + t2);
             }
+        }
+
+        // 8.5. AI usage
+        const aiTemplates = findBalancedTemplate(bodyText, 'AI usage');
+        if (aiTemplates.length > 0) {
+            const tpl = aiTemplates[0];
+            const inner = tpl.content.slice('{{AI usage'.length, -2);
+            const args = splitArgs(inner);
+            const aiData: Record<string, string> = {};
+            args.forEach(a => {
+                const parts = a.split('=');
+                if (parts.length >= 2) {
+                    const k = parts[0].replace(/^\|/, '').trim().toLowerCase();
+                    const v = parts.slice(1).join('=').trim();
+                    aiData[k] = v;
+                }
+            });
+
+            const realAiLevel = infobox?.['real ai level']?.trim();
+            const levelExplanations: Record<string, { title: string; desc: string }> = {
+                '0': { title: 'Level 0: No AI', desc: 'No intentional AI usage in production. Programs with AI features are okay if those features are not used. Note that this is not just generative AI, but ALL AI.' },
+                '1': { title: 'Level 1: Automation', desc: 'Specialized AI tools where there is NO generative AI. These can apply an after effect, filter, or change only details or cleans the presentation of your work.' },
+                '2': { title: 'Level 2: Brainstorming', desc: 'AI idea development, organization, structuring or outlining, where no AI generated content is used directly in the final product.' },
+                '3': { title: 'Level 3: Building Blocks', desc: 'AI generation of building block components (even if edited or traced). If any AI generation reaches the final product, it is at least this level.' },
+                '4': { title: 'Level 4: Major Components', desc: 'AI generation of major components or ideas (even if edited or traced). This is more than incidental use, where the content of the work would have been different if AI was not involved.' },
+                '5': { title: 'Level 5: Substantial/Whole', desc: 'AI generation of the large part or whole work (even if edited or traced). No matter how complex the prompt is, if the work is copy/pasted with only minimal human intervention.' },
+                'unknown': { title: 'Unknown', desc: 'It is not known whether, or to what extent, this game uses AI.' },
+            };
+
+            let ratingRows = '';
+            if (realAiLevel && levelExplanations[realAiLevel]) {
+                const info = levelExplanations[realAiLevel];
+                const badgeSrc = getIconSrc(realAiLevel, 'ai');
+                const badgeHtml = badgeSrc ? `<img src="${badgeSrc}" alt="${info.title}" class="table-ai-usage-badge" style="height: 32px; width: auto; vertical-align: middle; margin-right: 8px;" />` : '';
+                ratingRows = `
+                <tr class="template-infotable-head table-ai-usage-head-row">
+                    <th scope="col" style="width: 230px; text-align: right;" class="table-ai-usage-head-icon">Rating</th>
+                    <th scope="col" style="width: 590px;" class="table-ai-usage-head-notes">Explanation</th>
+                </tr>
+                <tr class="template-infotable-body table-ai-usage-body-row">
+                    <th scope="row" class="table-ai-usage-body-level" style="width: 230px; text-align: right; padding-right: 10px; vertical-align: middle;">${badgeHtml}<span>${info.title}</span></th>
+                    <td class="table-ai-usage-body-notes" style="vertical-align: middle;">${info.desc}</td>
+                </tr>`;
+            }
+
+            const categories: [string, string][] = [
+                ['code', 'Code'],
+                ['2d graphics', '2D graphics'],
+                ['3d graphics', '3D graphics'],
+                ['animation', 'Animation'],
+                ['audio', 'Audio'],
+                ['speech', 'Speech'],
+                ['video', 'Video'],
+                ['text', 'Text'],
+                ['localization', 'Localization'],
+                ['concept', 'Concept'],
+            ];
+
+            let catRows = '';
+            categories.forEach(([key, label]) => {
+                const val = aiData[key];
+                if (val) {
+                    catRows += `
+                    <tr class="template-infotable-body table-ai-usage-body-row">
+                        <th scope="row" style="width: 230px; text-align: right;" class="table-ai-usage-body-parameter">${label}</th>
+                        <td class="table-ai-usage-body-notes">${val}</td>
+                    </tr>`;
+                }
+            });
+
+            let implHeader = '';
+            if (catRows) {
+                implHeader = `
+                <tr class="template-infotable-head table-ai-usage-head-row">
+                    <th scope="col" style="width: 230px; text-align: right;" class="table-ai-usage-head-parameter">Implementation</th>
+                    <th scope="col" style="width: 590px;" class="table-ai-usage-head-notes"></th>
+                </tr>`;
+            }
+
+            const tableHtml = `<span id="AI_usage"></span><div class="container-pcgwikitable"><table class="pcgwikitable template-infotable table-ai-usage" id="table-ai-usage"><tbody>${ratingRows}${implHeader}${catRows}</tbody></table></div>`;
+            bodyText = bodyText.replace(tpl.content, tableHtml);
         }
 
         // 9. Middleware
