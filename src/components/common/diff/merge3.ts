@@ -1,5 +1,5 @@
 // Pure 3-way merge helpers (no DOM) — unit-testable, used by ThreeWayMerge.vue.
-import { diffComm, diffIndices } from 'node-diff3';
+import { diffComm, diffIndices, merge } from 'node-diff3';
 
 export const HEAD = '<<<<<<<';
 export const SEP = '=======';
@@ -12,7 +12,7 @@ export type Conflict = { from: number; to: number; ours: string; theirs: string 
 //  left     = only the local version differs (edit or insertion)
 //  right    = only the online version differs
 //  conflict = both sides changed the same region differently
-type LineRanges = { lRange: [number, number]; oRange: [number, number] };
+type LineRanges = { bRange: [number, number]; lRange: [number, number]; oRange: [number, number] };
 export type Hunk =
     | ({ type: 'stable'; text: string } & LineRanges)
     | ({ type: 'left'; base: string; local: string } & LineRanges)
@@ -45,8 +45,6 @@ function applySide(baseL: string[], bs: number, be: number, diffs: Diff[]): stri
     return out.join('\n');
 }
 
-const lineCount = (s: string) => (s === '' ? 0 : s.split('\n').length);
-
 // Classify the three versions into an ordered list of hunks (diff3 over two 2-way diffs).
 // Each hunk also carries its 0-based line range in the local and online docs (lRange/oRange),
 // so the side panes can highlight exactly the lines a hunk owns.
@@ -56,30 +54,32 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
     const R = sideDiffs(baseL, online.split('\n'));
 
     const hunks: Hunk[] = [];
-    let pos = 0, li = 0, ri = 0, lLine = 0, oLine = 0;
-    const advance = (ll: number, ol: number): { lRange: [number, number]; oRange: [number, number] } => {
-        const r = { lRange: [lLine, lLine + ll] as [number, number], oRange: [oLine, oLine + ol] as [number, number] };
+    let pos = 0, li = 0, ri = 0, lLine = 0, oLine = 0, bLine = 0;
+    const advance = (ll: number, ol: number, bl: number): LineRanges => {
+        const r: LineRanges = { bRange: [bLine, bLine + bl], lRange: [lLine, lLine + ll], oRange: [oLine, oLine + ol] };
         lLine += ll; oLine += ol;
+        bLine += bl;
         return r;
     };
     const stable = (from: number, to: number) => {
-        if (to > from) hunks.push({ type: 'stable', text: baseL.slice(from, to).join('\n'), ...advance(to - from, to - from) });
+        if (to > from) hunks.push({ type: 'stable', text: baseL.slice(from, to).join('\n'), ...advance(to - from, to - from, to - from) });
     };
 
     while (li < L.length || ri < R.length) {
         const l = L[li], r = R[ri];
-        if (r === undefined || (l !== undefined && l.be <= r.bs)) {
+        const sameInsertion = l && r && l.bs === l.be && r.bs === r.be && l.bs === r.bs;
+        if (r === undefined || (l !== undefined && l.be <= r.bs && !sameInsertion)) {
             stable(pos, l.bs);
             hunks.push({
                 type: 'left', base: baseL.slice(l.bs, l.be).join('\n'), local: l.lines.join('\n'),
-                ...advance(l.lines.length, l.be - l.bs),
+                ...advance(l.lines.length, l.be - l.bs, l.be - l.bs),
             });
             pos = l.be; li++;
-        } else if (l === undefined || r.be <= l.bs) {
+        } else if (l === undefined || (r.be <= l.bs && !sameInsertion)) {
             stable(pos, r.bs);
             hunks.push({
                 type: 'right', base: baseL.slice(r.bs, r.be).join('\n'), online: r.lines.join('\n'),
-                ...advance(r.be - r.bs, r.lines.length),
+                ...advance(r.be - r.bs, r.lines.length, r.be - r.bs),
             });
             pos = r.be; ri++;
         } else {
@@ -90,13 +90,13 @@ export function computeHunks(local: string, base: string, online: string): Hunk[
             const cl: Diff[] = [], cr: Diff[] = [];
             for (let grew = true; grew;) {
                 grew = false;
-                while (li < L.length && L[li].bs < be) { be = Math.max(be, L[li].be); cl.push(L[li++]); grew = true; }
-                while (ri < R.length && R[ri].bs < be) { be = Math.max(be, R[ri].be); cr.push(R[ri++]); grew = true; }
+                while (li < L.length && (L[li].bs < be || (be === bs && L[li].bs === bs))) { be = Math.max(be, L[li].be); cl.push(L[li++]); grew = true; }
+                while (ri < R.length && (R[ri].bs < be || (be === bs && R[ri].bs === bs))) { be = Math.max(be, R[ri].be); cr.push(R[ri++]); grew = true; }
             }
             const localT = applySide(baseL, bs, be, cl), onlineT = applySide(baseL, bs, be, cr);
             hunks.push({
                 type: 'conflict', base: baseL.slice(bs, be).join('\n'), local: localT, online: onlineT,
-                ...advance(lineCount(localT), lineCount(onlineT)),
+                ...advance(sideLineCount(bs, be, cl), sideLineCount(bs, be, cr), be - bs),
             });
             pos = be;
         }
@@ -111,14 +111,21 @@ export function defaultChoices(hunks: Hunk[]): Choice[] {
     return hunks.map((h) => (h.type === 'stable' ? 'include' : 'unresolved'));
 }
 
-// Heuristic auto-resolution: keep both sides of a conflict, preferring the non-empty one.
-export function smartChoices(hunks: Hunk[]): Choice[] {
-    return hunks.map((h): Choice => {
-        if (h.type !== 'conflict') return 'include';
-        if (!h.local.trim()) return 'right';
-        if (!h.online.trim()) return 'left';
-        return 'both';
-    });
+function sideLineCount(from: number, to: number, diffs: Diff[]): number {
+    return to - from + diffs.reduce((n, d) => n + d.lines.length - (d.be - d.bs), 0);
+}
+
+export function isConflict(h: Hunk): boolean {
+    return h.type === 'conflict' && (h.local !== h.online || h.lRange[1] - h.lRange[0] !== h.oRange[1] - h.oRange[0]);
+}
+
+// Merge disjoint character edits within a conflicting line. Overlapping edits remain unresolved.
+export function simpleMerge(h: Hunk): string | null {
+    if (h.type !== 'conflict') return null;
+    if (h.local.length > WORD_DIFF_LIMIT || h.base.length > WORD_DIFF_LIMIT || h.online.length > WORD_DIFF_LIMIT) return null;
+    if (h.local === h.online && isConflict(h)) return null;
+    const result = merge([...h.local], [...h.base], [...h.online], { excludeFalseConflicts: true });
+    return result.conflict ? null : result.result.join('');
 }
 
 // The text a hunk contributes to the merged result under a given choice. Anything still undecided
@@ -132,7 +139,10 @@ export function hunkText(h: Hunk, c: Choice): string {
             switch (c) {
                 case 'left': return h.local;
                 case 'right': return h.online;
-                case 'both': return `${h.local}\n${h.online}`;
+                case 'both': return [
+                    h.lRange[0] === h.lRange[1] ? null : h.local,
+                    h.oRange[0] === h.oRange[1] ? null : h.online,
+                ].filter((text) => text !== null).join('\n');
                 default: return h.base;
             }
     }
@@ -143,24 +153,36 @@ export function hunkText(h: Hunk, c: Choice): string {
 // a gutter button and a marker there — otherwise they'd be invisible and unresolvable.
 export function buildResult(hunks: Hunk[], choices: Choice[]): {
     text: string;
-    ranges: { from: number; to: number; hunk: number }[];
+    ranges: HunkRange[];
 } {
     let text = '';
     let first = true;
-    const ranges: { from: number; to: number; hunk: number }[] = [];
+    const ranges: HunkRange[] = [];
     hunks.forEach((h, i) => {
         const piece = hunkText(h, choices[i]);
-        if (piece === '') {
-            ranges.push({ from: text.length, to: text.length, hunk: i });
+        const count = hunkLineCount(h, choices[i]);
+        if (count === 0) {
+            ranges.push({ from: text.length, to: text.length, hunk: i, empty: true });
             return;
         }
         if (!first) text += '\n';
         first = false;
         const from = text.length;
         text += piece;
-        ranges.push({ from, to: text.length, hunk: i });
+        ranges.push({ from, to: text.length, hunk: i, empty: false });
     });
     return { text, ranges };
+}
+
+export type HunkRange = { from: number; to: number; hunk: number; empty: boolean };
+
+export function hunkLineCount(h: Hunk, c: Choice): number {
+    const size = ([from, to]: [number, number]) => to - from;
+    if (h.type === 'stable') return size(h.bRange);
+    if (c === 'include' && h.type === 'left' || c === 'left') return size(h.lRange);
+    if (c === 'include' && h.type === 'right' || c === 'right') return size(h.oRange);
+    if (c === 'both') return size(h.lRange) + size(h.oRange);
+    return size(h.bRange);
 }
 
 // Split into words, punctuation and whitespace runs, keeping each token's char offsets.

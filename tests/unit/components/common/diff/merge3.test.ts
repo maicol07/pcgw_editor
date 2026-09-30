@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    findConflicts, changedLineSet, computeHunks, defaultChoices, smartChoices, buildResult, wordDiff,
+    findConflicts, changedLineSet, computeHunks, defaultChoices, simpleMerge, isConflict, buildResult, wordDiff,
 } from '@/components/common/diff/merge3';
 
 const base = 'line1\nbase\nline3';
@@ -85,12 +85,31 @@ describe('hunk model', () => {
         expect(deleted.from).toBe(deleted.to);
     });
 
-    it('smart resolves conflicts to both sides', () => {
+    it('leaves overlapping character changes unresolved', () => {
         const hunks = computeHunks('line1\nMINE\nline3', base, 'line1\nTHEIRS\nline3');
-        const { text } = buildResult(hunks, smartChoices(hunks));
-        expect(text).toContain('MINE');
-        expect(text).toContain('THEIRS');
-        expect(findConflicts(text)).toHaveLength(0);
+        expect(simpleMerge(hunks.find((h) => h.type === 'conflict')!)).toBeNull();
+    });
+
+    it('merges disjoint edits within the same line', () => {
+        const hunks = computeHunks('red middle last', 'first middle last', 'first middle blue');
+        expect(simpleMerge(hunks[0])).toBe('red middle blue');
+    });
+
+    it('treats competing insertions at the same position as one conflict', () => {
+        const hunks = computeHunks('a\nleft\nb', 'a\nb', 'a\nright\nb');
+        expect(hunks.filter(isConflict)).toHaveLength(1);
+        expect(buildResult(hunks, defaultChoices(hunks)).text).toBe('a\nb');
+    });
+
+    it('recognizes identical changes as non-conflicting', () => {
+        const hunks = computeHunks('a\nsame\nb', 'a\nb', 'a\nsame\nb');
+        expect(hunks.filter(isConflict)).toHaveLength(0);
+        expect(buildResult(hunks, defaultChoices(hunks)).text).toBe('a\nb');
+    });
+
+    it.each(['a\n', '\na', 'a\n\nb', '\n', ''])('preserves blank lines in the initial base %j', (text) => {
+        const hunks = computeHunks(text, text, text);
+        expect(buildResult(hunks, defaultChoices(hunks)).text).toBe(text);
     });
 });
 

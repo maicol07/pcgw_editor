@@ -68,11 +68,8 @@ const finishMerge = () => {
                     <TabPanel value="0" class="h-full p-0!">
                         <div class="flex flex-col h-full gap-4">
                             <div class="text-xs text-surface-500 px-1">
-                                Merging Changes from PCGamingWiki. Use the gutter buttons to include, discard or resolve
-                                every change before finishing.
-                                <br />
-                                <span class="text-2xs opacity-70">Left: Local Version | Center: Merged Result | Right:
-                                    Online Version</span>
+                                Accept or ignore changes from each side, or edit the result directly and mark the change
+                                resolved. The result starts from the base revision.
                             </div>
 
                             <div

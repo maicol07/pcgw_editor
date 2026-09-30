@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { EditorView, Decoration, WidgetType, keymap, type DecorationSet } from '@codemirror/view';
-import { EditorState, StateField, StateEffect, Prec, type Range } from '@codemirror/state';
-import { history } from '@codemirror/commands';
+import { EditorView, Decoration, WidgetType, keymap, lineNumbers, drawSelection, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { EditorState, StateField, StateEffect, Prec, type Range, type Text } from '@codemirror/state';
+import { history, undo as cmUndo, redo as cmRedo, undoDepth, redoDepth, historyKeymap, defaultKeymap, isolateHistory } from '@codemirror/commands';
 import Button from 'openvue/button';
 import {
-    ChevronsLeft, ChevronsRight, FoldHorizontal, Wand2, Bot, ArrowLeft, ArrowRight, X, Plus,
-    Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check,
+    ChevronsLeft, ChevronsRight, FoldHorizontal, Wand2, Bot, ArrowLeft, ArrowRight, X,
+    Undo2, Redo2, UnfoldVertical, FoldVertical, ChevronUp, ChevronDown, Check, LockKeyhole, Link, WrapText, RotateCcw,
 } from '@lucide/vue';
 import {
-    computeHunks, defaultChoices, smartChoices, buildResult, findConflicts, hunkText, wordDiff,
-    type Hunk, type Choice,
+    findConflicts, isConflict, simpleMerge, wordDiff, type Hunk, type HunkRange,
 } from './merge3';
+import { createMergeModel, isResolved, mergeAction, mergeModelField, mergeHistory, setMergeModel, type Resolution, type Side, type MergeAction } from './mergeState';
 // AIService is imported lazily at the call site: a static import pulls the three @ai-sdk
 // providers (~700 kB) into the startup bundle for a feature many sessions never use.
 import { wikitextExtensions, isDark } from './cmWikitext';
@@ -34,45 +34,42 @@ const emit = defineEmits<{
 const COLLAPSE_MIN = 6; // collapse stable regions at least this many lines long
 
 let hunks: Hunk[] = [];
-let choices: Choice[] = [];
-let ranges: { from: number; to: number; hunk: number }[] = []; // char ranges of every hunk in the result
+let resolutions: Resolution[] = [];
+let ranges: HunkRange[] = [];
 let resultText = ''; // merged text as last derived from the model
 const expanded = new Set<number>(); // stable hunks the user expanded
 // Nothing is preselected: a block is "decided" exactly when it no longer holds the ancestor by default.
-const isDecided = (i: number) => choices[i] !== 'unresolved';
-const collapseOn = ref(true);
+const isDecided = (i: number) => isResolved(resolutions[i]);
+const collapseOn = ref(false);
+const scrollLocked = ref(true);
+const wrapLines = ref(false);
 const aiLoading = ref(false);
 const aiError = ref('');
 const unresolvedCount = ref(0);
-const yoursCount = ref(0), theirsCount = ref(0), conflictCount = ref(0);
+const conflictCount = ref(0);
 const currentConflictIndex = ref(-1);
+const selectedConflict = ref(false);
+const simpleCount = ref(0);
 
 // One gutter entry per visible change: which hunk, its kind, the resolution the user picked (none is
 // preselected), its y offset, and the block geometry used to draw the connector.
-type Marker = { i: number; type: Hunk['type']; choice: Choice | null; top: number; link: string };
+type ChangeKind = 'modified' | 'inserted' | 'deleted' | 'conflict';
+type Marker = { i: number; type: ChangeKind; pending: boolean; resolved: boolean; top: number; link: string };
 const markersL = ref<Marker[]>([]), markersR = ref<Marker[]>([]);
 const bodyHeight = ref(0); // gutter SVG viewBox height, in the same px space as marker tops
-const GUTTER_W = 56; // must match the gutter columns' w-14
+const GUTTER_W = 48;
 
-// ---- model undo/redo (actions are state changes, not just text) ----
-type Snap = { hunks: Hunk[]; choices: Choice[] };
-let past: Snap[] = [], futureStk: Snap[] = [];
+// Merge decisions and typing share CodeMirror's history.
 const canUndo = ref(false), canRedo = ref(false);
-const syncHist = () => { canUndo.value = past.length > 0; canRedo.value = futureStk.length > 0; };
-const snap = (): Snap => ({ hunks: hunks.slice(), choices: choices.slice() });
-const restore = (s: Snap) => { hunks = s.hunks; choices = s.choices; };
-const pushUndo = () => { past.push(snap()); futureStk = []; syncHist(); };
+const syncHist = () => {
+    canUndo.value = !!center && undoDepth(center.state) > 0;
+    canRedo.value = !!center && redoDepth(center.state) > 0;
+};
 function undo() {
-    if (!past.length) return false;
-    futureStk.push(snap());
-    restore(past.pop()!);
-    rebuild(); syncHist(); return true;
+    return !!center && cmUndo(center);
 }
 function redo() {
-    if (!futureStk.length) return false;
-    past.push(snap());
-    restore(futureStk.pop()!);
-    rebuild(); syncHist(); return true;
+    return !!center && cmRedo(center);
 }
 
 // ---- decorations ----
@@ -94,28 +91,42 @@ class FoldWidget extends WidgetType {
     constructor(readonly hunk: number, readonly count: number) { super(); }
     eq(o: FoldWidget) { return o.hunk === this.hunk && o.count === this.count; }
     toDOM() {
-        const el = document.createElement('div');
+        const el = document.createElement('button');
+        el.type = 'button';
         el.className = 'cm-fold';
         el.innerHTML = `${UNFOLD_SVG}<span>${this.count} unchanged lines</span>`;
         el.title = 'Click to expand';
-        el.onmousedown = (e) => { e.preventDefault(); expanded.add(this.hunk); refreshDecos(); };
+        el.onclick = () => { expanded.add(this.hunk); refreshDecos(); };
         return el;
     }
     ignoreEvent() { return false; }
 }
 
 // Collapse a stable region [fromLine, toLine] (1-based, inclusive) if long enough.
-function foldRange(doc: any, fromLine: number, toLine: number, hunk: number): Range<Decoration> | null {
+function foldRange(doc: Text, fromLine: number, toLine: number, hunk: number): Range<Decoration> | null {
     const count = toLine - fromLine + 1;
     if (!collapseOn.value || expanded.has(hunk) || count < COLLAPSE_MIN) return null;
     const from = doc.line(fromLine).from, to = doc.line(toLine).to;
     return Decoration.replace({ widget: new FoldWidget(hunk, count), block: true }).range(from, to);
 }
 
-// Highlight class for a hunk: colour by type, dimmed + dashed outline once the user has decided it.
+// Use the same change colors in all three panes.
 function hunkClass(h: Hunk, i: number): string {
-    const cls = h.type === 'conflict' ? 'cm-conflict' : h.type === 'left' ? 'cm-changed-local' : 'cm-changed-online';
+    const cls = `cm-merge-${changeKind(h)}`;
     return isDecided(i) ? `${cls} cm-resolved` : cls;
+}
+
+function changeKind(h: Hunk): ChangeKind {
+    if (isConflict(h)) return 'conflict';
+    if (h.type === 'stable') return 'modified';
+    if (h.bRange[0] === h.bRange[1]) return 'inserted';
+    if (h.type === 'left' ? h.lRange[0] === h.lRange[1] : h.oRange[0] === h.oRange[1]) return 'deleted';
+    return 'modified';
+}
+
+function resultBlock(i: number): string {
+    const r = ranges[i];
+    return center?.state.doc.sliceString(r.from, r.to) ?? '';
 }
 
 // What a hunk reads as in one of the side documents (for a change the other side made, this side
@@ -126,12 +137,10 @@ function sideText(h: Hunk, side: 'local' | 'online'): string {
     return h.type === (side === 'local' ? 'left' : 'right') ? (h.type === 'left' ? h.local : h.online) : h.base;
 }
 
-// A side only gets a highlight and controls where it actually differs from the result — otherwise the
-// same change would be offered twice, once per gutter. Exactly one side differs for a settled
-// one-sided change; both do for a pending conflict.
+// Compare the actual result, including manual edits, for inline highlighting.
 function differsFromResult(i: number, side: 'local' | 'online'): boolean {
     const h = hunks[i];
-    return !!h && h.type !== 'stable' && sideText(h, side) !== hunkText(h, choices[i]);
+    return !!h && h.type !== 'stable' && sideText(h, side) !== resultBlock(i);
 }
 
 // Is hunk `i` empty in this document? (a deletion has no lines of its own on the side that dropped it)
@@ -149,19 +158,16 @@ function isZeroLen(i: number, which: 'result' | 'local' | 'online'): boolean {
 // A zero-length hunk anchors on the boundary between the stable regions around it. Folding straight up
 // to that boundary would bury the position inside a block widget, where coordsAtPos can't place the
 // gutter button or the connector — so give up one line of the fold on that side.
-function trimmedFold(doc: any, fromLine: number, toLine: number, i: number, which: 'result' | 'local' | 'online') {
+function trimmedFold(doc: Text, fromLine: number, toLine: number, i: number, which: 'result' | 'local' | 'online') {
     if (isZeroLen(i - 1, which)) fromLine++;
     if (isZeroLen(i + 1, which)) toLine--;
     return toLine >= fromLine ? foldRange(doc, fromLine, toLine, i) : null;
 }
 
-// Line classes for a block: the first/last line carry the top/bottom edge, so a settled block
-// reads as one dashed box rather than a stack of open-sided rows.
 function blockLines(state: EditorState, fromLine: number, toLine: number, cls: string): Range<Decoration>[] {
     const out: Range<Decoration>[] = [];
     for (let n = fromLine; n <= toLine; n++) {
-        const edge = `${n === fromLine ? ' cm-blk-top' : ''}${n === toLine ? ' cm-blk-bottom' : ''}`;
-        out.push(Decoration.line({ class: cls + edge }).range(state.doc.line(n).from));
+        out.push(Decoration.line({ class: cls }).range(state.doc.line(n).from));
     }
     return out;
 }
@@ -208,9 +214,8 @@ function buildPaneDeco(state: EditorState, side: 'local' | 'online'): Decoration
             }
             return;
         }
-        // A pane marks a block only where it differs from the result — the colour still says who
-        // changed it, but the same change is never offered from both sides at once.
-        if (!differsFromResult(i, side)) return;
+        // One-sided changes only have controls and highlighting on the changed side.
+        if (h.type === 'left' && side === 'online' || h.type === 'right' && side === 'local') return;
 
         let fromLine = from0 + 1;
         let toLine = Math.min(to0, lines);
@@ -225,7 +230,7 @@ function buildPaneDeco(state: EditorState, side: 'local' | 'online'): Decoration
 
         out.push(...blockLines(state, fromLine, toLine, hunkClass(h, i)));
         const from = state.doc.line(fromLine).from;
-        out.push(...wordMarks(state.doc.sliceString(from, state.doc.line(toLine).to), hunkText(h, choices[i]), from, state.doc.length));
+        out.push(...wordMarks(state.doc.sliceString(from, state.doc.line(toLine).to), resultBlock(i), from, state.doc.length));
     });
     return Decoration.set(out, true);
 }
@@ -240,9 +245,9 @@ let left: EditorView | null = null, center: EditorView | null = null, right: Edi
 // until the user says so. That, plus no leftover conflict markers, is what unlocks the merge.
 const emitState = (doc: string) => {
     unresolvedCount.value = hunks.filter((h, i) => h.type !== 'stable' && !isDecided(i)).length;
-    yoursCount.value = hunks.filter((h) => h.type === 'left').length;
-    theirsCount.value = hunks.filter((h) => h.type === 'right').length;
-    conflictCount.value = hunks.filter((h) => h.type === 'conflict').length;
+    conflictCount.value = hunks.filter((h, i) => isConflict(h) && !isDecided(i)).length;
+    simpleCount.value = hunks.filter((h, i) => isConflict(h) && !isDecided(i) && simpleMerge(h) !== null && resolutions[i].left === 'pending' && resolutions[i].right === 'pending').length;
+    selectedConflict.value = currentConflictIndex.value >= 0 && isConflict(hunks[currentConflictIndex.value]) && !isDecided(currentConflictIndex.value);
     emit('update:result', doc);
     emit('update:conflictsResolved', unresolvedCount.value === 0 && findConflicts(doc).length === 0);
 };
@@ -254,6 +259,7 @@ function goTo(hunkIdx: number) {
     const range = ranges.find((r) => r.hunk === hunkIdx);
     if (!range || !center) return;
     currentConflictIndex.value = hunkIdx;
+    selectedConflict.value = isConflict(hunks[hunkIdx]) && !isDecided(hunkIdx);
     center.dispatch({ selection: { anchor: range.from }, scrollIntoView: true });
 }
 
@@ -267,6 +273,18 @@ function goToPrevConflict() {
     const idx = pendingBlocks();
     if (!idx.length) return;
     goTo(idx.filter((i) => i < currentConflictIndex.value).pop() ?? idx[idx.length - 1]);
+}
+
+function selectSideChange(update: ViewUpdate, side: Side) {
+    if (!update.selectionSet) return;
+    const line = update.state.doc.lineAt(update.state.selection.main.head).number - 1;
+    const index = hunks.findIndex((h) => {
+        const [from, to] = side === 'left' ? h.lRange : h.oRange;
+        return h.type !== 'stable' && line >= from && line < to;
+    });
+    if (index < 0) return;
+    currentConflictIndex.value = index;
+    selectedConflict.value = isConflict(hunks[index]) && !isDecided(index);
 }
 
 // Vertical extent of [from, to) inside a view, relative to the body. A zero-width position (a
@@ -297,7 +315,7 @@ function recomputeMarkers() {
     const bodyTop = bodyEl.value.getBoundingClientRect().top;
     const bodyH = bodyEl.value.clientHeight;
     // Mounted inside a Dialog: a measurement taken before layout would clip every marker away.
-    if (!bodyH) { requestAnimationFrame(recomputeMarkers); return; }
+    if (!bodyH) return;
     bodyHeight.value = bodyH;
 
     const outL: Marker[] = [], outR: Marker[] = [];
@@ -307,21 +325,17 @@ function recomputeMarkers() {
         const mid = blockY(center, r.from, r.to, bodyTop);
         if (!mid) continue;
         const base = {
-            i: r.hunk, type: h.type, top: mid[0],
-            choice: isDecided(r.hunk) ? choices[r.hunk] : null,
+            i: r.hunk, type: changeKind(h), top: mid[0], resolved: isDecided(r.hunk),
         };
         if (mid[0] < -40 || mid[0] > bodyH) continue;
-        // Controls appear on the side(s) the result no longer matches: one gutter for a settled
-        // one-sided change, both for a pending conflict. The buttons follow the result block alone —
-        // when the counterpart in a side pane can't be measured (scrolled out, or clamped at a shorter
-        // doc's end) we drop the ribbon, never the buttons.
-        if (differsFromResult(r.hunk, 'local')) {
+        // Keep each side's controls until that side has an explicit decision.
+        if (h.type !== 'right') {
             const side = left && paneY(left, h.lRange, bodyTop);
-            outL.push({ ...base, link: side ? linkPath(side, mid) : '' });
+            outL.push({ ...base, pending: resolutions[r.hunk].left === 'pending', link: side ? linkPath(side, mid) : '' });
         }
-        if (differsFromResult(r.hunk, 'online')) {
+        if (h.type !== 'left') {
             const side = right && paneY(right, h.oRange, bodyTop);
-            outR.push({ ...base, link: side ? linkPath(mid, side) : '' });
+            outR.push({ ...base, pending: resolutions[r.hunk].right === 'pending', link: side ? linkPath(mid, side) : '' });
         }
     }
     markersL.value = outL;
@@ -336,78 +350,46 @@ function refreshDecos() {
     nextTick(() => requestAnimationFrame(recomputeMarkers));
 }
 
-// Narrow a whole-document rewrite down to the part that actually changed. Replacing the full doc
-// makes CodeMirror re-measure asynchronously and lose the scroll position (the pane jumps to the top
-// and every gutter button scrolls out of view); a change confined to one region keeps the viewport.
-function minimalChange(old: string, next: string): { from: number; to: number; insert: string } | null {
-    if (old === next) return null;
-    let s = 0;
-    const max = Math.min(old.length, next.length);
-    while (s < max && old[s] === next[s]) s++;
-    let e = 0;
-    while (e < max - s && old[old.length - 1 - e] === next[next.length - 1 - e]) e++;
-    return { from: s, to: old.length - e, insert: next.slice(s, next.length - e) };
-}
-
-// ponytail: rebuild re-derives the result from the model — manual edits inside a block that a button
-// then changes are discarded. Edit freely for final touch-ups after resolving via buttons.
-function rebuild() {
-    if (!center) return;
+function applyAction(index: number, action: MergeAction, side: Side) {
+    if (!center || index < 0) return false;
+    currentConflictIndex.value = index;
     aiError.value = '';
-    const res = buildResult(hunks, choices);
-    ranges = res.ranges;
-    resultText = res.text;
-    const change = minimalChange(center.state.doc.toString(), res.text);
-    if (change) center.dispatch({ changes: change, scrollIntoView: false });
-    refreshDecos();
-    emitState(res.text);
+    center.dispatch(mergeAction(center.state, index, action, side, ''));
+    return true;
 }
 
-function setChoice(idx: number, c: Choice) { pushUndo(); choices[idx] = c; rebuild(); }
-
-// Gutter controls. In both gutters the arrow points into the result and means "use this side's text";
-// X means "drop this side's text" (i.e. take the other one). A block is reachable from either gutter,
-// so a change one side made is still revertable from the side that didn't make it.
-const ICONS = { ArrowRight, ArrowLeft, X, Plus };
-type Btn = { icon: keyof typeof ICONS; choice: Choice; tip: string };
-function buttons(type: Hunk['type'], side: 'left' | 'right'): Btn[] {
-    const into: keyof typeof ICONS = side === 'left' ? 'ArrowRight' : 'ArrowLeft';
-    const yours = side === 'left';
-    if (type === 'conflict') {
-        return [
-            { icon: into, choice: yours ? 'left' : 'right', tip: yours ? 'Take yours' : 'Take theirs' },
-            { icon: 'Plus', choice: 'both', tip: 'Keep both' },
-            { icon: 'X', choice: yours ? 'right' : 'left', tip: yours ? 'Discard yours' : 'Discard theirs' },
-        ];
+// Build one transaction for a bulk action, so a single undo restores every block.
+function applyNonConflicting(sides: Side[]) {
+    if (!center) return;
+    let state = center.state;
+    let changes = state.changes([]);
+    for (let i = 0; i < hunks.length; i++) {
+        if (hunks[i].type === 'stable' || isConflict(hunks[i])) continue;
+        for (const side of sides) {
+            if (state.field(mergeModelField).resolutions[i][side] !== 'pending') continue;
+            const tr = state.update(mergeAction(state, i, 'accept', side, ''));
+            changes = changes.compose(tr.changes);
+            state = tr.state;
+        }
     }
-    // Did this gutter's side make the change?
-    return (type === 'left') === yours
-        ? [
-            { icon: into, choice: 'include', tip: yours ? 'Keep your change' : 'Keep their change' },
-            { icon: 'X', choice: 'discard', tip: yours ? 'Discard your change' : 'Discard their change' },
-        ]
-        : [
-            { icon: into, choice: 'discard', tip: yours ? 'Keep your version' : 'Keep their version' },
-            { icon: 'X', choice: 'include', tip: yours ? 'Use their change' : 'Use your change' },
-        ];
+    if (state !== center.state) center.dispatch({ changes, effects: setMergeModel.of(state.field(mergeModelField)), annotations: isolateHistory.of('full') });
 }
-// A bulk action decides every changed block at once.
-function applyAll(map: (h: Hunk) => Choice) { pushUndo(); choices = hunks.map(map); rebuild(); }
-const acceptLeft = () => applyAll((h) => (h.type === 'conflict' ? 'left' : h.type === 'right' ? 'discard' : 'include'));
-const acceptRight = () => applyAll((h) => (h.type === 'conflict' ? 'right' : h.type === 'left' ? 'discard' : 'include'));
-// Apply every one-sided change, leaving conflict decisions untouched.
-const acceptBoth = () => {
-    pushUndo();
-    choices = hunks.map((h, i) => (h.type === 'conflict' ? choices[i] : 'include'));
-    rebuild();
-};
-// Auto-resolve conflicts only — one-sided decisions the user already made are kept.
-const smartApply = () => {
-    pushUndo();
-    const smart = smartChoices(hunks);
-    choices = hunks.map((h, i) => (h.type === 'conflict' ? smart[i] : choices[i]));
-    rebuild();
-};
+
+function smartApply() {
+    if (!center) return;
+    let state = center.state;
+    let changes = state.changes([]);
+    for (let i = 0; i < hunks.length; i++) {
+        const resolution = state.field(mergeModelField).resolutions[i];
+        if (!isConflict(hunks[i]) || resolution.left !== 'pending' || resolution.right !== 'pending') continue;
+        const text = simpleMerge(hunks[i]);
+        if (text === null) continue;
+        const tr = state.update(mergeAction(state, i, 'simple', 'left', text));
+        changes = changes.compose(tr.changes);
+        state = tr.state;
+    }
+    if (state !== center.state) center.dispatch({ changes, effects: setMergeModel.of(state.field(mergeModelField)), annotations: isolateHistory.of('full') });
+}
 
 function toggleCollapse() {
     collapseOn.value = !collapseOn.value;
@@ -420,65 +402,90 @@ async function aiResolve() {
     try {
         const { resolveMerge } = await import('../../../services/ai/AIService');
         const merged = await resolveMerge(props.local, props.base, props.online);
-        pushUndo();
-        hunks = []; choices = []; ranges = []; // AI output isn't model-tracked → nothing left to decide
-        center!.dispatch({ changes: { from: 0, to: center!.state.doc.length, insert: merged }, scrollIntoView: false });
-        center!.dispatch({ effects: setDeco.of(Decoration.none) });
-        markersL.value = []; markersR.value = [];
-        emitState(merged);
-    } catch (e: any) {
-        aiError.value = e?.message || 'AI merge failed';
+        if (!center) return;
+        center.dispatch({
+            changes: { from: 0, to: center.state.doc.length, insert: merged },
+            effects: setMergeModel.of({ hunks: [], resolutions: [], ranges: [] }),
+            annotations: isolateHistory.of('full'),
+        });
+        currentConflictIndex.value = -1;
+    } catch (e) {
+        aiError.value = e instanceof Error ? e.message : 'AI merge failed';
     } finally {
         aiLoading.value = false;
     }
 }
 
-const undoRedoKeys = Prec.highest(keymap.of([
-    { key: 'Mod-z', run: () => undo() },
-    { key: 'Mod-y', run: () => redo() },
-    { key: 'Mod-Shift-z', run: () => redo() },
+const mergeKeys = Prec.highest(keymap.of([
+    { key: 'F7', run: () => { goToNextConflict(); return true; } },
+    { key: 'Shift-F7', run: () => { goToPrevConflict(); return true; } },
+    { key: 'Alt-Shift-ArrowRight', mac: 'Ctrl-Shift-ArrowRight', run: () => applyAction(currentConflictIndex.value, 'accept', 'left') },
+    { key: 'Alt-Shift-ArrowLeft', mac: 'Ctrl-Shift-ArrowLeft', run: () => applyAction(currentConflictIndex.value, 'accept', 'right') },
 ]));
 
 function computeModel() {
-    hunks = computeHunks(props.local, props.base, props.online);
-    choices = defaultChoices(hunks);
-    const res = buildResult(hunks, choices);
-    ranges = res.ranges;
-    resultText = res.text;
-    past = []; futureStk = []; expanded.clear(); syncHist();
+    const { model, text } = createMergeModel(props.local, props.base, props.online);
+    hunks = model.hunks;
+    resolutions = model.resolutions;
+    ranges = model.ranges;
+    resultText = text;
+    expanded.clear();
     currentConflictIndex.value = -1;
 }
 
-// Recreates the three editors. Keeps the model and the current result text, so a theme switch (which
-// triggers this via MutationObserver) throws away neither the user's resolutions nor their edits.
+// Reconfigure existing views to preserve text, decisions, selection and undo history.
 const buildViews = () => {
-    const doc = center ? center.state.doc.toString() : resultText;
-    [left, center, right].forEach((v) => v?.destroy());
     const dark = isDark();
-    const ro = [...wikitextExtensions(dark, uiStore.diffSyntaxHighlighting), decoField, EditorState.readOnly.of(true), EditorView.editable.of(false)];
-
-    left = new EditorView({ doc: props.local, parent: leftEl.value, extensions: ro });
-    right = new EditorView({ doc: props.online, parent: rightEl.value, extensions: ro });
-
-    center = new EditorView({
-        doc, parent: centerEl.value,
-        extensions: [
-            ...wikitextExtensions(dark, uiStore.diffSyntaxHighlighting),
-            decoField,
+    const shared = [
+        ...wikitextExtensions(dark, uiStore.diffSyntaxHighlighting).filter((extension) => extension !== EditorView.lineWrapping),
+        wrapLines.value ? EditorView.lineWrapping : [], lineNumbers(), drawSelection(), decoField, mergeKeys,
+    ];
+    const ro = [...shared, EditorState.readOnly.of(true), EditorView.editable.of(false)];
+    const localExtensions = [...ro, EditorView.contentAttributes.of({ 'aria-label': 'Local version' }), EditorView.updateListener.of((update) => selectSideChange(update, 'left'))];
+    const onlineExtensions = [...ro, EditorView.contentAttributes.of({ 'aria-label': 'Online version' }), EditorView.updateListener.of((update) => selectSideChange(update, 'right'))];
+    const extensions = [
+            ...shared,
+            mergeModelField.init(() => ({ hunks, ranges, resolutions })),
+            mergeHistory,
             history(),
-            undoRedoKeys,
+            keymap.of([...historyKeymap, ...defaultKeymap]),
+            EditorView.contentAttributes.of({ 'aria-label': 'Merged result' }),
             EditorView.updateListener.of((u) => {
-                if (u.docChanged && !u.transactions.some((t) => t.effects.some((e) => e.is(setDeco)))) {
+                const modelChanged = u.transactions.some((t) => t.effects.some((e) => e.is(setMergeModel)));
+                if (u.docChanged || modelChanged) {
+                    const model = u.state.field(mergeModelField);
+                    hunks = model.hunks; resolutions = model.resolutions; ranges = model.ranges;
+                    resultText = u.state.doc.toString();
+                    if (currentConflictIndex.value >= hunks.length) currentConflictIndex.value = -1;
                     emitState(u.state.doc.toString());
+                    syncHist();
+                    nextTick(refreshDecos);
+                }
+                if (u.selectionSet) {
+                    const pos = u.state.selection.main.head;
+                    const selected = ranges.find((r) => hunks[r.hunk].type !== 'stable' && pos >= r.from && pos <= r.to);
+                    if (selected) {
+                        currentConflictIndex.value = selected.hunk;
+                        selectedConflict.value = isConflict(hunks[selected.hunk]) && !isDecided(selected.hunk);
+                    }
                 }
                 // Manual typing moves every block below it — the gutter buttons must follow.
                 if (u.docChanged || u.geometryChanged) requestAnimationFrame(recomputeMarkers);
             }),
-        ],
-    });
+        ];
+    if (center) {
+        left?.dispatch({ effects: StateEffect.reconfigure.of(localExtensions) });
+        right?.dispatch({ effects: StateEffect.reconfigure.of(onlineExtensions) });
+        center.dispatch({ effects: StateEffect.reconfigure.of(extensions) });
+    } else {
+        left = new EditorView({ doc: props.local, parent: leftEl.value, extensions: localExtensions });
+        right = new EditorView({ doc: props.online, parent: rightEl.value, extensions: onlineExtensions });
+        center = new EditorView({ doc: resultText, parent: centerEl.value, extensions });
+        syncScroll();
+    }
     refreshDecos();
-    emitState(doc);
-    syncScroll();
+    emitState(resultText);
+    syncHist();
 };
 
 // Document offset where hunk `i` starts, in the given view.
@@ -495,8 +502,7 @@ function hunkTop(view: EditorView, i: number, which: 'local' | 'result' | 'onlin
     return pos === null ? null : view.lineBlockAt(pos).top;
 }
 
-// The three docs have different lengths and different collapsed regions, so copying scrollTop drifts
-// badly. Anchor instead on the topmost block at or above the viewport edge and align its counterpart.
+// Map the viewport through every block, including stable text after insertions and deletions.
 function syncScroll() {
     const sides: [EditorView, 'local' | 'result' | 'online'][] = [];
     if (left) sides.push([left, 'local']);
@@ -509,21 +515,26 @@ function syncScroll() {
     for (const [v, which] of sides) {
         v.scrollDOM.addEventListener('scroll', () => {
             if (echoes.delete(v)) { requestAnimationFrame(recomputeMarkers); return; }
+            if (!scrollLocked.value) { requestAnimationFrame(recomputeMarkers); return; }
             const y = v.scrollDOM.scrollTop;
-            let anchor = -1, delta = y;
+            let anchor = -1;
             for (let i = 0; i < hunks.length; i++) {
-                if (hunks[i].type === 'stable') continue;
                 const t = hunkTop(v, i, which);
-                if (t === null || t > y + 40) break;
-                anchor = i; delta = y - t;
+                if (t === null || t > y) break;
+                anchor = i;
             }
+            const start = anchor < 0 ? 0 : hunkTop(v, anchor, which) ?? 0;
+            const end = anchor + 1 < hunks.length ? hunkTop(v, anchor + 1, which) ?? v.contentHeight : v.contentHeight;
+            const fraction = end > start ? (y - start) / (end - start) : 0;
             for (const [o, oWhich] of sides) {
                 if (o === v) continue;
-                const t = anchor < 0 ? 0 : hunkTop(o, anchor, oWhich);
+                const targetStart = anchor < 0 ? 0 : hunkTop(o, anchor, oWhich) ?? 0;
+                const targetEnd = anchor + 1 < hunks.length ? hunkTop(o, anchor + 1, oWhich) ?? o.contentHeight : o.contentHeight;
                 const before = o.scrollDOM.scrollTop;
-                o.scrollDOM.scrollTop = Math.max(0, (t ?? 0) + delta);
+                o.scrollDOM.scrollTop = Math.max(0, targetStart + fraction * (targetEnd - targetStart));
                 // Only expect an echo if the value really moved (it clamps at the ends).
                 if (o.scrollDOM.scrollTop !== before) echoes.add(o);
+                o.scrollDOM.scrollLeft = v.scrollDOM.scrollLeft;
             }
             requestAnimationFrame(recomputeMarkers);
         });
@@ -531,236 +542,247 @@ function syncScroll() {
 }
 
 const onResize = () => requestAnimationFrame(recomputeMarkers);
+let themeObserver: MutationObserver;
+let resizeObserver: ResizeObserver;
 
 onMounted(() => {
     computeModel();
     buildViews();
     window.addEventListener('resize', onResize);
-    const observer = new MutationObserver(() => buildViews()); // theme only → keep the model
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    onUnmounted(() => observer.disconnect());
+    themeObserver = new MutationObserver(() => buildViews());
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(bodyEl.value!);
 });
 
-watch(() => [props.local, props.base, props.online], () => { computeModel(); buildViews(); });
+watch(() => [props.local, props.base, props.online], () => {
+    [left, center, right].forEach((v) => v?.destroy());
+    left = center = right = null;
+    computeModel(); buildViews();
+});
 watch(() => uiStore.diffSyntaxHighlighting, () => buildViews());
+watch(wrapLines, () => buildViews());
 
 onUnmounted(() => {
     window.removeEventListener('resize', onResize);
+    themeObserver?.disconnect();
+    resizeObserver?.disconnect();
     [left, center, right].forEach((v) => v?.destroy());
 });
 </script>
 
 <template>
-    <div class="flex flex-col h-full w-full">
-        <!-- Toolbar -->
-        <div class="cm-toolbar flex items-center gap-1 px-2 py-1 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900/50">
-            <Button aria-label="Undo (Ctrl+Z)" size="small" severity="secondary" text rounded :disabled="!canUndo" @click="undo" v-tooltip.bottom="'Undo (Ctrl+Z)'">
-                <template #icon><Undo2 class="w-4 h-4" /></template>
+    <div class="merge-editor flex flex-col h-full w-full min-w-0" :aria-busy="aiLoading">
+        <div class="cm-toolbar" role="toolbar" aria-label="Merge actions">
+            <Button aria-label="Previous unresolved change (Shift+F7)" :disabled="!unresolvedCount || aiLoading"
+                text severity="secondary" @click="goToPrevConflict" v-tooltip.bottom="'Previous unresolved change (Shift+F7)'">
+                <template #icon><ChevronUp /></template>
             </Button>
-            <Button aria-label="Redo (Ctrl+Shift+Z)" size="small" severity="secondary" text rounded :disabled="!canRedo" @click="redo" v-tooltip.bottom="'Redo (Ctrl+Shift+Z)'">
-                <template #icon><Redo2 class="w-4 h-4" /></template>
+            <Button aria-label="Next unresolved change (F7)" :disabled="!unresolvedCount || aiLoading"
+                text severity="secondary" @click="goToNextConflict" v-tooltip.bottom="'Next unresolved change (F7)'">
+                <template #icon><ChevronDown /></template>
             </Button>
-            <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
-            <Button aria-label="Accept all from local (yours) →" size="small" severity="secondary" text rounded @click="acceptLeft" v-tooltip.bottom="'Accept all from local (yours) →'">
-                <template #icon><ChevronsRight class="w-4 h-4" /></template>
+            <span class="toolbar-separator" />
+            <Button aria-label="Apply non-conflicting changes from left" :disabled="aiLoading" text severity="secondary"
+                @click="applyNonConflicting(['left'])" v-tooltip.bottom="'Apply non-conflicting changes from left'">
+                <template #icon><ChevronsRight /></template>
             </Button>
-            <Button aria-label="← Accept all from online (theirs)" size="small" severity="secondary" text rounded @click="acceptRight" v-tooltip.bottom="'← Accept all from online (theirs)'">
-                <template #icon><ChevronsLeft class="w-4 h-4" /></template>
+            <Button aria-label="Apply all non-conflicting changes" :disabled="aiLoading" text severity="secondary"
+                @click="applyNonConflicting(['left', 'right'])" v-tooltip.bottom="'Apply all non-conflicting changes'">
+                <template #icon><FoldHorizontal /></template>
             </Button>
-            <Button aria-label="Apply all non-conflicting changes from both sides" size="small" severity="secondary" text rounded @click="acceptBoth" v-tooltip.bottom="'Apply all non-conflicting changes from both sides'">
-                <template #icon><FoldHorizontal class="w-4 h-4" /></template>
+            <Button aria-label="Apply non-conflicting changes from right" :disabled="aiLoading" text severity="secondary"
+                @click="applyNonConflicting(['right'])" v-tooltip.bottom="'Apply non-conflicting changes from right'">
+                <template #icon><ChevronsLeft /></template>
             </Button>
-            <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
-            <Button aria-label="Smart apply — auto-resolve conflicts (no AI)" size="small" severity="secondary" text rounded @click="smartApply" v-tooltip.bottom="'Smart apply — auto-resolve conflicts (no AI)'">
-                <template #icon><Wand2 class="w-4 h-4" /></template>
+            <Button aria-label="Resolve simple conflicts" :disabled="!simpleCount || aiLoading" text severity="secondary"
+                @click="smartApply" v-tooltip.bottom="'Merge disjoint edits within conflicting lines'">
+                <template #icon><Wand2 /></template>
             </Button>
-            <Button v-if="!aiConfig.hideAi" aria-label="Resolve the merge with AI" size="small" severity="primary" text rounded @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
-                <template #icon><Bot class="w-4 h-4" /></template>
+            <span class="toolbar-separator" />
+            <Button aria-label="Undo" text severity="secondary" :disabled="!canUndo || aiLoading" @click="undo" v-tooltip.bottom="'Undo (Ctrl+Z)'">
+                <template #icon><Undo2 /></template>
             </Button>
-            <div class="w-px h-5 bg-surface-200 dark:bg-surface-700 mx-1" />
-            <div class="flex items-center gap-2 text-xs text-surface-500 mr-1">
-                <span class="text-blue-600 dark:text-blue-400">{{ yoursCount }} yours</span>
-                <span class="text-green-600 dark:text-green-400">{{ theirsCount }} theirs</span>
-                <span :class="conflictCount ? 'text-red-600 dark:text-red-400' : ''">{{ conflictCount }} conflicting</span>
-            </div>
-            <div v-if="unresolvedCount > 0" class="flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-xs font-semibold">
-                <span>{{ unresolvedCount }} to review</span>
-                <Button aria-label="Previous undecided block" size="small" severity="secondary" text rounded @click="goToPrevConflict" v-tooltip.bottom="'Previous undecided block'">
-                    <template #icon><ChevronUp class="w-3.5 h-3.5" /></template>
-                </Button>
-                <Button aria-label="Next undecided block" size="small" severity="secondary" text rounded @click="goToNextConflict" v-tooltip.bottom="'Next undecided block'">
-                    <template #icon><ChevronDown class="w-3.5 h-3.5" /></template>
-                </Button>
-            </div>
-            <div v-else class="flex items-center gap-1 text-green-600 dark:text-green-400 px-2 py-0.5 rounded text-xs font-semibold">
-                <Check class="w-3.5 h-3.5" />
-                <span>All resolved</span>
-            </div>
+            <Button aria-label="Redo" text severity="secondary" :disabled="!canRedo || aiLoading" @click="redo" v-tooltip.bottom="'Redo (Ctrl+Shift+Z)'">
+                <template #icon><Redo2 /></template>
+            </Button>
+            <span class="toolbar-separator" />
+            <Button aria-label="Synchronize scrolling" :aria-pressed="scrollLocked" :class="{ toggled: scrollLocked }"
+                text severity="secondary" @click="scrollLocked = !scrollLocked" v-tooltip.bottom="'Synchronize scrolling'">
+                <template #icon><Link /></template>
+            </Button>
+            <Button aria-label="Wrap lines" :aria-pressed="wrapLines" :class="{ toggled: wrapLines }"
+                text severity="secondary" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Wrap lines'">
+                <template #icon><WrapText /></template>
+            </Button>
+            <Button aria-label="Collapse unchanged sections" :aria-pressed="collapseOn" text severity="secondary"
+                @click="toggleCollapse" v-tooltip.bottom="collapseOn ? 'Expand unchanged sections' : 'Collapse unchanged sections'">
+                <template #icon><UnfoldVertical v-if="collapseOn" /><FoldVertical v-else /></template>
+            </Button>
             <div class="flex-1" />
-            <Button size="small" severity="secondary" text rounded @click="toggleCollapse" v-tooltip.bottom="collapseOn ? 'Expand all unchanged sections' : 'Collapse unchanged sections'">
-                <template #icon><UnfoldVertical v-if="collapseOn" class="w-4 h-4" /><FoldVertical v-else class="w-4 h-4" /></template>
+            <Button v-if="!aiConfig.hideAi" aria-label="Resolve the merge with AI" text severity="secondary"
+                @click="aiResolve" :loading="aiLoading" v-tooltip.bottom="'Resolve the merge with AI'">
+                <template #icon><Bot /></template>
             </Button>
-            <span v-if="aiError" class="text-xs text-red-500 ml-1">{{ aiError }}</span>
         </div>
 
-        <!-- Labels -->
-        <div class="flex shrink-0 text-xs font-medium text-surface-500 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900/50">
-            <div class="flex-1 px-3 py-1.5">Local (yours)</div>
-            <div class="w-14 shrink-0" />
-            <div class="flex-1 px-3 py-1.5 border-l border-surface-200 dark:border-surface-700">Result</div>
-            <div class="w-14 shrink-0 border-l border-surface-200 dark:border-surface-700" />
-            <div class="flex-1 px-3 py-1.5 border-l border-surface-200 dark:border-surface-700">Online (theirs)</div>
+        <div class="merge-status" role="status" aria-live="polite">
+            <span v-if="unresolvedCount">{{ unresolvedCount }} unresolved {{ unresolvedCount === 1 ? 'change' : 'changes' }}, {{ conflictCount }} {{ conflictCount === 1 ? 'conflict' : 'conflicts' }}</span>
+            <span v-else class="resolved-status"><Check class="w-3.5 h-3.5" />All changes resolved</span>
+            <span class="change-legend"><i class="inserted" />Added <i class="modified" />Modified <i class="deleted" />Deleted <i class="conflict" />Conflict</span>
+        </div>
+        <div v-if="aiError" class="merge-error" role="alert">{{ aiError }}</div>
+
+        <div class="merge-selection" role="toolbar" aria-label="Selected change actions">
+            <span>{{ currentConflictIndex >= 0 ? 'Selected change' : 'Select a highlighted change' }}</span>
+            <Button label="Resolve using left" text severity="secondary" :disabled="currentConflictIndex < 0 || aiLoading"
+                @click="applyAction(currentConflictIndex, 'resolve', 'left')" />
+            <Button label="Resolve using right" text severity="secondary" :disabled="currentConflictIndex < 0 || aiLoading"
+                @click="applyAction(currentConflictIndex, 'resolve', 'right')" />
+            <Button label="Mark resolved" text severity="secondary" :disabled="currentConflictIndex < 0 || aiLoading"
+                @click="applyAction(currentConflictIndex, 'manual', 'left')" v-tooltip.bottom="'Keep the current result and mark the change resolved'" />
+            <Button aria-label="Revert selected change" text severity="secondary" :disabled="currentConflictIndex < 0 || aiLoading"
+                @click="applyAction(currentConflictIndex, 'reset', 'left')" v-tooltip.bottom="'Restore the base and review this change again'">
+                <template #icon><RotateCcw /></template>
+            </Button>
+            <span v-if="selectedConflict" class="selection-hint">Accept or ignore each side to resolve the conflict</span>
         </div>
 
-        <!-- Body: panes + gutters holding the per-block buttons -->
-        <div ref="bodyEl" class="flex flex-1 min-h-0 relative">
-            <div ref="leftEl" class="flex-1 min-h-0 overflow-hidden" />
-
-            <div class="gutter-col w-14 shrink-0 relative bg-surface-50 dark:bg-surface-900/30 border-x border-surface-200 dark:border-surface-700">
-                <!-- ribbons tying each block in "Local" to its counterpart in "Result" -->
-                <svg class="gutter-links" :viewBox="`0 0 ${GUTTER_W} ${bodyHeight}`" preserveAspectRatio="none">
-                    <path v-for="m in markersL" :key="'pl' + m.i" v-show="m.link" :d="m.link" :class="['lnk-' + m.type, { decided: !!m.choice }]" />
-                </svg>
-                <template v-for="m in markersL" :key="'l' + m.i">
-                    <div class="gutter-grp" :style="{ top: m.top + 'px' }">
-                        <button v-for="b in buttons(m.type, 'left')" :key="b.choice" :class="{ active: m.choice === b.choice }"
-                            @click="setChoice(m.i, b.choice)" v-tooltip.left="b.tip">
-                            <component :is="ICONS[b.icon]" class="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </template>
+        <div class="merge-workspace">
+            <div class="pane-labels">
+                <div><span>Local</span><span class="pane-mode"><LockKeyhole />Read-only</span></div>
+                <span class="gutter-label" />
+                <div><span>Result</span><span class="pane-mode">Editable</span></div>
+                <span class="gutter-label" />
+                <div><span>Online</span><span class="pane-mode"><LockKeyhole />Read-only</span></div>
             </div>
 
-            <div ref="centerEl" class="flex-1 min-h-0 overflow-hidden" />
-
-            <div class="gutter-col w-14 shrink-0 relative bg-surface-50 dark:bg-surface-900/30 border-x border-surface-200 dark:border-surface-700">
-                <!-- ribbons tying each block in "Result" to its counterpart in "Online" -->
-                <svg class="gutter-links" :viewBox="`0 0 ${GUTTER_W} ${bodyHeight}`" preserveAspectRatio="none">
-                    <path v-for="m in markersR" :key="'pr' + m.i" v-show="m.link" :d="m.link" :class="['lnk-' + m.type, { decided: !!m.choice }]" />
-                </svg>
-                <template v-for="m in markersR" :key="'r' + m.i">
-                    <div class="gutter-grp" :style="{ top: m.top + 'px' }">
-                        <button v-for="b in buttons(m.type, 'right')" :key="b.choice" :class="{ active: m.choice === b.choice }"
-                            @click="setChoice(m.i, b.choice)" v-tooltip.right="b.tip">
-                            <component :is="ICONS[b.icon]" class="w-3.5 h-3.5" />
-                        </button>
+            <div ref="bodyEl" class="merge-body">
+                <div ref="leftEl" class="merge-pane" data-testid="merge-local" />
+                <div class="gutter-col">
+                    <svg class="gutter-links" :viewBox="`0 0 ${GUTTER_W} ${bodyHeight}`" preserveAspectRatio="none" aria-hidden="true">
+                        <path v-for="m in markersL" :key="m.i" v-show="m.link" :d="m.link"
+                            :class="['lnk-' + m.type, { decided: m.resolved }]" />
+                    </svg>
+                    <div v-for="m in markersL" :key="m.i" class="gutter-grp" :style="{ top: m.top + 'px' }">
+                        <template v-if="m.pending">
+                            <button type="button" :aria-label="`Accept left change ${m.i + 1}`" :disabled="aiLoading"
+                                @click="applyAction(m.i, $event.ctrlKey ? 'resolve' : 'accept', 'left')" v-tooltip.left="'Accept left. Ctrl+click to resolve using left'">
+                                <ArrowRight />
+                            </button>
+                            <button type="button" :aria-label="`Ignore left change ${m.i + 1}`" :disabled="aiLoading"
+                                @click="applyAction(m.i, 'ignore', 'left')" v-tooltip.left="'Ignore left'"><X /></button>
+                        </template>
                     </div>
-                </template>
+                </div>
+                <div ref="centerEl" class="merge-pane" data-testid="merge-result" />
+                <div class="gutter-col">
+                    <svg class="gutter-links" :viewBox="`0 0 ${GUTTER_W} ${bodyHeight}`" preserveAspectRatio="none" aria-hidden="true">
+                        <path v-for="m in markersR" :key="m.i" v-show="m.link" :d="m.link"
+                            :class="['lnk-' + m.type, { decided: m.resolved }]" />
+                    </svg>
+                    <div v-for="m in markersR" :key="m.i" class="gutter-grp" :style="{ top: m.top + 'px' }">
+                        <template v-if="m.pending">
+                            <button type="button" :aria-label="`Accept right change ${m.i + 1}`" :disabled="aiLoading"
+                                @click="applyAction(m.i, $event.ctrlKey ? 'resolve' : 'accept', 'right')" v-tooltip.right="'Accept right. Ctrl+click to resolve using right'"><ArrowLeft /></button>
+                            <button type="button" :aria-label="`Ignore right change ${m.i + 1}`" :disabled="aiLoading"
+                                @click="applyAction(m.i, 'ignore', 'right')" v-tooltip.right="'Ignore right'"><X /></button>
+                        </template>
+                    </div>
+                </div>
+                <div ref="rightEl" class="merge-pane" data-testid="merge-online" />
             </div>
-
-            <div ref="rightEl" class="flex-1 min-h-0 overflow-hidden" />
         </div>
     </div>
 </template>
 
 <style scoped>
-:deep(.cm-editor) { height: 100%; }
-:deep(.cm-scroller) { overflow: auto; }
-
-.cm-toolbar :deep(.p-button:not(:disabled):hover) {
-    background-color: var(--p-content-hover-background);
+.merge-editor {
+    --merge-modified: #5390d9;
+    --merge-inserted: #549159;
+    --merge-deleted: #929292;
+    --merge-conflict: #db5860;
+    font-size: 12px;
     color: var(--p-text-color);
+    background: var(--p-content-background);
 }
-
-:deep(.cm-conflict) { background-color: color-mix(in srgb, var(--p-red-500) 14%, transparent); }
-:deep(.cm-changed-local) { background-color: color-mix(in srgb, var(--p-blue-500) 12%, transparent); }
-:deep(.cm-changed-online) { background-color: color-mix(in srgb, var(--p-green-500) 12%, transparent); }
-/* the exact words that changed inside a block — syntax colours stay readable underneath */
-:deep(.cm-word-diff) {
-    background-color: color-mix(in srgb, var(--p-primary-400) 30%, transparent);
-    border-radius: 0.15rem;
-}
-/* a settled block keeps a dashed outline so you can still see (and revisit) what you resolved */
-:deep(.cm-resolved) {
-    --blk-edge: var(--p-text-muted-color);
-    border-left: 1px dashed var(--blk-edge);
-    border-right: 1px dashed var(--blk-edge);
-}
-:deep(.cm-conflict.cm-resolved) { --blk-edge: color-mix(in srgb, var(--p-red-500) 55%, transparent); }
-:deep(.cm-changed-local.cm-resolved) { --blk-edge: color-mix(in srgb, var(--p-blue-500) 55%, transparent); }
-:deep(.cm-changed-online.cm-resolved) { --blk-edge: color-mix(in srgb, var(--p-green-500) 55%, transparent); }
-:deep(.cm-resolved.cm-blk-top) { border-top: 1px dashed var(--blk-edge); }
-:deep(.cm-resolved.cm-blk-bottom) { border-bottom: 1px dashed var(--blk-edge); }
-
-/* resolved blocks stay tinted, just faint — the change is settled but still locatable */
-:deep(.cm-conflict.cm-resolved) { background-color: color-mix(in srgb, var(--p-red-500) 5%, transparent); }
-:deep(.cm-changed-local.cm-resolved) { background-color: color-mix(in srgb, var(--p-blue-500) 5%, transparent); }
-:deep(.cm-changed-online.cm-resolved) { background-color: color-mix(in srgb, var(--p-green-500) 5%, transparent); }
-
-:deep(.cm-fold) {
+.cm-toolbar, .merge-selection, .merge-status {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.7rem;
-    padding: 0.15rem 0.75rem;
-    color: var(--p-text-muted-color);
-    background-color: color-mix(in srgb, var(--p-primary-500) 8%, transparent);
-    border-top: 1px solid var(--p-content-border-color);
+    gap: 4px;
+    min-height: 32px;
+    padding: 3px 8px;
     border-bottom: 1px solid var(--p-content-border-color);
-    cursor: pointer;
+    background: var(--p-content-background);
+    flex-wrap: wrap;
 }
-:deep(.cm-fold:hover) { background-color: color-mix(in srgb, var(--p-primary-500) 16%, transparent); }
-
-/* CodeMirror makes .cm-editor position:relative, so as a later sibling it would paint over the
-   gutter's absolutely positioned buttons and swallow their clicks. */
-.gutter-col {
-    z-index: 2;
-}
-
-.gutter-links {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-.gutter-links path {
-    stroke-width: 1;
-}
-.gutter-links .lnk-conflict {
-    fill: color-mix(in srgb, var(--p-red-500) 16%, transparent);
-    stroke: color-mix(in srgb, var(--p-red-500) 45%, transparent);
-}
-.gutter-links .lnk-left {
-    fill: color-mix(in srgb, var(--p-blue-500) 14%, transparent);
-    stroke: color-mix(in srgb, var(--p-blue-500) 40%, transparent);
-}
-.gutter-links .lnk-right {
-    fill: color-mix(in srgb, var(--p-green-500) 14%, transparent);
-    stroke: color-mix(in srgb, var(--p-green-500) 40%, transparent);
-}
-/* decided blocks fade back, matching the dashed outline in the editors */
-.gutter-links path.decided {
-    fill-opacity: 0.35;
-    stroke-dasharray: 3 2;
-}
-
-.gutter-grp {
-    position: absolute;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    gap: 1px;
-}
-.gutter-grp button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px;
-    border-radius: 0.2rem;
-    border: 1px solid var(--p-content-border-color);
-    background-color: var(--p-content-background);
+.cm-toolbar :deep(.p-button) { width: 28px; height: 28px; padding: 5px; border-radius: 3px; }
+.cm-toolbar :deep(svg) { width: 16px; height: 16px; }
+.cm-toolbar :deep(.p-button:not(:disabled):hover), .cm-toolbar :deep(.toggled) {
+    background: var(--p-content-hover-background);
     color: var(--p-text-color);
-    cursor: pointer;
 }
-.gutter-grp button:hover {
-    background-color: var(--p-primary-500);
-    border-color: var(--p-primary-500);
-    color: var(--p-primary-contrast-color);
+.toolbar-separator { width: 1px; height: 20px; margin: 0 5px; background: var(--p-content-border-color); }
+.merge-status { justify-content: space-between; color: var(--p-text-muted-color); }
+.resolved-status { display: inline-flex; align-items: center; gap: 5px; color: var(--merge-inserted); }
+.change-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+.change-legend i { width: 8px; height: 8px; border-radius: 1px; margin-left: 6px; }
+.change-legend .modified { background: var(--merge-modified); }
+.change-legend .inserted { background: var(--merge-inserted); }
+.change-legend .deleted { background: var(--merge-deleted); }
+.change-legend .conflict { background: var(--merge-conflict); }
+.merge-selection { color: var(--p-text-muted-color); }
+.merge-selection :deep(.p-button) { font-size: 11px; padding: 3px 7px; border-radius: 3px; }
+.merge-selection :deep(svg) { width: 14px; height: 14px; }
+.selection-hint { margin-left: auto; font-size: 11px; }
+.merge-error { padding: 6px 10px; color: var(--merge-conflict); }
+.merge-workspace { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.pane-labels, .merge-body { display: flex; }
+.pane-labels { flex-shrink: 0; border-bottom: 1px solid var(--p-content-border-color); }
+.pane-labels > div { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; font-weight: 600; gap: 8px; }
+.gutter-label, .gutter-col { width: 48px; flex-shrink: 0; }
+.pane-mode { display: inline-flex; gap: 4px; align-items: center; color: var(--p-text-muted-color); font-weight: 400; font-size: 11px; }
+.pane-mode svg { width: 11px; height: 11px; }
+.merge-body { flex: 1; min-height: 0; position: relative; }
+.merge-pane { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+:deep(.cm-editor) { height: 100%; font-size: 13px; }
+:deep(.cm-scroller) { overflow: auto; }
+:deep(.cm-gutters) { border-right: 1px solid var(--p-content-border-color); background: var(--p-content-background); color: var(--p-text-muted-color); }
+:deep(.cm-merge-modified) { --change-color: var(--merge-modified); }
+:deep(.cm-merge-inserted) { --change-color: var(--merge-inserted); }
+:deep(.cm-merge-deleted) { --change-color: var(--merge-deleted); }
+:deep(.cm-merge-conflict) { --change-color: var(--merge-conflict); }
+:deep(.cm-line[class*="cm-merge-"]) {
+    background: color-mix(in srgb, var(--change-color) 18%, transparent);
+    border-left: 2px solid var(--change-color);
 }
-.gutter-grp button.active {
-    background-color: color-mix(in srgb, var(--p-primary-500) 25%, transparent);
-    border-color: var(--p-primary-500);
+:deep(.cm-word-diff) { background: color-mix(in srgb, var(--change-color, var(--merge-modified)) 32%, transparent); }
+:deep(.cm-line.cm-resolved) { background: color-mix(in srgb, var(--change-color) 5%, transparent); border-left-color: color-mix(in srgb, var(--change-color) 40%, transparent); }
+:deep(.cm-fold) {
+    display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+    font-family: inherit; font-size: 11px; padding: 3px 8px;
+    color: var(--p-text-muted-color); background: var(--p-content-hover-background);
+    border: 0; border-block: 1px solid var(--p-content-border-color); cursor: pointer;
+}
+.gutter-col { position: relative; z-index: 2; overflow: hidden; border-inline: 1px solid var(--p-content-border-color); background: var(--p-content-background); }
+.gutter-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.gutter-links .lnk-modified { --change-color: var(--merge-modified); }
+.gutter-links .lnk-inserted { --change-color: var(--merge-inserted); }
+.gutter-links .lnk-deleted { --change-color: var(--merge-deleted); }
+.gutter-links .lnk-conflict { --change-color: var(--merge-conflict); }
+.gutter-links path { fill: color-mix(in srgb, var(--change-color) 18%, transparent); stroke: color-mix(in srgb, var(--change-color) 55%, transparent); stroke-width: 1; }
+.gutter-links path.decided { fill-opacity: 0.25; stroke-opacity: 0.4; }
+.gutter-grp { position: absolute; left: 0; right: 0; display: flex; justify-content: center; }
+.gutter-grp button {
+    display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 3px;
+    border: 0; border-radius: 2px; background: var(--p-content-background); color: var(--p-text-color); cursor: pointer;
+}
+.gutter-grp svg { width: 16px; height: 16px; }
+.gutter-grp button:not(:disabled):hover { background: var(--p-content-hover-background); color: var(--p-primary-color); }
+.gutter-grp button:disabled { opacity: 0.5; cursor: default; }
+.gutter-grp button:focus-visible, :deep(.cm-fold:focus-visible) { outline: 2px solid var(--p-primary-color); outline-offset: -2px; }
+@media (max-width: 900px) {
+    .pane-mode, .selection-hint { display: none; }
+    .change-legend { font-size: 10px; }
 }
 </style>
