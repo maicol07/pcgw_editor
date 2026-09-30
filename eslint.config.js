@@ -8,7 +8,7 @@ import pluginA11y from 'eslint-plugin-vuejs-accessibility';
 //   * unsanitized v-html (the XSS that reached innerHTML)
 //   * labels with no associated control (~98 of them)
 //   * icon-only buttons whose only name was a v-tooltip
-// Everything stylistic is off, so `pnpm lint` stays a signal rather than noise.
+// Everything stylistic is off, so `bun run lint` stays a signal rather than noise.
 export default [
     { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'coverage/**', 'worker.js', '*.tsbuildinfo'] },
 
@@ -45,7 +45,7 @@ export default [
 
             // Accessibility findings are real but form a backlog of their own (~100 unlabelled
             // controls, icon-only buttons named only by v-tooltip). They stay visible as warnings
-            // so `pnpm lint` reports them, while CI gates on errors — otherwise the whole suite
+            // so `bun run lint` reports them, while CI gates on errors — otherwise the whole suite
             // would be red from day one and nobody would run it.
             'vuejs-accessibility/alt-text': 'warn',
             'vuejs-accessibility/no-static-element-interactions': 'warn',

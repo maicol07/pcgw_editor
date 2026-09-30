@@ -18,7 +18,7 @@ export default defineConfig({
         include: ['tests/**/*.test.ts'],
         coverage: {
             // No thresholds yet: coverage was never measured, so any number here would be invented
-            // rather than agreed. This makes the baseline visible first (pnpm test:coverage).
+            // rather than agreed. This makes the baseline visible first (bun run test:coverage).
             provider: 'v8',
             reporter: ['text-summary', 'html'],
             include: ['src/**/*.{ts,vue}'],
@@ -27,7 +27,8 @@ export default defineConfig({
         setupFiles: ['./tests/setup.ts'],
         server: {
             deps: {
-                inline: ['element-plus']
+                // The wikitext dependency chain contains extensionless ESM imports.
+                inline: ['element-plus', '@bhsd/codemirror-wikitext', '@bhsd/codemirror-stickyscroll']
             }
         }
     },

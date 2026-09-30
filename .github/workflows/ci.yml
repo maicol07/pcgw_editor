@@ -13,28 +13,29 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v6
+    - name: Install Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: package.json
 
     - name: Use Node.js
       uses: actions/setup-node@v6
       with:
         node-version: '24'
-        cache: 'pnpm'
 
     # --frozen-lockfile so CI cannot silently resolve versions the lockfile does not pin
     # (deploy.yml already did this; ci.yml did not).
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      run: bun install --frozen-lockfile
 
-    # The type check only ran inside `pnpm build`, i.e. at release time — and until recently it was
+    # The type check only ran inside `bun run build`, i.e. at release time — and until recently it was
     # a no-op anyway (vue-tsc with neither -b nor -p on a solution-style tsconfig checks nothing).
     # Running it here means a type error fails the PR, not the release.
     - name: Type check
-      run: pnpm typecheck
+      run: bun run typecheck
 
     - name: Lint
-      run: pnpm lint
+      run: bun run lint
 
     - name: Run tests
-      run: pnpm test -- run
+      run: bun run test --run

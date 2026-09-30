@@ -83,27 +83,26 @@ Built on the bleeding edge of web technology:
 ## 🏁 Getting Started
 
 ### Prerequisites
--   Node.js 20+
--   pnpm 9+
+-   Bun 1.4.2, pinned in `package.json`
 
 ### Installation
 
 ```bash
 git clone https://github.com/maicol07/pcgw_editor.git
 cd pcgw_editor
-pnpm install
+bun install --frozen-lockfile
 ```
 
 ### Development
 
 ```bash
-pnpm run dev
+bun run dev
 ```
 
 ### Production Build
 
 ```bash
-pnpm run build
+bun run build
 ```
 
 ---
@@ -118,9 +117,8 @@ frontend.
 ### Deploy
 
 ```bash
-npm i -g wrangler      # once
-wrangler login         # once
-wrangler deploy worker.js --name pcgw-proxy-login
+bunx wrangler login         # once
+bunx wrangler deploy worker.js --name pcgw-proxy-login
 ```
 
 Endpoints: `/api/login`, `/api/proxy`, `/api/image`, and `/api/ext` — an
