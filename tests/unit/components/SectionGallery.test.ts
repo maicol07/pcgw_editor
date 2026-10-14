@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import SectionGallery from '../../../src/components/SectionGallery.vue';
 import { createTestingPinia } from '@pinia/testing';
 import Tooltip from 'openvue/tooltip';
@@ -933,6 +933,22 @@ describe('SectionGallery.vue', () => {
             vm.cropFileName = 'renamed.jpg';
             await vm.handleConfirmCrop();
             expect(fileStore.updateFileStatus).toHaveBeenCalledWith(21, expect.objectContaining({ name: 'renamed.jpg' }));
+        });
+
+        it('adds dropped image files and skips non-images', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            const fileStore = useFileStore();
+            (fileStore.addFile as any).mockResolvedValue(30);
+            vm.fileUploadRef = { clear: vi.fn() };
+            const image = new File(['x'], 'drop.png', { type: 'image/png' });
+            const text = new File(['x'], 'notes.txt', { type: 'text/plain' });
+
+            vm.handleGalleryDrop({ dataTransfer: { files: [image, text] } });
+            await flushPromises();
+
+            expect(fileStore.addFile).toHaveBeenCalledTimes(1);
+            expect(fileStore.addFile).toHaveBeenCalledWith(image);
         });
 
         it('saves crop coordinates in combineConfig and handles redo/uncrop for image combiner', async () => {

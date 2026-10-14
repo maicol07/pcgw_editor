@@ -630,6 +630,40 @@ const linkToWiki = (localId: number, wikiFilename: string) => {
     }
 };
 
+// Native drag-and-drop: FileUpload's drop zone only exists in advanced mode, which this UI does not use.
+const MAX_UPLOAD_SIZE = 10000000;
+const droppedImageFiles = (event: DragEvent): File[] => {
+    const dropped = Array.from(event.dataTransfer?.files ?? []);
+    const valid = dropped.filter(f => f.type.startsWith('image/') && f.size <= MAX_UPLOAD_SIZE);
+    if (valid.length < dropped.length) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Files Skipped',
+            detail: `${dropped.length - valid.length} file(s) skipped: only images up to ${formatSize(MAX_UPLOAD_SIZE)} are accepted.`,
+            life: 4000
+        });
+    }
+    return valid;
+};
+const isDraggingOverGallery = ref(false);
+const isDraggingOverCombiner = ref(false);
+
+const handleGalleryDrop = (event: DragEvent) => {
+    isDraggingOverGallery.value = false;
+    const files = droppedImageFiles(event);
+    if (files.length > 0) handleLocalMenuUpload({ files });
+};
+
+const handleCombinerDrop = (event: DragEvent) => {
+    isDraggingOverCombiner.value = false;
+    const files = droppedImageFiles(event);
+    if (files.length > 0) handleCombineLocalUpload({ files });
+};
+
+// Ignore dragleave events fired when moving between child elements.
+const isLeavingTarget = (event: DragEvent): boolean =>
+    !(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null);
+
 const handleLocalMenuUpload = async (event: any) => {
     if (isReplacing.value && replaceImageIndex.value !== null) {
         const file = event.files[0];
@@ -2859,6 +2893,7 @@ const handleConfirmCombine = async () => {
 
 defineExpose({
     cropFileName,
+    handleGalleryDrop,
     initiateDelete,
     handleConfirmDelete,
     existingDeletionReason,
@@ -2919,8 +2954,14 @@ defineExpose({
 </script>
 
 <template>
+    <!-- Drop zone is a pointer-only enhancement; keyboard users upload via the Add Image dialog. -->
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
-        class="gallery-section surface-card flex flex-col gap-4 p-4">
+        class="gallery-section surface-card flex flex-col gap-4 p-4"
+        :class="{ 'ring-2 ring-primary ring-offset-2': isDraggingOverGallery }"
+        @dragover.prevent="isDraggingOverGallery = true"
+        @dragleave="isDraggingOverGallery = !isLeavingTarget($event)"
+        @drop.prevent="handleGalleryDrop">
         <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-surface-200/80 dark:border-surface-800/80">
             <label class="section-eyebrow flex items-center gap-2">
                 <Images class="w-4 h-4 text-surface-400" /> Gallery
@@ -2956,7 +2997,7 @@ defineExpose({
 
                 <div class="hidden">
                     <FileUpload ref="fileUploadRef" mode="basic" name="files[]" :auto="true" customUpload
-                        @uploader="handleLocalMenuUpload" :multiple="!isReplacing" accept="image/*" :maxFileSize="10000000" />
+                        @uploader="handleLocalMenuUpload" :multiple="!isReplacing" accept="image/*" :maxFileSize="MAX_UPLOAD_SIZE" />
                 </div>
             </div>
 
@@ -3674,7 +3715,11 @@ defineExpose({
                 <hr class="border-surface-200 dark:border-surface-700" />
 
                 <!-- Unified Queue -->
-                <div class="flex flex-col gap-2 relative">
+                <div class="flex flex-col gap-2 relative rounded-lg"
+                    :class="{ 'ring-2 ring-primary ring-offset-2': isDraggingOverCombiner }"
+                    @dragover.prevent="isDraggingOverCombiner = true"
+                    @dragleave="isDraggingOverCombiner = !isLeavingTarget($event)"
+                    @drop.prevent="handleCombinerDrop">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <label class="font-bold text-xs text-surface-500 uppercase tracking-wider flex items-center gap-2">
                             <Images class="w-4 h-4" /> Image Queue
@@ -3698,13 +3743,13 @@ defineExpose({
                                 </template>
                             </MultiSelect>
                             <FileUpload ref="combineUploadRef" mode="basic" name="files[]" :auto="true" customUpload 
-                                @uploader="handleCombineLocalUpload" :multiple="true" accept="image/*" :maxFileSize="10000000" 
+                                @uploader="handleCombineLocalUpload" :multiple="true" accept="image/*" :maxFileSize="MAX_UPLOAD_SIZE" 
                                 chooseLabel="Upload Local..." class="p-button-sm" />
                         </div>
                     </div>
                     
                     <div v-if="combineQueue.length === 0" class="w-full text-center py-4 text-surface-400 text-sm">
-                        No images layered yet. Added images will appear here.
+                        No images layered yet. Added or dropped images will appear here.
                     </div>
                     
                     <VueDraggable v-else v-model="combineQueue" target=".sortable-combine-list" handle=".drag-handle" :animation="150" ghost-class="opacity-50">
