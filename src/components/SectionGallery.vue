@@ -3525,9 +3525,9 @@ defineExpose({
         </Dialog>
 
         <!-- Image Cropper Dialog -->
-        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal class="w-full max-w-3xl mx-4" :draggable="false">
+        <Dialog v-model:visible="showCropDialog" :header="croppingQueue.length > 0 ? `Crop Image (${croppingQueue.length} remaining)` : 'Crop Image'" modal class="w-full max-w-6xl mx-4" :draggable="false">
             <div class="flex flex-col gap-4">
-                <div class="h-[500px] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
+                <div class="h-[70vh] w-full bg-surface-100 dark:bg-surface-900 rounded overflow-hidden flex items-center justify-center">
                     <Cropper
                         v-if="cropImageUrl"
                         ref="cropperRef"
