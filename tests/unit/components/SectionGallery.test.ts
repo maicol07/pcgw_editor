@@ -910,6 +910,31 @@ describe('SectionGallery.vue', () => {
             }));
         });
 
+        it('seeds the crop filename per job and applies the edited name with the selected extension', async () => {
+            const wrapper = createWrapper();
+            const vm = wrapper.vm as any;
+            const fileStore = useFileStore();
+            const files = [
+                { id: 20, blob: new Blob(['a'], { type: 'image/jpeg' }), size: 1, name: 'first shot.jpg', type: 'image/jpeg', status: 'local' as const, lastModified: 1 },
+                { id: 21, blob: new Blob(['b'], { type: 'image/jpeg' }), size: 1, name: 'second.jpg', type: 'image/jpeg', status: 'local' as const, lastModified: 1 }
+            ];
+            fileStore.files = [...files];
+            vm.cropperRef = { getResult: () => ({ canvas: { toBlob: (cb: any, mime: string) => cb(new Blob(['c'], { type: mime })) } }) };
+
+            vm.initiateCrop({ type: 'gallery', galleryItem: { name: 'first shot.jpg', localId: 20, position: 'gallery' } });
+            expect(vm.cropFileName).toBe('first shot');
+            vm.selectedCropFormat = 'image/png';
+            await vm.handleConfirmCrop();
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(20, expect.objectContaining({ name: 'first shot.png' }));
+
+            fileStore.files = [...files];
+            vm.initiateCrop({ type: 'gallery', galleryItem: { name: 'second.jpg', localId: 21, position: 'gallery' } });
+            expect(vm.cropFileName).toBe('second');
+            vm.cropFileName = 'renamed.jpg';
+            await vm.handleConfirmCrop();
+            expect(fileStore.updateFileStatus).toHaveBeenCalledWith(21, expect.objectContaining({ name: 'renamed.jpg' }));
+        });
+
         it('saves crop coordinates in combineConfig and handles redo/uncrop for image combiner', async () => {
             const wrapper = createWrapper();
             const vm = wrapper.vm as any;

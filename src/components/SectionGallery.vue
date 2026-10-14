@@ -1508,6 +1508,7 @@ const cropperRef = ref<any>(null);
 const isCropping = ref(false);
 const cropImageUrl = ref<string>('');
 const cropOnUpload = ref(false);
+const cropFileName = ref('');
 
 const cropFormatOptions = [
     { label: 'PNG', value: 'image/png' },
@@ -1585,14 +1586,25 @@ const getDefaultCombineFormat = (queue: CombineItem[]): string => {
     return tiedFormats[0] || 'image/png';
 };
 
+const extensionForMime = (mime: string): string => {
+    if (mime === 'image/jpeg') return 'jpg';
+    if (mime === 'image/webp') return 'webp';
+    return 'png';
+};
+
 const replaceExtension = (filename: string, newMime: string): string => {
     const parts = filename.split('.');
     if (parts.length <= 1) return filename;
     parts.pop();
-    let ext = 'png';
-    if (newMime === 'image/jpeg') ext = 'jpg';
-    else if (newMime === 'image/webp') ext = 'webp';
-    return parts.join('.') + '.' + ext;
+    return parts.join('.') + '.' + extensionForMime(newMime);
+};
+
+const stripExtension = (filename: string): string => filename.replace(/\.[^.]+$/, '');
+
+// Builds the cropped file name from the user-edited base name, falling back to the original one.
+const buildCropFileName = (originalName: string, mime: string): string => {
+    const base = cropFileName.value.trim().replace(/[/\\]/g, '').replace(/\.(png|jpe?g|webp)$/i, '');
+    return `${base || stripExtension(originalName)}.${extensionForMime(mime)}`;
 };
 
 interface CropJob {
@@ -1720,6 +1732,7 @@ const initiateCrop = (job: CropJob) => {
         const file = fileStore.files.find(f => f.id === job.galleryItem?.localId);
         if (!file) return;
         croppingImage.value = job.galleryItem;
+        cropFileName.value = stripExtension(file.name);
         setCropImageUrl(getFileUrl(file.blob), true);
     } else if (job.type === 'combine' && job.combineItem) {
         if (!job.combineItem.url) return;
@@ -1731,6 +1744,7 @@ const initiateCrop = (job: CropJob) => {
             position: 'gallery',
             localId: job.combineItem.localId || 0
         };
+        cropFileName.value = stripExtension(job.combineItem.name);
     } else if (job.type === 'combine-result') {
         if (!uncroppedCombinePreviewUrl.value) return;
         setCropImageUrl(uncroppedCombinePreviewUrl.value, false);
@@ -1812,7 +1826,7 @@ const handleConfirmCrop = async () => {
         if (currentJob.type === 'gallery' && currentJob.galleryItem?.localId !== undefined) {
             const localFile = fileStore.files.find(f => f.id === currentJob.galleryItem?.localId) || capturedLocalFile;
             if (localFile) {
-                const newName = replaceExtension(localFile.name, targetMime);
+                const newName = buildCropFileName(localFile.name, targetMime);
                 const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
                 
                 // Keep the original blob if this is the first crop
@@ -1855,7 +1869,7 @@ const handleConfirmCrop = async () => {
             }
             item.croppedState = undefined; // Clear redo on new crop
 
-            const newName = replaceExtension(item.name, targetMime);
+            const newName = buildCropFileName(item.name, targetMime);
             const newFile = new File([blob], newName, { type: targetMime, lastModified: Date.now() });
             
             // If it's a local file, also update it in the file store so it persists
@@ -2844,6 +2858,7 @@ const handleConfirmCombine = async () => {
 };
 
 defineExpose({
+    cropFileName,
     initiateDelete,
     handleConfirmDelete,
     existingDeletionReason,
@@ -3538,8 +3553,13 @@ defineExpose({
                         :check-orientation="false"
                     />
                 </div>
-                <div class="flex items-center justify-between w-full mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
-                    <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center justify-between gap-3 w-full mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
+                    <div class="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                        <template v-if="croppingImage?.localId !== -999">
+                            <label for="cropFileName" class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Filename:</label>
+                            <InputText id="cropFileName" v-model="cropFileName" placeholder="Enter filename" class="flex-1 min-w-[12rem] text-sm" />
+                            <span class="text-surface-500 dark:text-surface-400 font-bold text-sm shrink-0">.{{ extensionForMime(selectedCropFormat) }}</span>
+                        </template>
                         <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Format:</span>
                         <Select v-model="selectedCropFormat" :options="cropFormatOptions" optionLabel="label" optionValue="value" class="w-32 text-xs" />
                     </div>
