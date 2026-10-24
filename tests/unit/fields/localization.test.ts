@@ -98,6 +98,23 @@ describe('Field Group: Localization', () => {
     });
 
     describe('Writing', () => {
+        it('clears the last row while preserving other L10n parameters and surrounding text', async () => {
+            const editor = new PCGWEditor('Before\n{{L10n|note=Keep this|content={{L10n/switch|language=English|interface=true}}}}\nAfter');
+            editor.updateLocalizations([]);
+
+            expect((await parseWikitext(editor.getText())).localizations).toEqual([]);
+            expect(editor.getText()).toContain('|note=Keep this');
+            expect(editor.getText()).toContain('Before');
+            expect(editor.getText()).toContain('After');
+            expect(editor.getText()).not.toContain('L10n/switch');
+        });
+
+        it('does not insert a localization template for an empty list', () => {
+            const editor = new PCGWEditor('Unrelated content');
+            editor.updateLocalizations([]);
+            expect(editor.getText()).toBe('Unrelated content');
+        });
+
         it('should write localization rows correctly', async () => {
             const data = getCleanData();
             data.localizations = localizationRows;

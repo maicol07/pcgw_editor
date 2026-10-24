@@ -1578,7 +1578,13 @@ export class PCGWEditor {
     }
 
     updateLocalizations(data: GameData['localizations']) {
-        if (!data || data.length === 0) return;
+        if (!data) return;
+        if (data.length === 0) {
+            if (this.parser.findTemplate('L10n')) {
+                this.parser.replaceParameterContent('L10n', 'content', '');
+            }
+            return;
+        }
         const content = data.map(row => {
             const ui = row.interface !== 'unknown' && row.interface ? row.interface : 'false';
             const audio = row.audio !== 'unknown' && row.audio ? row.audio : 'false';

@@ -1,8 +1,12 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
+import { defineComponent, ref } from 'vue';
 import LocalizationsForm from '../../../src/components/LocalizationsForm.vue';
+import DynamicField from '../../../src/components/schema/DynamicField.vue';
 import { LocalizationRow } from '../../../src/models/GameData';
+import { PCGWEditor } from '../../../src/utils/wikitext';
+import { parseWikitext } from '../../../src/utils/parser';
 
 // Mock Components
 const SelectStub = {
@@ -48,7 +52,8 @@ const PopoverStub = {
 };
 
 // Mock Lucide and Flag icons
-vi.mock('@lucide/vue', () => ({
+vi.mock('@lucide/vue', async (importOriginal) => ({
+    ...await importOriginal<typeof import('@lucide/vue')>(),
     Trash2: { template: '<span class="icon-trash"></span>' },
     Plus: { template: '<span class="icon-plus"></span>' },
     GripVertical: { template: '<span class="icon-grip"></span>' },
@@ -61,7 +66,7 @@ vi.mock('@placetopay/flagicons-vue', () => ({
 
 // vue-draggable-plus renders a wrapper that just emits its default slot
 vi.mock('vue-draggable-plus', () => ({
-    VueDraggable: { template: '<div><slot /></div>', props: ['modelValue'] }
+    VueDraggable: { name: 'VueDraggable', template: '<div><slot /></div>', props: ['modelValue'], emits: ['update:modelValue'] }
 }));
 
 describe('LocalizationsForm.vue', () => {
@@ -135,14 +140,11 @@ describe('LocalizationsForm.vue', () => {
     it('updates fields', async () => {
         const { wrapper } = setupWrapper();
         const checkboxes = wrapper.findAllComponents(CheckboxStub);
-
-        // Row 0, Interface checkbox
         await checkboxes[0].vm.$emit('update:modelValue', 'false');
 
-        // Check internal state as defineModel with array mutation doesn't always emit update:localizations
-        // when checking deep properties unless strict.
-        const model = (wrapper.vm as any).localizations as LocalizationRow[];
-        expect(model[0].interface).toBe('false');
+        const updates = wrapper.emitted('update:localizations');
+        expect(updates).toHaveLength(1);
+        expect((updates![0][0] as LocalizationRow[])[0].interface).toBe('false');
     });
 
     it('includes Chuvash, Gothic, and Võro in the supported languages list', () => {
@@ -154,5 +156,82 @@ describe('LocalizationsForm.vue', () => {
         expect(values).toContain('Chuvash');
         expect(values).toContain('Gothic');
         expect(values).toContain('Võro');
+    });
+
+    it('propagates field and row edits through DynamicField into wikitext', async () => {
+        const original = createLocalizations();
+        const model = ref(original);
+        const wrapper = mount(defineComponent({
+            components: { DynamicField },
+            setup: () => ({
+                model,
+                field: { key: 'localizations', label: '', component: 'LocalizationsForm' }
+            }),
+            template: '<DynamicField :field="field" v-model="model" />'
+        }), {
+            global: {
+                stubs: {
+                    Select: SelectStub, Checkbox: CheckboxStub, RatingSelect: RatingSelectStub,
+                    InputText: InputTextStub, Button: ButtonStub,
+                    MultiSelect: MultiSelectStub, Popover: PopoverStub
+                },
+                directives: { tooltip: () => {} }
+            }
+        });
+        await flushPromises();
+
+        const form = wrapper.findComponent(LocalizationsForm);
+        const notesInput = form.findComponent(InputTextStub).element;
+        form.findAllComponents(SelectStub)[3].vm.$emit('update:modelValue', 'French');
+        await flushPromises();
+        form.findAllComponents(CheckboxStub)[0].vm.$emit('update:modelValue', 'false');
+        await flushPromises();
+        form.findAllComponents(RatingSelectStub)[0].vm.$emit('update:modelValue', 'true');
+        await flushPromises();
+        form.findAllComponents(RatingSelectStub)[1].vm.$emit('update:modelValue', 'limited');
+        await flushPromises();
+        await form.findComponent(InputTextStub).setValue("'''Translation''' notes with [[French]] support");
+        form.findAllComponents(CheckboxStub)[1].vm.$emit('update:modelValue', true);
+        await flushPromises();
+
+        expect(form.findComponent(InputTextStub).element).toBe(notesInput);
+        expect(original[0]).toEqual(createLocalizations()[0]);
+        expect(model.value[0]).toMatchObject({
+            language: 'French', interface: 'false', audio: 'true',
+            subtitles: 'limited', notes: "'''Translation''' notes with [[French]] support", fan: true
+        });
+
+        const base = '{{L10n|note=Keep this|content=\n}}';
+        const assertSerialized = async () => {
+            const editor = new PCGWEditor(base);
+            editor.updateLocalizations(model.value);
+            const parsed = await parseWikitext(editor.getText());
+            expect(parsed.localizations.map(row => row.language)).toEqual(model.value.map(row => row.language));
+            return parsed.localizations;
+        };
+        expect((await assertSerialized())[0]).toMatchObject(model.value[0]);
+
+        form.findAllComponents(ButtonStub).at(-2)!.vm.$emit('click');
+        await flushPromises();
+        expect(model.value).toHaveLength(3);
+        form.findAllComponents(SelectStub)[5].vm.$emit('update:modelValue', 'German');
+        await flushPromises();
+        await assertSerialized();
+
+        form.findComponent({ name: 'VueDraggable' }).vm.$emit('update:modelValue', [...model.value].reverse());
+        await flushPromises();
+        expect(model.value.map(row => row.language)).toEqual(['German', 'Italian', 'French']);
+        await assertSerialized();
+
+        form.findAllComponents(SelectStub)[1].vm.$emit('update:modelValue', 'true');
+        await flushPromises();
+        expect(model.value.every(row => row.audio === 'true')).toBe(true);
+        await assertSerialized();
+
+        form.findAllComponents(ButtonStub)[1].vm.$emit('click');
+        await flushPromises();
+        expect(model.value.map(row => row.language)).toEqual(['Italian', 'French']);
+        await assertSerialized();
+        wrapper.unmount();
     });
 });

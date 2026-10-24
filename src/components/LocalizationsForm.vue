@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, toRaw } from 'vue';
 import { LocalizationRow, RatingValue } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
 import Button from 'openvue/button';
 import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
+import Checkbox from 'openvue/checkbox';
 import MultiSelect from 'openvue/multiselect';
 import Popover from 'openvue/popover';
 import { Trash2, Plus, GripVertical, Languages } from '@lucide/vue';
@@ -16,9 +17,17 @@ const localizations = defineModel<LocalizationRow[]>('localizations', { required
 const idMap = new WeakMap<LocalizationRow, number>();
 let nextId = 0;
 function getRowId(row: LocalizationRow) {
+    row = toRaw(row);
     if (!idMap.has(row)) idMap.set(row, nextId++);
     return idMap.get(row)!;
 }
+
+const updateRow = <K extends keyof LocalizationRow>(index: number, key: K, value: LocalizationRow[K]) => {
+    const row = localizations.value[index];
+    const updated = { ...row, [key]: value };
+    idMap.set(updated, getRowId(row));
+    localizations.value = localizations.value.map((item, i) => i === index ? updated : item);
+};
 
 const addRow = () => {
     localizations.value = [...localizations.value, {
@@ -158,7 +167,7 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                     <div class="@md:col-span-4 @3xl:col-span-3 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Language</label>
                         <div class="flex gap-2">
-                            <Select v-model="row.language" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
+                            <Select :modelValue="row.language" @update:modelValue="updateRow(index, 'language', $event)" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
                                 optionValue="value" placeholder="Select or type..." class="w-full">
                                 <template #value="slotProps">
                                     <div class="flex items-center gap-2" v-if="slotProps.value">
@@ -185,31 +194,31 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
                         <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">UI</label>
                         <div
                             class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
-                            <Checkbox :inputId="`loc-ui-${getRowId(row)}`" v-model="row.interface" true-value="true" false-value="false" binary />
+                            <Checkbox :inputId="`loc-ui-${getRowId(row)}`" :modelValue="row.interface" @update:modelValue="updateRow(index, 'interface', $event)" true-value="true" false-value="false" binary />
                         </div>
                     </div>
 
                     <!-- Audio -->
                     <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Audio</label>
-                        <RatingSelect v-model="row.audio" :inputId="`loc-audio-${getRowId(row)}`" />
+                        <RatingSelect :modelValue="row.audio" @update:modelValue="updateRow(index, 'audio', $event)" :inputId="`loc-audio-${getRowId(row)}`" />
                     </div>
 
                     <!-- Subtitles -->
                     <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
                         <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Subtitles</label>
-                        <RatingSelect v-model="row.subtitles" :inputId="`loc-subs-${getRowId(row)}`" />
+                        <RatingSelect :modelValue="row.subtitles" @update:modelValue="updateRow(index, 'subtitles', $event)" :inputId="`loc-subs-${getRowId(row)}`" />
                     </div>
 
                     <!-- Notes & Fan -->
                     <div class="@md:col-span-10 @3xl:col-span-3 min-w-0 flex gap-2 items-end">
                         <div class="flex-1 min-w-0 flex flex-col gap-1">
                             <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Notes</label>
-                            <InputText :id="`loc-notes-${getRowId(row)}`" v-model="row.notes" class="w-full" placeholder="Notes..." />
+                            <InputText :id="`loc-notes-${getRowId(row)}`" :modelValue="row.notes" @update:modelValue="updateRow(index, 'notes', $event ?? '')" class="w-full" placeholder="Notes..." />
                         </div>
                         <div class="flex flex-col gap-1 items-center pb-2 shrink-0" title="Fan Translation">
                             <label :for="`loc-fan-${getRowId(row)}`" class="text-xs font-bold text-surface-400">FAN</label>
-                            <Checkbox :inputId="`loc-fan-${getRowId(row)}`" v-model="row.fan" binary />
+                            <Checkbox :inputId="`loc-fan-${getRowId(row)}`" :modelValue="row.fan" @update:modelValue="updateRow(index, 'fan', $event)" binary />
                         </div>
                     </div>
 

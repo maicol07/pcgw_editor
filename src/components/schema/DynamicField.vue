@@ -168,6 +168,7 @@ const boundProps = computed(() => {
     if (props.field.component === 'LocalizationsForm') {
         return {
             localizations: props.modelValue || props.field.defaultValue || [],
+            'onUpdate:localizations': handleModelValueUpdate,
         }
     }
 
