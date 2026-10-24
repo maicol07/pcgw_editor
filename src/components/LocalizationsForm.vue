@@ -2,8 +2,8 @@
 import { ref, toRaw } from 'vue';
 import { LocalizationRow, RatingValue } from '../models/GameData';
 import RatingSelect from './RatingSelect.vue';
+import NotesButton from './NotesButton.vue';
 import Button from 'openvue/button';
-import InputText from 'openvue/inputtext';
 import Select from 'openvue/select';
 import Checkbox from 'openvue/checkbox';
 import MultiSelect from 'openvue/multiselect';
@@ -151,85 +151,73 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
 
         <VueDraggable v-model="localizations" :animation="150" handle=".drag-handle" class="flex flex-col gap-2">
             <div v-for="(row, index) in localizations" :key="getRowId(row)"
-                class="p-4 border rounded border-surface-200 dark:border-surface-700 flex flex-col gap-2 relative group mt-1 ml-1">
+                class="localization-row p-3 border rounded-lg border-surface-200 dark:border-surface-700">
 
-                <div class="absolute -left-3 -top-3 opacity-40 group-hover:opacity-100 transition-opacity z-10">
-                    <Button class="drag-handle cursor-grab active:cursor-grabbing" severity="secondary" rounded
-                        aria-label="Drag" size="small">
+                <div class="localization-drag self-end">
+                    <Button class="drag-handle cursor-grab active:cursor-grabbing w-8 h-8" severity="secondary" text
+                        :aria-label="`Reorder ${row.language || 'language'}`" size="small">
                         <template #icon>
                             <GripVertical class="w-3 h-3 text-surface-500" />
                         </template>
                     </Button>
                 </div>
 
-                <div class="grid grid-cols-1 @md:grid-cols-12 gap-x-3 gap-y-2 items-end">
-                    <!-- Language -->
-                    <div class="@md:col-span-4 @3xl:col-span-3 min-w-0 flex flex-col gap-1">
-                        <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Language</label>
-                        <div class="flex gap-2">
-                            <Select :modelValue="row.language" @update:modelValue="updateRow(index, 'language', $event)" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
-                                optionValue="value" placeholder="Select or type..." class="w-full">
-                                <template #value="slotProps">
-                                    <div class="flex items-center gap-2" v-if="slotProps.value">
-                                        <FlagIcon :flag="getFlagCode(slotProps.value) as any"
-                                            v-if="getFlagCode(slotProps.value)" size="M" class="rounded" />
-                                        <span v-else>🏳️</span>
-                                        <span>{{ slotProps.value }}</span>
-                                    </div>
-                                    <span v-else>{{ slotProps.placeholder }}</span>
-                                </template>
-                                <template #option="slotProps">
-                                    <div class="flex items-center gap-2">
-                                        <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" v-if="slotProps.option.code" />
-                                        <span v-else>🏳️</span>
-                                        <span>{{ slotProps.option.label }}</span>
-                                    </div>
-                                </template>
-                            </Select>
-                        </div>
-                    </div>
+                <!-- Language -->
+                <div class="localization-language min-w-0 flex flex-col gap-1">
+                    <label :for="`loc-lang-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Language</label>
+                    <Select :modelValue="row.language" @update:modelValue="updateRow(index, 'language', $event)" :inputId="`loc-lang-${getRowId(row)}`" :options="commonLanguages" optionLabel="label"
+                        optionValue="value" filter placeholder="Select language..." size="small" class="w-full min-w-0">
+                        <template #value="slotProps">
+                            <div class="flex items-center gap-2 min-w-0" v-if="slotProps.value">
+                                <FlagIcon :flag="getFlagCode(slotProps.value) as any"
+                                    v-if="getFlagCode(slotProps.value)" size="M" class="rounded" />
+                                <span v-else>🏳️</span>
+                                <span class="truncate">{{ slotProps.value }}</span>
+                            </div>
+                            <span v-else>{{ slotProps.placeholder }}</span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex items-center gap-2">
+                                <FlagIcon :flag="slotProps.option.code" size="M" class="rounded" v-if="slotProps.option.code" />
+                                <span v-else>🏳️</span>
+                                <span>{{ slotProps.option.label }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                </div>
 
+                <div class="localization-ratings grid grid-cols-1 @sm:grid-cols-3 gap-3 min-w-0">
                     <!-- Interface -->
-                    <div class="@md:col-span-2 @3xl:col-span-1 min-w-0 flex flex-col gap-1 items-center">
+                    <div class="min-w-0 flex flex-col gap-1">
                         <label :for="`loc-ui-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">UI</label>
-                        <div
-                            class="h-10 flex items-center justify-center border border-surface-300 dark:border-surface-600 rounded bg-surface-50 dark:bg-surface-900 w-full">
-                            <Checkbox :inputId="`loc-ui-${getRowId(row)}`" :modelValue="row.interface" @update:modelValue="updateRow(index, 'interface', $event)" true-value="true" false-value="false" binary />
-                        </div>
+                        <RatingSelect :modelValue="row.interface" @update:modelValue="updateRow(index, 'interface', $event)" :inputId="`loc-ui-${getRowId(row)}`" />
                     </div>
 
                     <!-- Audio -->
-                    <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
+                    <div class="min-w-0 flex flex-col gap-1">
                         <label :for="`loc-audio-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Audio</label>
                         <RatingSelect :modelValue="row.audio" @update:modelValue="updateRow(index, 'audio', $event)" :inputId="`loc-audio-${getRowId(row)}`" />
                     </div>
 
                     <!-- Subtitles -->
-                    <div class="@md:col-span-3 @3xl:col-span-2 min-w-0 flex flex-col gap-1">
+                    <div class="min-w-0 flex flex-col gap-1">
                         <label :for="`loc-subs-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Subtitles</label>
                         <RatingSelect :modelValue="row.subtitles" @update:modelValue="updateRow(index, 'subtitles', $event)" :inputId="`loc-subs-${getRowId(row)}`" />
                     </div>
+                </div>
 
-                    <!-- Notes & Fan -->
-                    <div class="@md:col-span-10 @3xl:col-span-3 min-w-0 flex gap-2 items-end">
-                        <div class="flex-1 min-w-0 flex flex-col gap-1">
-                            <label :for="`loc-notes-${getRowId(row)}`" class="text-xs font-bold uppercase tracking-wider text-surface-500">Notes</label>
-                            <InputText :id="`loc-notes-${getRowId(row)}`" :modelValue="row.notes" @update:modelValue="updateRow(index, 'notes', $event ?? '')" class="w-full" placeholder="Notes..." />
-                        </div>
-                        <div class="flex flex-col gap-1 items-center pb-2 shrink-0" title="Fan Translation">
-                            <label :for="`loc-fan-${getRowId(row)}`" class="text-xs font-bold text-surface-400">FAN</label>
-                            <Checkbox :inputId="`loc-fan-${getRowId(row)}`" :modelValue="row.fan" @update:modelValue="updateRow(index, 'fan', $event)" binary />
-                        </div>
-                    </div>
+                <div class="localization-actions flex items-center justify-end gap-2 self-end h-8">
+                    <label :for="`loc-fan-${getRowId(row)}`" class="flex items-center gap-2 cursor-pointer text-xs text-surface-600 dark:text-surface-300 whitespace-nowrap mr-1">
+                        <Checkbox :inputId="`loc-fan-${getRowId(row)}`" :modelValue="row.fan" @update:modelValue="updateRow(index, 'fan', $event)" binary />
+                        <span>Fan translation</span>
+                    </label>
+                    <NotesButton :modelValue="row.notes" @update:modelValue="updateRow(index, 'notes', $event)" type="note" title="Localization notes" class="w-8 h-8 shrink-0" />
 
-                    <!-- Delete Button (Last column) -->
-                    <div class="@md:col-span-2 @3xl:col-span-1 min-w-0 flex justify-end pb-1">
-                        <Button severity="danger" text @click="removeRow(index)" title="Remove Language">
-                            <template #icon>
-                                <Trash2 class="w-4 h-4" />
-                            </template>
-                        </Button>
-                    </div>
+                    <Button severity="danger" text size="small" class="w-8 h-8 shrink-0" @click="removeRow(index)" :aria-label="`Remove ${row.language || 'language'}`" title="Remove language">
+                        <template #icon>
+                            <Trash2 class="w-4 h-4" />
+                        </template>
+                    </Button>
                 </div>
             </div>
         </VueDraggable>
@@ -266,3 +254,31 @@ const ratingOptions: { label: string; value: RatingValue }[] = [
         </Popover>
     </div>
 </template>
+
+<style scoped>
+.localization-row {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    grid-template-areas: "drag language" "actions actions" "ratings ratings";
+    gap: 0.75rem;
+}
+
+.localization-drag { grid-area: drag; }
+.localization-language { grid-area: language; }
+.localization-ratings { grid-area: ratings; }
+.localization-actions { grid-area: actions; }
+
+@container (min-width: 36rem) {
+    .localization-row {
+        grid-template-columns: 2rem minmax(0, 1fr) auto;
+        grid-template-areas: "drag language actions" "ratings ratings ratings";
+    }
+}
+
+@container (min-width: 64rem) {
+    .localization-row {
+        grid-template-columns: 2rem minmax(12rem, 1.4fr) minmax(0, 3fr) auto;
+        grid-template-areas: "drag language ratings actions";
+    }
+}
+</style>

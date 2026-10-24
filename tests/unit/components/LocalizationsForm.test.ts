@@ -27,7 +27,7 @@ const RatingSelectStub = {
     emits: ['update:modelValue']
 };
 
-const InputTextStub = {
+const NotesButtonStub = {
     template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" class="p-inputtext" />',
     props: ['modelValue'],
     emits: ['update:modelValue']
@@ -84,7 +84,7 @@ describe('LocalizationsForm.vue', () => {
                         Select: SelectStub,
                         Checkbox: CheckboxStub,
                         RatingSelect: RatingSelectStub,
-                        InputText: InputTextStub,
+                        NotesButton: NotesButtonStub,
                         Button: ButtonStub,
                         MultiSelect: MultiSelectStub,
                         Popover: PopoverStub
@@ -139,12 +139,13 @@ describe('LocalizationsForm.vue', () => {
 
     it('updates fields', async () => {
         const { wrapper } = setupWrapper();
-        const checkboxes = wrapper.findAllComponents(CheckboxStub);
-        await checkboxes[0].vm.$emit('update:modelValue', 'false');
+        const ratings = wrapper.findAllComponents(RatingSelectStub);
+        expect(ratings).toHaveLength(6);
+        await ratings[0].vm.$emit('update:modelValue', 'limited');
 
         const updates = wrapper.emitted('update:localizations');
         expect(updates).toHaveLength(1);
-        expect((updates![0][0] as LocalizationRow[])[0].interface).toBe('false');
+        expect((updates![0][0] as LocalizationRow[])[0].interface).toBe('limited');
     });
 
     it('includes Chuvash, Gothic, and Võro in the supported languages list', () => {
@@ -172,7 +173,7 @@ describe('LocalizationsForm.vue', () => {
             global: {
                 stubs: {
                     Select: SelectStub, Checkbox: CheckboxStub, RatingSelect: RatingSelectStub,
-                    InputText: InputTextStub, Button: ButtonStub,
+                    NotesButton: NotesButtonStub, Button: ButtonStub,
                     MultiSelect: MultiSelectStub, Popover: PopoverStub
                 },
                 directives: { tooltip: () => {} }
@@ -181,23 +182,23 @@ describe('LocalizationsForm.vue', () => {
         await flushPromises();
 
         const form = wrapper.findComponent(LocalizationsForm);
-        const notesInput = form.findComponent(InputTextStub).element;
+        const notesInput = form.findComponent(NotesButtonStub).element;
         form.findAllComponents(SelectStub)[3].vm.$emit('update:modelValue', 'French');
         await flushPromises();
-        form.findAllComponents(CheckboxStub)[0].vm.$emit('update:modelValue', 'false');
+        form.findAllComponents(RatingSelectStub)[0].vm.$emit('update:modelValue', 'hackable');
         await flushPromises();
-        form.findAllComponents(RatingSelectStub)[0].vm.$emit('update:modelValue', 'true');
+        form.findAllComponents(RatingSelectStub)[1].vm.$emit('update:modelValue', 'true');
         await flushPromises();
-        form.findAllComponents(RatingSelectStub)[1].vm.$emit('update:modelValue', 'limited');
+        form.findAllComponents(RatingSelectStub)[2].vm.$emit('update:modelValue', 'limited');
         await flushPromises();
-        await form.findComponent(InputTextStub).setValue("'''Translation''' notes with [[French]] support");
-        form.findAllComponents(CheckboxStub)[1].vm.$emit('update:modelValue', true);
+        await form.findComponent(NotesButtonStub).setValue("'''Translation''' notes with [[French]] support");
+        form.findAllComponents(CheckboxStub)[0].vm.$emit('update:modelValue', true);
         await flushPromises();
 
-        expect(form.findComponent(InputTextStub).element).toBe(notesInput);
+        expect(form.findComponent(NotesButtonStub).element).toBe(notesInput);
         expect(original[0]).toEqual(createLocalizations()[0]);
         expect(model.value[0]).toMatchObject({
-            language: 'French', interface: 'false', audio: 'true',
+            language: 'French', interface: 'hackable', audio: 'true',
             subtitles: 'limited', notes: "'''Translation''' notes with [[French]] support", fan: true
         });
 
