@@ -1,9 +1,14 @@
 name: Build and Deploy to GitHub Pages
 
+# Called by ci.yml with the release tag; run by hand to redeploy a ref.
 on:
-  release:
-    types: [published]
   workflow_call:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        type: string
+        required: true
+  workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -22,20 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: actions/checkout@v7
         with:
-          bun-version-file: package.json
+          ref: ${{ inputs.ref || github.ref }}
 
+      # vue-tsc (in the build) fails on the Bun runtime: the scripts run on Node.js.
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - uses: maicol07/actions/setup-js@v1
 
       - name: Build
         run: bun run build
