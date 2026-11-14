@@ -26,15 +26,28 @@ jobs:
 
   # Overrides js.yml: vue-tsc and Vitest (jsdom) fail on the Bun runtime, so the scripts run on
   # Node.js; Bun only installs and runs them.
-  checks:
+  # vue-tsc, eslint's Node-only plugins and vitest (jsdom) need the Node.js runtime; bun installs
+  # and runs the scripts.
+  lint:
     uses: maicol07/actions/.github/workflows/js.yml@v1
     with:
-      # vue-tsc and vitest (jsdom) need the Node.js runtime; bun installs and runs the scripts.
       node_version: '24'
-      run: bun run typecheck && bun run lint && bun run test --run
+      run: bun run lint
+
+  typecheck:
+    uses: maicol07/actions/.github/workflows/js.yml@v1
+    with:
+      node_version: '24'
+      run: bun run typecheck
+
+  tests:
+    uses: maicol07/actions/.github/workflows/js.yml@v1
+    with:
+      node_version: '24'
+      run: bun run test --run
 
   release:
-    needs: [security, checks]
+    needs: [security, lint, typecheck, tests]
     if: github.event_name == 'push'
     uses: maicol07/actions/.github/workflows/release.yml@v1
     permissions:
