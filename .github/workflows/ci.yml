@@ -19,37 +19,37 @@ permissions:
 
 jobs:
   security:
-    uses: maicol07/actions/.github/workflows/security.yml@v1
+    uses: maicol07/actions/.github/workflows/security.yml@v2
 
   commit_lint:
-    uses: maicol07/actions/.github/workflows/commit-lint.yml@v1
+    uses: maicol07/actions/.github/workflows/commit-lint.yml@v2
 
   # Overrides js.yml: vue-tsc and Vitest (jsdom) fail on the Bun runtime, so the scripts run on
   # Node.js; Bun only installs and runs them.
   # vue-tsc, eslint's Node-only plugins and vitest (jsdom) need the Node.js runtime; bun installs
   # and runs the scripts.
   lint:
-    uses: maicol07/actions/.github/workflows/js.yml@v1
+    uses: maicol07/actions/.github/workflows/js.yml@v2
     with:
       node_version: '24'
       run: bun run lint
 
   typecheck:
-    uses: maicol07/actions/.github/workflows/js.yml@v1
+    uses: maicol07/actions/.github/workflows/js.yml@v2
     with:
       node_version: '24'
       run: bun run typecheck
 
   tests:
-    uses: maicol07/actions/.github/workflows/js.yml@v1
+    uses: maicol07/actions/.github/workflows/js.yml@v2
     with:
       node_version: '24'
       run: bun run test --run
 
   release:
     needs: [security, lint, typecheck, tests]
-    if: github.event_name == 'push'
-    uses: maicol07/actions/.github/workflows/release.yml@v1
+    if: github.event_name == 'push' && !failure() && !cancelled()
+    uses: maicol07/actions/.github/workflows/release.yml@v2
     permissions:
       contents: write
       pull-requests: write
